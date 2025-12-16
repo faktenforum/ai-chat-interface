@@ -85,8 +85,6 @@ webSearch:
   firecrawlApiKey: "${FIRECRAWL_API_KEY}"
   firecrawlApiUrl: "${FIRECRAWL_API_URL}"
   firecrawlVersion: "${FIRECRAWL_VERSION}"
-  jinaApiKey: "${JINA_API_KEY}"
-  jinaApiUrl: "${JINA_API_URL}"
-  rerankerType: "jina"
+  rerankerType: "simple"
   scraperTimeout: 7500
   safeSearch: 1

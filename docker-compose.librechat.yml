@@ -79,6 +79,8 @@ services:
   rag_api:
     container_name: rag_api
     image: ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest
+    ports:
+      - "${LIBRECHAT_RAG_PORT:-8000}:8000"
     env_file:
       - .env
     environment:
@@ -87,6 +89,8 @@ services:
       - RAG_OPENAI_API_KEY=${RAG_OPENAI_API_KEY:-${OPENROUTER_API_KEY:-}}
       - RAG_OPENAI_BASEURL=${RAG_OPENAI_BASEURL:-${OPENROUTER_BASE_URL:-}}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-${OPENROUTER_API_KEY:-}}
+      - SIMPLE_RERANKER_MODEL_NAME=${SIMPLE_RERANKER_MODEL_NAME:-mixedbread-ai/mxbai-rerank-large-v2}
+      - SIMPLE_RERANKER_MODEL_TYPE=${SIMPLE_RERANKER_MODEL_TYPE:-cross-encoder}
     restart: always
     depends_on:
       - vectordb

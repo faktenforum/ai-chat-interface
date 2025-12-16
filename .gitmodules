@@ -1,0 +1,12 @@
+[submodule "dev/rag_api"]
+	path = dev/rag_api
+	url = https://github.com/kalaspuffar/rag_api.git
+	branch = reranker
+[submodule "dev/librechat"]
+	path = dev/librechat
+	url = https://github.com/kalaspuffar/LibreChat.git
+	branch = new/feature/simple_reranker
+[submodule "dev/agents"]
+	path = dev/agents
+	url = https://github.com/kalaspuffar/agents.git
+	branch = simple_reranker
