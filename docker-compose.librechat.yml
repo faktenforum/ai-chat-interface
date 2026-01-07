@@ -31,8 +31,12 @@ services:
         source: ./librechat.yaml
         target: /app/librechat.yaml
     depends_on:
-      - mongodb
-      - meilisearch
+      setup-permissions:
+        condition: service_completed_successfully
+      mongodb:
+        condition: service_started
+      meilisearch:
+        condition: service_started
     networks:
       - traefik-net
     labels:
@@ -66,6 +70,22 @@ services:
       MEILI_MASTER_KEY: ${LIBRECHAT_MEILI_MASTER_KEY}
     volumes:
       - ./meili_data_v1.12:/meili_data
+    networks:
+      - traefik-net
+
+  setup-permissions:
+    image: alpine
+    container_name: setup-permissions
+    user: root
+    volumes:
+      - ./logs:/logs
+      - ./images:/images
+      - ./uploads:/uploads
+      - ./data-node:/mongo_data
+      - ./meili_data_v1.12:/meili_data
+    command: >
+      sh -c "chown -R ${UID:-1000}:${GID:-1000} /logs /images /uploads /mongo_data /meili_data && 
+             chmod -R 775 /logs /images /uploads /mongo_data /meili_data"
     networks:
       - traefik-net
 

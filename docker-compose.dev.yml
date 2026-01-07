@@ -38,6 +38,12 @@ services:
     environment:
       NODE_ENV: development
 
+  setup-permissions:
+    extends:
+      file: docker-compose.librechat.yml
+      service: setup-permissions
+    env_file: .env
+
   # --- WEBUI ---
   openwebui:
     extends:

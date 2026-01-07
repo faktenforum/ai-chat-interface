@@ -19,6 +19,10 @@ services:
     extends: { file: docker-compose.librechat.yml, service: api }
     env_file: .env
 
+  setup-permissions:
+    extends: { file: docker-compose.librechat.yml, service: setup-permissions }
+    env_file: .env
+
   # --- WEBUI ---
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }

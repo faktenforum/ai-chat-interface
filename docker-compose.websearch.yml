@@ -95,6 +95,10 @@ services:
       OPENAI_BASE_URL: ${OPENROUTER_BASE_URL}
       MODEL_NAME: ${FIRECRAWL_LLM_MODEL:-gpt-4o}
       BULL_AUTH_KEY: ${FIRECRAWL_BULL_AUTH_KEY:-}
+      NUQ_DATABASE_URL: postgres://${FIRECRAWL_POSTGRES_USER:-firecrawl}:${FIRECRAWL_POSTGRES_PASSWORD:-firecrawl}@${FIRECRAWL_POSTGRES_HOST:-nuq-postgres}:5432/${FIRECRAWL_POSTGRES_DB:-firecrawl}
+      # Force all workers to use our lightweight stack (Redis/Postgres) instead of RabbitMQ
+      USE_RABBITMQ: "false"
+      EXTRACTOR_QUEUE_TYPE: redis
     depends_on:
       redis:
         condition: service_started

@@ -17,6 +17,9 @@ services:
     labels:
       - "traefik.http.routers.librechat-secure.tls.certresolver=le"
 
+  setup-permissions:
+    extends: { file: docker-compose.librechat.yml, service: setup-permissions }
+
   # --- WEBUI ---
   # openwebui:
   #   extends: { file: docker-compose.openwebui.yml, service: openwebui }

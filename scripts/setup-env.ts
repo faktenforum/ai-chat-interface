@@ -46,6 +46,8 @@ interface PromptConfig {
  * Variables that should prompt the user
  */
 const PROMPTS: Record<string, PromptConfig> = {
+    'UID': { message: 'Docker Host User ID (UID):', type: 'input', defaultGen: () => '1000' },
+    'GID': { message: 'Docker Host Group ID (GID):', type: 'input', defaultGen: () => '1000' },
     'DOMAIN': { message: 'Domain or IP (e.g. localhost or ai.faktenforum.org):', type: 'input' },
     'OPENROUTER_API_KEY': { message: 'OpenRouter API Key:', type: 'password' },
     'JINA_API_KEY': { message: 'Jina API Key (optional, press enter to skip):', type: 'input' },
