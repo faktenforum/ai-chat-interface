@@ -30,7 +30,6 @@ const AUTO_GENERATED: Record<string, () => string> = {
     'LIBRECHAT_CREDS_KEY': () => genSecret(16), // 32 hex chars = 16 bytes
     'LIBRECHAT_CREDS_IV': () => genSecret(8),   // 16 hex chars = 8 bytes
     'LIBRECHAT_MEILI_MASTER_KEY': () => genSecret(16),
-    'SEARXNG_SECRET_KEY': () => genSecret(32),
     'FIRECRAWL_BULL_AUTH_KEY': () => genSecret(16),
 };
 
@@ -49,8 +48,8 @@ const PROMPTS: Record<string, PromptConfig> = {
     'UID': { message: 'Docker Host User ID (UID):', type: 'input', defaultGen: () => '1000' },
     'GID': { message: 'Docker Host Group ID (GID):', type: 'input', defaultGen: () => '1000' },
     'DOMAIN': { message: 'Domain or IP (e.g. localhost or ai.faktenforum.org):', type: 'input' },
-    'OPENROUTER_API_KEY': { message: 'OpenRouter API Key:', type: 'password' },
-    'JINA_API_KEY': { message: 'Jina API Key (optional, press enter to skip):', type: 'input' },
+    'OPENROUTER_KEY': { message: 'OpenRouter API Key:', type: 'password' },
+    'LIBRECHAT_JINA_API_KEY': { message: 'Jina API Key (optional, press enter to skip):', type: 'input' },
 
     // Mongo
     'LIBRECHAT_MONGO_INITDB_ROOT_USERNAME': { message: 'Mongo Root Username:', type: 'input', defaultGen: () => genShortId('librechat') },
@@ -59,10 +58,6 @@ const PROMPTS: Record<string, PromptConfig> = {
 
     // VectorDB
     'LIBRECHAT_VECTORDB_PASSWORD': { message: 'VectorDB (Postgres) Password:', type: 'password', defaultGen: () => genSecret(16) },
-
-    // OpenWebUI (Currently disabled for production)
-    // 'OPENWEBUI_ADMIN_EMAIL': { message: 'OpenWebUI Admin Email:', type: 'input' },
-    // 'OPENWEBUI_ADMIN_PASSWORD': { message: 'OpenWebUI Admin Password:', type: 'password', defaultGen: () => genSecret(16) },
 
     // Firecrawl
     'FIRECRAWL_POSTGRES_PASSWORD': { message: 'Firecrawl Postgres Password:', type: 'password', defaultGen: () => genSecret(16) },
@@ -82,6 +77,23 @@ async function main() {
     if (fs.existsSync(ENV_FILE)) {
         console.log('📄 Found existing .env file, loading values as defaults...');
         existingEnv = dotenv.parse(fs.readFileSync(ENV_FILE));
+    }
+
+    // Migration helper: map old keys to new keys if missing
+    const MIGRATIONS: Record<string, string> = {
+        'OPENROUTER_API_KEY': 'OPENROUTER_KEY',
+        'SEARCH': 'LIBRECHAT_SEARCH_ENABLED',
+        'SEARXNG_INSTANCE_URL': 'LIBRECHAT_SEARXNG_URL',
+        'SEARXNG_API_KEY': 'LIBRECHAT_SEARXNG_API_KEY',
+        'JINA_API_KEY': 'LIBRECHAT_JINA_API_KEY',
+        'JINA_API_URL': 'LIBRECHAT_JINA_API_URL',
+        'USE_DB_AUTHENTICATION': 'FIRECRAWL_USE_DB_AUTHENTICATION',
+    };
+
+    for (const [oldKey, newKey] of Object.entries(MIGRATIONS)) {
+        if (existingEnv[oldKey] && !existingEnv[newKey]) {
+            existingEnv[newKey] = existingEnv[oldKey];
+        }
     }
 
     // 2. Read env.example to get the required variable structure

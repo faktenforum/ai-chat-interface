@@ -16,13 +16,15 @@ services:
       CREDS_KEY: ${LIBRECHAT_CREDS_KEY}
       CREDS_IV: ${LIBRECHAT_CREDS_IV}
       ALLOW_REGISTRATION: ${LIBRECHAT_ALLOW_REGISTRATION:-true}
-      OPENROUTER_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_KEY: ${OPENROUTER_KEY}
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL}
       OPENROUTER_SITE_URL: http://chat.${DOMAIN:-localhost}
       OPENROUTER_APP_NAME: ${OPENROUTER_APP_NAME}
-      SEARXNG_BASE_URL: http://searxng.${DOMAIN:-localhost}/
-      SEARCH: "true"
+      SEARXNG_BASE_URL: ${LIBRECHAT_SEARXNG_URL:-http://searxng:8080}
+      SEARCH: ${LIBRECHAT_SEARCH_ENABLED:-true}
       MEILI_MASTER_KEY: ${LIBRECHAT_MEILI_MASTER_KEY}
+      JINA_API_KEY: ${LIBRECHAT_JINA_API_KEY}
+      JINA_API_URL: ${LIBRECHAT_JINA_API_URL}
     volumes:
       - ./images:/app/client/public/images
       - ./uploads:/app/uploads
