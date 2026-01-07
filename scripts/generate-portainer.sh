@@ -5,6 +5,7 @@ SOURCE_FILE="docker-compose.prod.yml"
 OUTPUT_FILE="docker-compose.portainer.yml"
 
 echo "Generating Portainer-compatible stack file..."
+echo "Note: Use .env.prod for environment variables (generated via: npm run setup:prod)"
 
 # Check if source file exists
 if [ ! -f "$SOURCE_FILE" ]; then
@@ -27,6 +28,7 @@ mv "$temp_file" "$OUTPUT_FILE"
 if [ $? -eq 0 ]; then
     echo "Successfully generated $OUTPUT_FILE"
     echo "You can now copy the contents of this file into Portainer's Web Editor."
+    echo "Don't forget to copy .env.prod values into Portainer's Advanced Mode environment section."
 else
     echo "Error: Failed to generate $OUTPUT_FILE"
     exit 1

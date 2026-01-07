@@ -4,23 +4,35 @@ Modular Docker Compose setup for LibreChat, Open WebUI, and Firecrawl with Traef
 
 ## Setup
 
+### Local Development
+
 1. **Network**: Create the shared proxy network:
    ```bash
    docker network create traefik-net
    ```
 
-2. **Environment**: Initialize or update your `.env` file:
+2. **Environment Configuration**
    ```bash
    npm run setup
    ```
-   This interactive script will:
-   * Generate secure secrets for all required fields (JWT, Session, etc.)
-   * Prompt you for keys (OpenRouter, Jina)
-   * Set RabbitMQ credentials for Firecrawl stability
-   * Use existing `.env` values as defaults if they exist
-   * Set `DOMAIN` (e.g., `localhost` or `ai.faktenforum.org`)
-   * Set `OPENROUTER_API_KEY`
-   * Set `JINA_API_KEY` (for reranking)
+   This interactive script will configure:
+   - Domain settings
+   - Database credentials (MongoDB, PostgreSQL)
+   - API keys (OpenRouter, Jina)
+   - RabbitMQ credentials (for Firecrawl stability)
+   - Registration settings (enabled by default for local development)
+   - Email verification (enabled by default, uses MailDev for local testing)
+
+### Production Deployment
+
+1. **Production Environment Configuration**
+   ```bash
+   npm run setup:prod
+   ```
+   This generates `.env.prod` with production-specific settings:
+   - **Registration enabled** but restricted to allowed email domains (`@correctiv.org`, `@faktenforum.org`)
+   - **SendGrid SMTP** for email verification
+   - Production-optimized defaults from `env.prod.example`
 
 ## Services
 
@@ -33,6 +45,7 @@ Run services using their feature-grouped compose files:
 | **WebUI** | `docker compose -f docker-compose.openwebui.yml up -d` | `http://webui.localhost` |
 | **WebSearch** | `docker compose -f docker-compose.websearch.yml up -d` | `http://searxng.localhost`, `http://firecrawl.localhost` |
 | **RAG** | `docker compose -f docker-compose.rag.yml up -d` | *Internal* |
+| **MailDev** | Included in `docker-compose.yml` / `docker-compose.dev.yml` | `http://maildev.localhost` (Web UI) |
 
 ## Usage
 
@@ -82,7 +95,16 @@ You can still use standard `docker compose` commands with the feature-grouped fi
 docker compose -f docker-compose.traefik.yml -f docker-compose.librechat.yml up -d
 ```
 
-## Firecrawl Admin
+## Local Development Tools
+
+### MailDev (Email Testing)
+MailDev is automatically included in local development setups. It captures all outgoing emails for testing:
+- **Web UI**: `http://maildev.localhost` (or `http://localhost:1080`)
+- **SMTP**: `maildev:1025` (internal Docker network)
+- Email verification is enabled by default (`LIBRECHAT_ALLOW_UNVERIFIED_EMAIL_LOGIN=false`)
+- All emails sent by LibreChat can be viewed in the MailDev web interface
+
+### Firecrawl Admin
 `http://firecrawl.localhost/admin/<BULL_AUTH_KEY>/queues`
 (Set `FIRECRAWL_BULL_AUTH_KEY` in `.env`)
 

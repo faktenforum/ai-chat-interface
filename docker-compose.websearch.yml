@@ -6,9 +6,10 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./searxng:/etc/searxng:rw
+      - ./config/searxng:/etc/searxng:rw
     environment:
       SEARXNG_BASE_URL: http://searxng.${DOMAIN:-localhost}/
+      SEARXNG_SECRET_KEY: ${SEARXNG_SECRET_KEY}
     cap_drop:
       - ALL
     cap_add:

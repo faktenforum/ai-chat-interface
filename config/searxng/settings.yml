@@ -1,7 +1,7 @@
 use_default_settings: true
 server:
-  # key must be changed to something secret for production
-  secret_key: "supersecretkey"
+  # Secret key from environment variable for security
+  secret_key: "${SEARXNG_SECRET_KEY}"
   limiter: false
   image_proxy: true
 search:

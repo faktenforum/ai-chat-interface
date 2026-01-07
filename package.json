@@ -3,12 +3,18 @@
     "description": "Infrastructure for AI Chat Interface with Traefik, LibreChat, and more",
     "scripts": {
         "setup": "./scripts/setup-env.ts",
-        "setup:portainer": "./scripts/setup-env.ts --portainer",
-        "generate:portainer": "./scripts/generate-portainer.sh"
+        "setup:yes": "./scripts/setup-env.ts --yes",
+        "setup:prod": "./scripts/setup-env.ts --prod",
+        "setup:prod:yes": "./scripts/setup-env.ts --prod --yes",
+        "generate:portainer": "./scripts/generate-portainer.sh",
+        "merge:config": "./scripts/merge-librechat-config.ts"
     },
     "license": "MIT",
     "devDependencies": {
         "@inquirer/prompts": "^8.1.0",
-        "dotenv": "^17.2.3"
+        "@types/js-yaml": "^4.0.9",
+        "@types/node": "^25.0.3",
+        "dotenv": "^17.2.3",
+        "js-yaml": "^4.1.1"
     }
 }

@@ -16,10 +16,21 @@ services:
       CREDS_KEY: ${LIBRECHAT_CREDS_KEY}
       CREDS_IV: ${LIBRECHAT_CREDS_IV}
       ALLOW_REGISTRATION: ${LIBRECHAT_ALLOW_REGISTRATION:-true}
+      ALLOW_UNVERIFIED_EMAIL_LOGIN: ${LIBRECHAT_ALLOW_UNVERIFIED_EMAIL_LOGIN:-true}
+      # Email SMTP Configuration
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_ENCRYPTION: ${EMAIL_ENCRYPTION}
+      EMAIL_USERNAME: ${EMAIL_USERNAME}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      EMAIL_ALLOW_SELFSIGNED: ${EMAIL_ALLOW_SELFSIGNED:-false}
       OPENROUTER_KEY: ${OPENROUTER_KEY}
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL}
       OPENROUTER_SITE_URL: http://chat.${DOMAIN:-localhost}
       OPENROUTER_APP_NAME: ${OPENROUTER_APP_NAME}
+      DOMAIN_CLIENT: ${DOMAIN_CLIENT:-http://chat.localhost}
       SEARXNG_BASE_URL: ${LIBRECHAT_SEARXNG_URL:-http://searxng:8080}
       SEARCH: ${LIBRECHAT_SEARCH_ENABLED:-true}
       MEILI_MASTER_KEY: ${LIBRECHAT_MEILI_MASTER_KEY}
@@ -30,7 +41,7 @@ services:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
       - type: bind
-        source: ./librechat.yaml
+        source: ./config/librechat.yaml
         target: /app/librechat.yaml
     depends_on:
       setup-permissions:

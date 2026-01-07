@@ -14,6 +14,11 @@ services:
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
     restart: always
+    volumes:
+      # Override to use production config with domain restrictions
+      - type: bind
+        source: ./config/librechat.prod.yaml
+        target: /app/librechat.yaml
     labels:
       - "traefik.http.routers.librechat-secure.tls.certresolver=le"
 

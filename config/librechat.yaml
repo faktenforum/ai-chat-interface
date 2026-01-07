@@ -17,19 +17,13 @@ interface:
     modalAcceptance: true
     modalTitle: 'Kleingedrucktes'
     modalContent: |
-      # Checkbot Nutzungsbedingungen 🤖
+      # Nutzungsbedingungen
 
-      **§1 Die Wahrheit™**
-      Wir prüfen Fakten. Meistens. Wenn wir falsch liegen, war es ein "alternativer Fakt".
+      **Wichtiger Hinweis zu KI-generierten Antworten**
+      Alle Antworten dieses KI-Systems sollten stets von Menschen überprüft werden. KI-generierte Inhalte können Fehler enthalten und sollten nicht als alleinige Quelle für wichtige Entscheidungen verwendet werden.
 
-      **§2 Deine Daten**
-      Wir behandeln deine Anfragen vertraulich. Ehrenwort.
-
-      **§3 Haftung**
-      Wir haften nicht für geplatzte Filterblasen oder spontane Erkenntniseffekte.
-
-      *Viel Spaß beim Recherchieren!*
-
+      **Datenverarbeitung und Hosting**
+      Wir bemühen uns, so viele Komponenten wie möglich selbst zu hosten. Aktuell nutzen wir noch externe Dienste wie OpenRouter, wodurch Daten derzeit an Server in den USA übertragen werden. Unser Ziel ist es, vollständig auf selbst gehostete oder europäische Dienste umzustellen.
   endpointsMenu: true
   modelSelect: true
   parameters: true

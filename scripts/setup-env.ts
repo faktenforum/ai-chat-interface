@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 const ROOT_DIR = process.cwd();
 const ENV_FILE = path.join(ROOT_DIR, '.env');
 const EXAMPLE_FILE = path.join(ROOT_DIR, 'env.example');
+const PROD_EXAMPLE_FILE = path.join(ROOT_DIR, 'env.prod.example');
 
 /**
  * Generate a random hex string
@@ -30,6 +31,7 @@ const AUTO_GENERATED: Record<string, () => string> = {
     'LIBRECHAT_CREDS_KEY': () => genSecret(16), // 32 hex chars = 16 bytes
     'LIBRECHAT_CREDS_IV': () => genSecret(8),   // 16 hex chars = 8 bytes
     'LIBRECHAT_MEILI_MASTER_KEY': () => genSecret(16),
+    'SEARXNG_SECRET_KEY': () => genSecret(32),
     'FIRECRAWL_BULL_AUTH_KEY': () => genSecret(16),
 };
 
@@ -39,6 +41,7 @@ interface PromptConfig {
     message: string;
     type: PromptType;
     defaultGen?: () => string;
+    prodOnly?: boolean; // Only prompt in production mode
 }
 
 /**
@@ -63,20 +66,31 @@ const PROMPTS: Record<string, PromptConfig> = {
     'FIRECRAWL_POSTGRES_PASSWORD': { message: 'Firecrawl Postgres Password:', type: 'password', defaultGen: () => genSecret(16) },
     'FIRECRAWL_RABBITMQ_USER': { message: 'Firecrawl RabbitMQ Username:', type: 'input', defaultGen: () => 'firecrawl' },
     'FIRECRAWL_RABBITMQ_PASSWORD': { message: 'Firecrawl RabbitMQ Password:', type: 'password', defaultGen: () => genSecret(16) },
+
+    // Email (Production only)
+    'EMAIL_PASSWORD': { message: 'SendGrid API Key (for email verification):', type: 'password', prodOnly: true },
+    'EMAIL_FROM': { message: 'Email From Address (e.g., noreply@faktenforum.org):', type: 'input', prodOnly: true },
 };
 
 async function main() {
     const args = process.argv.slice(2);
-    const isPortainerMode = args.includes('--portainer');
-    const targetFile = isPortainerMode ? path.join(ROOT_DIR, 'docker-compose.portainer.env') : ENV_FILE;
+    const isProdMode = args.includes('--prod');
+    const skipPrompts = args.includes('--yes') || args.includes('-y');
+    const targetFile = isProdMode ? path.join(ROOT_DIR, '.env.prod') : ENV_FILE;
 
-    console.log(`\n🚀 AI Chat Interface - Environment Setup (TypeScript)${isPortainerMode ? ' [Portainer Mode]' : ''}\n`);
+    console.log(`\n🚀 AI Chat Interface - Environment Setup (TypeScript)${isProdMode ? ' [Production Mode]' : ''}${skipPrompts ? ' [Auto Mode]' : ''}\n`);
+    if (skipPrompts) {
+        console.log('⚡ Skipping prompts, using defaults and existing values...\n');
+    }
 
-    // 1. Load existing .env if it exists
+    // 1. Load existing env file for defaults
+    // In prod mode, prefer .env.prod if it exists, otherwise fall back to .env
     let existingEnv: Record<string, string> = {};
-    if (fs.existsSync(ENV_FILE)) {
-        console.log('📄 Found existing .env file, loading values as defaults...');
-        existingEnv = dotenv.parse(fs.readFileSync(ENV_FILE));
+    const defaultsFile = isProdMode && fs.existsSync(targetFile) ? targetFile : ENV_FILE;
+
+    if (fs.existsSync(defaultsFile)) {
+        console.log(`📄 Found existing ${path.basename(defaultsFile)} file, loading values as defaults...`);
+        existingEnv = dotenv.parse(fs.readFileSync(defaultsFile));
     }
 
     // Migration helper: map old keys to new keys if missing
@@ -96,16 +110,46 @@ async function main() {
         }
     }
 
-    // 2. Read env.example to get the required variable structure
+    // 2. Read env.example to get the base variable structure
     if (!fs.existsSync(EXAMPLE_FILE)) {
         console.log('❌ Error: env.example not found. Please ensure it exists in the root directory.');
         process.exit(1);
     }
 
-    const exampleLines = fs.readFileSync(EXAMPLE_FILE, 'utf-8').split('\n');
-    const finalEnvLines: string[] = [];
+    const exampleContent = fs.readFileSync(EXAMPLE_FILE, 'utf-8');
+    let baseDefaults: Record<string, string> = {};
 
-    for (const line of exampleLines) {
+    // Parse env.example into a map
+    for (const line of exampleContent.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const [key, ...valueParts] = trimmed.split('=');
+        if (key) {
+            baseDefaults[key] = valueParts.join('=');
+        }
+    }
+
+    // 3. In production mode, merge with env.prod.example overrides
+    if (isProdMode && fs.existsSync(PROD_EXAMPLE_FILE)) {
+        console.log('📦 Loading production overrides from env.prod.example...');
+        const prodContent = fs.readFileSync(PROD_EXAMPLE_FILE, 'utf-8');
+
+        for (const line of prodContent.split('\n')) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) continue;
+            const [key, ...valueParts] = trimmed.split('=');
+            if (key) {
+                baseDefaults[key] = valueParts.join('=');
+            }
+        }
+    }
+
+    // 4. Build final env file
+    const finalEnvLines: string[] = [];
+    const processedKeys = new Set<string>();
+
+    // Process all lines from env.example to preserve structure
+    for (const line of exampleContent.split('\n')) {
         const trimmed = line.trim();
 
         // Header, comments, or empty lines
@@ -115,8 +159,9 @@ async function main() {
         }
 
         const [key, ...valueParts] = trimmed.split('=');
-        const defaultValue = valueParts.join('=');
+        const defaultValue = baseDefaults[key] || valueParts.join('=');
         const currentValue = existingEnv[key];
+        processedKeys.add(key);
 
         // Check if it's an auto-generated secret
         if (AUTO_GENERATED[key]) {
@@ -133,8 +178,22 @@ async function main() {
         // Check if it's a prompted variable
         if (PROMPTS[key]) {
             const p = PROMPTS[key];
+
+            // Skip prod-only prompts in dev mode
+            if (p.prodOnly && !isProdMode) {
+                finalEnvLines.push(`${key}=${currentValue !== undefined ? currentValue : defaultValue}`);
+                continue;
+            }
+
             const hasExisting = !!currentValue;
             const suggested = p.defaultGen ? p.defaultGen() : defaultValue;
+
+            // If --yes flag is set, skip prompts and use existing or default
+            if (skipPrompts) {
+                const val = currentValue || suggested;
+                finalEnvLines.push(`${key}=${val}`);
+                continue;
+            }
 
             const msg = hasExisting
                 ? `${p.message} (already set, enter to keep)`
@@ -159,11 +218,37 @@ async function main() {
         finalEnvLines.push(`${key}=${currentValue !== undefined ? currentValue : defaultValue}`);
     }
 
-    // 3. Write final file
+    // 5. Add any production-only variables that weren't in env.example
+    if (isProdMode && fs.existsSync(PROD_EXAMPLE_FILE)) {
+        const prodContent = fs.readFileSync(PROD_EXAMPLE_FILE, 'utf-8');
+
+        for (const line of prodContent.split('\n')) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) continue;
+            const [key] = trimmed.split('=');
+
+            if (key && !processedKeys.has(key)) {
+                const currentValue = existingEnv[key];
+                const defaultValue = baseDefaults[key];
+                finalEnvLines.push(`${key}=${currentValue !== undefined ? currentValue : defaultValue}`);
+            }
+        }
+    }
+
+    // 6. Write final file
     fs.writeFileSync(targetFile, finalEnvLines.join('\n'));
-    if (isPortainerMode) {
-        console.log(`\n✅ Portainer setup complete! Values written to ${path.basename(targetFile)}`);
-        console.log('You can copy the contents of this file into Portainer\'s "Advanced Mode" environment section.');
+    if (isProdMode) {
+        console.log(`\n✅ Production setup complete! Values written to ${path.basename(targetFile)}`);
+        console.log('You can use this file for Portainer or production deployments.');
+        
+        // Merge LibreChat config for production
+        try {
+            const { execSync } = require('child_process');
+            console.log('\n📦 Merging LibreChat production config...');
+            execSync('npm run merge:config', { stdio: 'inherit' });
+        } catch (error) {
+            console.warn('⚠️  Warning: Could not merge LibreChat config. Run manually: npm run merge:config');
+        }
     } else {
         console.log('\n✅ Setup complete! Your .env file has been updated.\n');
     }
