@@ -86,3 +86,4 @@ volumes:
   firecrawl_pgdata:
   pgdata2:
   librechat-config:
+  mongoconfig:

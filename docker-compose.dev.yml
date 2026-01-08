@@ -1,8 +1,6 @@
 services:
   traefik:
-    extends:
-      file: docker-compose.traefik.yml
-      service: traefik
+    extends: { file: docker-compose.traefik.yml, service: traefik }
     env_file: .env
 
   maildev:
@@ -20,28 +18,20 @@ services:
       - "traefik.http.routers.maildev.entrypoints=web"
       - "traefik.http.services.maildev.loadbalancer.server.port=1080"
 
-  mongodb:
-    extends:
-      file: docker-compose.librechat.yml
-      service: mongodb
+  config-init:
+    extends: { file: docker-compose.librechat.yml, service: config-init }
     env_file: .env
 
-  config-init:
-    extends:
-      file: docker-compose.librechat.yml
-      service: config-init
+  mongodb:
+    extends: { file: docker-compose.librechat.yml, service: mongodb }
     env_file: .env
   
   meilisearch:
-    extends:
-      file: docker-compose.librechat.yml
-      service: meilisearch
+    extends: { file: docker-compose.librechat.yml, service: meilisearch }
     env_file: .env
 
   api:
-    extends:
-      file: docker-compose.librechat.yml
-      service: api
+    extends: { file: docker-compose.librechat.yml, service: api }
     image: librechat:local
     build:
       context: ./dev/librechat
@@ -54,63 +44,43 @@ services:
       NODE_ENV: development
 
   setup-permissions:
-    extends:
-      file: docker-compose.librechat.yml
-      service: setup-permissions
+    extends: { file: docker-compose.librechat.yml, service: setup-permissions }
     env_file: .env
 
   openwebui:
-    extends:
-      file: docker-compose.openwebui.yml
-      service: openwebui
+    extends: { file: docker-compose.openwebui.yml, service: openwebui }
     env_file: .env
 
   searxng:
-    extends:
-      file: docker-compose.websearch.yml
-      service: searxng
+    extends: { file: docker-compose.websearch.yml, service: searxng }
     env_file: .env
 
   firecrawl-api:
-    extends:
-      file: docker-compose.websearch.yml
-      service: firecrawl-api
+    extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
     env_file: .env
 
   playwright-service:
-    extends:
-      file: docker-compose.websearch.yml
-      service: playwright-service
+    extends: { file: docker-compose.websearch.yml, service: playwright-service }
     env_file: .env
 
   redis:
-    extends:
-      file: docker-compose.websearch.yml
-      service: redis
+    extends: { file: docker-compose.websearch.yml, service: redis }
     env_file: .env
 
   nuq-postgres:
-    extends:
-      file: docker-compose.websearch.yml
-      service: nuq-postgres
+    extends: { file: docker-compose.websearch.yml, service: nuq-postgres }
     env_file: .env
 
   rabbitmq:
-    extends:
-      file: docker-compose.websearch.yml
-      service: rabbitmq
+    extends: { file: docker-compose.websearch.yml, service: rabbitmq }
     env_file: .env
 
   vectordb:
-    extends:
-      file: docker-compose.rag.yml
-      service: vectordb
+    extends: { file: docker-compose.rag.yml, service: vectordb }
     env_file: .env
 
   rag_api:
-    extends:
-      file: docker-compose.rag.yml
-      service: rag_api
+    extends: { file: docker-compose.rag.yml, service: rag_api }
     image: rag_api:local
     build:
       context: ./dev/rag_api
@@ -131,3 +101,4 @@ volumes:
   firecrawl_pgdata:
   pgdata2:
   librechat-config:
+  mongoconfig:

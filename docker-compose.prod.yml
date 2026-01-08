@@ -1,89 +1,87 @@
 services:
   config-init:
     extends: { file: docker-compose.librechat.yml, service: config-init }
-    networks:
-      - app-net
 
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
-    restart: always
     volumes:
       - mongodata:/data/db
-    networks:
-      - app-net
+      - mongoconfig:/data/configdb
 
   meilisearch:
     extends: { file: docker-compose.librechat.yml, service: meilisearch }
-    restart: always
-    networks:
-      - app-net
 
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
-    restart: always
     networks:
       - traefik-net
       - app-net
     labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.librechat.rule=Host(`chat.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.librechat.entrypoints=web"
+      - "traefik.http.services.librechat.loadbalancer.server.port=3080"
+      - "traefik.http.routers.librechat-secure.rule=Host(`chat.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.librechat-secure.entrypoints=websecure"
+      - "traefik.http.routers.librechat-secure.tls=true"
       - "traefik.http.routers.librechat-secure.tls.certresolver=le"
 
   setup-permissions:
     extends: { file: docker-compose.librechat.yml, service: setup-permissions }
-    networks:
-      - app-net
+    volumes:
+      - mongodata:/mongo_data
+      - mongoconfig:/mongo_configdb
+    command: >
+      sh -c "chown -R ${UID:-1000}:${GID:-1000} /mongo_data /mongo_configdb"
 
   searxng:
     extends: { file: docker-compose.websearch.yml, service: searxng }
-    restart: always
     networks:
       - traefik-net
+      - app-net
     labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.searxng.rule=Host(`searxng.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.searxng.entrypoints=web"
+      - "traefik.http.services.searxng.loadbalancer.server.port=8080"
+      - "traefik.http.routers.searxng-secure.rule=Host(`searxng.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.searxng-secure.entrypoints=websecure"
+      - "traefik.http.routers.searxng-secure.tls=true"
       - "traefik.http.routers.searxng-secure.tls.certresolver=le"
 
   firecrawl-api:
     extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
-    restart: always
     networks:
       - traefik-net
       - firecrawl-network
+      - app-net
     labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.firecrawl.entrypoints=web"
+      - "traefik.http.services.firecrawl.loadbalancer.server.port=3002"
+      - "traefik.http.routers.firecrawl-secure.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.firecrawl-secure.entrypoints=websecure"
+      - "traefik.http.routers.firecrawl-secure.tls=true"
       - "traefik.http.routers.firecrawl-secure.tls.certresolver=le"
 
   playwright-service:
     extends: { file: docker-compose.websearch.yml, service: playwright-service }
-    restart: always
-    networks:
-      - firecrawl-network
 
   redis:
     extends: { file: docker-compose.websearch.yml, service: redis }
-    restart: always
-    networks:
-      - firecrawl-network
 
   nuq-postgres:
     extends: { file: docker-compose.websearch.yml, service: nuq-postgres }
-    restart: always
-    networks:
-      - firecrawl-network
 
   rabbitmq:
     extends: { file: docker-compose.websearch.yml, service: rabbitmq }
-    restart: always
-    networks:
-      - firecrawl-network
 
   vectordb:
     extends: { file: docker-compose.rag.yml, service: vectordb }
-    restart: always
-    networks:
-      - app-net
 
   rag_api:
     extends: { file: docker-compose.rag.yml, service: rag_api }
-    restart: always
-    networks:
-      - app-net
 
 networks:
   traefik-net:
@@ -96,6 +94,7 @@ networks:
 
 volumes:
   mongodata:
+  mongoconfig:
   firecrawl_pgdata:
   pgdata2:
   librechat-config:

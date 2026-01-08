@@ -181,8 +181,12 @@ services:
     image: mongo
     restart: always
     user: "${UID:-1000}:${GID:-1000}"
+    depends_on:
+      setup-permissions:
+        condition: service_completed_successfully
     volumes:
       - ./data-node:/data/db
+      - mongoconfig:/data/configdb
     command: mongod --noauth
     networks:
       - app-net
@@ -197,11 +201,13 @@ services:
       MEILI_MASTER_KEY: ${LIBRECHAT_MEILI_MASTER_KEY}
     volumes:
       - ./meili_data_v1.12:/meili_data
+      - mongoconfig:/mongo_configdb
     networks:
       - app-net
 
   setup-permissions:
     image: alpine
+    restart: "no"
     container_name: setup-permissions
     user: root
     volumes:
@@ -210,11 +216,13 @@ services:
       - ./uploads:/uploads
       - ./data-node:/mongo_data
       - ./meili_data_v1.12:/meili_data
+      - mongoconfig:/mongo_configdb
     command: >
-      sh -c "chown -R ${UID:-1000}:${GID:-1000} /logs /images /uploads /mongo_data /meili_data && 
-             chmod -R 775 /logs /images /uploads /mongo_data /meili_data"
+      sh -c "chown -R ${UID:-1000}:${GID:-1000} /logs /images /uploads /mongo_data /mongo_configdb /meili_data && 
+             chmod -R 775 /logs /images /uploads /mongo_data /mongo_configdb /meili_data"
     networks:
       - app-net
 
 volumes:
   librechat-config:
+  mongoconfig:
