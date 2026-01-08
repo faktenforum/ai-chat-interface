@@ -23,54 +23,12 @@ services:
   meilisearch:
     extends: { file: docker-compose.librechat.yml, service: meilisearch }
     restart: always
-    environment:
-      MEILI_HOST: http://0.0.0.0:7700
-      MEILI_NO_ANALYTICS: "true"
-      MEILI_MASTER_KEY: ${LIBRECHAT_MEILI_MASTER_KEY}
     networks:
       - traefik-net
 
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
     restart: always
-    # Override environment to ensure Portainer Stack variables are properly passed through
-    environment:
-      HOST: ${LIBRECHAT_HOST:-0.0.0.0}
-      MONGO_URI: ${LIBRECHAT_MONGO_URI}
-      MEILI_HOST: ${LIBRECHAT_MEILI_HOST:-http://meilisearch:7700}
-      RAG_PORT: ${LIBRECHAT_RAG_PORT:-8000}
-      RAG_API_URL: ${LIBRECHAT_RAG_API_URL:-http://rag_api:8000}
-      SESSION_SECRET: ${LIBRECHAT_SESSION_SECRET}
-      JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
-      JWT_REFRESH_SECRET: ${LIBRECHAT_JWT_REFRESH_SECRET}
-      CREDS_KEY: ${LIBRECHAT_CREDS_KEY}
-      CREDS_IV: ${LIBRECHAT_CREDS_IV}
-      ALLOW_REGISTRATION: ${LIBRECHAT_ALLOW_REGISTRATION:-true}
-      ALLOW_UNVERIFIED_EMAIL_LOGIN: ${LIBRECHAT_ALLOW_UNVERIFIED_EMAIL_LOGIN:-false}
-      EMAIL_HOST: ${EMAIL_HOST}
-      EMAIL_PORT: ${EMAIL_PORT:-587}
-      EMAIL_ENCRYPTION: ${EMAIL_ENCRYPTION}
-      EMAIL_USERNAME: ${EMAIL_USERNAME}
-      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
-      EMAIL_FROM: ${EMAIL_FROM}
-      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
-      EMAIL_ALLOW_SELFSIGNED: ${EMAIL_ALLOW_SELFSIGNED:-false}
-      OPENROUTER_KEY: ${OPENROUTER_KEY}
-      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
-      OPENROUTER_SITE_URL: ${OPENROUTER_SITE_URL}
-      OPENROUTER_APP_NAME: ${OPENROUTER_APP_NAME:-LibreChat-OpenRouter}
-      LIBRECHAT_SEARXNG_URL: ${LIBRECHAT_SEARXNG_URL:-http://searxng:8080}
-      LIBRECHAT_SEARXNG_API_KEY: ${LIBRECHAT_SEARXNG_API_KEY:-}
-      LIBRECHAT_JINA_API_KEY: ${LIBRECHAT_JINA_API_KEY:-}
-      LIBRECHAT_JINA_API_URL: ${LIBRECHAT_JINA_API_URL:-https://api.jina.ai/v1/rerank}
-      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-local-selfhost}
-      FIRECRAWL_API_URL: ${FIRECRAWL_API_URL:-http://firecrawl-api:3002}
-      FIRECRAWL_VERSION: ${FIRECRAWL_VERSION:-v2}
-      DOMAIN_CLIENT: ${DOMAIN_CLIENT}
-      SEARXNG_BASE_URL: ${LIBRECHAT_SEARXNG_URL:-http://searxng:8080}
-      SEARCH: ${LIBRECHAT_SEARCH_ENABLED:-true}
-      MEILI_MASTER_KEY: ${LIBRECHAT_MEILI_MASTER_KEY}
-      CONFIG_PATH: /app/config/librechat.yaml
     networks:
       - traefik-net
     labels:
@@ -92,8 +50,6 @@ services:
   searxng:
     extends: { file: docker-compose.websearch.yml, service: searxng }
     restart: always
-    environment:
-      SEARXNG_SECRET_KEY: ${SEARXNG_SECRET_KEY}
     networks:
       - traefik-net
     labels:
@@ -102,15 +58,6 @@ services:
   firecrawl-api:
     extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
     restart: always
-    environment:
-      PORT: ${FIRECRAWL_INTERNAL_PORT:-3002}
-      REDIS_URL: ${FIRECRAWL_REDIS_URL:-redis://redis:6379}
-      PLAYWRIGHT_MICROSERVICE_URL: ${PLAYWRIGHT_MICROSERVICE_URL:-http://playwright-service:3000/scrape}
-      USE_DB_AUTHENTICATION: ${FIRECRAWL_USE_DB_AUTHENTICATION:-false}
-      BULL_AUTH_KEY: ${FIRECRAWL_BULL_AUTH_KEY}
-      DATABASE_URL: postgres://${FIRECRAWL_POSTGRES_USER}:${FIRECRAWL_POSTGRES_PASSWORD}@${FIRECRAWL_POSTGRES_HOST}/${FIRECRAWL_POSTGRES_DB}
-      NUM_WORKERS: ${FIRECRAWL_NUM_WORKERS:-8}
-      LLM_MODEL: ${FIRECRAWL_LLM_MODEL:-gpt-4o}
     networks:
       - traefik-net
       - firecrawl-network
@@ -132,19 +79,12 @@ services:
   nuq-postgres:
     extends: { file: docker-compose.websearch.yml, service: nuq-postgres }
     restart: always
-    environment:
-      POSTGRES_DB: ${FIRECRAWL_POSTGRES_DB:-firecrawl}
-      POSTGRES_USER: ${FIRECRAWL_POSTGRES_USER:-firecrawl}
-      POSTGRES_PASSWORD: ${FIRECRAWL_POSTGRES_PASSWORD}
     networks:
       - firecrawl-network
 
   rabbitmq:
     extends: { file: docker-compose.websearch.yml, service: rabbitmq }
     restart: always
-    environment:
-      RABBITMQ_DEFAULT_USER: ${FIRECRAWL_RABBITMQ_USER:-firecrawl}
-      RABBITMQ_DEFAULT_PASS: ${FIRECRAWL_RABBITMQ_PASSWORD}
     networks:
       - firecrawl-network
 
@@ -152,23 +92,12 @@ services:
   vectordb:
     extends: { file: docker-compose.rag.yml, service: vectordb }
     restart: always
-    environment:
-      POSTGRES_DB: ${LIBRECHAT_VECTORDB_DB:-vectordb}
-      POSTGRES_USER: ${LIBRECHAT_VECTORDB_USER:-vectordb}
-      POSTGRES_PASSWORD: ${LIBRECHAT_VECTORDB_PASSWORD}
     networks:
       - traefik-net
 
   rag_api:
     extends: { file: docker-compose.rag.yml, service: rag_api }
     restart: always
-    environment:
-      DB_HOST: vectordb
-      RAG_PORT: ${LIBRECHAT_RAG_PORT:-8000}
-      RAG_HOST: ${LIBRECHAT_RAG_HOST:-0.0.0.0}
-      POSTGRES_DB: ${LIBRECHAT_VECTORDB_DB:-vectordb}
-      POSTGRES_USER: ${LIBRECHAT_VECTORDB_USER:-vectordb}
-      POSTGRES_PASSWORD: ${LIBRECHAT_VECTORDB_PASSWORD}
     networks:
       - traefik-net
 

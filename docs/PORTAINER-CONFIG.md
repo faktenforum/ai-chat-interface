@@ -23,8 +23,25 @@ Important: **No `envsubst`**. The generated YAML contains escaped placeholders l
    - `loadbalancer-net`
 2. In Portainer: Stack → Git repository
    - Compose path: `docker-compose.prod.yml`
-3. Paste the full `.env.prod` content into Stack → **Environment variables** (advanced mode)
+3. Configure environment
+   - Generate `stack.env` locally:
+     - `npm run setup:prod`
+   - In Portainer: Stack → **Environment variables** (Advanced mode)
+     - Paste the contents of your locally generated `stack.env`
 4. Deploy the stack
+
+## Local production-like test (optional)
+
+To test the production compose locally using your generated `stack.env`:
+
+- `docker compose --env-file stack.env -f docker-compose.prod.yml up -d`
+
+## Networking note (common confusion)
+
+In `docker-compose.prod.yml` the services join the network key `traefik-net`, but that key is mapped to the external Docker network **`loadbalancer-net`**:
+
+- Compose key: `traefik-net`
+- Actual Docker network name: `loadbalancer-net`
 
 ## Troubleshooting
 

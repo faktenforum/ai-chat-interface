@@ -1,6 +1,7 @@
 .env
 .env.local
 .env.*
+stack.env
 !env.example
 
 # Docker data

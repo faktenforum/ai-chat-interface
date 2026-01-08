@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 
 const ROOT_DIR = process.cwd();
 const ENV_FILE = path.join(ROOT_DIR, '.env');
+const STACK_ENV_FILE = path.join(ROOT_DIR, 'stack.env');
 const EXAMPLE_FILE = path.join(ROOT_DIR, 'env.example');
 const PROD_EXAMPLE_FILE = path.join(ROOT_DIR, 'env.prod.example');
 
@@ -74,7 +75,7 @@ async function main() {
     const args = process.argv.slice(2);
     const isProdMode = args.includes('--prod');
     const skipPrompts = args.includes('--yes') || args.includes('-y');
-    const targetFile = isProdMode ? path.join(ROOT_DIR, '.env.prod') : ENV_FILE;
+    const targetFile = isProdMode ? STACK_ENV_FILE : ENV_FILE;
 
     console.log(`\n🚀 AI Chat Interface - Environment Setup (TypeScript)${isProdMode ? ' [Production Mode]' : ''}${skipPrompts ? ' [Auto Mode]' : ''}\n`);
     if (skipPrompts) {
@@ -270,8 +271,8 @@ async function main() {
         console.log(`   📝 File: ${path.basename(targetFile)}`);
         console.log(`   🔄 Variables: ${processedKeys.size} total (${preservedVarsCount} preserved, ${newVarsCount} new)`);
         console.log('\n📦 Next steps for Portainer deployment:');
-        console.log('  1. Copy the contents of .env.prod');
-        console.log('  2. In Portainer: Stack → Editor → Environment variables');
+        console.log('  1. Copy the contents of stack.env');
+        console.log('  2. In Portainer: Stack → Editor → Environment variables (Advanced mode)');
         console.log('  3. Paste the environment variables');
         console.log('  4. Deploy stack → config-init will generate config automatically');
         console.log('\n💡 Tip: Re-run this script anytime env.example or env.prod.example changes');
