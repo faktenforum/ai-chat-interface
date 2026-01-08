@@ -34,12 +34,21 @@ services:
     command: >
       sh -c "chown -R ${UID:-1000}:${GID:-1000} /mongo_data /mongo_configdb"
 
+  searxng-config-init:
+    extends: { file: docker-compose.websearch.yml, service: searxng-config-init }
+
   searxng:
     extends: { file: docker-compose.websearch.yml, service: searxng }
+    volumes:
+      # Use named volume in production (bind mounts don't work reliably in Portainer)
+      - searxng-config:/etc/searxng:ro
     networks:
       - app-net
     # SearXNG is NOT exposed via Traefik in production
     # It's only accessible internally by LibreChat
+    depends_on:
+      searxng-config-init:
+        condition: service_completed_successfully
 
   firecrawl-api:
     extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
@@ -90,3 +99,4 @@ volumes:
   firecrawl_pgdata:
   pgdata2:
   librechat-config:
+  searxng-config:

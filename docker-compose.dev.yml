@@ -51,8 +51,17 @@ services:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }
     env_file: .env
 
+  searxng-config-init:
+    extends: { file: docker-compose.websearch.yml, service: searxng-config-init }
+    env_file: .env
+
   searxng:
     extends: { file: docker-compose.websearch.yml, service: searxng }
+    volumes:
+      - searxng-config:/etc/searxng:ro
+    depends_on:
+      searxng-config-init:
+        condition: service_completed_successfully
     env_file: .env
 
   firecrawl-api:
@@ -102,3 +111,4 @@ volumes:
   pgdata2:
   librechat-config:
   mongoconfig:
+  searxng-config:
