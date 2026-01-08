@@ -59,7 +59,11 @@ services:
           messageWindowSize: 5
           agent:
             provider: "OpenRouter"
-            model: "openai/gpt-5-mini"
+            # Open Source model optimized for Memory tasks
+            # Llama 3.3 70B: Better choice for Memory - faster, more cost-effective, still very precise
+            # Memory Agent needs: Function Calling (required), precision (important), speed (runs in parallel)
+            # DeepSeek V3.2 is overkill for simple memory decisions
+            model: "meta-llama/llama-3.3-70b-instruct"
             instructions: |
               A memory assistant that stores per-user information securely and recalls it when relevant.
             model_parameters:
@@ -71,13 +75,145 @@ services:
               apiKey: "$${OPENROUTER_KEY}"
               baseURL: "$${OPENROUTER_BASE_URL}"
               models:
-                default: ["openai/gpt-5-mini"]
+                # Mix of Open Source and proprietary models - Fallback list if fetch fails or fetch is disabled
+                # Sorted by Top Weekly popularity
+                default: [
+                  "anthropic/claude-sonnet-4.5",      # Top proprietary model
+                  "deepseek/deepseek-v3.2",           # Best Open Source
+                  "google/gemini-2.5-flash-lite",    # Google's lightweight reasoning model, optimized for speed and cost
+                  "meta-llama/llama-3.3-70b-instruct", # Meta's latest, very popular
+                  "openai/gpt-5.2",                   # Latest GPT-5 series
+                  "xiaomi/mimo-v2-flash",             # Popular open-source model
+                  "deepseek/deepseek-chat",           # Excellent for coding
+                  "mistralai/mistral-large-2411",     # European option (French)
+                  "mistralai/mistral-nemo"            # European option (French, smaller)
+                ]
                 fetch: true
               titleConvo: true
               summarize: true
               headers:
                 HTTP-Referer: "$${OPENROUTER_SITE_URL}"
                 X-Title: "$${OPENROUTER_APP_NAME}"
+        
+        # Model Specs: Define default model for new users
+        # This prevents "My Agents" from being selected when users have no agents
+        # Note: Memory function uses a separate model (configured in memory.agent section)
+        # Chat models don't need Function Calling for Memory - Memory works independently
+        # Models sorted by OpenRouter Top Weekly popularity (https://openrouter.ai/models?order=top-weekly)
+        # Mix of Open Source and proprietary models, European models prioritized where available
+        modelSpecs:
+          list:
+            # Default: DeepSeek V3.2 - Best Open Source model in Top Weekly (#4 overall)
+            - name: "deepseek-v3.2"
+              label: "DeepSeek V3.2 (Open Source)"
+              description: "DeepSeek's latest open-source model, 356B tokens context, excellent reasoning and tool use"
+              default: true
+              preset:
+                endpoint: "OpenRouter"
+                endpointType: "custom"
+                model: "deepseek/deepseek-v3.2"
+            
+            # Top Proprietary Models (OpenRouter Top Weekly ranking)
+            # 1. Claude Sonnet 4.5 - #1 in Top Weekly, Anthropic's most advanced Sonnet model
+            - name: "claude-sonnet-4.5"
+              label: "Claude Sonnet 4.5"
+              description: "Anthropic's most advanced Sonnet model, optimized for real-world agents and coding workflows"
+              preset:
+                endpoint: "OpenRouter"
+                endpointType: "custom"
+                model: "anthropic/claude-sonnet-4.5"
+            
+            # Top Open Source Models (OpenRouter Top Weekly ranking)
+            # 2. Llama 3.3 70B - Meta's latest, very popular
+            - name: "llama-3.3-70b"
+              label: "Llama 3.3 70B (Open Source)"
+              description: "Meta's latest open-source model with 70B parameters, very popular"
+              preset:
+                endpoint: "OpenRouter"
+                endpointType: "custom"
+                model: "meta-llama/llama-3.3-70b-instruct"
+            
+            # 3. Xiaomi MiMo-V2-Flash - Popular open-source model, excellent performance
+            - name: "xiaomi-mimo-v2-flash"
+              label: "MiMo-V2-Flash (Open Source)"
+              description: "Xiaomi's open-source foundation language model, 392B tokens context, excellent for trivia, academia, finance, and science"
+              preset:
+                endpoint: "OpenRouter"
+                endpointType: "custom"
+                model: "xiaomi/mimo-v2-flash"
+            
+            # 4. DeepSeek Chat 67B - Very popular, especially for coding
+            - name: "deepseek-chat-67b"
+              label: "DeepSeek Chat 67B (Open Source)"
+              description: "DeepSeek's powerful open-source model, 67B parameters, excellent for coding"
+              preset:
+                endpoint: "OpenRouter"
+                endpointType: "custom"
+                model: "deepseek/deepseek-chat"
+            
+            # 5. Mistral Large 2411 - Popular European option (French company)
+            - name: "mistral-large-2411"
+              label: "Mistral Large 2411 (European)"
+              description: "Mistral's latest model (French company), very popular"
+              preset:
+                endpoint: "OpenRouter"
+                endpointType: "custom"
+                model: "mistralai/mistral-large-2411"
+            
+            # 6. Llama 3.1 8B - Smaller but popular option
+            - name: "llama-3.1-8b"
+              label: "Llama 3.1 8B (Open Source)"
+              description: "Meta's efficient open-source model, 8B parameters, fast and popular"
+              preset:
+                endpoint: "OpenRouter"
+                endpointType: "custom"
+                model: "meta-llama/llama-3.1-8b-instruct"
+            
+            # 7. OpenAI GPT-5 Series - Proprietary, high-performance models
+            - name: "openai-gpt5-mini"
+              label: "GPT-5 Mini"
+              description: "OpenAI's GPT-5 series model, optimized for efficiency and speed while maintaining high quality responses"
+              preset:
+                endpoint: "OpenRouter"
+                endpointType: "custom"
+                model: "openai/gpt-5-mini"
+            
+            # 8. OpenAI GPT-5.2 - Latest GPT-5 series model
+            - name: "openai-gpt5-2"
+              label: "GPT-5.2"
+              description: "OpenAI's latest GPT-5.2 model, offering advanced capabilities for complex reasoning and multi-step tasks"
+              preset:
+                endpoint: "OpenRouter"
+                endpointType: "custom"
+                model: "openai/gpt-5.2"
+            
+            # 9. Google Gemini 2.5 Flash Lite - Google's lightweight reasoning model
+            - name: "google-gemini-2.5-flash-lite"
+              label: "Gemini 2.5 Flash Lite"
+              description: "Google's lightweight reasoning model optimized for ultra-low latency and cost efficiency, 1M context window, faster token generation"
+              preset:
+                endpoint: "OpenRouter"
+                endpointType: "custom"
+                model: "google/gemini-2.5-flash-lite"
+            
+            # 10. Mistral Nemo - European model (French company), 12B parameters
+            - name: "mistral-nemo"
+              label: "Mistral Nemo (European)"
+              description: "Mistral's 12B parameter model developed with NVIDIA, multilingual support, European company"
+              preset:
+                endpoint: "OpenRouter"
+                endpointType: "custom"
+                model: "mistralai/mistral-nemo"
+            
+            # 11. Z.AI GLM 4.7 - Advanced reasoning model
+            - name: "z-ai-glm-4.7"
+              label: "GLM 4.7"
+              description: "Z.AI's GLM 4.7 model, optimized for complex reasoning and advanced language understanding"
+              preset:
+                endpoint: "OpenRouter"
+                endpointType: "custom"
+                model: "glm/glm-4.7"
+
         
         webSearch:
           enabled: true
