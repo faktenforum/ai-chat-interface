@@ -15,6 +15,7 @@ services:
       - traefik-net
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
       - "traefik.http.routers.openwebui.rule=Host(`webui.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.openwebui.entrypoints=web"
       - "traefik.http.services.openwebui.loadbalancer.server.port=8080"

@@ -188,6 +188,7 @@ services:
       start_period: 120s
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
       - "traefik.http.routers.firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.firecrawl.entrypoints=web"
       - "traefik.http.services.firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"

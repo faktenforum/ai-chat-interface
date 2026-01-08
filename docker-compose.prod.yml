@@ -18,6 +18,7 @@ services:
       - app-net
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=loadbalancer-net"
       - "traefik.http.routers.librechat.rule=Host(`chat.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.librechat.entrypoints=web"
       - "traefik.http.services.librechat.loadbalancer.server.port=3080"
@@ -58,6 +59,7 @@ services:
       - app-net
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=loadbalancer-net"
       - "traefik.http.routers.firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.firecrawl.entrypoints=web"
       - "traefik.http.services.firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"

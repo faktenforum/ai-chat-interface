@@ -14,6 +14,7 @@ services:
       - traefik-net
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
       - "traefik.http.routers.maildev.rule=Host(`maildev.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.maildev.entrypoints=web"
       - "traefik.http.services.maildev.loadbalancer.server.port=1080"
