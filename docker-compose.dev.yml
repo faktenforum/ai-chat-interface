@@ -1,22 +1,17 @@
-# Development Environment - Local Builds & Live Reload
-# Usage: docker compose -f docker-compose.dev.yml up -d
-
 services:
-  # --- INFRASTRUCTURE ---
   traefik:
     extends:
       file: docker-compose.traefik.yml
       service: traefik
     env_file: .env
 
-  # --- INFRASTRUCTURE ---
   maildev:
     container_name: maildev
     image: maildev/maildev:latest
     restart: always
     ports:
-      - "1080:1080"  # Web UI
-      - "1025:1025"  # SMTP
+      - "1080:1080"
+      - "1025:1025"
     networks:
       - traefik-net
     labels:
@@ -25,11 +20,16 @@ services:
       - "traefik.http.routers.maildev.entrypoints=web"
       - "traefik.http.services.maildev.loadbalancer.server.port=1080"
 
-  # --- LIBRECHAT ---
   mongodb:
     extends:
       file: docker-compose.librechat.yml
       service: mongodb
+    env_file: .env
+
+  config-init:
+    extends:
+      file: docker-compose.librechat.yml
+      service: config-init
     env_file: .env
   
   meilisearch:
@@ -49,7 +49,6 @@ services:
       target: node
     env_file: .env
     volumes:
-      # Mount whole agents folder to ensure correct resolution of internal modules and node_modules
       - ./dev/agents:/app/node_modules/@librechat/agents
     environment:
       NODE_ENV: development
@@ -60,14 +59,12 @@ services:
       service: setup-permissions
     env_file: .env
 
-  # --- WEBUI ---
   openwebui:
     extends:
       file: docker-compose.openwebui.yml
       service: openwebui
     env_file: .env
 
-  # --- WEBSEARCH ---
   searxng:
     extends:
       file: docker-compose.websearch.yml
@@ -104,7 +101,6 @@ services:
       service: rabbitmq
     env_file: .env
 
-  # --- RAG ---
   vectordb:
     extends:
       file: docker-compose.rag.yml
@@ -134,3 +130,4 @@ networks:
 volumes:
   firecrawl_pgdata:
   pgdata2:
+  librechat-config:

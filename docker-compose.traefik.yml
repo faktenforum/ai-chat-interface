@@ -9,10 +9,6 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      # Uncomment and configure for production if not using standalone Traefik
-      # - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      # - "--certificatesresolvers.letsencrypt.acme.email=admin@example.com"
-      # - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
     ports:
       - "80:80"
       - "443:443"

@@ -24,7 +24,6 @@ services:
       RAG_OPENAI_API_KEY: ${RAG_OPENAI_API_KEY:-${OPENROUTER_KEY:-}}
       RAG_OPENAI_BASEURL: ${RAG_OPENAI_BASEURL:-${OPENROUTER_BASE_URL:-}}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-${OPENROUTER_KEY:-}}
-      # Force embeddings provider to use OpenRouter if keys are shared
       EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER:-openai}
       EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-text-embedding-3-small}
       OPENAI_API_BASE: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}

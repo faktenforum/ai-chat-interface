@@ -1,22 +1,13 @@
-# Production Environment - SSL, Security Headers, & High Availability
-# Usage (local): docker compose --env-file stack.env -f docker-compose.prod.yml up -d
-# Usage (Portainer Git stack): paste stack.env contents into Stack → Environment variables (Advanced mode)
-
 services:
-  # --- LIBRECHAT ---
   config-init:
     extends: { file: docker-compose.librechat.yml, service: config-init }
-    # No environment needed - config-init only writes static config file
     networks:
       - app-net
 
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
     restart: always
-    # Keep --noauth consistent with local setup
-    # Note: For production with auth, would need to update MONGO_URI to include credentials
     volumes:
-      # Override bind mount with named volume for Portainer
       - mongodata:/data/db
     networks:
       - app-net
@@ -41,14 +32,6 @@ services:
     networks:
       - app-net
 
-  # --- WEBUI ---
-  # openwebui:
-  #   extends: { file: docker-compose.openwebui.yml, service: openwebui }
-  #   restart: always
-  #   labels:
-  #     - "traefik.http.routers.openwebui-secure.tls.certresolver=le"
-
-  # --- WEBSEARCH ---
   searxng:
     extends: { file: docker-compose.websearch.yml, service: searxng }
     restart: always
@@ -90,7 +73,6 @@ services:
     networks:
       - firecrawl-network
 
-  # --- RAG ---
   vectordb:
     extends: { file: docker-compose.rag.yml, service: vectordb }
     restart: always

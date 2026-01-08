@@ -30,7 +30,6 @@ services:
       - "traefik.http.routers.searxng.rule=Host(`searxng.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.searxng.entrypoints=web"
       - "traefik.http.services.searxng.loadbalancer.server.port=8080"
-      # Secure entrypoint
       - "traefik.http.routers.searxng-secure.rule=Host(`searxng.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.searxng-secure.entrypoints=websecure"
       - "traefik.http.routers.searxng-secure.tls=true"
@@ -114,7 +113,6 @@ services:
       BULL_AUTH_KEY: ${FIRECRAWL_BULL_AUTH_KEY:-}
       NUQ_DATABASE_URL: postgres://${FIRECRAWL_POSTGRES_USER:-firecrawl}:${FIRECRAWL_POSTGRES_PASSWORD:-firecrawl}@${FIRECRAWL_POSTGRES_HOST:-nuq-postgres}:5432/${FIRECRAWL_POSTGRES_DB:-firecrawl}
       NUQ_RABBITMQ_URL: amqp://${FIRECRAWL_RABBITMQ_USER:-firecrawl}:${FIRECRAWL_RABBITMQ_PASSWORD:-firecrawl}@rabbitmq:5672
-      # Use the official RabbitMQ stack for extraction jobs as required by the image
       USE_RABBITMQ: "true"
     depends_on:
       redis:
@@ -143,7 +141,6 @@ services:
       - "traefik.http.routers.firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.firecrawl.entrypoints=web"
       - "traefik.http.services.firecrawl.loadbalancer.server.port=3002"
-      # Secure entrypoint
       - "traefik.http.routers.firecrawl-secure.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
       - "firecrawl-secure.entrypoints=websecure"
       - "firecrawl-secure.tls=true"

@@ -8,7 +8,6 @@ services:
       DEFAULT_MODEL: ${OPENWEBUI_DEFAULT_MODEL:-google/gemini-2.0-flash-exp:free}
       ADMIN_EMAIL: ${OPENWEBUI_ADMIN_EMAIL}
       ADMIN_PASSWORD: ${OPENWEBUI_ADMIN_PASSWORD}
-    # Port removed, handled by Traefik
     volumes:
       - ${OPENWEBUI_VOLUME:-./volumes/openwebui}:/app/backend/data
     restart: unless-stopped
@@ -19,7 +18,6 @@ services:
       - "traefik.http.routers.openwebui.rule=Host(`webui.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.openwebui.entrypoints=web"
       - "traefik.http.services.openwebui.loadbalancer.server.port=8080"
-      # Secure entrypoint
       - "traefik.http.routers.openwebui-secure.rule=Host(`webui.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.openwebui-secure.entrypoints=websecure"
       - "traefik.http.routers.openwebui-secure.tls=true"

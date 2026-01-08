@@ -1,5 +1,4 @@
 services:
-  # Config init: Generates LibreChat config (LibreChat resolves env vars at runtime)
   config-init:
     image: alpine:latest
     container_name: librechat-config-init
@@ -127,7 +126,6 @@ services:
       CREDS_IV: ${LIBRECHAT_CREDS_IV}
       ALLOW_REGISTRATION: ${LIBRECHAT_ALLOW_REGISTRATION:-true}
       ALLOW_UNVERIFIED_EMAIL_LOGIN: ${LIBRECHAT_ALLOW_UNVERIFIED_EMAIL_LOGIN:-true}
-      # Email SMTP Configuration
       EMAIL_HOST: ${EMAIL_HOST}
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_ENCRYPTION: ${EMAIL_ENCRYPTION}
@@ -136,12 +134,10 @@ services:
       EMAIL_FROM: ${EMAIL_FROM}
       EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
       EMAIL_ALLOW_SELFSIGNED: ${EMAIL_ALLOW_SELFSIGNED:-false}
-      # OpenRouter Configuration (for librechat.yaml template)
       OPENROUTER_KEY: ${OPENROUTER_KEY}
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
       OPENROUTER_SITE_URL: ${OPENROUTER_SITE_URL:-http://chat.localhost}
       OPENROUTER_APP_NAME: ${OPENROUTER_APP_NAME:-LibreChat-OpenRouter}
-      # WebSearch Configuration (for librechat.yaml template)
       LIBRECHAT_SEARXNG_URL: ${LIBRECHAT_SEARXNG_URL:-http://searxng:8080}
       LIBRECHAT_SEARXNG_API_KEY: ${LIBRECHAT_SEARXNG_API_KEY:-}
       LIBRECHAT_JINA_API_KEY: ${LIBRECHAT_JINA_API_KEY:-}
@@ -149,7 +145,6 @@ services:
       FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-local-selfhost}
       FIRECRAWL_API_URL: ${FIRECRAWL_API_URL:-http://firecrawl-api:3002}
       FIRECRAWL_VERSION: ${FIRECRAWL_VERSION:-v2}
-      # LibreChat Core
       DOMAIN_CLIENT: ${DOMAIN_CLIENT:-http://chat.localhost}
       SEARXNG_BASE_URL: ${LIBRECHAT_SEARXNG_URL:-http://searxng:8080}
       SEARCH: ${LIBRECHAT_SEARCH_ENABLED:-true}
@@ -177,7 +172,6 @@ services:
       - "traefik.http.routers.librechat.rule=Host(`chat.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.librechat.entrypoints=web"
       - "traefik.http.services.librechat.loadbalancer.server.port=3080"
-      # Secure entrypoint for production
       - "traefik.http.routers.librechat-secure.rule=Host(`chat.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.librechat-secure.entrypoints=websecure"
       - "traefik.http.routers.librechat-secure.tls=true"
