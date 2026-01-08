@@ -37,18 +37,9 @@ services:
   searxng:
     extends: { file: docker-compose.websearch.yml, service: searxng }
     networks:
-      - traefik-net
       - app-net
-
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.searxng.rule=Host(`searxng.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.searxng.entrypoints=web"
-      - "traefik.http.services.searxng.loadbalancer.server.url=http://searxng:8080"
-      - "traefik.http.routers.searxng-secure.rule=Host(`searxng.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.searxng-secure.entrypoints=websecure"
-      - "traefik.http.routers.searxng-secure.tls=true"
-      - "traefik.http.routers.searxng-secure.tls.certresolver=le"
+    # SearXNG is NOT exposed via Traefik in production
+    # It's only accessible internally by LibreChat
 
   firecrawl-api:
     extends: { file: docker-compose.websearch.yml, service: firecrawl-api }

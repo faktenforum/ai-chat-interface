@@ -6,7 +6,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./config/searxng:/etc/searxng:rw
+      - ./config/searxng:/etc/searxng:ro
     environment:
       SEARXNG_BASE_URL: http://searxng.${DOMAIN:-localhost}/
       SEARXNG_SECRET_KEY: ${SEARXNG_SECRET_KEY}
@@ -30,9 +30,10 @@ services:
       - app-net
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
       - "traefik.http.routers.searxng.rule=Host(`searxng.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.searxng.entrypoints=web"
-      - "traefik.http.services.searxng.loadbalancer.server.url=http://searxng:8080"
+      - "traefik.http.services.searxng.loadbalancer.server.port=8080"
 
   playwright-service:
     container_name: firecrawl-playwright
