@@ -18,6 +18,3 @@ services:
       - "traefik.http.routers.openwebui.rule=Host(`webui.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.openwebui.entrypoints=web"
       - "traefik.http.services.openwebui.loadbalancer.server.port=8080"
-      - "traefik.http.routers.openwebui-secure.rule=Host(`webui.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.openwebui-secure.entrypoints=websecure"
-      - "traefik.http.routers.openwebui-secure.tls=true"

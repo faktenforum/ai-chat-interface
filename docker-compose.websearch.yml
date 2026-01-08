@@ -29,10 +29,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.searxng.rule=Host(`searxng.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.searxng.entrypoints=web"
-      - "traefik.http.services.searxng.loadbalancer.server.port=8080"
-      - "traefik.http.routers.searxng-secure.rule=Host(`searxng.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.searxng-secure.entrypoints=websecure"
-      - "traefik.http.routers.searxng-secure.tls=true"
+      - "traefik.http.services.searxng.loadbalancer.server.url=http://searxng:8080"
 
   playwright-service:
     container_name: firecrawl-playwright
@@ -43,7 +40,6 @@ services:
       - PORT=3000
     networks:
       - firecrawl-network
-      - traefik-net
 
   redis:
     container_name: firecrawl-redis
@@ -140,10 +136,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.firecrawl.entrypoints=web"
-      - "traefik.http.services.firecrawl.loadbalancer.server.port=3002"
-      - "traefik.http.routers.firecrawl-secure.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
-      - "firecrawl-secure.entrypoints=websecure"
-      - "firecrawl-secure.tls=true"
+      - "traefik.http.services.firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"
 
 volumes:
   firecrawl_pgdata:

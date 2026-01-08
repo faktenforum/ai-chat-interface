@@ -172,9 +172,6 @@ services:
       - "traefik.http.routers.librechat.rule=Host(`chat.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.librechat.entrypoints=web"
       - "traefik.http.services.librechat.loadbalancer.server.port=3080"
-      - "traefik.http.routers.librechat-secure.rule=Host(`chat.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.librechat-secure.entrypoints=websecure"
-      - "traefik.http.routers.librechat-secure.tls=true"
 
   mongodb:
     container_name: mongodb
