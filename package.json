@@ -6,8 +6,7 @@
         "setup": "./scripts/setup-env.ts",
         "setup:yes": "./scripts/setup-env.ts --yes",
         "setup:prod": "./scripts/setup-env.ts --prod",
-        "setup:prod:yes": "./scripts/setup-env.ts --prod --yes",
-        "test:prod": "./scripts/test-prod-setup.sh"
+        "setup:prod:yes": "./scripts/setup-env.ts --prod --yes"
     },
     "license": "MIT",
     "devDependencies": {
