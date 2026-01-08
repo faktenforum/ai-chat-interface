@@ -23,6 +23,10 @@ services:
       - "traefik.http.services.maildev.loadbalancer.server.port=1080"
 
   # --- LIBRECHAT ---
+  config-init:
+    extends: { file: docker-compose.librechat.yml, service: config-init }
+    env_file: .env
+
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
     env_file: .env
@@ -87,3 +91,4 @@ networks:
 volumes:
   firecrawl_pgdata:
   pgdata2:
+  librechat-config:

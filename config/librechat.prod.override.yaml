@@ -1,9 +1,0 @@
-# Production-specific overrides for librechat.yaml
-# This file is merged with config/librechat.yaml to create config/librechat.prod.yaml
-# Only define values that differ from the base configuration
-
-# Production: Restrict registration to allowed domains
-registration:
-  allowedDomains:
-    - "correctiv.org"
-    - "faktenforum.org"

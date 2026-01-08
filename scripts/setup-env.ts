@@ -54,9 +54,7 @@ const PROMPTS: Record<string, PromptConfig> = {
     'OPENROUTER_KEY': { message: 'OpenRouter API Key:', type: 'password' },
     'LIBRECHAT_JINA_API_KEY': { message: 'Jina API Key (optional, press enter to skip):', type: 'input' },
 
-    // Mongo
-    'LIBRECHAT_MONGO_INITDB_ROOT_USERNAME': { message: 'Mongo Root Username:', type: 'input', defaultGen: () => genShortId('librechat') },
-    'LIBRECHAT_MONGO_INITDB_ROOT_PASSWORD': { message: 'Mongo Root Password:', type: 'password', defaultGen: () => genSecret(16) },
+    // Mongo (using --noauth, so INITDB credentials not needed)
     'LIBRECHAT_MONGO_DATABASE': { message: 'Mongo Database Name:', type: 'input', defaultGen: () => 'librechat' },
 
     // VectorDB
@@ -83,14 +81,16 @@ async function main() {
         console.log('⚡ Skipping prompts, using defaults and existing values...\n');
     }
 
-    // 1. Load existing env file for defaults
-    // In prod mode, prefer .env.prod if it exists, otherwise fall back to .env
+    // 1. Load existing env file to preserve user values (API keys, passwords, etc.)
+    // File will be completely rewritten based on env.example structure
     let existingEnv: Record<string, string> = {};
     const defaultsFile = isProdMode && fs.existsSync(targetFile) ? targetFile : ENV_FILE;
 
     if (fs.existsSync(defaultsFile)) {
-        console.log(`📄 Found existing ${path.basename(defaultsFile)} file, loading values as defaults...`);
+        console.log(`📄 Loading existing values from ${path.basename(defaultsFile)} (file will be regenerated)...`);
         existingEnv = dotenv.parse(fs.readFileSync(defaultsFile));
+    } else {
+        console.log(`📝 Creating new ${path.basename(targetFile)} file...`);
     }
 
     // Migration helper: map old keys to new keys if missing
@@ -159,7 +159,15 @@ async function main() {
         }
 
         const [key, ...valueParts] = trimmed.split('=');
-        const defaultValue = baseDefaults[key] || valueParts.join('=');
+        if (!key) continue;
+        
+        // Skip if already processed (avoid duplicates)
+        if (processedKeys.has(key)) {
+            continue;
+        }
+        
+        // Use value from baseDefaults (which includes prod overrides) if available, otherwise from example
+        const defaultValue = baseDefaults[key] !== undefined ? baseDefaults[key] : valueParts.join('=');
         const currentValue = existingEnv[key];
         processedKeys.add(key);
 
@@ -218,39 +226,60 @@ async function main() {
         finalEnvLines.push(`${key}=${currentValue !== undefined ? currentValue : defaultValue}`);
     }
 
-    // 5. Add any production-only variables that weren't in env.example
+    // 5. Add production-only section with full structure from env.prod.example
     if (isProdMode && fs.existsSync(PROD_EXAMPLE_FILE)) {
         const prodContent = fs.readFileSync(PROD_EXAMPLE_FILE, 'utf-8');
+        let addedProdSection = false;
 
         for (const line of prodContent.split('\n')) {
             const trimmed = line.trim();
-            if (!trimmed || trimmed.startsWith('#')) continue;
-            const [key] = trimmed.split('=');
+            
+            // Keep comments and empty lines from env.prod.example
+            if (!trimmed || trimmed.startsWith('#')) {
+                if (!addedProdSection) {
+                    finalEnvLines.push('');
+                    finalEnvLines.push('# ═══════════════════════════════════════════════════════════════════════════');
+                    finalEnvLines.push('# Production-Only Configuration (from env.prod.example)');
+                    finalEnvLines.push('# ═══════════════════════════════════════════════════════════════════════════');
+                    addedProdSection = true;
+                }
+                finalEnvLines.push(line);
+                continue;
+            }
 
+            const [key] = trimmed.split('=');
             if (key && !processedKeys.has(key)) {
                 const currentValue = existingEnv[key];
                 const defaultValue = baseDefaults[key];
                 finalEnvLines.push(`${key}=${currentValue !== undefined ? currentValue : defaultValue}`);
+                processedKeys.add(key);
             }
         }
     }
 
     // 6. Write final file
-    fs.writeFileSync(targetFile, finalEnvLines.join('\n'));
+    const finalContent = finalEnvLines.join('\n');
+    fs.writeFileSync(targetFile, finalContent);
+    
+    // Summary
+    const newVarsCount = Array.from(processedKeys).filter(k => !existingEnv[k]).length;
+    const preservedVarsCount = Array.from(processedKeys).filter(k => existingEnv[k]).length;
+    
     if (isProdMode) {
-        console.log(`\n✅ Production setup complete! Values written to ${path.basename(targetFile)}`);
-        console.log('You can use this file for Portainer or production deployments.');
-        
-        // Merge LibreChat config for production
-        try {
-            const { execSync } = require('child_process');
-            console.log('\n📦 Merging LibreChat production config...');
-            execSync('npm run merge:config', { stdio: 'inherit' });
-        } catch (error) {
-            console.warn('⚠️  Warning: Could not merge LibreChat config. Run manually: npm run merge:config');
-        }
+        console.log(`\n✅ Production environment file regenerated!`);
+        console.log(`   📝 File: ${path.basename(targetFile)}`);
+        console.log(`   🔄 Variables: ${processedKeys.size} total (${preservedVarsCount} preserved, ${newVarsCount} new)`);
+        console.log('\n📦 Next steps for Portainer deployment:');
+        console.log('  1. Copy the contents of .env.prod');
+        console.log('  2. In Portainer: Stack → Editor → Environment variables');
+        console.log('  3. Paste the environment variables');
+        console.log('  4. Deploy stack → config-init will generate config automatically');
+        console.log('\n💡 Tip: Re-run this script anytime env.example or env.prod.example changes');
     } else {
-        console.log('\n✅ Setup complete! Your .env file has been updated.\n');
+        console.log(`\n✅ Environment file regenerated!`);
+        console.log(`   📝 File: ${path.basename(targetFile)}`);
+        console.log(`   🔄 Variables: ${processedKeys.size} total (${preservedVarsCount} preserved, ${newVarsCount} new)`);
+        console.log('\n💡 Tip: Re-run this script anytime env.example changes');
     }
 }
 
