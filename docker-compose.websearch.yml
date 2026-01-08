@@ -149,8 +149,3 @@ services:
 volumes:
   firecrawl_pgdata:
 
-networks:
-  traefik-net:
-    external: true
-  firecrawl-network:
-    driver: bridge

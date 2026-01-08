@@ -22,7 +22,3 @@ services:
     networks:
       - traefik-net
     restart: unless-stopped
-
-networks:
-  traefik-net:
-    external: true

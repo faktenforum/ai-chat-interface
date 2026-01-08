@@ -23,7 +23,3 @@ services:
       - "traefik.http.routers.openwebui-secure.rule=Host(`webui.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.openwebui-secure.entrypoints=websecure"
       - "traefik.http.routers.openwebui-secure.tls=true"
-
-networks:
-  traefik-net:
-    external: true

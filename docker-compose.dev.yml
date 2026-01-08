@@ -125,7 +125,7 @@ services:
 
 networks:
   traefik-net:
-    external: true
+    driver: bridge
   firecrawl-network:
     driver: bridge
 
