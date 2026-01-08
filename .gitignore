@@ -25,6 +25,7 @@ tmp/
 Thumbs.db
 *.swp
 *.swo
+.cursor/
 
 # Portainer
 docker-compose.portainer.yml
