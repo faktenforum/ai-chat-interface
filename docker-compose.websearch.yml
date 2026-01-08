@@ -24,6 +24,7 @@ services:
         max-file: "1"
     networks:
       - traefik-net
+      - app-net
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.searxng.rule=Host(`searxng.${DOMAIN:-localhost}`)"
@@ -128,6 +129,7 @@ services:
     networks:
       - firecrawl-network
       - traefik-net
+      - app-net
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

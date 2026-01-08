@@ -1,5 +1,6 @@
 # Production Environment - SSL, Security Headers, & High Availability
-# Usage: docker compose -f docker-compose.prod.yml up -d
+# Usage (local): docker compose --env-file stack.env -f docker-compose.prod.yml up -d
+# Usage (Portainer Git stack): paste stack.env contents into Stack → Environment variables (Advanced mode)
 
 services:
   # --- LIBRECHAT ---
@@ -7,7 +8,7 @@ services:
     extends: { file: docker-compose.librechat.yml, service: config-init }
     # No environment needed - config-init only writes static config file
     networks:
-      - traefik-net
+      - app-net
 
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
@@ -18,26 +19,27 @@ services:
       # Override bind mount with named volume for Portainer
       - mongodata:/data/db
     networks:
-      - traefik-net
+      - app-net
 
   meilisearch:
     extends: { file: docker-compose.librechat.yml, service: meilisearch }
     restart: always
     networks:
-      - traefik-net
+      - app-net
 
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
     restart: always
     networks:
       - traefik-net
+      - app-net
     labels:
       - "traefik.http.routers.librechat-secure.tls.certresolver=le"
 
   setup-permissions:
     extends: { file: docker-compose.librechat.yml, service: setup-permissions }
     networks:
-      - traefik-net
+      - app-net
 
   # --- WEBUI ---
   # openwebui:
@@ -93,18 +95,20 @@ services:
     extends: { file: docker-compose.rag.yml, service: vectordb }
     restart: always
     networks:
-      - traefik-net
+      - app-net
 
   rag_api:
     extends: { file: docker-compose.rag.yml, service: rag_api }
     restart: always
     networks:
-      - traefik-net
+      - app-net
 
 networks:
   traefik-net:
     external: true
     name: loadbalancer-net
+  app-net:
+    driver: bridge
   firecrawl-network:
     driver: bridge
 

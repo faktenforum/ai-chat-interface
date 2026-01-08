@@ -107,7 +107,7 @@ services:
         echo "Preview (first 10 lines):"
         head -10 /app/config/librechat.yaml
     networks:
-      - traefik-net
+      - app-net
 
   api:
     container_name: LibreChat
@@ -171,6 +171,7 @@ services:
         condition: service_started
     networks:
       - traefik-net
+      - app-net
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.librechat.rule=Host(`chat.${DOMAIN:-localhost}`)"
@@ -190,7 +191,7 @@ services:
       - ./data-node:/data/db
     command: mongod --noauth
     networks:
-      - traefik-net
+      - app-net
 
   meilisearch:
     container_name: meilisearch
@@ -203,7 +204,7 @@ services:
     volumes:
       - ./meili_data_v1.12:/meili_data
     networks:
-      - traefik-net
+      - app-net
 
   setup-permissions:
     image: alpine
@@ -219,7 +220,7 @@ services:
       sh -c "chown -R ${UID:-1000}:${GID:-1000} /logs /images /uploads /mongo_data /meili_data && 
              chmod -R 775 /logs /images /uploads /mongo_data /meili_data"
     networks:
-      - traefik-net
+      - app-net
 
 volumes:
   librechat-config:

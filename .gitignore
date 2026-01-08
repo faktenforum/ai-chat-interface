@@ -4,7 +4,6 @@
 stack.env
 !env.example
 
-# Docker data
 volumes/
 pgdata/
 mongodata/
@@ -12,7 +11,6 @@ redisdata/
 qdrantdata/
 docker-compose.override.yml
 
-# LibreChat data directories
 data-node/
 meili_data_v1.12/
 images/
@@ -21,17 +19,11 @@ logs/
 *.log
 tmp/
 
-# Editor/OS
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
 .cursor/
 
-# Portainer
-docker-compose.portainer.yml
-docker-compose.portainer.env
-
-# Node
 node_modules/
 package-lock.json

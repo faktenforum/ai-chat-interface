@@ -126,6 +126,8 @@ services:
 networks:
   traefik-net:
     driver: bridge
+  app-net:
+    driver: bridge
   firecrawl-network:
     driver: bridge
 

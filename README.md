@@ -49,8 +49,12 @@ docker compose -f docker-compose.dev.yml up -d
 
 #### Production (Stable Release + SSL)
 Enables Let's Encrypt SSL and security hardening.
+
+First generate production environment variables:
+
 ```bash
-docker compose -f docker-compose.prod.yml up -d
+npm run setup:prod
+docker compose --env-file stack.env -f docker-compose.prod.yml up -d
 ```
 
 ### Deployment (Portainer)
