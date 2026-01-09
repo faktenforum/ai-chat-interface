@@ -1,0 +1,47 @@
+services:
+  vectordb:
+    container_name: vectordb
+    image: pgvector/pgvector:0.8.0-pg15-trixie
+    environment:
+      POSTGRES_DB: ${LIBRECHAT_VECTORDB_DB:-vectordb}
+      POSTGRES_USER: ${LIBRECHAT_VECTORDB_USER:-vectordb}
+      POSTGRES_PASSWORD: ${LIBRECHAT_VECTORDB_PASSWORD:-mypassword}
+    restart: always
+    volumes:
+      - pgdata2:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+  rag_api:
+    container_name: rag_api
+    image: ghcr.io/danny-avila/librechat-rag-api-dev-lite:latest
+    environment:
+      DB_HOST: vectordb
+      POSTGRES_DB: ${LIBRECHAT_VECTORDB_DB:-vectordb}
+      POSTGRES_USER: ${LIBRECHAT_VECTORDB_USER:-vectordb}
+      POSTGRES_PASSWORD: ${LIBRECHAT_VECTORDB_PASSWORD:-mypassword}
+      RAG_PORT: ${LIBRECHAT_RAG_PORT:-8000}
+      # OpenRouter/OpenAI API Configuration (from env.example via setup-env.ts)
+      RAG_OPENAI_API_KEY: ${RAG_OPENAI_API_KEY:-${OPENROUTER_KEY:-${OPENAI_API_KEY:-}}}
+      RAG_OPENAI_BASEURL: ${RAG_OPENAI_BASEURL:-${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-${OPENROUTER_KEY:-}}
+      # Embeddings Configuration (from env.example via setup-env.ts)
+      EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER:-openai}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-openai/text-embedding-3-small}
+      # JWT Secret (from env.example via setup-env.ts)
+      # Map RAG_JWT_SECRET (or LIBRECHAT_JWT_SECRET) to JWT_SECRET (RAG API expects this name)
+      # Both LibreChat and RAG API must use the same secret for token verification
+      JWT_SECRET: ${RAG_JWT_SECRET:-${LIBRECHAT_JWT_SECRET:-}}
+      # Chunking Configuration (from env.example via setup-env.ts)
+      # Map RAG_CHUNK_SIZE/RAG_CHUNK_OVERLAP to CHUNK_SIZE/CHUNK_OVERLAP (RAG API expects these names)
+      CHUNK_SIZE: ${RAG_CHUNK_SIZE:-1500}
+      CHUNK_OVERLAP: ${RAG_CHUNK_OVERLAP:-100}
+    restart: always
+    depends_on:
+      - vectordb
+    networks:
+      - app-net
+
+volumes:
+  pgdata2:
+

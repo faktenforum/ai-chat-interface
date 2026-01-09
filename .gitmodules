@@ -14,3 +14,6 @@
 	path = dev/librechat-doc
 	url = git@github.com:faktenforum/librechat.ai.git
 	branch = main
+[submodule "dev/firecrawl"]
+	path = dev/firecrawl
+	url = git@github.com:firecrawl/firecrawl.git

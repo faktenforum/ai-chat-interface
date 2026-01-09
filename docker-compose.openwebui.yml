@@ -1,18 +1,21 @@
 services:
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
-    env_file: [.env]
+    container_name: openwebui
     environment:
       OPENAI_API_KEY: ${OPENROUTER_API_KEY}
       OPENAI_API_BASE_URL: ${OPENROUTER_BASE_URL}
-      DEFAULT_MODEL: ${OPENROUTER_MODEL}
-      WEBUI_NAME: Checkbot
+      DEFAULT_MODEL: ${OPENWEBUI_DEFAULT_MODEL:-google/gemini-2.0-flash-exp:free}
       ADMIN_EMAIL: ${OPENWEBUI_ADMIN_EMAIL}
       ADMIN_PASSWORD: ${OPENWEBUI_ADMIN_PASSWORD}
-    ports:
-      - "${OPENWEBUI_PORT:-3001}:8080"
     volumes:
       - ${OPENWEBUI_VOLUME:-./volumes/openwebui}:/app/backend/data
     restart: unless-stopped
-
-
+    networks:
+      - traefik-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
+      - "traefik.http.routers.openwebui.rule=Host(`webui.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.openwebui.entrypoints=web"
+      - "traefik.http.services.openwebui.loadbalancer.server.port=8080"

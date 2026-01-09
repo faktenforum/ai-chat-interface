@@ -1,0 +1,26 @@
+# Portainer (CE) – Deployment Notes
+
+## Deploy
+
+- **Prerequisite**: external Docker network exists: `loadbalancer-net`
+- **Portainer**: Stacks → **Add stack** → **Git repository**
+  - Compose path: `docker-compose.prod.yml`
+- **Environment**:
+  - Locally generate: `npm run setup:prod` (creates `stack.env`)
+  - In Portainer: Stack → **Environment variables** (Advanced mode) → paste `stack.env` contents
+- **Deploy** the stack
+
+## Why `config-init` exists
+
+Portainer CE can be unreliable with bind-mounting a **single file** from a Git repo. We therefore generate `librechat.yaml` via an init container (`config-init`) into a **named volume** (`librechat-config`).
+
+## Networking (important)
+
+- `traefik-net` (compose key) is mapped to external Docker network **`loadbalancer-net`**
+- `app-net` is the internal network for service-to-service traffic (LibreChat ↔ MongoDB/Meilisearch/RAG/WebSearch)
+- **MongoDB does not need to be on `loadbalancer-net`**; it must be reachable from LibreChat on `app-net`
+
+## Quick checks
+
+- Config present: `docker exec LibreChat cat /app/config/librechat.yaml`
+- Init logs: `docker logs librechat-config-init`
