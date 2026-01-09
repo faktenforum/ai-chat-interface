@@ -6,8 +6,11 @@ services:
       dockerfile: Dockerfile
     pull_policy: build
     volumes:
+      - librechat-config:/app/config
       - mongodata:/mongo_data  # Production verwendet named volume statt bind mount
       - mongoconfig:/mongo_configdb
+      # Note: logs, images, uploads, meili_data are handled by other services in production
+      # librechat-init only needs access to config and mongo volumes for initialization
 
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }

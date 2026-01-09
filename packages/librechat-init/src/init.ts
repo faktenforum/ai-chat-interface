@@ -1,5 +1,5 @@
 #!/usr/bin/env -S node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings
-import { copyFileSync, existsSync } from 'fs';
+import { copyFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { setupPermissions } from './setup-permissions.ts';
@@ -10,6 +10,7 @@ const __dirname = dirname(__filename);
 
 const CONFIG_SOURCE = join(__dirname, '../config/librechat.yaml');
 const CONFIG_TARGET = '/app/config/librechat.yaml';
+const CONFIG_DIR = '/app/config';
 
 async function main() {
   console.log('=========================================');
@@ -20,6 +21,11 @@ async function main() {
     // Task 1: Copy LibreChat config
     console.log('[1/3] Setting up LibreChat configuration...');
     if (existsSync(CONFIG_SOURCE)) {
+      // Ensure target directory exists (named volumes are empty by default)
+      if (!existsSync(CONFIG_DIR)) {
+        mkdirSync(CONFIG_DIR, { recursive: true });
+        console.log('✓ Created config directory');
+      }
       copyFileSync(CONFIG_SOURCE, CONFIG_TARGET);
       console.log('✓ Config copied successfully');
     } else {
