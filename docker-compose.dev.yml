@@ -19,8 +19,8 @@ services:
       - "traefik.http.routers.maildev.entrypoints=web"
       - "traefik.http.services.maildev.loadbalancer.server.port=1080"
 
-  config-init:
-    extends: { file: docker-compose.librechat.yml, service: config-init }
+  librechat-init:
+    extends: { file: docker-compose.librechat.yml, service: librechat-init }
     env_file: .env
 
   mongodb:
@@ -43,10 +43,6 @@ services:
       - ./dev/agents:/app/node_modules/@librechat/agents
     environment:
       NODE_ENV: development
-
-  setup-permissions:
-    extends: { file: docker-compose.librechat.yml, service: setup-permissions }
-    env_file: .env
 
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }

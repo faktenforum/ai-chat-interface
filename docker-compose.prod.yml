@@ -1,6 +1,10 @@
 services:
-  config-init:
-    extends: { file: docker-compose.librechat.yml, service: config-init }
+  librechat-init:
+    extends: { file: docker-compose.librechat.yml, service: librechat-init }
+    volumes:
+      - librechat-config:/app/config
+      - mongodata:/mongo_data
+      - mongoconfig:/mongo_configdb
 
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
@@ -26,14 +30,6 @@ services:
       - "traefik.http.routers.librechat-secure.entrypoints=websecure"
       - "traefik.http.routers.librechat-secure.tls=true"
       - "traefik.http.routers.librechat-secure.tls.certresolver=le"
-
-  setup-permissions:
-    extends: { file: docker-compose.librechat.yml, service: setup-permissions }
-    volumes:
-      - mongodata:/mongo_data
-      - mongoconfig:/mongo_configdb
-    command: >
-      sh -c "chown -R ${UID:-1000}:${GID:-1000} /mongo_data /mongo_configdb"
 
   searxng-config-init:
     extends: { file: docker-compose.websearch.yml, service: searxng-config-init }
