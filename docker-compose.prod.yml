@@ -1,11 +1,8 @@
-# Production Docker Compose file - Uses extends for modular structure
-# For Portainer deployments, use docker-compose.portainer.yml instead (all services inline)
 services:
   librechat-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-init }
     volumes:
-      - librechat-config:/app/config
-      - mongodata:/mongo_data
+      - mongodata:/mongo_data  # Production verwendet named volume statt bind mount
       - mongoconfig:/mongo_configdb
 
   mongodb:
