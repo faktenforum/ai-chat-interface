@@ -16,7 +16,7 @@ services:
         cache: true
         
         interface:
-          customWelcome: 'Hi {{user.name}}! Willkommen beim KI Chat-Interface von Correctiv'
+          customWelcome: 'Hi {{user.name}}! Willkommen im KI Chat-Interface von Correctiv mit LibreChat'
           fileSearch: true
           privacyPolicy:
             externalUrl: 'https://correctiv.org/kontakt/datenschutz/'
@@ -57,17 +57,46 @@ services:
           personalize: true
           tokenLimit: 2000
           messageWindowSize: 5
+          # Memory categories for journalism and fact-checking workflow
+          # Restricts memory storage to these structured categories for better consistency
+          validKeys:
+            # User preferences and communication style
+            - "preferences"
+            # Work-related: role, organization, department, responsibilities
+            - "work_info"
+            # Personal information: name, location, contact preferences
+            - "personal_info"
+            # Current projects, research topics, ongoing investigations
+            - "projects"
+            # Fact-checking specific: methods, verification approaches, source preferences
+            - "factcheck_info"
+            # Research context: background info, historical context, related investigations
+            - "research_context"
+            # Preferred sources, verification methods, trusted outlets
+            - "sources"
+            # Output format preferences: article style, citation format, structure
+            - "output_format"
+            # Important deadlines, publication dates, milestones
+            - "deadlines"
+            # Expertise areas, specializations, domain knowledge
+            - "expertise"
+            # Final results, conclusions, verified facts from completed fact-checks
+            - "results"
           agent:
             provider: "OpenRouter"
-            # Open Source model optimized for Memory tasks
-            # Llama 3.3 70B: Better choice for Memory - faster, more cost-effective, still very precise
-            # Memory Agent needs: Function Calling (required), precision (important), speed (runs in parallel)
-            # DeepSeek V3.2 is overkill for simple memory decisions
-            model: "meta-llama/llama-3.3-70b-instruct"
+            # Open Source model optimized for Memory tasks with better function calling precision
+            # deepseek/deepseek-chat: Excellent function calling, better at following instructions precisely
+            # Alternative: mistralai/mistral-large-2411 (European, good function calling)
+            model: "deepseek/deepseek-chat"
             instructions: |
-              A memory assistant that stores per-user information securely and recalls it when relevant.
+              Store ONLY substantial, reusable info using validKeys categories. NEVER: greetings, casual chat, trivial mentions, obvious statements. Store: preferences (communication style, topics, workflow), work_info (role, org, responsibilities), personal_info (name, location - only if explicitly shared), projects (current research/investigations), factcheck_info (verification methods), research_context (background, related work), sources (preferred outlets), output_format (article style), deadlines (important dates), expertise (specializations), results (verified facts, conclusions). Must be reusable across conversations. Delete outdated/corrected info promptly. If only greetings/casual chat/no substantial info, END IMMEDIATELY without tools. UPDATE STRATEGY: Check existing memories first. If matching category/key exists, UPDATE with `set_memory` by merging old+new info. Only create new if no match. NEVER delete+recreate. Token limit: 2000 per value.
             model_parameters:
-              temperature: 0.1
+              # Lower temperature for more precise, deterministic function calling decisions
+              # 0.2 provides better precision for memory task decisions
+              temperature: 0.2
+              # top_p: 0.8 provides controlled sampling - balances precision with flexibility
+              # Lower than 0.9 for more focused token selection in memory tasks
+              top_p: 0.8
         
         endpoints:
           custom:
@@ -234,6 +263,134 @@ services:
           allowedDomains:
             - correctiv.org
             - faktenforum.org
+          # Optional: Social Login Providers (default: all disabled)
+          # socialLogins: ['github', 'google', 'discord', 'openid', 'facebook', 'apple', 'saml']
+        
+        # Balance System (disabled - for cost-based limits)
+        # balance:
+        #   enabled: false
+        #   startBalance: 20000        # Starting balance for new users
+        #   autoRefillEnabled: false   # Automatic refill
+        #   refillIntervalValue: 30    # Interval value
+        #   refillIntervalUnit: 'days' # Interval unit (days, weeks, months)
+        #   refillAmount: 10000        # Refill amount
+        
+        # Transactions (disabled - for transaction logs)
+        # Default: true (enabled), automatically enabled when balance.enabled: true
+        # transactions:
+        #   enabled: false
+        
+        # Speech / Voice Features (disabled - TTS/STT)
+        # speech:
+        #   tts:
+        #     openai:
+        #       url: ''
+        #       apiKey: '${TTS_API_KEY}'
+        #       model: ''
+        #       voices: ['']
+        #   stt:
+        #     openai:
+        #       url: ''
+        #       apiKey: '${STT_API_KEY}'
+        #       model: ''
+        
+        # Cloudflare Turnstile CAPTCHA (disabled)
+        # turnstile:
+        #   siteKey: "your-site-key-here"
+        #   options:
+        #     language: "auto"    # "auto" or ISO 639-1 code (e.g. "de")
+        #     size: "normal"      # "normal", "compact", "flexible", "invisible"
+        
+        # Rate Limits (disabled - for upload/import limits)
+        # rateLimits:
+        #   fileUploads:
+        #     ipMax: 100                    # Max uploads per IP
+        #     ipWindowInMinutes: 60         # Time window for IP limit
+        #     userMax: 50                   # Max uploads per user
+        #     userWindowInMinutes: 60       # Time window for user limit
+        #   conversationsImport:
+        #     ipMax: 100                    # Max imports per IP
+        #     ipWindowInMinutes: 60         # Time window for IP limit
+        #     userMax: 50                   # Max imports per user
+        #     userWindowInMinutes: 60       # Time window for user limit
+        
+        # File Config (disabled - granular upload configuration)
+        # fileConfig:
+        #   endpoints:
+        #     assistants:
+        #       fileLimit: 5                # Max files per request
+        #       fileSizeLimit: 10           # Max size per file (MB)
+        #       totalSizeLimit: 50          # Max total size (MB)
+        #       supportedMimeTypes:
+        #         - "image/.*"
+        #         - "application/pdf"
+        #     openAI:
+        #       disabled: true              # Disables uploads for OpenAI endpoint
+        #     default:
+        #       totalSizeLimit: 20          # Default total size (MB)
+        #   serverFileSizeLimit: 100        # Global server limit (MB)
+        #   avatarSizeLimit: 2              # Avatar size limit (MB)
+        #   imageGeneration:
+        #     percentage: 100               # Image size in percentage
+        #     px: 1024                      # Image size in pixels
+        #   clientImageResize:
+        #     enabled: false                # Client-side image compression
+        #     maxWidth: 1900                # Max width (px)
+        #     maxHeight: 1900               # Max height (px)
+        #     quality: 0.92                 # JPEG quality (0.0-1.0)
+        
+        # MCP Servers Interface Config (default: use: true, create: true, share: false)
+        # interface:
+        #   mcpServers:
+        #     use: true       # Users can use MCP servers (default: true)
+        #     create: true    # Users can create MCP servers (default: true)
+        #     share: false    # Users can share MCP servers (default: false)
+        
+        # Temporary Chat Retention (disabled - automatic deletion)
+        # interface:
+        #   temporaryChatRetention: 720  # Hours (min: 1, max: 8760, default: 720 = 30 days)
+        
+        # Actions Domain Restrictions (disabled - SSRF protection for Agent Actions)
+        # SECURITY: If not configured, SSRF targets are blocked (localhost, private IPs, .internal/.local TLDs)
+        # To allow internal targets, they MUST be explicitly added to allowedDomains
+        # Supports wildcards: '*.example.com' and protocol/port restrictions: 'https://api.example.com:8443'
+        # actions:
+        #   allowedDomains:
+        #     - 'swapi.dev'
+        #     - 'librechat.ai'
+        #     - 'google.com'
+        #     # - 'http://10.225.26.25:7894'  # Internal IP with protocol/port (uncomment if needed)
+        
+        # MCP Settings (disabled - SSRF protection for MCP Server Remote Transports)
+        # SECURITY: If not configured, SSRF targets are blocked (localhost, private IPs, .internal/.local TLDs)
+        # To allow internal targets like host.docker.internal, they MUST be explicitly added
+        # Supports wildcards: '*.example.com' matches 'api.example.com', 'staging.example.com', etc.
+        # Supports protocol/port restrictions: 'https://api.example.com:8443'
+        # mcpSettings:
+        #   allowedDomains:
+        #     - 'host.docker.internal'    # Docker host access (required for Docker setups)
+        #     - 'localhost'               # Local development
+        #     - '*.example.com'           # Wildcard subdomain
+        #     - 'https://secure.api.com'  # Protocol-restricted
+        #     - 'http://internal:8080'    # Protocol and port restricted
+        
+        # OCR Configuration (disabled - Optical Character Recognition)
+        # ocr:
+        #   mistralModel: ""         # Mistral model for OCR (optional)
+        #   apiKey: "${OCR_API_KEY}" # API key (default: "${OCR_API_KEY}")
+        #   baseURL: "${OCR_BASEURL}" # Base URL (default: "${OCR_BASEURL}")
+        #   strategy: "mistral_ocr"  # Strategy: "mistral_ocr", "custom_ocr", "azure_mistral_ocr", "vertexai_mistral_ocr" (default: "mistral_ocr")
+        
+        # File Strategy (Granular) - disabled (default: "local" for all file types)
+        # Allows different storage strategies for different file types
+        # If not specified, all file types default to "local"
+        # Priority: specific type > fileStrategies.default > fileStrategy > "local"
+        # Available strategies: "local", "s3", "firebase", "azure_blob"
+        fileStrategies:
+          default: "local"
+          avatar: "local"
+          image: "local"
+          document: "local"
         CONFIG_EOF
         
         echo "✓ Config generated successfully"
