@@ -17,3 +17,6 @@
 [submodule "dev/firecrawl"]
 	path = dev/firecrawl
 	url = git@github.com:firecrawl/firecrawl.git
+[submodule "dev/searxng"]
+	path = dev/searxng
+	url = git@github.com:searxng/searxng.git
