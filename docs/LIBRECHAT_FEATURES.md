@@ -365,7 +365,7 @@ Rating system for AI responses with thumbs up/down and detailed tags.
 ### Basic Features
 - [ ] Cache works (Redis or In-Memory)
 - [x] Custom welcome shows username
-- [ ] File search works with uploaded files
+- [x] File search works with uploaded files
 - [ ] Privacy policy link works
 - [x] Terms of service modal appears for new users
 

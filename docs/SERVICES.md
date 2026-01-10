@@ -9,7 +9,6 @@ This document provides an overview of all services in the AI Chat Interface stac
 | **LibreChat** | Main AI chat interface | ✅ `http://chat.localhost` | ✅ `https://chat.{DOMAIN}` | ❌ |
 | **SearXNG** | Meta search engine for web search | ✅ `http://searxng.localhost` | ❌ Not exposed | ✅ Internal only |
 | **Firecrawl API** | Web scraping service | ✅ `http://firecrawl.localhost` | ✅ `https://firecrawl.{DOMAIN}` | ❌ |
-| **OpenWebUI** | Alternative web UI for AI models | ✅ `http://webui.localhost` | ✅ `https://webui.{DOMAIN}` | ❌ |
 | **MailDev** | Development mail server | ✅ `http://maildev.localhost` | ❌ Not in production | ❌ |
 | **Traefik** | Reverse proxy and load balancer | ✅ `http://localhost:8080` (API) | External (separate container) | ❌ |
 | **MongoDB** | LibreChat database | ❌ | ❌ | ✅ Internal only |
@@ -46,12 +45,6 @@ This document provides an overview of all services in the AI Chat Interface stac
 - **Purpose**: Web scraping and content extraction service
 - **Network**: `traefik-net` + `firecrawl-network` + `app-net`
 - **Internal Dependencies**: playwright-service, redis, nuq-postgres, rabbitmq
-
-#### OpenWebUI
-- **Local**: `http://webui.localhost`
-- **Production**: `https://webui.{DOMAIN}`
-- **Purpose**: Alternative web UI for AI models
-- **Network**: `traefik-net`
 
 #### MailDev
 - **Local**: `http://maildev.localhost`
@@ -95,7 +88,7 @@ This document provides an overview of all services in the AI Chat Interface stac
 
 1. **`traefik-net`** (Local: bridge, Production: external `loadbalancer-net`)
    - Services that need external HTTP/HTTPS access
-   - LibreChat, SearXNG (local only), Firecrawl API, OpenWebUI, MailDev (local only)
+   - LibreChat, SearXNG (local only), Firecrawl API, MailDev (local only)
 
 2. **`app-net`** (Bridge network)
    - LibreChat ecosystem internal communication

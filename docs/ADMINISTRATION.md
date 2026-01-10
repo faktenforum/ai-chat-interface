@@ -40,12 +40,4 @@
 | `node config/flush-cache.js` | Flush application cache |
 | `npm run user-stats` | Display user statistics |
 
-## Alternative: Direct Node.js execution
-
-If `npm run` doesn't work, execute scripts directly:
-```bash
-node config/list-users.js
-node config/create-user.js
-```
-
 **Note**: These scripts are built into the LibreChat Docker image under `/app/config/`.

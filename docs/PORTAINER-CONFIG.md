@@ -6,8 +6,8 @@
 - **Portainer**: Stacks → **Add stack** → **Git repository**
   - Compose path: `docker-compose.prod.yml`
 - **Environment**:
-  - Locally generate: `npm run setup:prod` (creates `stack.env`)
-  - In Portainer: Stack → **Environment variables** (Advanced mode) → paste `stack.env` contents
+  - Locally generate: `npm run setup:prod` (creates `.env.prod`)
+  - In Portainer: Stack → **Environment variables** (Advanced mode) → paste `.env.prod` contents
 - **Deploy** the stack
 
 ## Why `librechat-init` exists
