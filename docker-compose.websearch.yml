@@ -49,32 +49,164 @@ services:
             - "172.19.0.0/16"  # Docker networks
             - "172.20.0.0/16"  # Docker networks
             - "172.21.0.0/16"  # Docker networks
-        # Enable additional search engines
+        # Enable additional search engines with weighting for better AI results
         engines:
-          # General search engines
+          # General search engines (weighted for relevance)
           - name: google
             disabled: false
+            weight: 2.0
           - name: bing
             disabled: false
+            weight: 1.5
+          - name: duckduckgo
+            disabled: false
+            weight: 1.5
+          # Wikipedia (high priority for factual information)
+          - name: wikipedia
+            disabled: false
+            weight: 3.0
           # IT & Development
           - name: github
             disabled: false
+            weight: 1.0
           - name: npm
             disabled: false
+            weight: 1.0
           # Images
           - name: pixabay images
             disabled: false
-          # Science & Research
+            weight: 1.0
+          # Science & Research (high priority for scientific sources)
           - name: openalex
             disabled: false
-          # Science & Research (requires API key - will be configured later)
+            weight: 2.5
           - name: springer nature
             inactive: false
             api_key: "${SPRINGER_NATURE_API_KEY:-}"
-        # Enable plugins
+            weight: 2.5
+        # Enable plugins for better search results
         plugins:
           searx.plugins.infinite_scroll.SXNGPlugin:
             active: true
+          searx.plugins.tracker_url_remover.SXNGPlugin:
+            active: true
+          searx.plugins.oa_doi_rewrite.SXNGPlugin:
+            active: true
+          searx.plugins.hostnames.SXNGPlugin:
+            active: true
+        # Hostnames configuration for journalism and trusted sources
+        hostnames:
+          # High priority: Trusted journalism and academic sources
+          high_priority:
+            # Wikipedia and knowledge bases
+            - '(.*\\.)?wikipedia\\.org$'
+            - '(.*\\.)?wikidata\\.org$'
+            # Academic and government sources
+            - '(.*\\.)?edu$'
+            - '(.*\\.)?gov$'
+            - '(.*\\.)?ac\\.uk$'
+            # German quality journalism
+            - '(.*\\.)?sueddeutsche\\.de$'
+            - '(.*\\.)?faz\\.net$'
+            - '(.*\\.)?zeit\\.de$'
+            - '(.*\\.)?spiegel\\.de$'
+            - '(.*\\.)?taz\\.de$'
+            - '(.*\\.)?correctiv\\.org$'
+            - '(.*\\.)?faktenforum\\.org$'
+            - '(.*\\.)?netzpolitik\\.org$'
+            - '(.*\\.)?tagesschau\\.de$'
+            - '(.*\\.)?ard\\.de$'
+            - '(.*\\.)?zdf\\.de$'
+            - '(.*\\.)?deutschlandfunk\\.de$'
+            - '(.*\\.)?deutschlandfunknova\\.de$'
+            - '(.*\\.)?ndr\\.de$'
+            - '(.*\\.)?wdr\\.de$'
+            - '(.*\\.)?br\\.de$'
+            - '(.*\\.)?mdr\\.de$'
+            - '(.*\\.)?swr\\.de$'
+            - '(.*\\.)?hr\\.de$'
+            - '(.*\\.)?rbb\\.de$'
+            - '(.*\\.)?sr\\.de$'
+            - '(.*\\.)?radio-bremen\\.de$'
+            # International quality journalism
+            - '(.*\\.)?nytimes\\.com$'
+            - '(.*\\.)?theguardian\\.com$'
+            - '(.*\\.)?bbc\\.com$'
+            - '(.*\\.)?bbc\\.co\\.uk$'
+            - '(.*\\.)?reuters\\.com$'
+            - '(.*\\.)?ap\\.org$'
+            - '(.*\\.)?apnews\\.com$'
+            - '(.*\\.)?washingtonpost\\.com$'
+            - '(.*\\.)?wsj\\.com$'
+            - '(.*\\.)?ft\\.com$'
+            - '(.*\\.)?economist\\.com$'
+            - '(.*\\.)?propublica\\.org$'
+            - '(.*\\.)?pbs\\.org$'
+            - '(.*\\.)?npr\\.org$'
+            # Fact-checking organizations
+            - '(.*\\.)?snopes\\.com$'
+            - '(.*\\.)?factcheck\\.org$'
+            - '(.*\\.)?politifact\\.com$'
+            - '(.*\\.)?fullfact\\.org$'
+            # Scientific and research organizations
+            - '(.*\\.)?nature\\.com$'
+            - '(.*\\.)?science\\.org$'
+            - '(.*\\.)?arxiv\\.org$'
+            - '(.*\\.)?doi\\.org$'
+            # IT & Technology journalism (German)
+            - '(.*\\.)?golem\\.de$'
+            - '(.*\\.)?heise\\.de$'
+            - '(.*\\.)?linux-magazin\\.de$'
+            - '(.*\\.)?linux\\.de$'
+            - '(.*\\.)?pro-linux\\.de$'
+            - '(.*\\.)?linux-community\\.de$'
+            # IT & Technology journalism (International)
+            - '(.*\\.)?arstechnica\\.com$'
+            - '(.*\\.)?techcrunch\\.com$'
+            - '(.*\\.)?theverge\\.com$'
+            - '(.*\\.)?wired\\.com$'
+            - '(.*\\.)?zdnet\\.com$'
+            # Open Source & Linux communities
+            - '(.*\\.)?omgubuntu\\.co\\.uk$'
+            - '(.*\\.)?linux\\.ch$'
+            - '(.*\\.)?phoronix\\.com$'
+            - '(.*\\.)?lwn\\.net$'
+            - '(.*\\.)?linuxfoundation\\.org$'
+            - '(.*\\.)?opensource\\.org$'
+            - '(.*\\.)?gnu\\.org$'
+            - '(.*\\.)?fsf\\.org$'
+            - '(.*\\.)?debian\\.org$'
+            - '(.*\\.)?ubuntu\\.com$'
+            - '(.*\\.)?redhat\\.com$'
+            - '(.*\\.)?suse\\.com$'
+            - '(.*\\.)?archlinux\\.org$'
+            - '(.*\\.)?kernel\\.org$'
+            - '(.*\\.)?github\\.com$'
+            - '(.*\\.)?gitlab\\.com$'
+            - '(.*\\.)?sourceforge\\.net$'
+            # Democracy & free society projects
+            - '(.*\\.)?reporter-ohne-grenzen\\.de$'
+            - '(.*\\.)?rsf\\.org$'
+            - '(.*\\.)?dekoder\\.org$'
+            - '(.*\\.)?n-ost\\.org$'
+            - '(.*\\.)?transparency\\.org$'
+            - '(.*\\.)?freiheitsrechte\\.org$'
+            - '(.*\\.)?digitalcourage\\.de$'
+            - '(.*\\.)?ccc\\.de$'
+            - '(.*\\.)?eff\\.org$'
+            - '(.*\\.)?fsfe\\.org$'
+            - '(.*\\.)?wikimedia\\.org$'
+            - '(.*\\.)?creativecommons\\.org$'
+          # Low priority: Social media and user-generated content
+          low_priority:
+            - '(.*\\.)?facebook\\.com$'
+            - '(.*\\.)?twitter\\.com$'
+            - '(.*\\.)?x\\.com$'
+            - '(.*\\.)?instagram\\.com$'
+            - '(.*\\.)?tiktok\\.com$'
+            - '(.*\\.)?reddit\\.com$'
+            - '(.*\\.)?youtube\\.com$'
+            - '(.*\\.)?youtu\\.be$'
         CONFIG_EOF
         
         # Create minimal limiter.toml to avoid warning (limiter is disabled, but file is still checked)

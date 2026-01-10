@@ -91,15 +91,94 @@ The following engines are intentionally disabled:
 - **Purpose**: Automatically loads more results as user scrolls
 - **Benefit**: Better user experience for long result lists
 
+### Tracker URL Remover
+- **Status**: Enabled
+- **Purpose**: Removes tracking parameters from URLs in search results
+- **Benefit**: Cleaner URLs, better privacy, improved result quality for AI processing
+
+### Open Access DOI Rewrite
+- **Status**: Enabled
+- **Purpose**: Automatically redirects to open-access versions of scientific publications
+- **Benefit**: Avoids paywalls, improves access to scientific sources for AI research
+
+### Hostnames Plugin
+- **Status**: Enabled
+- **Purpose**: Prioritizes trusted journalism and academic sources, filters low-quality content
+- **Benefit**: Better result quality for AI by focusing on authoritative sources
+- **Configuration**: See "Hostname Prioritization" section below
+
 ### Other Active Plugins
 - Calculator
 - Hash Plugin (MD5, SHA, etc.)
 - Self Info
 - Unit Converter
 - Ahmia Filter
-- Hostnames
 - Time Zone
-- Tracker URL Remover
+
+## Engine Weighting
+
+Engines are weighted to improve result ranking for AI processing:
+
+- **Wikipedia** (`weight: 3.0`) - Highest priority for factual information
+- **OpenAlex** (`weight: 2.5`) - High priority for scientific sources
+- **Google** (`weight: 2.0`) - High priority for general search
+- **Bing/DuckDuckGo** (`weight: 1.5`) - Medium-high priority
+- **Other engines** (`weight: 1.0`) - Standard priority
+
+Higher weights mean results from these engines appear higher in the result list, especially when multiple engines return the same result.
+
+## Hostname Prioritization
+
+The Hostnames plugin prioritizes trusted journalism and academic sources while deprioritizing social media and user-generated content.
+
+### High Priority Sources
+
+**German Quality Journalism:**
+- Süddeutsche Zeitung, FAZ, Die Zeit, Der Spiegel, taz
+- Correctiv, Faktenforum, Netzpolitik.org
+- Public broadcasters (ARD, ZDF, Deutschlandfunk, regional broadcasters)
+
+**International Quality Journalism:**
+- New York Times, The Guardian, BBC, Reuters, AP
+- Washington Post, Wall Street Journal, Financial Times, The Economist
+- ProPublica, PBS, NPR
+
+**Fact-Checking Organizations:**
+- Snopes, FactCheck.org, PolitiFact, Full Fact
+
+**Academic & Government Sources:**
+- `.edu` domains (universities)
+- `.gov` domains (government)
+- `.ac.uk` (UK academic institutions)
+- Wikipedia, Wikidata
+
+**Scientific Sources:**
+- Nature, Science, ArXiv, DOI.org
+
+**IT & Technology Journalism:**
+- **German**: Golem.de, Heise.de, Linux-Magazin, Linux.de, Pro-Linux
+- **International**: Ars Technica, TechCrunch, The Verge, Wired, ZDNet
+
+**Open Source & Linux Communities:**
+- OMG! Ubuntu, Linux.ch, Phoronix, LWN.net
+- Linux Foundation, OpenSource.org, GNU.org, FSF.org
+- Major distributions: Debian, Ubuntu, Red Hat, SUSE, Arch Linux
+- Kernel.org, GitHub, GitLab, SourceForge
+
+**Democracy & Free Society Projects:**
+- Reporter ohne Grenzen, RSF.org
+- Dekoder.org, n-ost (border crossing journalism)
+- Transparency International, Digitalcourage
+- Chaos Computer Club (CCC), Electronic Frontier Foundation (EFF)
+- FSFE (Free Software Foundation Europe), Wikimedia, Creative Commons
+
+### Low Priority Sources
+
+Social media and user-generated content platforms are deprioritized:
+- Facebook, Twitter/X, Instagram, TikTok
+- Reddit, YouTube
+
+This ensures AI receives information from authoritative sources rather than social media discussions.
 
 ## Configuration
 
