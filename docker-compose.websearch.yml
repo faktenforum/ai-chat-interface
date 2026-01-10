@@ -28,6 +28,10 @@ services:
           formats:
             - html
             - json
+          # Default search language - use "de" for German, "en" for English, "auto" for auto-detect
+          # Leave blank to detect from browser information
+          # Available codes: https://docs.searxng.org/admin/settings/settings_search.html#default-lang
+          default_lang: "${SEARXNG_DEFAULT_LANG:-de}"
         # Bot detection configuration for internal Docker network access
         # LibreChat accesses SearXNG directly (container-to-container) without X-Forwarded-For headers
         # We trust Docker's internal networks to allow LibreChat API access
@@ -45,6 +49,30 @@ services:
             - "172.19.0.0/16"  # Docker networks
             - "172.20.0.0/16"  # Docker networks
             - "172.21.0.0/16"  # Docker networks
+        # Enable additional search engines
+        engines:
+          # General search engines
+          - name: bing
+            disabled: false
+          # IT & Development
+          - name: github
+            disabled: false
+          - name: npm
+            disabled: false
+          # Images
+          - name: pixabay images
+            disabled: false
+          # Science & Research
+          - name: openalex
+            disabled: false
+          # Science & Research (requires API key - will be configured later)
+          - name: springer nature
+            inactive: false
+            api_key: "${SPRINGER_NATURE_API_KEY:-}"
+        # Enable plugins
+        plugins:
+          searx.plugins.infinite_scroll.SXNGPlugin:
+            active: true
         CONFIG_EOF
         
         # Create minimal limiter.toml to avoid warning (limiter is disabled, but file is still checked)

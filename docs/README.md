@@ -19,6 +19,7 @@ New to the project? Start here:
 
 - **[Portainer Configuration](PORTAINER-CONFIG.md)** - Guide for deploying via Portainer
 - **[Getting Started](GETTING_STARTED.md)** - Complete setup and deployment instructions
+- **[SearXNG Engines](SEARXNG_ENGINES.md)** - Configuration and usage of SearXNG search engines
 
 ## Development
 

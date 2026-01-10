@@ -13,6 +13,10 @@ This project includes the following git submodules:
 - **dev/firecrawl** - Firecrawl web scraping service
 - **dev/searxng** - SearXNG metasearch engine
 
+## Documentation
+
+- [SearXNG Engines Configuration](../docs/SEARXNG_ENGINES.md) - Overview of enabled search engines and features
+
 ## Setup
 
 ### 1. Initialize Submodules
