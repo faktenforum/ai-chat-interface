@@ -58,6 +58,14 @@
   - Problem: Custom icons (Data URIs/URLs) rendered as `<img>` tags, cannot use `currentColor` for theme adaptation
   - Solution: Create LibreChat PR to render SVGs inline or add CSS variable support for icon colors
 
+### OCR (Optical Character Recognition)
+
+- [ ] Obtain official Mistral API key
+  - Status: Configuration ready (`LIBRECHAT_OCR_API_KEY` in `.env`), using private key temporarily
+  - Required for: OCR service AND direct Mistral model usage
+  - Mistral Console: https://console.mistral.ai/
+  - LibreChat Docs: https://www.librechat.ai/docs/features/ocr
+
 ---
 
 ## Providers

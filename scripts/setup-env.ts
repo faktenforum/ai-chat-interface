@@ -73,6 +73,7 @@ const PROMPTS: Record<string, PromptConfig> = {
     'DOMAIN': { message: 'Domain or IP (e.g. localhost or ai.faktenforum.org):', type: 'input' },
     'OPENROUTER_KEY': { message: 'OpenRouter API Key:', type: 'password' },
     'LIBRECHAT_JINA_API_KEY': { message: 'Jina API Key (optional, press enter to skip):', type: 'input' },
+    'LIBRECHAT_OCR_API_KEY': { message: 'Mistral OCR API Key (optional, press enter to skip):', type: 'password' },
 
     // Mongo (using --noauth, so INITDB credentials not needed)
     'LIBRECHAT_MONGO_DATABASE': { message: 'Mongo Database Name:', type: 'input', defaultGen: () => 'librechat' },

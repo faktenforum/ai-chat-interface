@@ -71,6 +71,8 @@ services:
       SEARCH: ${LIBRECHAT_SEARCH_ENABLED:-true}
       MEILI_MASTER_KEY: ${LIBRECHAT_MEILI_MASTER_KEY}
       CONFIG_PATH: /app/config/librechat.yaml
+      OCR_API_KEY: ${LIBRECHAT_OCR_API_KEY:-}
+      OCR_BASEURL: ${LIBRECHAT_OCR_BASEURL:-https://api.mistral.ai/v1}
     volumes:
       - ./images:/app/client/public/images
       - ./uploads:/app/uploads

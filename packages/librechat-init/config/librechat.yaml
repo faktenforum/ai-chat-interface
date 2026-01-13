@@ -85,6 +85,20 @@ memory:
       top_p: 0.8
 
 endpoints:
+  # Agents configuration
+  agents:
+    disableBuilder: false
+    capabilities:
+      - "execute_code"
+      - "file_search"
+      - "actions"
+      - "artifacts"
+      - "chain"
+      - "context"
+      - "ocr"
+      - "tools"
+      - "web_search"
+  
   custom:
     - name: OpenRouter
       apiKey: "$${OPENROUTER_KEY}"
@@ -444,12 +458,28 @@ registration:
 #     - 'https://secure.api.com'  # Protocol-restricted
 #     - 'http://internal:8080'    # Protocol and port restricted
 
-# OCR Configuration (disabled - Optical Character Recognition)
-# ocr:
-#   mistralModel: ""         # Mistral model for OCR (optional)
-#   apiKey: "${OCR_API_KEY}" # API key (default: "${OCR_API_KEY}")
-#   baseURL: "${OCR_BASEURL}" # Base URL (default: "${OCR_BASEURL}")
-#   strategy: "mistral_ocr"  # Strategy: "mistral_ocr", "custom_ocr", "azure_mistral_ocr", "vertexai_mistral_ocr" (default: "mistral_ocr")
+# OCR Configuration (Optical Character Recognition)
+# Requires: LIBRECHAT_OCR_API_KEY environment variable set with your Mistral API key
+ocr:
+  mistralModel: "mistral-ocr-latest"
+  apiKey: "${OCR_API_KEY}"
+  baseURL: "${OCR_BASEURL}"
+  strategy: "mistral_ocr"
+
+# File Configuration - Define supported MIME types for OCR and other file operations
+fileConfig:
+  ocr:
+    supportedMimeTypes:
+      - "image/.*"
+      - "application/pdf"
+  text:
+    supportedMimeTypes:
+      - "text/.*"
+      - "application/json"
+      - "application/x-yaml"
+  stt:
+    supportedMimeTypes:
+      - "audio/.*"
 
 # File Strategy (Granular) - disabled (default: "local" for all file types)
 # Allows different storage strategies for different file types
