@@ -59,8 +59,10 @@ docker compose -f docker-compose.dev.yml up -d
 This will:
 - Build `librechat:local` from `dev/librechat`
 - Build `rag_api:local` from `dev/rag_api`
-- Build `searxng:local` from `dev/searxng`
+- Use official `searxng/searxng:latest` image (same as production)
 - Mount `dev/agents` as a volume in the LibreChat container
+
+**Note:** The SearXNG code in `dev/searxng` is kept as reference only. We use the official Docker image for both development and production.
 
 ### Working on Upstream PRs
 

@@ -51,6 +51,7 @@
 - [ ] Fix vision model detection for "Upload to AI Provider" option
   - Problem: Upload option shown for all OpenRouter models (provider-level), not model-level
   - Solution: Create LibreChat issue/PR to add model-level vision detection, or use alternative provider
+  - Issue: [#11321](https://github.com/danny-avila/LibreChat/issues/11321) - Image Upload Option Shown for Non-Vision Models
 - [ ] Add multilingual support for model descriptions
   - Problem: Descriptions are single-language only (no i18n support)
   - Solution: Create LibreChat feature request/PR for multilingual model descriptions
