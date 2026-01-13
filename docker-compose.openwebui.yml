@@ -3,7 +3,7 @@ services:
     image: ghcr.io/open-webui/open-webui:main
     container_name: openwebui
     environment:
-      OPENAI_API_KEY: ${OPENROUTER_API_KEY}
+      OPENAI_API_KEY: ${OPENROUTER_KEY}
       OPENAI_API_BASE_URL: ${OPENROUTER_BASE_URL}
       DEFAULT_MODEL: ${OPENWEBUI_DEFAULT_MODEL:-google/gemini-2.0-flash-exp:free}
       ADMIN_EMAIL: ${OPENWEBUI_ADMIN_EMAIL}
