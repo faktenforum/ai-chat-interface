@@ -11,7 +11,7 @@ This project includes the following git submodules:
 - **dev/rag_api** - RAG API service
 - **dev/librechat-doc** - LibreChat documentation
 - **dev/firecrawl** - Firecrawl web scraping service
-- **dev/searxng** - SearXNG metasearch engine
+- **dev/searxng** - SearXNG metasearch engine (reference only - uses official Docker image)
 
 ## Documentation
 
@@ -19,7 +19,25 @@ This project includes the following git submodules:
 
 ## Setup
 
-### 1. Initialize Submodules
+### Quick Setup (Recommended)
+
+Use the preparation script to set up all development submodules:
+
+```bash
+npm run prepare:dev
+```
+
+This will:
+1. Initialize and update git submodules
+2. Build the agents npm package
+
+**Note:** SearXNG uses the official Docker image (`searxng/searxng:latest`). The code in `dev/searxng` is kept as reference only.
+
+### Manual Setup
+
+If you prefer to set up manually:
+
+**1. Initialize Submodules**
 
 ```bash
 git submodule update --init --remote
@@ -27,7 +45,7 @@ git submodule update --init --remote
 
 This checks out the branches specified in `.gitmodules`.
 
-### 1.1. Build Agents Package
+**2. Build Agents Package**
 
 Since `agents` is an npm package used by LibreChat, build it before starting:
 
@@ -37,6 +55,8 @@ npm install
 npm run build
 cd ../..
 ```
+
+**Note:** SearXNG uses the official Docker image, no build required.
 
 ### 2. Build and Start
 

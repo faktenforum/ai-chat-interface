@@ -54,10 +54,8 @@ services:
 
   searxng:
     extends: { file: docker-compose.websearch.yml, service: searxng }
-    image: searxng:local
-    build:
-      context: ./dev/searxng
-      dockerfile: Dockerfile.dev
+    # Use official SearXNG image (same as production)
+    # The SearXNG code in dev/searxng is kept as reference only
     volumes:
       - searxng-config:/etc/searxng:ro
     depends_on:
