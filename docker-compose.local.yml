@@ -1,0 +1,96 @@
+services:
+  traefik:
+    extends: { file: docker-compose.traefik.yml, service: traefik }
+    env_file: .env.local
+
+  maildev:
+    container_name: maildev
+    image: maildev/maildev:latest
+    restart: always
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+    networks:
+      - traefik-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
+      - "traefik.http.routers.maildev.rule=Host(`maildev.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.maildev.entrypoints=web"
+      - "traefik.http.services.maildev.loadbalancer.server.port=1080"
+
+  mongodb:
+    extends: { file: docker-compose.librechat.yml, service: mongodb }
+    env_file: .env.local
+  
+  meilisearch:
+    extends: { file: docker-compose.librechat.yml, service: meilisearch }
+    env_file: .env.local
+
+  api:
+    extends: { file: docker-compose.librechat.yml, service: api }
+    env_file: .env.local
+
+  librechat-init:
+    extends: { file: docker-compose.librechat.yml, service: librechat-init }
+    env_file: .env.local
+
+  openwebui:
+    extends: { file: docker-compose.openwebui.yml, service: openwebui }
+    env_file: .env.local
+
+  searxng-config-init:
+    extends: { file: docker-compose.websearch.yml, service: searxng-config-init }
+    env_file: .env.local
+
+  searxng:
+    extends: { file: docker-compose.websearch.yml, service: searxng }
+    volumes:
+      - searxng-config:/etc/searxng:ro
+    depends_on:
+      searxng-config-init:
+        condition: service_completed_successfully
+    env_file: .env.local
+
+  firecrawl-api:
+    extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
+    env_file: .env.local
+
+  playwright-service:
+    extends: { file: docker-compose.websearch.yml, service: playwright-service }
+    env_file: .env.local
+
+  redis:
+    extends: { file: docker-compose.websearch.yml, service: redis }
+    env_file: .env.local
+
+  nuq-postgres:
+    extends: { file: docker-compose.websearch.yml, service: nuq-postgres }
+    env_file: .env.local
+
+  rabbitmq:
+    extends: { file: docker-compose.websearch.yml, service: rabbitmq }
+    env_file: .env.local
+
+  vectordb:
+    extends: { file: docker-compose.rag.yml, service: vectordb }
+    env_file: .env.local
+
+  rag_api:
+    extends: { file: docker-compose.rag.yml, service: rag_api }
+    env_file: .env.local
+
+networks:
+  traefik-net:
+    driver: bridge
+  app-net:
+    driver: bridge
+  firecrawl-network:
+    driver: bridge
+
+volumes:
+  firecrawl_pgdata:
+  pgdata2:
+  librechat-config:
+  mongoconfig:
+  searxng-config:

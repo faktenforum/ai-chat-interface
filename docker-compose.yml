@@ -1,96 +1,106 @@
 services:
-  traefik:
-    extends: { file: docker-compose.traefik.yml, service: traefik }
-    env_file: .env
-
-  maildev:
-    container_name: maildev
-    image: maildev/maildev:latest
-    restart: always
-    ports:
-      - "1080:1080"
-      - "1025:1025"
-    networks:
-      - traefik-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=ai-chat-interface_traefik-net"
-      - "traefik.http.routers.maildev.rule=Host(`maildev.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.maildev.entrypoints=web"
-      - "traefik.http.services.maildev.loadbalancer.server.port=1080"
+  librechat-init:
+    extends: { file: docker-compose.librechat.yml, service: librechat-init }
+    build:
+      context: ./packages/librechat-init
+      dockerfile: Dockerfile
+    pull_policy: build
+    volumes:
+      - librechat-config:/app/config
+      - mongodata:/mongo_data  # Production verwendet named volume statt bind mount
+      - mongoconfig:/mongo_configdb
+      # Note: logs, images, uploads, meili_data are handled by other services in production
+      # librechat-init only needs access to config and mongo volumes for initialization
 
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
-    env_file: .env
-  
+    volumes:
+      - mongodata:/data/db
+      - mongoconfig:/data/configdb
+
   meilisearch:
     extends: { file: docker-compose.librechat.yml, service: meilisearch }
-    env_file: .env
 
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
-    env_file: .env
-
-  librechat-init:
-    extends: { file: docker-compose.librechat.yml, service: librechat-init }
-    env_file: .env
-
-  openwebui:
-    extends: { file: docker-compose.openwebui.yml, service: openwebui }
-    env_file: .env
+    networks:
+      - traefik-net
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=loadbalancer-net"
+      - "traefik.http.routers.librechat.rule=Host(`chat.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.librechat.entrypoints=web"
+      - "traefik.http.services.librechat.loadbalancer.server.port=3080"
+      - "traefik.http.routers.librechat-secure.rule=Host(`chat.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.librechat-secure.entrypoints=websecure"
+      - "traefik.http.routers.librechat-secure.tls=true"
+      - "traefik.http.routers.librechat-secure.tls.certresolver=le"
 
   searxng-config-init:
     extends: { file: docker-compose.websearch.yml, service: searxng-config-init }
-    env_file: .env
 
   searxng:
     extends: { file: docker-compose.websearch.yml, service: searxng }
     volumes:
+      # Use named volume in production (bind mounts don't work reliably in Portainer)
       - searxng-config:/etc/searxng:ro
+    networks:
+      - app-net
+    # SearXNG is NOT exposed via Traefik in production
+    # It's only accessible internally by LibreChat
     depends_on:
       searxng-config-init:
         condition: service_completed_successfully
-    env_file: .env
 
   firecrawl-api:
     extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
-    env_file: .env
+    networks:
+      - traefik-net
+      - firecrawl-network
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=loadbalancer-net"
+      - "traefik.http.routers.firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.firecrawl.entrypoints=web"
+      - "traefik.http.services.firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"
+      - "traefik.http.routers.firecrawl-secure.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.firecrawl-secure.entrypoints=websecure"
+      - "traefik.http.routers.firecrawl-secure.tls=true"
+      - "traefik.http.routers.firecrawl-secure.tls.certresolver=le"
 
   playwright-service:
     extends: { file: docker-compose.websearch.yml, service: playwright-service }
-    env_file: .env
 
   redis:
     extends: { file: docker-compose.websearch.yml, service: redis }
-    env_file: .env
 
   nuq-postgres:
     extends: { file: docker-compose.websearch.yml, service: nuq-postgres }
-    env_file: .env
 
   rabbitmq:
     extends: { file: docker-compose.websearch.yml, service: rabbitmq }
-    env_file: .env
 
   vectordb:
     extends: { file: docker-compose.rag.yml, service: vectordb }
-    env_file: .env
 
   rag_api:
     extends: { file: docker-compose.rag.yml, service: rag_api }
-    env_file: .env
 
 networks:
   traefik-net:
-    driver: bridge
+    external: true
+    name: loadbalancer-net
   app-net:
     driver: bridge
   firecrawl-network:
     driver: bridge
 
 volumes:
+  mongodata:
+  mongoconfig:
   firecrawl_pgdata:
   pgdata2:
   librechat-config:
-  mongoconfig:
   searxng-config:

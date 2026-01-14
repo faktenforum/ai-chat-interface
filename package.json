@@ -10,6 +10,8 @@
         "setup:yes": "./scripts/setup-env.ts --yes",
         "setup:prod": "./scripts/setup-env.ts --prod",
         "setup:prod:yes": "./scripts/setup-env.ts --prod --yes",
+        "setup:dev": "./scripts/setup-env.ts --dev",
+        "setup:dev:yes": "./scripts/setup-env.ts --dev --yes",
         "prepare:dev": "./scripts/prepare-dev-submodules.sh"
     },
     "license": "MIT",

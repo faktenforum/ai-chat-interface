@@ -4,10 +4,11 @@
 
 - **Prerequisite**: external Docker network exists: `loadbalancer-net`
 - **Portainer**: Stacks → **Add stack** → **Git repository**
-  - Compose path: `docker-compose.prod.yml`
+  - Compose path: `docker-compose.yml` (for production or test environment)
 - **Environment**:
-  - Locally generate: `npm run setup:prod` (creates `.env.prod`)
-  - In Portainer: Stack → **Environment variables** (Advanced mode) → paste `.env.prod` contents
+  - **Production**: Locally generate `npm run setup:prod` (creates `.env.prod`)
+  - **Test Environment**: Locally generate `npm run setup:dev` (creates `.env.dev`)
+  - In Portainer: Stack → **Environment variables** (Advanced mode) → paste `.env.prod` or `.env.dev` contents
 - **Deploy** the stack
 
 ## Why `librechat-init` exists
