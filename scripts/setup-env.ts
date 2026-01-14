@@ -64,6 +64,7 @@ const AUTO_GENERATED: Record<string, () => string> = {
     // n8n
     'N8N_ENCRYPTION_KEY': () => genBase64Secret(32), // 32 bytes = 44 base64 chars (n8n recommended)
     'N8N_POSTGRES_PASSWORD': () => genSecret(16), // PostgreSQL password for n8n
+    'N8N_BASIC_AUTH_PASSWORD': () => genSecret(16), // Basic Auth password for n8n (only used if N8N_BASIC_AUTH_ACTIVE=true)
 };
 
 type PromptType = 'input' | 'password';
@@ -104,7 +105,6 @@ const PROMPTS: Record<string, PromptConfig> = {
 
     // n8n (Production only)
     'N8N_BASIC_AUTH_USER': { message: 'n8n Basic Auth Username:', type: 'input', defaultGen: () => 'admin', prodOnly: true },
-    'N8N_BASIC_AUTH_PASSWORD': { message: 'n8n Basic Auth Password:', type: 'password', prodOnly: true },
 };
 
 /**
