@@ -365,10 +365,10 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD-SHELL", "nc -z 0.0.0.0 3002 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 15
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3002/v0/health/liveness', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
       start_period: 120s
 
 volumes:
