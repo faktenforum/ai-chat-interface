@@ -110,8 +110,6 @@ services:
   n8n-postgres:
     extends: { file: docker-compose.n8n.yml, service: n8n-postgres }
     container_name: ${STACK_NAME:-prod}-n8n-postgres
-    volumes:
-      - n8n_pgdata:/var/lib/postgresql/data
 
   n8n:
     extends: { file: docker-compose.n8n.yml, service: n8n }
