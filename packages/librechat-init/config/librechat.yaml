@@ -431,6 +431,27 @@ registration:
 #     - '*.example.com'           # Wildcard subdomain
 #     - 'https://secure.api.com'  # Protocol-restricted
 #     - 'http://internal:8080'    # Protocol and port restricted
+#     # n8n Integration (uncomment when MCP bridge is ready)
+#     # - 'http://n8n:5678'        # Internal n8n service (Docker network)
+#     # - 'https://n8n.${DOMAIN}'  # External n8n URL (production)
+
+# n8n MCP Server Integration (Future - disabled)
+# To integrate n8n workflows with LibreChat Agents via MCP:
+# 1. Create an HTTP-based MCP server bridge that translates MCP calls to n8n webhook requests
+# 2. Configure the MCP server below as a streamable-http type
+# 3. Add n8n domain to mcpSettings.allowedDomains (see above)
+# Example configuration (uncomment when ready):
+# mcpServers:
+#   n8n:
+#     type: streamable-http
+#     url: http://n8n:5678/mcp  # Internal Docker network URL
+#     # Or use external URL: https://n8n.${DOMAIN}/mcp
+#     headers:
+#       X-User-ID: "{{LIBRECHAT_USER_ID}}"
+#       Authorization: "Bearer ${N8N_API_KEY}"
+#     timeout: 30000
+#     serverInstructions: true
+#     chatMenu: true  # Show in chat dropdown (or false for agents only)
 
 # OCR Configuration (Optical Character Recognition)
 # Requires: LIBRECHAT_OCR_API_KEY environment variable set with your Mistral API key

@@ -1,0 +1,63 @@
+services:
+  n8n-postgres:
+    container_name: n8n-postgres
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: ${N8N_POSTGRES_DB:-n8n}
+      POSTGRES_USER: ${N8N_POSTGRES_USER:-n8n}
+      POSTGRES_PASSWORD: ${N8N_POSTGRES_PASSWORD:-n8n}
+    volumes:
+      - n8n_pgdata:/var/lib/postgresql/data
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${N8N_POSTGRES_USER:-n8n}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  n8n:
+    container_name: n8n
+    image: n8nio/n8n:latest
+    restart: always
+    environment:
+      - N8N_HOST=${N8N_HOST:-n8n.localhost}
+      - N8N_PORT=${N8N_PORT:-5678}
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE:-}
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE:-false}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-}
+      - N8N_USER_MANAGEMENT_DISABLED=${N8N_USER_MANAGEMENT_DISABLED:-false}
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=n8n-postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${N8N_POSTGRES_DB:-n8n}
+      - DB_POSTGRESDB_USER=${N8N_POSTGRES_USER:-n8n}
+      - DB_POSTGRESDB_PASSWORD=${N8N_POSTGRES_PASSWORD:-n8n}
+      - NODE_ENV=${NODE_ENV:-production}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      n8n-postgres:
+        condition: service_healthy
+    networks:
+      - traefik-net
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`${N8N_HOST:-n8n.localhost}`)"
+      - "traefik.http.routers.n8n.entrypoints=web"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+      - "traefik.http.routers.n8n-secure.rule=Host(`${N8N_HOST:-n8n.localhost}`)"
+      - "traefik.http.routers.n8n-secure.entrypoints=websecure"
+      - "traefik.http.routers.n8n-secure.tls=true"
+      - "traefik.http.routers.n8n-secure.tls.certresolver=le"
+
+volumes:
+  n8n_pgdata:
+  n8n_data:

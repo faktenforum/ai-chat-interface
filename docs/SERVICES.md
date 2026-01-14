@@ -9,12 +9,14 @@ This document provides an overview of all services in the AI Chat Interface stac
 | **LibreChat** | Main AI chat interface | ✅ `http://chat.localhost` | ✅ `https://chat.{DOMAIN}` | ❌ |
 | **SearXNG** | Meta search engine for web search | ✅ `http://searxng.localhost` | ❌ Not exposed | ✅ Internal only |
 | **Firecrawl API** | Web scraping service | ✅ `http://firecrawl.localhost` | ✅ `https://firecrawl.{DOMAIN}` | ❌ |
+| **n8n** | Workflow automation platform | ✅ `http://n8n.localhost` | ✅ `https://n8n.{DOMAIN}` | ❌ |
 | **MailDev** | Development mail server | ✅ `http://maildev.localhost` | ❌ Not in production | ❌ |
 | **Traefik** | Reverse proxy and load balancer | ✅ `http://localhost:8080` (API) | External (separate container) | ❌ |
 | **MongoDB** | LibreChat database | ❌ | ❌ | ✅ Internal only |
 | **Meilisearch** | LibreChat search index | ❌ | ❌ | ✅ Internal only |
 | **VectorDB** | RAG vector database (PostgreSQL + pgvector) | ❌ | ❌ | ✅ Internal only |
 | **RAG API** | Retrieval-Augmented Generation API | ❌ | ❌ | ✅ Internal only |
+| **n8n PostgreSQL** | n8n database | ❌ | ❌ | ✅ Internal only |
 | **Firecrawl Services** | Internal Firecrawl dependencies | ❌ | ❌ | ✅ Internal only |
 | - playwright-service | Browser automation | ❌ | ❌ | ✅ Internal only |
 | - redis | Firecrawl cache/queue | ❌ | ❌ | ✅ Internal only |
@@ -46,6 +48,15 @@ This document provides an overview of all services in the AI Chat Interface stac
 - **Network**: `traefik-net` + `firecrawl-network` + `app-net`
 - **Internal Dependencies**: playwright-service, redis, nuq-postgres, rabbitmq
 
+#### n8n
+- **Local**: `http://n8n.localhost`
+- **Production**: `https://n8n.{DOMAIN}`
+- **Purpose**: Workflow automation platform for creating automated workflows and integrations
+- **Network**: `traefik-net` + `app-net`
+- **Internal Dependencies**: n8n PostgreSQL
+- **Future Integration**: Can be integrated with LibreChat Agents via MCP tools or webhooks
+- **Note**: Basic Auth recommended for production. Encryption key required for credential storage.
+
 #### MailDev
 - **Local**: `http://maildev.localhost`
 - **Production**: ❌ Not in production stack
@@ -75,6 +86,11 @@ This document provides an overview of all services in the AI Chat Interface stac
 - **Network**: `app-net` only
 - **Access**: Only accessible from LibreChat API
 
+#### n8n PostgreSQL
+- **Purpose**: n8n's database for storing workflows, credentials, and execution history
+- **Network**: `app-net` only
+- **Access**: Only accessible from n8n service
+
 #### Firecrawl Internal Services
 - **playwright-service**: Browser automation for web scraping
 - **redis**: Cache and queue management
@@ -88,11 +104,11 @@ This document provides an overview of all services in the AI Chat Interface stac
 
 1. **`traefik-net`** (Local: bridge, Production: external `loadbalancer-net`)
    - Services that need external HTTP/HTTPS access
-   - LibreChat, SearXNG (local only), Firecrawl API, MailDev (local only)
+   - LibreChat, SearXNG (local only), Firecrawl API, n8n, MailDev (local only)
 
 2. **`app-net`** (Bridge network)
    - LibreChat ecosystem internal communication
-   - LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API
+   - LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API, n8n, n8n PostgreSQL
 
 3. **`firecrawl-network`** (Bridge network)
    - Firecrawl internal services only

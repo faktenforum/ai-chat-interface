@@ -115,6 +115,21 @@ services:
     extends: { file: docker-compose.rag.yml, service: rag_api }
     env_file: .env.local
 
+  # n8n Services
+  n8n-postgres:
+    extends: { file: docker-compose.n8n.yml, service: n8n-postgres }
+    env_file: .env.local
+
+  n8n:
+    extends: { file: docker-compose.n8n.yml, service: n8n }
+    env_file: .env.local
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.n8n.entrypoints=web"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
   # Additional Services
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }
@@ -135,3 +150,5 @@ volumes:
   mongoconfig:
   pgdata2:
   searxng-config:
+  n8n_pgdata:
+  n8n_data:
