@@ -9,6 +9,7 @@
   - **Production**: Locally generate `npm run setup:prod` (creates `.env.prod`)
   - **Test Environment**: Locally generate `npm run setup:dev` (creates `.env.dev`)
   - In Portainer: Stack → **Environment variables** (Advanced mode) → paste `.env.prod` or `.env.dev` contents
+  - **Important**: The `STACK_NAME` variable in `.env.prod` (set to `prod`) and `.env.dev` (set to `dev`) ensures that container names, volumes, and networks are prefixed to avoid conflicts when running multiple stacks on the same host
 - **Deploy** the stack
 
 ## Why `librechat-init` exists
@@ -23,5 +24,5 @@ Portainer CE can be unreliable with bind-mounting a **single file** from a Git r
 
 ## Quick checks
 
-- Config present: `docker exec LibreChat cat /app/config/librechat.yaml`
-- Init logs: `docker logs librechat-init`
+- Config present: `docker exec <STACK_NAME>-librechat cat /app/config/librechat.yaml` (e.g., `prod-librechat` or `dev-librechat`)
+- Init logs: `docker logs <STACK_NAME>-librechat-init` (e.g., `prod-librechat-init` or `dev-librechat-init`)
