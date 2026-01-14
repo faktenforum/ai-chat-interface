@@ -1,0 +1,88 @@
+---
+name: create-new-service
+description: Guide for integrating new services into the Docker stack
+---
+
+# New Service Integration Checklist
+
+## 1. Service Definition File
+Create `docker-compose.{service}.yml`:
+- Base service configuration (image, environment, volumes, networks)
+- Use `environment:` section (Portainer compatibility - no `env_file` only)
+- Define all volumes in `volumes:` section
+- Set appropriate networks (`app-net` for internal, `traefik-net` + `app-net` for exposed)
+- Add healthchecks for database dependencies
+- Comment: "Traefik labels defined in docker-compose.prod.yml and docker-compose.local.yml"
+
+## 2. Extension Files
+Add service to:
+- `docker-compose.local.yml`: Extend service, add `env_file: .env.local`, add Traefik labels (HTTP only)
+- `docker-compose.local-source.yml`: Same as local.yml (if service supports source builds)
+- `docker-compose.prod.yml`: Extend service, add `container_name: ${STACK_NAME:-prod}-{service}`, add Traefik labels (HTTP + HTTPS), add volumes with `${STACK_NAME:-prod}-` prefix
+
+## 3. Environment Variables
+Add to all three example files:
+- `env.local.example`: Local defaults (http, no auth, localhost domains)
+- `env.prod.example`: Production defaults (https, auth enabled, production domains)
+- `env.dev.example`: Dev defaults (https, auth enabled, dev domains - online accessible)
+
+Pattern: `{SERVICE}_HOST`, `{SERVICE}_PROTOCOL`, `{SERVICE}_SECURE_COOKIE`, `{SERVICE}_BASIC_AUTH_*`, database vars, encryption keys
+
+## 4. Setup Script Integration
+Update `scripts/setup-env.ts`:
+- Add auto-generated secrets to `AUTO_GENERATED` object (hex/base64 secrets, usernames)
+- Add user prompts to `PROMPTS` object (passwords, API keys, optional configs)
+- Use `genSecret()`, `genBase64Secret()`, `genUsername()` helpers
+
+## 5. Traefik Labels
+**Local** (`docker-compose.local.yml`):
+```yaml
+labels:
+  - "traefik.enable=true"
+  - "traefik.docker.network=ai-chat-interface_traefik-net"
+  - "traefik.http.routers.{service}.rule=Host(`{service}.${DOMAIN:-localhost}`)"
+  - "traefik.http.routers.{service}.entrypoints=web"
+  - "traefik.http.services.{service}.loadbalancer.server.port={port}"
+```
+
+**Production** (`docker-compose.prod.yml`):
+```yaml
+labels:
+  - "traefik.enable=true"
+  - "traefik.docker.network=loadbalancer-net"
+  - "traefik.http.routers.${STACK_NAME:-prod}-{service}.rule=Host(`{service}.${DOMAIN:-localhost}`)"
+  - "traefik.http.routers.${STACK_NAME:-prod}-{service}.entrypoints=web"
+  - "traefik.http.services.${STACK_NAME:-prod}-{service}.loadbalancer.server.port={port}"
+  - "traefik.http.routers.${STACK_NAME:-prod}-{service}-secure.rule=Host(`{service}.${DOMAIN:-localhost}`)"
+  - "traefik.http.routers.${STACK_NAME:-prod}-{service}-secure.entrypoints=websecure"
+  - "traefik.http.routers.${STACK_NAME:-prod}-{service}-secure.tls=true"
+  - "traefik.http.routers.${STACK_NAME:-prod}-{service}-secure.tls.certresolver=le"
+```
+
+## 6. Volumes
+Add to volumes section in all compose files:
+- **Local**: `{service}_data:` (simple name)
+- **Production**: `{service}_data: name: ${STACK_NAME:-prod}-{service}-data`
+
+## 7. Documentation
+- Update `docs/SERVICES.md`: Add to matrix table, add details section
+- Update `docs/README.md`: Add link if service-specific docs created
+- Create `docs/{SERVICE}.md` if service needs detailed setup notes
+
+## 8. Security
+- **Production/Dev**: Enable HTTPS, Basic Auth, secure cookies
+- **Local**: HTTP only, no auth required
+- Generate encryption keys via `setup-env.ts` or `openssl rand -base64 32`
+- Never hardcode credentials
+
+## 9. Naming
+- Service names: lowercase with hyphens
+- Container names: `${STACK_NAME:-prod}-{service}` (production), `{service}` (local)
+- Volume names: `${STACK_NAME:-prod}-{service}-data` (production), `{service}_data` (local)
+- Traefik routers: `${STACK_NAME:-prod}-{service}` (production), `{service}` (local)
+
+## 10. Testing
+- Run `npm run setup:yes` to generate env files
+- Test locally: `docker compose -f docker-compose.local.yml up -d`
+- Verify Traefik routing: `http://{service}.localhost`
+- Check logs: `docker compose logs {service}`

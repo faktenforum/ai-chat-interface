@@ -58,7 +58,60 @@ Identical compose structure for local and production. Differences: environment f
 - ❌ Hardcode localhost/127.0.0.1 in service URLs (use service names)
 - ❌ Mix volume strategies (bind mounts + named volumes for same data)
 
-### 9. Testing
+### 9. Service Integration Patterns
+- **Service Files**: Create `docker-compose.{service}.yml` with base service definitions
+- **Extension Pattern**: Use `extends:` in `docker-compose.local.yml`, `docker-compose.local-source.yml`, and `docker-compose.prod.yml`
+- **Environment Variables**: Add to `env.local.example`, `env.prod.example`, `env.dev.example` (dev = online accessible, needs security)
+- **Auto-Generation**: Add secrets to `AUTO_GENERATED` in `scripts/setup-env.ts` (hex/base64 secrets, usernames)
+- **Prompts**: Add user inputs to `PROMPTS` in `scripts/setup-env.ts` (passwords, API keys, optional configs)
+
+### 10. Naming Conventions
+- **Container Names**: Production uses `${STACK_NAME:-prod}-{service}`; local uses `{service}` only
+- **Volume Names**: Production uses `${STACK_NAME:-prod}-{volume}`; local uses `{volume}` only
+- **Network Names**: Production uses `${STACK_NAME:-prod}-{network}`; local uses `{network}` only
+- **Traefik Routers**: Production uses `${STACK_NAME:-prod}-{service}`; local uses `{service}` only
+- **Service Names**: Use lowercase with hyphens (e.g., `n8n-postgres`, not `n8n_postgres`)
+
+### 11. Traefik Configuration
+- **Local**: `traefik.docker.network=ai-chat-interface_traefik-net` (bridge network name)
+- **Production**: `traefik.docker.network=loadbalancer-net` (external network)
+- **Host Rules**: Use `Host(\`{service}.${DOMAIN:-localhost}\`)` pattern
+- **HTTPS**: Production requires `-secure` router with `entrypoints=websecure`, `tls=true`, `certresolver=le`
+- **HTTP**: Local uses `entrypoints=web` only (no TLS)
+- **Service Labels**: Always include `traefik.enable=true`, router rule, entrypoint, and service/port
+
+### 12. Network Assignment
+- **External Services** (via Traefik): `traefik-net` + `app-net`
+- **Internal Services**: `app-net` only
+- **Service-Specific Networks**: Use dedicated networks (e.g., `firecrawl-network`) for isolated service groups
+- **Database Services**: `app-net` only (never `traefik-net`)
+
+### 13. Volume Strategy by Environment
+- **Local**: Named volumes (no bind mounts for new services - Portainer compatibility)
+- **Production**: Named volumes only with `${STACK_NAME:-prod}-` prefix
+- **Config Volumes**: Use init containers to write configs to named volumes (never bind-mount configs in production)
+
+### 14. Security Requirements
+- **Production**: HTTPS required, Basic Auth recommended for exposed services
+- **Dev Environment** (online accessible): Same security as production (HTTPS + Basic Auth)
+- **Local**: HTTP only, no Basic Auth required
+- **Encryption Keys**: Generate with `openssl rand -base64 32` or via `setup-env.ts` auto-generation
+- **Credentials**: Store in environment variables, never hardcode
+
+### 15. Environment Variable Patterns
+- **Host/Protocol**: `{SERVICE}_HOST`, `{SERVICE}_PROTOCOL` (http for local, https for prod/dev)
+- **Secure Cookies**: `{SERVICE}_SECURE_COOKIE` (false for local, true for prod/dev)
+- **Basic Auth**: `{SERVICE}_BASIC_AUTH_ACTIVE`, `{SERVICE}_BASIC_AUTH_USER`, `{SERVICE}_BASIC_AUTH_PASSWORD`
+- **Database**: `{SERVICE}_POSTGRES_DB`, `{SERVICE}_POSTGRES_USER`, `{SERVICE}_POSTGRES_PASSWORD`
+- **Webhook URLs**: Auto-configured based on `{SERVICE}_HOST` and `{SERVICE}_PROTOCOL`
+
+### 16. Documentation Requirements
+- **SERVICES.md**: Add service to matrix table, add details section
+- **README.md**: Add link to service-specific docs if created
+- **Service Docs**: Create `docs/{SERVICE}.md` for complex services (e.g., `docs/N8N.md`)
+- **Update**: Keep documentation in sync with implementation
+
+### 17. Testing
 
 - **Local**: Use `npm run setup:yes && docker compose down -v && sleep 3 && docker compose up -d` to make sure all services are restarted and all changes are applied.
 - **Production**: `docker compose --env-file .env.prod -f docker-compose.prod.yml up`
