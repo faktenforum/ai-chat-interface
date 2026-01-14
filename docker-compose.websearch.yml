@@ -264,12 +264,6 @@ services:
     networks:
       - traefik-net
       - app-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=ai-chat-interface_traefik-net"
-      - "traefik.http.routers.searxng.rule=Host(`searxng.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.searxng.entrypoints=web"
-      - "traefik.http.services.searxng.loadbalancer.server.port=8080"
     depends_on:
       searxng-config-init:
         condition: service_completed_successfully
@@ -322,10 +316,11 @@ services:
     networks:
       - firecrawl-network
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping && rabbitmq-diagnostics -q check_port_connectivity"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+      start_period: 40s
 
   firecrawl-api:
     container_name: firecrawl-api
@@ -375,12 +370,6 @@ services:
       timeout: 5s
       retries: 15
       start_period: 120s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=ai-chat-interface_traefik-net"
-      - "traefik.http.routers.firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.firecrawl.entrypoints=web"
-      - "traefik.http.services.firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"
 
 volumes:
   firecrawl_pgdata:

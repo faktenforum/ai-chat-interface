@@ -38,13 +38,13 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
-      - "traefik.http.routers.librechat.rule=Host(`chat.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.librechat.entrypoints=web"
-      - "traefik.http.services.librechat.loadbalancer.server.port=3080"
-      - "traefik.http.routers.librechat-secure.rule=Host(`chat.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.librechat-secure.entrypoints=websecure"
-      - "traefik.http.routers.librechat-secure.tls=true"
-      - "traefik.http.routers.librechat-secure.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-librechat.rule=Host(`chat.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-librechat.entrypoints=web"
+      - "traefik.http.services.${STACK_NAME:-prod}-librechat.loadbalancer.server.port=3080"
+      - "traefik.http.routers.${STACK_NAME:-prod}-librechat-secure.rule=Host(`chat.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-librechat-secure.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-librechat-secure.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-librechat-secure.tls.certresolver=le"
 
   searxng-config-init:
     extends: { file: docker-compose.websearch.yml, service: searxng-config-init }
@@ -58,6 +58,12 @@ services:
     depends_on:
       searxng-config-init:
         condition: service_completed_successfully
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=loadbalancer-net"
+      - "traefik.http.routers.${STACK_NAME:-prod}-searxng.rule=Host(`searxng.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-searxng.entrypoints=web"
+      - "traefik.http.services.${STACK_NAME:-prod}-searxng.loadbalancer.server.port=8080"
 
   firecrawl-api:
     extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
@@ -69,13 +75,13 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
-      - "traefik.http.routers.firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.firecrawl.entrypoints=web"
-      - "traefik.http.services.firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"
-      - "traefik.http.routers.firecrawl-secure.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.firecrawl-secure.entrypoints=websecure"
-      - "traefik.http.routers.firecrawl-secure.tls=true"
-      - "traefik.http.routers.firecrawl-secure.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl.entrypoints=web"
+      - "traefik.http.services.${STACK_NAME:-prod}-firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"
+      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.tls.certresolver=le"
 
   playwright-service:
     extends: { file: docker-compose.websearch.yml, service: playwright-service }

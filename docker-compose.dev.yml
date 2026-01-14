@@ -64,6 +64,12 @@ services:
       - ./dev/agents:/app/node_modules/@librechat/agents
     environment:
       NODE_ENV: development
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
+      - "traefik.http.routers.librechat.rule=Host(`chat.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.librechat.entrypoints=web"
+      - "traefik.http.services.librechat.loadbalancer.server.port=3080"
 
   # Web Search Services
   searxng-config-init:
@@ -78,10 +84,22 @@ services:
       searxng-config-init:
         condition: service_completed_successfully
     env_file: .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
+      - "traefik.http.routers.searxng.rule=Host(`searxng.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.searxng.entrypoints=web"
+      - "traefik.http.services.searxng.loadbalancer.server.port=8080"
 
   firecrawl-api:
     extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
     env_file: .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
+      - "traefik.http.routers.firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.firecrawl.entrypoints=web"
+      - "traefik.http.services.firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"
 
   playwright-service:
     extends: { file: docker-compose.websearch.yml, service: playwright-service }

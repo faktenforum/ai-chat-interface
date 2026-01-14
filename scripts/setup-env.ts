@@ -558,7 +558,7 @@ async function main() {
         console.log(`  1. Copy the contents of ${path.basename(targetFile)}`);
         console.log('  2. In Portainer: Stack → Editor → Environment variables (Advanced mode)');
         console.log('  3. Paste the environment variables');
-        console.log('  4. Deploy stack → config-init will generate config automatically');
+        console.log('  4. Deploy stack → librechat-init will generate config automatically');
         const exampleFile = isProdMode ? 'env.prod.example' : 'env.dev.example';
         console.log(`\n💡 Tip: Re-run this script anytime env.local.example or ${exampleFile} changes`);
     } else {
