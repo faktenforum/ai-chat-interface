@@ -105,11 +105,11 @@ services:
       - mongoconfig:/data/configdb
     command: mongod --noauth
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --eval 'db.runCommand(\"ping\").ok' localhost:27017/test --quiet || exit 1"]
+      test: ["CMD-SHELL", "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --quiet || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 5
-      start_period: 40s
+      start_period: 90s
     networks:
       - app-net
 
