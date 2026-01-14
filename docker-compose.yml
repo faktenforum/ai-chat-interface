@@ -8,10 +8,8 @@ services:
     pull_policy: build
     volumes:
       - librechat-config:/app/config
-      - mongodata:/mongo_data  # Production verwendet named volume statt bind mount
+      - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
-      # Note: logs, images, uploads, meili_data are handled by other services in production
-      # librechat-init only needs access to config and mongo volumes for initialization
 
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
@@ -49,12 +47,7 @@ services:
     extends: { file: docker-compose.websearch.yml, service: searxng }
     container_name: ${STACK_NAME:-prod}-searxng
     volumes:
-      # Use named volume in production (bind mounts don't work reliably in Portainer)
       - searxng-config:/etc/searxng:ro
-    networks:
-      - app-net
-    # SearXNG is NOT exposed via Traefik in production
-    # It's only accessible internally by LibreChat
     depends_on:
       searxng-config-init:
         condition: service_completed_successfully
