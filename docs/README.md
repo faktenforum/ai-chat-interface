@@ -20,6 +20,7 @@ New to the project? Start here:
 - **[Portainer Configuration](PORTAINER-CONFIG.md)** - Guide for deploying via Portainer, including GitOps automatic updates
 - **[Getting Started](GETTING_STARTED.md)** - Complete setup and deployment instructions
 - **[SearXNG Engines](SEARXNG_ENGINES.md)** - Configuration and usage of SearXNG search engines
+- **[n8n Setup Notes](N8N.md)** - Owner setup, Portainer env behavior, and user reset
 
 ## Development
 
