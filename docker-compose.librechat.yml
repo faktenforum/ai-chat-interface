@@ -88,12 +88,27 @@ services:
     networks:
       - traefik-net
       - app-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=ai-chat-interface_traefik-net"
-      - "traefik.http.routers.librechat.rule=Host(`chat.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.librechat.entrypoints=web"
-      - "traefik.http.services.librechat.loadbalancer.server.port=3080"
+
+  mongodb-init:
+    image: alpine:latest
+    container_name: mongodb-init
+    restart: "no"
+    user: root
+    volumes:
+      - ./data-node:/data/db
+      - mongoconfig:/data/configdb
+    command: >
+      sh -c "
+        mkdir -p /data/db /data/configdb
+        chown -R \"$$UID\":\"$$GID\" /data/db /data/configdb 2>/dev/null || true
+        chmod -R 775 /data/db /data/configdb 2>/dev/null || true
+        echo \"MongoDB volume permissions set for UID:$$UID GID:$$GID\"
+      "
+    environment:
+      UID: ${UID:-1000}
+      GID: ${GID:-1000}
+    networks:
+      - app-net
 
   mongodb:
     container_name: mongodb
@@ -104,12 +119,15 @@ services:
       - ./data-node:/data/db
       - mongoconfig:/data/configdb
     command: mongod --noauth
+    depends_on:
+      mongodb-init:
+        condition: service_completed_successfully
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: ["CMD-SHELL", "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --quiet || exit 1"]
       interval: 10s
-      timeout: 5s
+      timeout: 10s
       retries: 5
-      start_period: 10s
+      start_period: 90s
     networks:
       - app-net
 

@@ -71,7 +71,7 @@ This document describes the search engines and features enabled in our SearXNG i
    - **Which fields are you interested in?**: Select relevant fields (e.g., Social Sciences, Arts and Humanities, etc.)
 4. **Complete Registration**: Submit the form and verify your email
 5. **Get API Key**: After approval, you'll receive your API key (hexadecimal format)
-6. **Add to Environment**: Add `SPRINGER_NATURE_API_KEY=your-key-here` to your `.env` or `.env.prod` file
+6. **Add to Environment**: Add `SPRINGER_NATURE_API_KEY=your-key-here` to your `.env.local`, `.env.dev`, or `.env.prod` file
 7. **Restart SearXNG**: `docker compose restart searxng`
 
 **Note**: The engine uses the **Meta API v2**, which provides access to Springer Nature's metadata and publications. The API key is free for academic use.
@@ -184,7 +184,7 @@ This ensures AI receives information from authoritative sources rather than soci
 
 ### Environment Variables
 
-Add the following to your `.env` or `.env.prod` file:
+Add the following to your `.env.local`, `.env.dev`, or `.env.prod` file:
 
 ```bash
 # SearXNG default language for search results
@@ -200,7 +200,7 @@ SPRINGER_NATURE_API_KEY=your-api-key-here
 
 By default, SearXNG searches in all languages, which can result in unwanted results (e.g., Chinese content). To filter results by language:
 
-1. **Set `SEARXNG_DEFAULT_LANG`** in your `.env` or `.env.prod` file:
+1. **Set `SEARXNG_DEFAULT_LANG`** in your `.env.local`, `.env.dev`, or `.env.prod` file:
    - `de` - German results only
    - `en` - English results only
    - `all` - All languages (default, may include unwanted results)

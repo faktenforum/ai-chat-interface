@@ -31,13 +31,12 @@ For detailed setup and deployment instructions, see the [Documentation](docs/REA
 **Quick setup for local development:**
 ```bash
 npm run setup
-docker compose up -d
+docker compose -f docker-compose.local.yml --env-file .env.local up -d
 ```
 
-**Production deployment:**
+**Full reset (cleanup and restart):**
 ```bash
-npm run setup:prod
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+npm run setup:yes && docker compose -f docker-compose.local.yml down -v && sleep 3 && docker compose -f docker-compose.local.yml --env-file .env.local up -d
 ```
 
 ## Documentation

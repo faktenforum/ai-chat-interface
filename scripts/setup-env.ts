@@ -7,10 +7,12 @@ import { input, password } from '@inquirer/prompts';
 import dotenv from 'dotenv';
 
 const ROOT_DIR = process.cwd();
-const ENV_FILE = path.join(ROOT_DIR, '.env');
-const STACK_ENV_FILE = path.join(ROOT_DIR, '.env.prod');
-const EXAMPLE_FILE = path.join(ROOT_DIR, 'env.example');
+const LOCAL_ENV_FILE = path.join(ROOT_DIR, '.env.local');
+const PROD_ENV_FILE = path.join(ROOT_DIR, '.env.prod');
+const DEV_ENV_FILE = path.join(ROOT_DIR, '.env.dev');
+const LOCAL_EXAMPLE_FILE = path.join(ROOT_DIR, 'env.local.example');
 const PROD_EXAMPLE_FILE = path.join(ROOT_DIR, 'env.prod.example');
+const DEV_EXAMPLE_FILE = path.join(ROOT_DIR, 'env.dev.example');
 
 // ============================================================================
 // Utility Functions
@@ -182,11 +184,11 @@ async function processPrompted(
     config: PromptConfig,
     currentValue: string | undefined,
     defaultValue: string,
-    isProdMode: boolean,
+    isProdOrDevMode: boolean,
     skipPrompts: boolean
 ): Promise<string> {
-    // Skip prod-only prompts in dev mode
-    if (config.prodOnly && !isProdMode) {
+    // Skip prod-only prompts in local/dev mode
+    if (config.prodOnly && !isProdOrDevMode) {
         return currentValue !== undefined ? currentValue : defaultValue;
     }
 
@@ -334,13 +336,14 @@ function resolveVariableExpansions(envLines: string[]): string[] {
 // ============================================================================
 
 /**
- * Process environment file lines from env.example
+ * Process environment file lines from env.local.example
  */
 async function processEnvExample(
     exampleContent: string,
     baseDefaults: Record<string, string>,
     existingEnv: Record<string, string>,
     isProdMode: boolean,
+    isDevMode: boolean,
     skipPrompts: boolean
 ): Promise<string[]> {
     const finalEnvLines: string[] = [];
@@ -378,7 +381,7 @@ async function processEnvExample(
                 PROMPTS[key],
                 currentValue,
                 defaultValue,
-                isProdMode,
+                isProdMode || isDevMode,
                 skipPrompts
             );
             finalEnvLines.push(`${key}=${value}`);
@@ -393,30 +396,35 @@ async function processEnvExample(
 }
 
 /**
- * Add production-only variables from env.prod.example
+ * Add environment-specific variables from env.prod.example or env.dev.example
  */
 function addProductionVariables(
-    prodContent: string,
+    envContent: string,
     baseDefaults: Record<string, string>,
     existingEnv: Record<string, string>,
     processedKeys: Set<string>
 ): string[] {
-    const prodLines: string[] = [];
-    let addedProdSection = false;
+    const envLines: string[] = [];
+    let addedSection = false;
+    const sectionTitle = envContent.includes('Production-specific') 
+        ? 'Production-Only Configuration (from env.prod.example)'
+        : envContent.includes('Test environment-specific')
+        ? 'Test Environment Configuration (from env.dev.example)'
+        : 'Environment-Specific Configuration';
 
-    for (const line of prodContent.split('\n')) {
+    for (const line of envContent.split('\n')) {
         const trimmed = line.trim();
 
         // Keep comments and empty lines
         if (!trimmed || trimmed.startsWith('#')) {
-            if (!addedProdSection) {
-                prodLines.push('');
-                prodLines.push('# ═══════════════════════════════════════════════════════════════════════════');
-                prodLines.push('# Production-Only Configuration (from env.prod.example)');
-                prodLines.push('# ═══════════════════════════════════════════════════════════════════════════');
-                addedProdSection = true;
+            if (!addedSection) {
+                envLines.push('');
+                envLines.push('# ═══════════════════════════════════════════════════════════════════════════');
+                envLines.push(`# ${sectionTitle}`);
+                envLines.push('# ═══════════════════════════════════════════════════════════════════════════');
+                addedSection = true;
             }
-            prodLines.push(line);
+            envLines.push(line);
             continue;
         }
 
@@ -424,12 +432,12 @@ function addProductionVariables(
         if (key && !processedKeys.has(key)) {
             const currentValue = existingEnv[key];
             const defaultValue = baseDefaults[key];
-            prodLines.push(`${key}=${currentValue !== undefined ? currentValue : defaultValue}`);
+            envLines.push(`${key}=${currentValue !== undefined ? currentValue : defaultValue}`);
             processedKeys.add(key);
         }
     }
 
-    return prodLines;
+    return envLines;
 }
 
 // ============================================================================
@@ -439,16 +447,30 @@ function addProductionVariables(
 async function main() {
     const args = process.argv.slice(2);
     const isProdMode = args.includes('--prod');
+    const isDevMode = args.includes('--dev');
     const skipPrompts = args.includes('--yes') || args.includes('-y');
-    const targetFile = isProdMode ? STACK_ENV_FILE : ENV_FILE;
+    
+    // Determine target file based on mode
+    let targetFile: string;
+    let modeName: string;
+    if (isProdMode) {
+        targetFile = PROD_ENV_FILE;
+        modeName = 'Production';
+    } else if (isDevMode) {
+        targetFile = DEV_ENV_FILE;
+        modeName = 'Test';
+    } else {
+        targetFile = LOCAL_ENV_FILE;
+        modeName = 'Local';
+    }
 
-    console.log(`\n🚀 AI Chat Interface - Environment Setup (TypeScript)${isProdMode ? ' [Production Mode]' : ''}${skipPrompts ? ' [Auto Mode]' : ''}\n`);
+    console.log(`\n🚀 AI Chat Interface - Environment Setup (TypeScript) [${modeName} Mode]${skipPrompts ? ' [Auto Mode]' : ''}\n`);
     if (skipPrompts) {
         console.log('⚡ Skipping prompts, using defaults and existing values...\n');
     }
 
     // 1. Load existing environment file
-    const defaultsFile = isProdMode && fs.existsSync(targetFile) ? targetFile : ENV_FILE;
+    const defaultsFile = (isProdMode || isDevMode) && fs.existsSync(targetFile) ? targetFile : LOCAL_ENV_FILE;
     const existingEnv = loadExistingEnv(defaultsFile);
 
     if (Object.keys(existingEnv).length > 0) {
@@ -460,32 +482,37 @@ async function main() {
     // 2. Apply migrations
     applyMigrations(existingEnv);
 
-    // 3. Read env.example
-    if (!fs.existsSync(EXAMPLE_FILE)) {
-        console.log('❌ Error: env.example not found. Please ensure it exists in the root directory.');
+    // 3. Read env.local.example
+    if (!fs.existsSync(LOCAL_EXAMPLE_FILE)) {
+        console.log('❌ Error: env.local.example not found. Please ensure it exists in the root directory.');
         process.exit(1);
     }
 
-    const exampleContent = fs.readFileSync(EXAMPLE_FILE, 'utf-8');
-    const baseDefaults = parseEnvFile(EXAMPLE_FILE);
+    const exampleContent = fs.readFileSync(LOCAL_EXAMPLE_FILE, 'utf-8');
+    const baseDefaults = parseEnvFile(LOCAL_EXAMPLE_FILE);
 
-    // 4. Merge with env.prod.example if in production mode
+    // 4. Merge with environment-specific example file
     if (isProdMode && fs.existsSync(PROD_EXAMPLE_FILE)) {
         console.log('📦 Loading production overrides from env.prod.example...');
         const prodDefaults = parseEnvFile(PROD_EXAMPLE_FILE);
         Object.assign(baseDefaults, prodDefaults);
+    } else if (isDevMode && fs.existsSync(DEV_EXAMPLE_FILE)) {
+        console.log('📦 Loading test environment overrides from env.dev.example...');
+        const devDefaults = parseEnvFile(DEV_EXAMPLE_FILE);
+        Object.assign(baseDefaults, devDefaults);
     }
 
-    // 5. Process env.example lines
+    // 5. Process env.local.example lines
     const finalEnvLines = await processEnvExample(
         exampleContent,
         baseDefaults,
         existingEnv,
         isProdMode,
+        isDevMode,
         skipPrompts
     );
 
-    // 6. Add production-only variables
+    // 6. Add environment-specific variables
     if (isProdMode && fs.existsSync(PROD_EXAMPLE_FILE)) {
         const prodContent = fs.readFileSync(PROD_EXAMPLE_FILE, 'utf-8');
         const processedKeys = new Set(
@@ -495,6 +522,15 @@ async function main() {
         );
         const prodLines = addProductionVariables(prodContent, baseDefaults, existingEnv, processedKeys);
         finalEnvLines.push(...prodLines);
+    } else if (isDevMode && fs.existsSync(DEV_EXAMPLE_FILE)) {
+        const devContent = fs.readFileSync(DEV_EXAMPLE_FILE, 'utf-8');
+        const processedKeys = new Set(
+            finalEnvLines
+                .filter(line => !line.trim().startsWith('#') && line.includes('='))
+                .map(line => line.split('=')[0])
+        );
+        const devLines = addProductionVariables(devContent, baseDefaults, existingEnv, processedKeys);
+        finalEnvLines.push(...devLines);
     }
 
     // 7. Resolve variable expansions
@@ -513,21 +549,23 @@ async function main() {
     const newVarsCount = Array.from(processedKeys).filter(k => !existingEnv[k]).length;
     const preservedVarsCount = Array.from(processedKeys).filter(k => existingEnv[k]).length;
 
-    if (isProdMode) {
-        console.log(`\n✅ Production environment file regenerated!`);
+    if (isProdMode || isDevMode) {
+        const envType = isProdMode ? 'Production' : 'Test';
+        console.log(`\n✅ ${envType} environment file regenerated!`);
         console.log(`   📝 File: ${path.basename(targetFile)}`);
         console.log(`   🔄 Variables: ${processedKeys.size} total (${preservedVarsCount} preserved, ${newVarsCount} new)`);
         console.log('\n📦 Next steps for Portainer deployment:');
-        console.log('  1. Copy the contents of .env.prod');
+        console.log(`  1. Copy the contents of ${path.basename(targetFile)}`);
         console.log('  2. In Portainer: Stack → Editor → Environment variables (Advanced mode)');
         console.log('  3. Paste the environment variables');
-        console.log('  4. Deploy stack → config-init will generate config automatically');
-        console.log('\n💡 Tip: Re-run this script anytime env.example or env.prod.example changes');
+        console.log('  4. Deploy stack → librechat-init will generate config automatically');
+        const exampleFile = isProdMode ? 'env.prod.example' : 'env.dev.example';
+        console.log(`\n💡 Tip: Re-run this script anytime env.local.example or ${exampleFile} changes`);
     } else {
         console.log(`\n✅ Environment file regenerated!`);
         console.log(`   📝 File: ${path.basename(targetFile)}`);
         console.log(`   🔄 Variables: ${processedKeys.size} total (${preservedVarsCount} preserved, ${newVarsCount} new)`);
-        console.log('\n💡 Tip: Re-run this script anytime env.example changes');
+        console.log('\n💡 Tip: Re-run this script anytime env.local.example changes');
     }
 }
 

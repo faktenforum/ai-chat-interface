@@ -1,60 +1,73 @@
 services:
   librechat-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-init }
+    container_name: ${STACK_NAME:-prod}-librechat-init
     build:
       context: ./packages/librechat-init
       dockerfile: Dockerfile
     pull_policy: build
     volumes:
       - librechat-config:/app/config
-      - mongodata:/mongo_data  # Production verwendet named volume statt bind mount
+      - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
-      # Note: logs, images, uploads, meili_data are handled by other services in production
-      # librechat-init only needs access to config and mongo volumes for initialization
+
+  mongodb-init:
+    extends: { file: docker-compose.librechat.yml, service: mongodb-init }
+    container_name: ${STACK_NAME:-prod}-mongodb-init
+    volumes:
+      - mongodata:/data/db
+      - mongoconfig:/data/configdb
 
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
+    container_name: ${STACK_NAME:-prod}-mongodb
     volumes:
       - mongodata:/data/db
       - mongoconfig:/data/configdb
 
   meilisearch:
     extends: { file: docker-compose.librechat.yml, service: meilisearch }
+    container_name: ${STACK_NAME:-prod}-meilisearch
 
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
+    container_name: ${STACK_NAME:-prod}-librechat
     networks:
       - traefik-net
       - app-net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
-      - "traefik.http.routers.librechat.rule=Host(`chat.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.librechat.entrypoints=web"
-      - "traefik.http.services.librechat.loadbalancer.server.port=3080"
-      - "traefik.http.routers.librechat-secure.rule=Host(`chat.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.librechat-secure.entrypoints=websecure"
-      - "traefik.http.routers.librechat-secure.tls=true"
-      - "traefik.http.routers.librechat-secure.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-librechat.rule=Host(`chat.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-librechat.entrypoints=web"
+      - "traefik.http.services.${STACK_NAME:-prod}-librechat.loadbalancer.server.port=3080"
+      - "traefik.http.routers.${STACK_NAME:-prod}-librechat-secure.rule=Host(`chat.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-librechat-secure.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-librechat-secure.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-librechat-secure.tls.certresolver=le"
 
   searxng-config-init:
     extends: { file: docker-compose.websearch.yml, service: searxng-config-init }
+    container_name: ${STACK_NAME:-prod}-searxng-config-init
 
   searxng:
     extends: { file: docker-compose.websearch.yml, service: searxng }
+    container_name: ${STACK_NAME:-prod}-searxng
     volumes:
-      # Use named volume in production (bind mounts don't work reliably in Portainer)
       - searxng-config:/etc/searxng:ro
-    networks:
-      - app-net
-    # SearXNG is NOT exposed via Traefik in production
-    # It's only accessible internally by LibreChat
     depends_on:
       searxng-config-init:
         condition: service_completed_successfully
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=loadbalancer-net"
+      - "traefik.http.routers.${STACK_NAME:-prod}-searxng.rule=Host(`searxng.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-searxng.entrypoints=web"
+      - "traefik.http.services.${STACK_NAME:-prod}-searxng.loadbalancer.server.port=8080"
 
   firecrawl-api:
     extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
+    container_name: ${STACK_NAME:-prod}-firecrawl-api
     networks:
       - traefik-net
       - firecrawl-network
@@ -62,45 +75,59 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
-      - "traefik.http.routers.firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.firecrawl.entrypoints=web"
-      - "traefik.http.services.firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"
-      - "traefik.http.routers.firecrawl-secure.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.firecrawl-secure.entrypoints=websecure"
-      - "traefik.http.routers.firecrawl-secure.tls=true"
-      - "traefik.http.routers.firecrawl-secure.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl.entrypoints=web"
+      - "traefik.http.services.${STACK_NAME:-prod}-firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"
+      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.tls.certresolver=le"
 
   playwright-service:
     extends: { file: docker-compose.websearch.yml, service: playwright-service }
+    container_name: ${STACK_NAME:-prod}-firecrawl-playwright
 
   redis:
     extends: { file: docker-compose.websearch.yml, service: redis }
+    container_name: ${STACK_NAME:-prod}-firecrawl-redis
 
   nuq-postgres:
     extends: { file: docker-compose.websearch.yml, service: nuq-postgres }
+    container_name: ${STACK_NAME:-prod}-firecrawl-postgres
 
   rabbitmq:
     extends: { file: docker-compose.websearch.yml, service: rabbitmq }
+    container_name: ${STACK_NAME:-prod}-firecrawl-rabbitmq
 
   vectordb:
     extends: { file: docker-compose.rag.yml, service: vectordb }
+    container_name: ${STACK_NAME:-prod}-vectordb
 
   rag_api:
     extends: { file: docker-compose.rag.yml, service: rag_api }
+    container_name: ${STACK_NAME:-prod}-rag-api
 
 networks:
   traefik-net:
     external: true
     name: loadbalancer-net
   app-net:
+    name: ${STACK_NAME:-prod}-app-net
     driver: bridge
   firecrawl-network:
+    name: ${STACK_NAME:-prod}-firecrawl-network
     driver: bridge
 
 volumes:
   mongodata:
+    name: ${STACK_NAME:-prod}-mongodata
   mongoconfig:
+    name: ${STACK_NAME:-prod}-mongoconfig
   firecrawl_pgdata:
+    name: ${STACK_NAME:-prod}-firecrawl-pgdata
   pgdata2:
+    name: ${STACK_NAME:-prod}-pgdata2
   librechat-config:
+    name: ${STACK_NAME:-prod}-librechat-config
   searxng-config:
+    name: ${STACK_NAME:-prod}-searxng-config

@@ -130,8 +130,8 @@ main() {
     log_success "All development submodules prepared successfully!"
     echo ""
     log_info "Next steps:"
-    log_info "  docker compose -f docker-compose.dev.yml build"
-    log_info "  docker compose -f docker-compose.dev.yml up -d"
+    log_info "  npm run setup"
+    log_info "  npm run start:local-source"
     echo ""
 }
 
