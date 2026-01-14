@@ -24,9 +24,17 @@ const DEV_EXAMPLE_FILE = path.join(ROOT_DIR, 'env.dev.example');
 const genSecret = (length: number = 32): string => crypto.randomBytes(length).toString('hex');
 
 /**
- * Generate a random base64 string (for n8n encryption key)
+ * Generate a random base64 string
  */
 const genBase64Secret = (length: number = 32): string => crypto.randomBytes(length).toString('base64');
+
+/**
+ * Generate a random username with optional prefix
+ */
+const genUsername = (prefix: string = 'admin'): string => {
+    const randomSuffix = crypto.randomBytes(4).toString('hex');
+    return `${prefix}-${randomSuffix}`;
+};
 
 /**
  * Check if a value contains variable expansions (e.g., ${VAR_NAME})
@@ -59,12 +67,13 @@ const AUTO_GENERATED: Record<string, () => string> = {
     'LIBRECHAT_CREDS_IV': () => genSecret(8),   // 16 hex chars = 8 bytes
     'LIBRECHAT_MEILI_MASTER_KEY': () => genSecret(16),
     'SEARXNG_SECRET_KEY': () => genSecret(32),
-    'LIBRECHAT_SEARXNG_API_KEY': () => genSecret(32), // SearXNG API key for LibreChat
+    'LIBRECHAT_SEARXNG_API_KEY': () => genSecret(32),
     'FIRECRAWL_BULL_AUTH_KEY': () => genSecret(16),
     // n8n
-    'N8N_ENCRYPTION_KEY': () => genBase64Secret(32), // 32 bytes = 44 base64 chars (n8n recommended)
-    'N8N_POSTGRES_PASSWORD': () => genSecret(16), // PostgreSQL password for n8n
-    'N8N_BASIC_AUTH_PASSWORD': () => genSecret(16), // Basic Auth password for n8n (only used if N8N_BASIC_AUTH_ACTIVE=true)
+    'N8N_ENCRYPTION_KEY': () => genBase64Secret(32), // 32 bytes = 44 base64 chars
+    'N8N_POSTGRES_PASSWORD': () => genSecret(16),
+    'N8N_BASIC_AUTH_USER': () => genUsername('admin'), // Format: admin-{random-hex}
+    'N8N_BASIC_AUTH_PASSWORD': () => genSecret(16),
 };
 
 type PromptType = 'input' | 'password';
@@ -102,9 +111,6 @@ const PROMPTS: Record<string, PromptConfig> = {
     'EMAIL_PASSWORD': { message: 'SendGrid API Key (for email verification):', type: 'password', prodOnly: true },
     'EMAIL_FROM': { message: 'Email From Address (e.g., noreply@faktenforum.org):', type: 'input', prodOnly: true },
     'LIBRECHAT_DEFAULT_ADMINS': { message: 'Default LibreChat Admin Emails (comma-separated, optional):', type: 'input' },
-
-    // n8n (Production only)
-    'N8N_BASIC_AUTH_USER': { message: 'n8n Basic Auth Username:', type: 'input', defaultGen: () => 'admin', prodOnly: true },
 };
 
 /**
