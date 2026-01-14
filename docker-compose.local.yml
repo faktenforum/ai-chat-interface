@@ -1,4 +1,5 @@
 services:
+  # Infrastructure Services
   traefik:
     extends: { file: docker-compose.traefik.yml, service: traefik }
     env_file: .env.local
@@ -18,14 +19,34 @@ services:
       - "traefik.http.routers.maildev.entrypoints=web"
       - "traefik.http.services.maildev.loadbalancer.server.port=1080"
 
+  # Database Services - MongoDB
   mongodb-init:
     extends: { file: docker-compose.librechat.yml, service: mongodb-init }
     env_file: .env.local
+    volumes:
+      - mongodata:/data/db
+      - mongoconfig:/data/configdb
 
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
     env_file: .env.local
-  
+    volumes:
+      - mongodata:/data/db
+      - mongoconfig:/data/configdb
+
+  # LibreChat Services
+  librechat-init:
+    extends: { file: docker-compose.librechat.yml, service: librechat-init }
+    env_file: .env.local
+    volumes:
+      - librechat-config:/app/config
+      - ./logs:/logs
+      - ./images:/images
+      - ./uploads:/uploads
+      - mongodata:/mongo_data
+      - ./meili_data_v1.12:/meili_data
+      - mongoconfig:/mongo_configdb
+
   meilisearch:
     extends: { file: docker-compose.librechat.yml, service: meilisearch }
     env_file: .env.local
@@ -34,14 +55,7 @@ services:
     extends: { file: docker-compose.librechat.yml, service: api }
     env_file: .env.local
 
-  librechat-init:
-    extends: { file: docker-compose.librechat.yml, service: librechat-init }
-    env_file: .env.local
-
-  openwebui:
-    extends: { file: docker-compose.openwebui.yml, service: openwebui }
-    env_file: .env.local
-
+  # Web Search Services
   searxng-config-init:
     extends: { file: docker-compose.websearch.yml, service: searxng-config-init }
     env_file: .env.local
@@ -75,12 +89,18 @@ services:
     extends: { file: docker-compose.websearch.yml, service: rabbitmq }
     env_file: .env.local
 
+  # RAG Services
   vectordb:
     extends: { file: docker-compose.rag.yml, service: vectordb }
     env_file: .env.local
 
   rag_api:
     extends: { file: docker-compose.rag.yml, service: rag_api }
+    env_file: .env.local
+
+  # Additional Services
+  openwebui:
+    extends: { file: docker-compose.openwebui.yml, service: openwebui }
     env_file: .env.local
 
 networks:
@@ -93,7 +113,8 @@ networks:
 
 volumes:
   firecrawl_pgdata:
-  pgdata2:
   librechat-config:
+  mongodata:
   mongoconfig:
+  pgdata2:
   searxng-config:

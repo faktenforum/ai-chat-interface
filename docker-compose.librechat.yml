@@ -105,9 +105,10 @@ services:
       - mongoconfig:/data/configdb
     command: >
       sh -c "
+        mkdir -p /data/db /data/configdb
         chown -R \"$$UID\":\"$$GID\" /data/db /data/configdb 2>/dev/null || true
         chmod -R 775 /data/db /data/configdb 2>/dev/null || true
-        echo \"Permissions set for UID:$$UID GID:$$GID\"
+        echo \"MongoDB volume permissions set for UID:$$UID GID:$$GID\"
       "
     environment:
       UID: ${UID:-1000}

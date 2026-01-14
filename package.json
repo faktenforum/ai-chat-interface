@@ -12,7 +12,16 @@
         "setup:prod:yes": "./scripts/setup-env.ts --prod --yes",
         "setup:dev": "./scripts/setup-env.ts --dev",
         "setup:dev:yes": "./scripts/setup-env.ts --dev --yes",
-        "prepare:dev": "./scripts/prepare-dev-submodules.sh"
+        "prepare:dev": "./scripts/prepare-dev-submodules.sh",
+        "start:local": "docker compose -f docker-compose.local.yml --env-file .env.local up -d",
+        "stop:local": "docker compose -f docker-compose.local.yml --env-file .env.local down",
+        "restart:local": "docker compose -f docker-compose.local.yml --env-file .env.local down && docker compose -f docker-compose.local.yml --env-file .env.local up -d",
+        "start:dev": "docker compose -f docker-compose.dev.yml up -d",
+        "stop:dev": "docker compose -f docker-compose.dev.yml down",
+        "restart:dev": "docker compose -f docker-compose.dev.yml down && docker compose -f docker-compose.dev.yml up -d",
+        "start:prod": "docker compose --env-file .env.prod -f docker-compose.yml up -d",
+        "stop:prod": "docker compose --env-file .env.prod -f docker-compose.yml down",
+        "restart:prod": "docker compose --env-file .env.prod -f docker-compose.yml down && docker compose --env-file .env.prod -f docker-compose.yml up -d"
     },
     "license": "MIT",
     "devDependencies": {
