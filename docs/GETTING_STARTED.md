@@ -135,7 +135,7 @@ Production and test environments are deployed via Portainer. See [Portainer Conf
 **Portainer deployments (production and test environment) use SendGrid SMTP** - MailDev is not available in Portainer stacks.
 
 For local development, MailDev is automatically included and captures all outgoing emails for testing:
-- **Web UI**: `http://maildev.localhost` (or `http://localhost:1080`)
+- **Web UI**: `http://maildev.localhost` (via Traefik)
 - **SMTP**: `maildev:1025` (internal Docker network)
 - Email verification is enabled by default (`LIBRECHAT_ALLOW_UNVERIFIED_EMAIL_LOGIN=false`)
 - All emails sent by LibreChat can be viewed in the MailDev web interface

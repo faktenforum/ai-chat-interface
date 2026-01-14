@@ -245,6 +245,7 @@ services:
     image: searxng/searxng:latest
     restart: always
     volumes:
+      - searxng-config:/etc/searxng:ro
     environment:
       SEARXNG_BASE_URL: http://searxng.${DOMAIN:-localhost}/
       SEARXNG_SECRET_KEY: ${SEARXNG_SECRET_KEY}

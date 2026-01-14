@@ -15,11 +15,11 @@
         "prepare:dev": "./scripts/prepare-dev-submodules.sh",
         "start:local": "docker compose -f docker-compose.local.yml --env-file .env.local up -d",
         "stop:local": "docker compose -f docker-compose.local.yml --env-file .env.local down",
-        "restart:local": "docker compose -f docker-compose.local.yml --env-file .env.local down && docker compose -f docker-compose.local.yml --env-file .env.local up -d",
+        "restart:local": "docker compose -f docker-compose.local.yml --env-file .env.local restart",
         "build:local-source": "docker compose -f docker-compose.local-source.yml --env-file .env.local build",
         "start:local-source": "docker compose -f docker-compose.local-source.yml --env-file .env.local up -d",
         "stop:local-source": "docker compose -f docker-compose.local-source.yml --env-file .env.local down",
-        "restart:local-source": "docker compose -f docker-compose.local-source.yml --env-file .env.local down && docker compose -f docker-compose.local-source.yml --env-file .env.local up -d",
+        "restart:local-source": "docker compose -f docker-compose.local-source.yml --env-file .env.local restart",
         "rebuild:local-source": "docker compose -f docker-compose.local-source.yml --env-file .env.local build --no-cache"
     },
     "license": "MIT",

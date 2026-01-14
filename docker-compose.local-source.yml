@@ -8,11 +8,9 @@ services:
     container_name: maildev
     image: maildev/maildev:latest
     restart: always
-    ports:
-      - "1080:1080"
-      - "1025:1025"
     networks:
       - traefik-net
+      - app-net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=ai-chat-interface_traefik-net"
