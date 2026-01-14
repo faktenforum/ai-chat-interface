@@ -10,7 +10,7 @@ This guide explains how to work with local source builds and git submodules.
 - Contributing to upstream projects
 - Custom modifications to services
 
-**Note:** For standard local development with official images, use `docker-compose.local.yml` instead. For Portainer deployments, use `docker-compose.yml`.
+**Note:** For standard local development with official images, use `docker-compose.local.yml` instead. For Portainer deployments, use `docker-compose.prod.yml`.
 
 ## Git Submodules
 

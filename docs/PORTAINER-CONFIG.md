@@ -4,7 +4,7 @@
 
 - **Prerequisite**: external Docker network exists: `loadbalancer-net`
 - **Portainer**: Stacks → **Add stack** → **Git repository**
-  - Compose path: `docker-compose.yml` (for production or test environment)
+  - Compose path: `docker-compose.prod.yml` (for production or test environment)
 - **Environment**:
   - **Production**: Locally generate `npm run setup:prod` (creates `.env.prod`)
   - **Test Environment**: Locally generate `npm run setup:dev` (creates `.env.dev`)
