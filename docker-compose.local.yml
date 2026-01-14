@@ -18,6 +18,10 @@ services:
       - "traefik.http.routers.maildev.entrypoints=web"
       - "traefik.http.services.maildev.loadbalancer.server.port=1080"
 
+  mongodb-init:
+    extends: { file: docker-compose.librechat.yml, service: mongodb-init }
+    env_file: .env.local
+
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
     env_file: .env.local

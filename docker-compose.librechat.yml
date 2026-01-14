@@ -95,6 +95,26 @@ services:
       - "traefik.http.routers.librechat.entrypoints=web"
       - "traefik.http.services.librechat.loadbalancer.server.port=3080"
 
+  mongodb-init:
+    image: alpine:latest
+    container_name: mongodb-init
+    restart: "no"
+    user: root
+    volumes:
+      - ./data-node:/data/db
+      - mongoconfig:/data/configdb
+    command: >
+      sh -c "
+        chown -R \"$$UID\":\"$$GID\" /data/db /data/configdb 2>/dev/null || true
+        chmod -R 775 /data/db /data/configdb 2>/dev/null || true
+        echo \"Permissions set for UID:$$UID GID:$$GID\"
+      "
+    environment:
+      UID: ${UID:-1000}
+      GID: ${GID:-1000}
+    networks:
+      - app-net
+
   mongodb:
     container_name: mongodb
     image: mongo
@@ -104,6 +124,9 @@ services:
       - ./data-node:/data/db
       - mongoconfig:/data/configdb
     command: mongod --noauth
+    depends_on:
+      mongodb-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --quiet || exit 1"]
       interval: 10s
