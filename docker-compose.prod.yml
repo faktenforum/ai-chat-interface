@@ -124,9 +124,11 @@ services:
       - "traefik.docker.network=loadbalancer-net"
       - "traefik.http.routers.${STACK_NAME:-prod}-n8n.rule=Host(`n8n.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.${STACK_NAME:-prod}-n8n.entrypoints=web"
+      - "traefik.http.routers.${STACK_NAME:-prod}-n8n.service=${STACK_NAME:-prod}-n8n"
       - "traefik.http.services.${STACK_NAME:-prod}-n8n.loadbalancer.server.port=5678"
       - "traefik.http.routers.${STACK_NAME:-prod}-n8n-secure.rule=Host(`n8n.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.${STACK_NAME:-prod}-n8n-secure.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-n8n-secure.service=${STACK_NAME:-prod}-n8n"
       - "traefik.http.routers.${STACK_NAME:-prod}-n8n-secure.tls=true"
       - "traefik.http.routers.${STACK_NAME:-prod}-n8n-secure.tls.certresolver=le"
 

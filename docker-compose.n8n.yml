@@ -48,15 +48,8 @@ services:
     networks:
       - traefik-net
       - app-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(`${N8N_HOST:-n8n.localhost}`)"
-      - "traefik.http.routers.n8n.entrypoints=web"
-      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
-      - "traefik.http.routers.n8n-secure.rule=Host(`${N8N_HOST:-n8n.localhost}`)"
-      - "traefik.http.routers.n8n-secure.entrypoints=websecure"
-      - "traefik.http.routers.n8n-secure.tls=true"
-      - "traefik.http.routers.n8n-secure.tls.certresolver=le"
+    # Traefik labels are defined in docker-compose.prod.yml and docker-compose.local.yml
+    # to ensure unique router names with STACK_NAME prefix
 
 volumes:
   n8n_pgdata:
