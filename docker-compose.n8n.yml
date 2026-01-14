@@ -51,6 +51,19 @@ services:
     # Traefik labels are defined in docker-compose.prod.yml and docker-compose.local.yml
     # to ensure unique router names with STACK_NAME prefix
 
+  n8n-postgres-upgrade:
+    container_name: n8n-postgres-upgrade
+    image: tianon/postgres-upgrade:15-to-16
+    restart: "no"
+    environment:
+      PGDATA: /var/lib/postgresql/16/data
+    volumes:
+      - n8n_pgdata:/var/lib/postgresql/15/data
+      - n8n_pgdata_v16:/var/lib/postgresql/16/data
+    networks:
+      - app-net
+
 volumes:
   n8n_pgdata:
+  n8n_pgdata_v16:
   n8n_data:

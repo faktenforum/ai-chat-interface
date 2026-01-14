@@ -156,5 +156,7 @@ volumes:
     name: ${STACK_NAME:-prod}-searxng-config
   n8n_pgdata:
     name: ${STACK_NAME:-prod}-n8n-pgdata
+  n8n_pgdata_v16:
+    name: ${STACK_NAME:-prod}-n8n-pgdata-v16
   n8n_data:
     name: ${STACK_NAME:-prod}-n8n-data

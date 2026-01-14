@@ -151,4 +151,5 @@ volumes:
   pgdata2:
   searxng-config:
   n8n_pgdata:
+  n8n_pgdata_v16:
   n8n_data:
