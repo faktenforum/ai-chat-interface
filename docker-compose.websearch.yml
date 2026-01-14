@@ -244,8 +244,6 @@ services:
     container_name: searxng
     image: searxng/searxng:latest
     restart: always
-    ports:
-      - "8080:8080"
     volumes:
     environment:
       SEARXNG_BASE_URL: http://searxng.${DOMAIN:-localhost}/
