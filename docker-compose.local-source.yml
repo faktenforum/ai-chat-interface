@@ -2,7 +2,7 @@ services:
   # Infrastructure Services
   traefik:
     extends: { file: docker-compose.traefik.yml, service: traefik }
-    env_file: .env
+    env_file: .env.local
 
   maildev:
     container_name: maildev
@@ -23,14 +23,14 @@ services:
   # Database Services - MongoDB
   mongodb-init:
     extends: { file: docker-compose.librechat.yml, service: mongodb-init }
-    env_file: .env
+    env_file: .env.local
     volumes:
       - mongodata:/data/db
       - mongoconfig:/data/configdb
 
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
-    env_file: .env
+    env_file: .env.local
     volumes:
       - mongodata:/data/db
       - mongoconfig:/data/configdb
@@ -38,7 +38,7 @@ services:
   # LibreChat Services
   librechat-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-init }
-    env_file: .env
+    env_file: .env.local
     volumes:
       - librechat-config:/app/config
       - ./logs:/logs
@@ -50,7 +50,7 @@ services:
 
   meilisearch:
     extends: { file: docker-compose.librechat.yml, service: meilisearch }
-    env_file: .env
+    env_file: .env.local
 
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
@@ -59,7 +59,7 @@ services:
       context: ./dev/librechat
       dockerfile: Dockerfile
       target: node
-    env_file: .env
+    env_file: .env.local
     volumes:
       - ./dev/agents:/app/node_modules/@librechat/agents
     environment:
@@ -74,7 +74,7 @@ services:
   # Web Search Services
   searxng-config-init:
     extends: { file: docker-compose.websearch.yml, service: searxng-config-init }
-    env_file: .env
+    env_file: .env.local
 
   searxng:
     extends: { file: docker-compose.websearch.yml, service: searxng }
@@ -83,7 +83,7 @@ services:
     depends_on:
       searxng-config-init:
         condition: service_completed_successfully
-    env_file: .env
+    env_file: .env.local
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=ai-chat-interface_traefik-net"
@@ -93,7 +93,7 @@ services:
 
   firecrawl-api:
     extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
-    env_file: .env
+    env_file: .env.local
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=ai-chat-interface_traefik-net"
@@ -103,24 +103,24 @@ services:
 
   playwright-service:
     extends: { file: docker-compose.websearch.yml, service: playwright-service }
-    env_file: .env
+    env_file: .env.local
 
   redis:
     extends: { file: docker-compose.websearch.yml, service: redis }
-    env_file: .env
+    env_file: .env.local
 
   nuq-postgres:
     extends: { file: docker-compose.websearch.yml, service: nuq-postgres }
-    env_file: .env
+    env_file: .env.local
 
   rabbitmq:
     extends: { file: docker-compose.websearch.yml, service: rabbitmq }
-    env_file: .env
+    env_file: .env.local
 
   # RAG Services
   vectordb:
     extends: { file: docker-compose.rag.yml, service: vectordb }
-    env_file: .env
+    env_file: .env.local
 
   rag_api:
     extends: { file: docker-compose.rag.yml, service: rag_api }
@@ -128,14 +128,14 @@ services:
     build:
       context: ./dev/rag_api
       dockerfile: Dockerfile
-    env_file: .env
+    env_file: .env.local
     environment:
       DEBUG: "true"
 
   # Additional Services
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }
-    env_file: .env
+    env_file: .env.local
 
 networks:
   traefik-net:

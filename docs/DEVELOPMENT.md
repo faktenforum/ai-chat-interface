@@ -1,13 +1,16 @@
 # Development Guide
 
-This guide explains how to work with the development stack and git submodules.
+This guide explains how to work with local source builds and git submodules.
 
-## Development vs Production Compose Files
+## Local Source Builds
 
-The project uses two different Docker Compose configurations:
+**`docker-compose.local-source.yml`** builds images directly from git submodules in `/dev`. Use this for:
+- Debugging services
+- Testing PRs for upstream projects
+- Contributing to upstream projects
+- Custom modifications to services
 
-- **`docker-compose.yml`** - Uses published Docker images from Docker Hub/GHCR. Use this for production deployments or when you want to use stable, pre-built images.
-- **`docker-compose.dev.yml`** - Builds images directly from git submodules in `/dev`. Use this for local development, debugging, and working on PRs for upstream projects.
+**Note:** For standard local development with official images, use `docker-compose.local.yml` instead. For Portainer deployments, use `docker-compose.yml`.
 
 ## Git Submodules
 
@@ -45,15 +48,41 @@ cd ../..
 git submodule update --remote
 ```
 
-## Development Stack
+## Setup
+
+### Prerequisites
+
+```bash
+npm run prepare:dev  # Initialize submodules and build agents package
+npm run setup        # Configure environment (.env.local)
+```
 
 ### Building and Starting
 
-To use local builds from submodules:
-
+**First time setup:**
 ```bash
-docker compose -f docker-compose.dev.yml build
-docker compose -f docker-compose.dev.yml up -d
+npm run prepare:dev  # Initialize submodules and build agents package
+npm run setup        # Configure environment (.env.local)
+npm run build:local-source  # Build Docker images from source
+npm run start:local-source  # Start services
+```
+
+**Subsequent starts (images already built):**
+```bash
+npm run start:local-source
+```
+
+**Available npm scripts:**
+- `npm run build:local-source` - Build Docker images from source
+- `npm run rebuild:local-source` - Rebuild images without cache (use after code changes)
+- `npm run start:local-source` - Start services (preserves data)
+- `npm run stop:local-source` - Stop services (preserves data)
+- `npm run restart:local-source` - Restart services (preserves data)
+
+**Manual commands:**
+```bash
+docker compose -f docker-compose.local-source.yml --env-file .env.local build
+docker compose -f docker-compose.local-source.yml --env-file .env.local up -d
 ```
 
 This will:
@@ -64,13 +93,7 @@ This will:
 
 **Note:** The SearXNG code in `dev/searxng` is kept as reference only. We use the official Docker image for both development and production.
 
-### Working on Upstream PRs
-
-The development stack allows you to:
-1. Make changes to submodule code in `/dev`
-2. Test changes immediately by rebuilding and restarting services
-3. Create PRs for upstream projects
-4. Test upstream PRs by checking out the PR branch in the submodule
+## Working on Upstream PRs
 
 Example workflow for testing a LibreChat PR:
 
@@ -79,16 +102,21 @@ cd dev/librechat
 git fetch origin pull/1234/head:pr-1234
 git checkout pr-1234
 cd ../..
-docker compose -f docker-compose.dev.yml build api
-docker compose -f docker-compose.dev.yml up -d api
+npm run build:local-source api  # Build only the api service
+npm run start:local-source api   # Start only the api service
 ```
 
-## Switching Between Local and Published Images
+Or manually:
+```bash
+docker compose -f docker-compose.local-source.yml --env-file .env.local build api
+docker compose -f docker-compose.local-source.yml --env-file .env.local up -d api
+```
 
-- **Local builds**: Use `docker compose -f docker-compose.dev.yml`
-- **Published images**: Use `docker compose -f docker-compose.yml`
-
-The compose files are independent - you can run either stack, but not both simultaneously (they use the same container names).
+**After making code changes:**
+```bash
+npm run rebuild:local-source <service-name>  # Rebuild without cache
+npm run restart:local-source <service-name>   # Restart the service
+```
 
 ## Additional Resources
 

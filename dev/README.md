@@ -60,26 +60,19 @@ cd ../..
 
 ### 2. Build and Start
 
-To use local builds from submodules, include the override file:
-
+**Using npm scripts (recommended):**
 ```bash
-docker compose -f docker-compose.librechat.yml -f docker-compose.librechat.dev.yml build
-docker compose -f docker-compose.librechat.yml -f docker-compose.librechat.dev.yml up -d
+npm run setup
+npm run start:local-source
 ```
 
-Alternatively, use the development compose file which includes all services:
-
+**Or manually:**
 ```bash
-docker compose -f docker-compose.dev.yml build
-docker compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.local-source.yml --env-file .env.local build
+docker compose -f docker-compose.local-source.yml --env-file .env.local up -d
 ```
 
-To use published images, omit the override file:
-
-```bash
-docker compose -f docker-compose.librechat.yml build
-docker compose -f docker-compose.librechat.yml up -d
-```
+This builds images from submodules and starts all services.
 
 ## Update Submodules
 
@@ -87,9 +80,8 @@ docker compose -f docker-compose.librechat.yml up -d
 git submodule update --remote
 ```
 
-## Switch Between Local and Published Images
-
-Since the override file is not automatically loaded, simply include or omit it in your commands:
-
-- **Local builds**: Include `-f docker-compose.librechat.dev.yml` or use `-f docker-compose.dev.yml`
-- **Published images**: Omit the override file flag
+After updating, rebuild affected services:
+```bash
+docker compose -f docker-compose.local-source.yml --env-file .env.local build <service-name>
+docker compose -f docker-compose.local-source.yml --env-file .env.local up -d <service-name>
+```

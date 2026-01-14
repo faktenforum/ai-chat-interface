@@ -39,18 +39,6 @@ docker compose -f docker-compose.local.yml --env-file .env.local up -d
 npm run setup:yes && docker compose -f docker-compose.local.yml down -v && sleep 3 && docker compose -f docker-compose.local.yml --env-file .env.local up -d
 ```
 
-**Production deployment:**
-```bash
-npm run setup:prod
-docker compose --env-file .env.prod -f docker-compose.yml up -d
-```
-
-**Test environment deployment (Portainer):**
-```bash
-npm run setup:dev
-# Deploy via Portainer using docker-compose.yml and .env.dev contents
-```
-
 ## Documentation
 
 Comprehensive documentation is available in the [`docs/`](docs/) directory:

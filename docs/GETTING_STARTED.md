@@ -43,23 +43,21 @@ This guide will help you set up and deploy the AI Chat Interface platform.
 
 ## Usage
 
-Select the stack you want to run:
+The project provides three Docker Compose stacks:
 
-### Modes
+1. **`docker-compose.local.yml`** - Local development with official images (`.env.local`)
+2. **`docker-compose.local-source.yml`** - Local development with builds from git submodules (`.env.local`)
+3. **`docker-compose.yml`** - Portainer deployment (`.env.prod` for production, `.env.dev` for test environment)
 
-#### Local Development (Official Images)
-Uses official hub images with local development setup (Traefik, MailDev).
+### Local Development Stacks
 
-**Recommended approach (using npm scripts):**
+#### Option 1: Official Images (`docker-compose.local.yml`)
+Uses official Docker Hub/GHCR images. Best for standard development.
+
+**Quick start:**
 ```bash
 npm run setup
 npm run start:local
-```
-
-**Or manually:**
-```bash
-npm run setup
-docker compose -f docker-compose.local.yml --env-file .env.local up -d
 ```
 
 **Available npm scripts:**
@@ -67,40 +65,40 @@ docker compose -f docker-compose.local.yml --env-file .env.local up -d
 - `npm run stop:local` - Stop services (preserves data)
 - `npm run restart:local` - Restart services (preserves data)
 
-**Note:** The `--env-file .env.local` flag is required so Docker Compose can resolve variables (like `${LIBRECHAT_MONGO_URI}`) when parsing the compose file, even though `env_file: .env.local` is also defined in the compose file.
+**Note:** The `--env-file .env.local` flag is required so Docker Compose can resolve variables when parsing the compose file.
 
-**⚠️ Important - Data Safety:**
-- **Normal restart** (preserves data): Use `npm run restart:local` or `docker compose -f docker-compose.local.yml --env-file .env.local down && docker compose -f docker-compose.local.yml --env-file .env.local up -d`
-- **Full reset** (⚠️ DELETES ALL DATA): `docker compose -f docker-compose.local.yml --env-file .env.local down -v && docker compose -f docker-compose.local.yml --env-file .env.local up -d`
-- The `-v` flag removes all volumes including your MongoDB data, user accounts, and chat history
-- **Never use `-v` in production or on Portainer** unless you intentionally want to delete all data
+#### Option 2: Local Source Builds (`docker-compose.local-source.yml`)
+Builds images from git submodules in `/dev`. Use for debugging, testing PRs, or contributing to upstream projects.
 
-#### Development (Local Builds)
-Builds images from git submodules in `/dev` for local development and PR testing.
-See the [Development Guide](DEVELOPMENT.md) for detailed instructions.
-
-**Recommended approach (using npm scripts):**
+**First time setup:**
 ```bash
-npm run start:dev
+npm run prepare:dev        # Initialize submodules and build agents package
+npm run setup              # Configure environment
+npm run build:local-source # Build Docker images from source
+npm run start:local-source # Start services
 ```
 
-**Or manually:**
+**Subsequent starts:**
 ```bash
-docker compose -f docker-compose.dev.yml up -d
+npm run start:local-source
 ```
 
 **Available npm scripts:**
-- `npm run start:dev` - Start services (preserves data)
-- `npm run stop:dev` - Stop services (preserves data)
-- `npm run restart:dev` - Restart services (preserves data)
+- `npm run build:local-source` - Build Docker images from source
+- `npm run rebuild:local-source` - Rebuild images without cache
+- `npm run start:local-source` - Start services (preserves data)
+- `npm run stop:local-source` - Stop services (preserves data)
+- `npm run restart:local-source` - Restart services (preserves data)
 
-**⚠️ Important - Data Safety:**
-- **Normal restart** (preserves data): Use `npm run restart:dev` or `docker compose -f docker-compose.dev.yml down && docker compose -f docker-compose.dev.yml up -d`
-- **Full reset** (⚠️ DELETES ALL DATA): `docker compose -f docker-compose.dev.yml down -v && docker compose -f docker-compose.dev.yml up -d`
-- The `-v` flag removes all volumes including your MongoDB data, user accounts, and chat history
+See [Development Guide](DEVELOPMENT.md) for detailed instructions.
 
-#### Production & Test Environment (Portainer Deployment)
-Production and test environments are deployed via Portainer. See [Portainer Configuration](PORTAINER-CONFIG.md) for detailed deployment instructions.
+**⚠️ Data Safety (Both Local Stacks):**
+- **Normal restart** (preserves data): Use `npm run restart:local` or `npm run restart:local-source`
+- **Full reset** (⚠️ DELETES ALL DATA): Add `-v` flag to `down` command
+- **Never use `-v` in production or on Portainer** unless you intentionally want to delete all data
+
+### Portainer Deployment (`docker-compose.yml`)
+Production and test environments are deployed via Portainer. See [Portainer Configuration](PORTAINER-CONFIG.md) for detailed instructions.
 
 **Quick Start:**
 
@@ -129,17 +127,14 @@ Production and test environments are deployed via Portainer. See [Portainer Conf
 - Always backup data before any production operations
 - Use Portainer's built-in restart/stop functions which preserve volumes
 
-### Compose file notes
-
-- `docker-compose.yml` - Production/test environment deployment (Portainer)
-- `docker-compose.local.yml` - Local development with Traefik and MailDev
-- `docker-compose.dev.yml` - Development mode with local builds from submodules
-- The other `docker-compose.*.yml` files are reused via `extends` and are not intended to be run standalone.
-
 ## Local Development Tools
 
-### MailDev (Email Testing)
-MailDev is automatically included in local development setups. It captures all outgoing emails for testing:
+### MailDev (Email Testing - Local Only)
+**Important**: MailDev is **only** used for local development (`docker-compose.local.yml` and `docker-compose.local-source.yml`). 
+
+**Portainer deployments (production and test environment) use SendGrid SMTP** - MailDev is not available in Portainer stacks.
+
+For local development, MailDev is automatically included and captures all outgoing emails for testing:
 - **Web UI**: `http://maildev.localhost` (or `http://localhost:1080`)
 - **SMTP**: `maildev:1025` (internal Docker network)
 - Email verification is enabled by default (`LIBRECHAT_ALLOW_UNVERIFIED_EMAIL_LOGIN=false`)
