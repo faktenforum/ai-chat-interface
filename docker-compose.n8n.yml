@@ -42,6 +42,20 @@ services:
           exit 0
         fi
         
+        # Check if owner already exists
+        echo "Checking if owner account exists..."
+        OWNER_CHECK=$$(curl -s -w "\n%{http_code}" "$${N8N_INTERNAL_URL}/rest/owner" 2>/dev/null || echo -e "\n000")
+        OWNER_CHECK_CODE=$$(echo "$$OWNER_CHECK" | tail -n1)
+        
+        if [ "$$OWNER_CHECK_CODE" = "200" ]; then
+          echo "ℹ️  Owner account already exists, skipping creation"
+          exit 0
+        fi
+        
+        # Wait a bit more to ensure n8n is fully ready for owner setup
+        echo "Waiting for n8n to be fully ready for owner setup..."
+        sleep 3
+        
         echo "Creating owner account..."
         RESPONSE=$$(curl -s -w "\n%{http_code}" -X POST "$${N8N_INTERNAL_URL}/rest/owner/setup" \
           -H "Content-Type: application/json" \
@@ -55,13 +69,23 @@ services:
         HTTP_CODE=$$(echo "$$RESPONSE" | tail -n1)
         BODY=$$(echo "$$RESPONSE" | sed '$$d')
         
-        if [ "$$HTTP_CODE" = "200" ]; then
+        if [ "$$HTTP_CODE" = "200" ] || [ "$$HTTP_CODE" = "201" ]; then
           echo "✅ Owner account created: $${N8N_OWNER_EMAIL}"
-        elif echo "$$BODY" | grep -q "Instance owner already setup"; then
+          # Wait a moment and verify owner was actually created
+          sleep 2
+          VERIFY_CHECK=$$(curl -s -w "\n%{http_code}" "$${N8N_INTERNAL_URL}/rest/owner" 2>/dev/null || echo -e "\n000")
+          VERIFY_CODE=$$(echo "$$VERIFY_CHECK" | tail -n1)
+          if [ "$$VERIFY_CODE" = "200" ]; then
+            echo "✅ Verified: Owner account is now active"
+          else
+            echo "⚠️  Warning: Owner creation reported success but verification failed (HTTP $${VERIFY_CODE})"
+          fi
+        elif echo "$$BODY" | grep -qi "Instance owner already setup\|already exists\|already configured"; then
           echo "ℹ️  Owner already exists, skipping"
         else
           echo "⚠️  Failed to create owner (HTTP $${HTTP_CODE})"
           echo "   Response: $$BODY"
+          exit 1
         fi
 
   n8n-postgres:
@@ -94,6 +118,7 @@ services:
       N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-}
       N8N_USER_MANAGEMENT_DISABLED: ${N8N_USER_MANAGEMENT_DISABLED:-false}
+      N8N_PYTHON_ENABLED: ${N8N_PYTHON_ENABLED:-false}
       WEBHOOK_URL: ${WEBHOOK_URL:-}
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: n8n-postgres
