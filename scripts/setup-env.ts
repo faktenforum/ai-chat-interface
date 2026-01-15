@@ -29,13 +29,13 @@ const genSecret = (length: number = 32): string => crypto.randomBytes(length).to
 const genBase64Secret = (length: number = 32): string => crypto.randomBytes(length).toString('base64');
 
 /**
- * Generate a password that meets n8n requirements:
+ * Generate a secure password meeting common requirements:
  * - At least 1 uppercase letter
  * - At least 1 lowercase letter
  * - At least 1 number
  * - Minimum length: 8 characters
  */
-const genN8nPassword = (length: number = 16): string => {
+const genPassword = (length: number = 16): string => {
     const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     const lowercase = 'abcdefghijklmnopqrstuvwxyz';
     const numbers = '0123456789';
@@ -99,9 +99,9 @@ const AUTO_GENERATED: Record<string, () => string> = {
     'FIRECRAWL_BULL_AUTH_KEY': () => genSecret(16),
     // n8n
     'N8N_ENCRYPTION_KEY': () => genBase64Secret(32), // 32 bytes = 44 base64 chars
-    'N8N_POSTGRES_PASSWORD': () => genSecret(16),
+    'N8N_POSTGRES_PASSWORD': () => genPassword(16),
     'N8N_OWNER_EMAIL': () => `admin-${crypto.randomBytes(4).toString('hex')}@n8n.local`,
-    'N8N_OWNER_PASSWORD': () => genN8nPassword(16),
+    'N8N_OWNER_PASSWORD': () => genPassword(16),
 };
 
 type PromptType = 'input' | 'password';
@@ -128,12 +128,12 @@ const PROMPTS: Record<string, PromptConfig> = {
     'LIBRECHAT_MONGO_DATABASE': { message: 'Mongo Database Name:', type: 'input', defaultGen: () => 'librechat' },
 
     // VectorDB
-    'LIBRECHAT_VECTORDB_PASSWORD': { message: 'VectorDB (Postgres) Password:', type: 'password', defaultGen: () => genSecret(16) },
+    'LIBRECHAT_VECTORDB_PASSWORD': { message: 'VectorDB (Postgres) Password:', type: 'password', defaultGen: () => genPassword(16) },
 
     // Firecrawl
-    'FIRECRAWL_POSTGRES_PASSWORD': { message: 'Firecrawl Postgres Password:', type: 'password', defaultGen: () => genSecret(16) },
+    'FIRECRAWL_POSTGRES_PASSWORD': { message: 'Firecrawl Postgres Password:', type: 'password', defaultGen: () => genPassword(16) },
     'FIRECRAWL_RABBITMQ_USER': { message: 'Firecrawl RabbitMQ Username:', type: 'input', defaultGen: () => 'firecrawl' },
-    'FIRECRAWL_RABBITMQ_PASSWORD': { message: 'Firecrawl RabbitMQ Password:', type: 'password', defaultGen: () => genSecret(16) },
+    'FIRECRAWL_RABBITMQ_PASSWORD': { message: 'Firecrawl RabbitMQ Password:', type: 'password', defaultGen: () => genPassword(16) },
 
     // Email (Production only)
     'EMAIL_PASSWORD': { message: 'SendGrid API Key (for email verification):', type: 'password', prodOnly: true },

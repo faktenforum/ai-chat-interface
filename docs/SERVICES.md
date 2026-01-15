@@ -51,12 +51,10 @@ This document provides an overview of all services in the AI Chat Interface stac
 #### n8n
 - **Local**: `http://n8n.localhost`
 - **Production**: `https://n8n.{DOMAIN}`
-- **Purpose**: Workflow automation platform for creating automated workflows and integrations
+- **Purpose**: Workflow automation platform
 - **Network**: `traefik-net` + `app-net`
 - **Internal Dependencies**: n8n PostgreSQL, n8n-init (init container)
 - **Init Container**: `n8n-init` automatically creates owner account via API if credentials are provided
-- **Future Integration**: Can be integrated with LibreChat Agents via MCP tools or webhooks
-- **Note**: Encryption key required for credential storage. Owner account can be auto-created via init container.
 
 #### MailDev
 - **Local**: `http://maildev.localhost`
@@ -93,10 +91,9 @@ This document provides an overview of all services in the AI Chat Interface stac
 - **Access**: Only accessible from n8n service
 
 #### n8n-init
-- **Purpose**: Init container that automatically creates n8n owner account via API
+- **Purpose**: Init container that creates n8n owner account via API
 - **Network**: `app-net` only
-- **Behavior**: Waits for n8n to be ready, then calls `/owner/setup` API if credentials are provided
-- **Note**: Runs once before n8n starts. Skips owner creation if credentials are not set.
+- **Behavior**: Waits for n8n readiness, then calls `/rest/owner/setup` API if credentials are provided
 
 #### Firecrawl Internal Services
 - **playwright-service**: Browser automation for web scraping

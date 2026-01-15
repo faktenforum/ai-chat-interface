@@ -16,14 +16,12 @@ services:
       - -c
       - |
         set -e
-        echo "Waiting for n8n to be ready..."
         
-        # Wait for n8n HTTP endpoint to be available
-        # Use service name for internal Docker network communication
         MAX_RETRIES=60
         RETRY_COUNT=0
         N8N_INTERNAL_URL="http://n8n:$${N8N_PORT}"
         
+        echo "Waiting for n8n to be ready..."
         while [ "$$RETRY_COUNT" -lt "$$MAX_RETRIES" ]; do
           if curl -f -s "$${N8N_INTERNAL_URL}/healthz" > /dev/null 2>&1; then
             echo "n8n is ready!"
@@ -39,17 +37,12 @@ services:
           exit 1
         fi
         
-        # Check if owner credentials are provided
         if [ -z "$${N8N_OWNER_EMAIL}" ] || [ -z "$${N8N_OWNER_PASSWORD}" ]; then
-          echo "INFO: N8N_OWNER_EMAIL or N8N_OWNER_PASSWORD not set, skipping owner creation"
-          echo "INFO: Owner must be created manually through the web UI"
+          echo "INFO: Owner credentials not set, skipping automatic creation"
           exit 0
         fi
         
-        echo "Attempting to create owner account..."
-        
-        # Create owner via API (use internal service URL)
-        # n8n API uses /rest prefix for REST endpoints
+        echo "Creating owner account..."
         RESPONSE=$$(curl -s -w "\n%{http_code}" -X POST "$${N8N_INTERNAL_URL}/rest/owner/setup" \
           -H "Content-Type: application/json" \
           -d "{
@@ -63,14 +56,12 @@ services:
         BODY=$$(echo "$$RESPONSE" | sed '$$d')
         
         if [ "$$HTTP_CODE" = "200" ]; then
-          echo "✅ Owner account created successfully!"
-          echo "   Email: $${N8N_OWNER_EMAIL}"
+          echo "✅ Owner account created: $${N8N_OWNER_EMAIL}"
         elif echo "$$BODY" | grep -q "Instance owner already setup"; then
-          echo "ℹ️  Owner account already exists, skipping creation"
+          echo "ℹ️  Owner already exists, skipping"
         else
-          echo "⚠️  WARNING: Failed to create owner account (HTTP $${HTTP_CODE})"
+          echo "⚠️  Failed to create owner (HTTP $${HTTP_CODE})"
           echo "   Response: $$BODY"
-          echo "   Owner must be created manually through the web UI"
         fi
 
   n8n-postgres:
@@ -125,8 +116,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    # Traefik labels are defined in docker-compose.prod.yml and docker-compose.local.yml
-    # to ensure unique router names with STACK_NAME prefix
+    # Traefik labels defined in docker-compose.prod.yml and docker-compose.local.yml
 
 volumes:
   n8n_pgdata:
