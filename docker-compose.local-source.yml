@@ -135,9 +135,16 @@ services:
     extends: { file: docker-compose.n8n.yml, service: n8n-postgres }
     env_file: .env.local
 
+  n8n-init:
+    extends: { file: docker-compose.n8n.yml, service: n8n-init }
+    env_file: .env.local
+
   n8n:
     extends: { file: docker-compose.n8n.yml, service: n8n }
     env_file: .env.local
+    depends_on:
+      n8n-postgres:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=ai-chat-interface_traefik-net"

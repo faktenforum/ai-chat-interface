@@ -111,9 +111,16 @@ services:
     extends: { file: docker-compose.n8n.yml, service: n8n-postgres }
     container_name: ${STACK_NAME:-prod}-n8n-postgres
 
+  n8n-init:
+    extends: { file: docker-compose.n8n.yml, service: n8n-init }
+    container_name: ${STACK_NAME:-prod}-n8n-init
+
   n8n:
     extends: { file: docker-compose.n8n.yml, service: n8n }
     container_name: ${STACK_NAME:-prod}-n8n
+    depends_on:
+      n8n-postgres:
+        condition: service_healthy
     networks:
       - traefik-net
       - app-net

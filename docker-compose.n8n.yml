@@ -1,4 +1,78 @@
 services:
+  n8n-init:
+    image: curlimages/curl:latest
+    container_name: n8n-init
+    restart: "no"
+    environment:
+      N8N_PORT: ${N8N_PORT:-5678}
+      N8N_OWNER_EMAIL: ${N8N_OWNER_EMAIL:-}
+      N8N_OWNER_PASSWORD: ${N8N_OWNER_PASSWORD:-}
+      N8N_OWNER_FIRST_NAME: ${N8N_OWNER_FIRST_NAME:-Admin}
+      N8N_OWNER_LAST_NAME: ${N8N_OWNER_LAST_NAME:-User}
+    networks:
+      - app-net
+    command:
+      - sh
+      - -c
+      - |
+        set -e
+        echo "Waiting for n8n to be ready..."
+        
+        # Wait for n8n HTTP endpoint to be available
+        # Use service name for internal Docker network communication
+        MAX_RETRIES=60
+        RETRY_COUNT=0
+        N8N_INTERNAL_URL="http://n8n:$${N8N_PORT}"
+        
+        while [ "$$RETRY_COUNT" -lt "$$MAX_RETRIES" ]; do
+          if curl -f -s "$${N8N_INTERNAL_URL}/healthz" > /dev/null 2>&1; then
+            echo "n8n is ready!"
+            break
+          fi
+          RETRY_COUNT=$$((RETRY_COUNT + 1))
+          echo "Waiting for n8n... ($$RETRY_COUNT/$$MAX_RETRIES)"
+          sleep 2
+        done
+        
+        if [ "$$RETRY_COUNT" -eq "$$MAX_RETRIES" ]; then
+          echo "ERROR: n8n did not become ready in time"
+          exit 1
+        fi
+        
+        # Check if owner credentials are provided
+        if [ -z "$${N8N_OWNER_EMAIL}" ] || [ -z "$${N8N_OWNER_PASSWORD}" ]; then
+          echo "INFO: N8N_OWNER_EMAIL or N8N_OWNER_PASSWORD not set, skipping owner creation"
+          echo "INFO: Owner must be created manually through the web UI"
+          exit 0
+        fi
+        
+        echo "Attempting to create owner account..."
+        
+        # Create owner via API (use internal service URL)
+        # n8n API uses /rest prefix for REST endpoints
+        RESPONSE=$$(curl -s -w "\n%{http_code}" -X POST "$${N8N_INTERNAL_URL}/rest/owner/setup" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"email\": \"$${N8N_OWNER_EMAIL}\",
+            \"firstName\": \"$${N8N_OWNER_FIRST_NAME}\",
+            \"lastName\": \"$${N8N_OWNER_LAST_NAME}\",
+            \"password\": \"$${N8N_OWNER_PASSWORD}\"
+          }")
+        
+        HTTP_CODE=$$(echo "$$RESPONSE" | tail -n1)
+        BODY=$$(echo "$$RESPONSE" | sed '$$d')
+        
+        if [ "$$HTTP_CODE" = "200" ]; then
+          echo "✅ Owner account created successfully!"
+          echo "   Email: $${N8N_OWNER_EMAIL}"
+        elif echo "$$BODY" | grep -q "Instance owner already setup"; then
+          echo "ℹ️  Owner account already exists, skipping creation"
+        else
+          echo "⚠️  WARNING: Failed to create owner account (HTTP $${HTTP_CODE})"
+          echo "   Response: $$BODY"
+          echo "   Owner must be created manually through the web UI"
+        fi
+
   n8n-postgres:
     container_name: n8n-postgres
     image: postgres:16-alpine
@@ -27,9 +101,6 @@ services:
       N8N_PORT: ${N8N_PORT:-5678}
       N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
       N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
-      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-false}
-      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-}
-      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-}
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-}
       N8N_USER_MANAGEMENT_DISABLED: ${N8N_USER_MANAGEMENT_DISABLED:-false}
       WEBHOOK_URL: ${WEBHOOK_URL:-}
@@ -48,6 +119,12 @@ services:
     networks:
       - traefik-net
       - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:${N8N_PORT:-5678}/healthz', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     # Traefik labels are defined in docker-compose.prod.yml and docker-compose.local.yml
     # to ensure unique router names with STACK_NAME prefix
 

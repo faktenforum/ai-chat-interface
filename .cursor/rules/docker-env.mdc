@@ -101,7 +101,6 @@ Identical compose structure for local and production. Differences: environment f
 ### 15. Environment Variable Patterns
 - **Host/Protocol**: `{SERVICE}_HOST`, `{SERVICE}_PROTOCOL` (http for local, https for prod/dev)
 - **Secure Cookies**: `{SERVICE}_SECURE_COOKIE` (false for local, true for prod/dev)
-- **Basic Auth**: `{SERVICE}_BASIC_AUTH_ACTIVE`, `{SERVICE}_BASIC_AUTH_USER`, `{SERVICE}_BASIC_AUTH_PASSWORD`
 - **Database**: `{SERVICE}_POSTGRES_DB`, `{SERVICE}_POSTGRES_USER`, `{SERVICE}_POSTGRES_PASSWORD`
 - **Webhook URLs**: Auto-configured based on `{SERVICE}_HOST` and `{SERVICE}_PROTOCOL`
 

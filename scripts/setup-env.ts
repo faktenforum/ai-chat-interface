@@ -29,6 +29,34 @@ const genSecret = (length: number = 32): string => crypto.randomBytes(length).to
 const genBase64Secret = (length: number = 32): string => crypto.randomBytes(length).toString('base64');
 
 /**
+ * Generate a password that meets n8n requirements:
+ * - At least 1 uppercase letter
+ * - At least 1 lowercase letter
+ * - At least 1 number
+ * - Minimum length: 8 characters
+ */
+const genN8nPassword = (length: number = 16): string => {
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const all = uppercase + lowercase + numbers;
+    
+    // Ensure at least one of each required character type
+    let password = '';
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    
+    // Fill the rest randomly
+    for (let i = password.length; i < length; i++) {
+        password += all[Math.floor(Math.random() * all.length)];
+    }
+    
+    // Shuffle the password
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+};
+
+/**
  * Generate a random username with optional prefix
  */
 const genUsername = (prefix: string = 'admin'): string => {
@@ -72,8 +100,8 @@ const AUTO_GENERATED: Record<string, () => string> = {
     // n8n
     'N8N_ENCRYPTION_KEY': () => genBase64Secret(32), // 32 bytes = 44 base64 chars
     'N8N_POSTGRES_PASSWORD': () => genSecret(16),
-    'N8N_BASIC_AUTH_USER': () => genUsername('admin'), // Format: admin-{random-hex}
-    'N8N_BASIC_AUTH_PASSWORD': () => genSecret(16),
+    'N8N_OWNER_EMAIL': () => `admin-${crypto.randomBytes(4).toString('hex')}@n8n.local`,
+    'N8N_OWNER_PASSWORD': () => genN8nPassword(16),
 };
 
 type PromptType = 'input' | 'password';
