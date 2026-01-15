@@ -14,5 +14,6 @@ This project uses git submodules in `/dev` for local development and PR testing:
 - `dev/librechat-doc` - LibreChat documentation
 - `dev/firecrawl` - Firecrawl web scraping service
 - `dev/searxng` - SearXNG metasearch engine
+- `dev/n8n` - n8n workflow automation platform
 
 Use `docker-compose.dev.yml` to build images from submodule sources. Use `docker-compose.yml` for published images. See `dev/README.md` for details.

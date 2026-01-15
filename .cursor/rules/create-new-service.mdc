@@ -72,7 +72,7 @@ Add to volumes section in all compose files:
 ## 8. Security
 - **Production/Dev**: Enable HTTPS, Basic Auth, secure cookies
 - **Local**: HTTP only, no auth required
-- Generate encryption keys via `setup-env.ts` or `openssl rand -base64 32`
+- Generate encryption keys via `setup-env.ts`
 - Never hardcode credentials
 
 ## 9. Naming
