@@ -20,3 +20,6 @@
 [submodule "dev/searxng"]
 	path = dev/searxng
 	url = git@github.com:searxng/searxng.git
+[submodule "dev/n8n"]
+	path = dev/n8n
+	url = git@github.com:n8n-io/n8n.git
