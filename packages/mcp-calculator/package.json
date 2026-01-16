@@ -1,0 +1,31 @@
+{
+  "name": "@ai-chat-interface/mcp-calculator",
+  "version": "1.0.0",
+  "description": "MCP Calculator Server for LibreChat - Production-ready calculator with basic arithmetic operations",
+  "type": "module",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "lint": "eslint . --ext .ts",
+    "test": "echo \"Tests to be implemented\""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.23.8",
+    "express": "^4.21.2",
+    "pino": "^9.5.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "tsx": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

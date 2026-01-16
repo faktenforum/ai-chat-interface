@@ -1,0 +1,41 @@
+services:
+  mcp-calculator:
+    # For local development, use build context
+    # For production/Portainer, use image from registry
+    build:
+      context: ./packages/mcp-calculator
+      dockerfile: Dockerfile
+    image: ghcr.io/faktenforum/mcp-calculator:latest
+    container_name: mcp-calculator
+    restart: always
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${MCP_CALCULATOR_PORT:-3000}
+      LOG_LEVEL: ${MCP_CALCULATOR_LOG_LEVEL:-info}
+      # Optional: API keys for authentication (comma-separated)
+      # API_KEYS: ${MCP_CALCULATOR_API_KEYS:-}
+    expose:
+      - "3000"
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # Security: read-only root filesystem where possible
+    read_only: false
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+networks:
+  app-net:
+    driver: bridge
