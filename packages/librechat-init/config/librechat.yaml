@@ -442,7 +442,7 @@ mcpServers:
     type: streamable-http
     url: http://mcp-calculator:3000/mcp
     initTimeout: 120000
-    chatMenu: true
+    chatMenu: false
     startup: true
 
 # n8n MCP Server Integration (Future - disabled)

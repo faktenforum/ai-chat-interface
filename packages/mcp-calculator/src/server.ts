@@ -19,19 +19,20 @@ import {
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
+// Session management
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
+/**
+ * Extracts session ID from request headers (supports both lowercase and capitalized header names)
+ */
 function getSessionId(headers: Request['headers']): string | undefined {
-  const header = headers['mcp-session-id'];
-  if (typeof header === 'string') {
-    return header;
-  }
-  if (Array.isArray(header) && header.length > 0 && typeof header[0] === 'string') {
-    return header[0];
-  }
-  return undefined;
+  const header = headers['mcp-session-id'] || headers['Mcp-Session-Id'];
+  return typeof header === 'string' ? header : undefined;
 }
 
+/**
+ * Creates and configures the MCP server with all handlers
+ */
 function createServer() {
   const server = new Server(
     {
@@ -121,20 +122,8 @@ function createServer() {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error({ tool: name, args, error: errorMessage }, 'Tool execution failed');
 
-      if (error instanceof CalculatorError) {
-        return {
-          content: [{ type: 'text', text: `Error: ${error.message}` }],
-          isError: true,
-        };
-      }
-
       return {
-        content: [
-          {
-            type: 'text',
-            text: `Unexpected error: ${errorMessage}`,
-          },
-        ],
+        content: [{ type: 'text', text: error instanceof CalculatorError ? `Error: ${error.message}` : `Unexpected error: ${errorMessage}` }],
         isError: true,
       };
     }
@@ -235,10 +224,49 @@ Always use these tools for calculations instead of computing manually.`,
     throw new CalculatorError(`Unknown prompt: ${name}`, 'UNKNOWN_PROMPT');
   });
 
-
   return { server };
 }
 
+/**
+ * Creates a new session for an initialize request
+ */
+function createSession(): { server: Server; transport: StreamableHTTPServerTransport } {
+  const { server } = createServer();
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => randomUUID(),
+    enableJsonResponse: true,
+    onsessioninitialized: (sessionId: string) => {
+      logger.info({ sessionId, totalSessions: transports.size + 1 }, 'Session initialized');
+      transports.set(sessionId, transport);
+    },
+  });
+
+  server.onclose = async () => {
+    const sid = transport.sessionId;
+    if (sid && transports.has(sid)) {
+      logger.info({ sessionId: sid, totalSessions: transports.size - 1 }, 'Session closed');
+      transports.delete(sid);
+    }
+  };
+
+  return { server, transport };
+}
+
+/**
+ * Sends a JSON-RPC error response
+ */
+function sendErrorResponse(res: Response, status: number, code: number, message: string, id: unknown = null): void {
+  if (res.headersSent) return;
+  res.status(status).json({
+    jsonrpc: '2.0',
+    error: { code, message },
+    id,
+  });
+}
+
+/**
+ * Creates and configures the Express application
+ */
 function createApp(): express.Application {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
@@ -247,168 +275,102 @@ function createApp(): express.Application {
   app.get('/health', (_req: Request, res: Response) => {
     res.json({
       status: 'ok',
-      server: {
-        name: 'calculator-mcp-server',
-        version: '1.0.0'
-      },
-      transport: 'streamable-http',
-      activeSessions: transports.size
+      server: 'calculator-mcp-server',
+      version: '1.0.0',
+      activeSessions: transports.size,
     });
   });
 
+  // SSE stream endpoint (GET /mcp)
   app.get('/mcp', async (req: Request, res: Response) => {
     const sessionId = getSessionId(req.headers);
 
     if (!sessionId) {
-      if (!res.headersSent) {
-        res.status(400).json({
-          jsonrpc: '2.0',
-          error: { code: -32000, message: 'Bad Request: No session ID provided' },
-          id: null,
-        });
-      }
+      sendErrorResponse(res, 400, -32000, 'Bad Request: No session ID provided');
       return;
     }
 
     const transport = transports.get(sessionId);
     if (!transport) {
-      logger.warn({ sessionId, totalSessions: transports.size }, 'GET: Session not found');
-      if (!res.headersSent) {
-        res.status(400).json({
-          jsonrpc: '2.0',
-          error: { code: -32000, message: 'Bad Request: Session not found' },
-          id: null,
-        });
-      }
+      sendErrorResponse(res, 404, -32000, 'Session not found');
       return;
-    }
-
-    try {
-      req.socket.setTimeout(0);
-      req.socket.setNoDelay(true);
-      req.socket.setKeepAlive(true, 60000);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error({ sessionId, error: errorMessage }, 'Error configuring socket');
     }
 
     try {
       await transport.handleRequest(req, res);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error({ sessionId, error: errorMessage }, 'Error in transport.handleRequest');
-      if (!res.headersSent) {
-        res.status(500).json({
-          jsonrpc: '2.0',
-          error: { code: -32603, message: 'Internal server error' },
-          id: null,
-        });
-      }
+      logger.error({ sessionId, error: error instanceof Error ? error.message : String(error) }, 'Error in transport.handleRequest');
+      sendErrorResponse(res, 500, -32603, 'Internal server error');
     }
   });
 
+  // Session termination endpoint (DELETE /mcp)
   app.delete('/mcp', async (req: Request, res: Response) => {
     const sessionId = getSessionId(req.headers);
 
     if (!sessionId) {
-      if (!res.headersSent) {
-        res.status(400).json({
-          jsonrpc: '2.0',
-          error: { code: -32000, message: 'Bad Request: No valid session ID provided' },
-          id: null,
-        });
-      }
+      sendErrorResponse(res, 400, -32000, 'Bad Request: No session ID provided');
       return;
     }
 
     const transport = transports.get(sessionId);
     if (!transport) {
-      if (!res.headersSent) {
-        res.status(400).json({
-          jsonrpc: '2.0',
-          error: { code: -32000, message: 'Bad Request: No valid session ID provided' },
-          id: null,
-        });
-      }
+      sendErrorResponse(res, 404, -32000, 'Session not found');
       return;
     }
 
     try {
       await transport.handleRequest(req, res, req.body);
+      transports.delete(sessionId);
+      logger.info({ sessionId, totalSessions: transports.size }, 'Session deleted');
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error({ error: errorMessage, sessionId }, 'Error handling session termination');
-      if (!res.headersSent) {
-        res.status(500).json({
-          jsonrpc: '2.0',
-          error: { code: -32603, message: 'Error handling session termination' },
-          id: null,
-        });
-      }
+      logger.error({ error: error instanceof Error ? error.message : String(error), sessionId }, 'Error handling session termination');
+      sendErrorResponse(res, 500, -32603, 'Error handling session termination');
     }
   });
 
+  // Main MCP endpoint (POST /mcp)
   app.post('/mcp', async (req: Request, res: Response) => {
     try {
       const sessionId = getSessionId(req.headers);
+      const requestId = typeof req.body === 'object' && req.body !== null && 'id' in req.body ? req.body.id : null;
 
+      // Handle existing session
       if (sessionId) {
         const transport = transports.get(sessionId);
         if (transport) {
           await transport.handleRequest(req, res, req.body);
           return;
         }
-        if (!res.headersSent) {
-          const requestId = typeof req.body === 'object' && req.body !== null && 'id' in req.body
-            ? (req.body as { id: unknown }).id
-            : null;
-          res.status(400).json({
-            jsonrpc: '2.0',
-            error: { code: -32000, message: 'Bad Request: Invalid session ID' },
-            id: requestId,
-          });
-        }
+        sendErrorResponse(res, 404, -32000, 'Session not found', requestId);
         return;
       }
 
-      const { server } = createServer();
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
-        enableJsonResponse: true,
-        onsessioninitialized: (sessionId: string) => {
-          logger.info({ sessionId, totalSessions: transports.size + 1 }, 'Session initialized');
-          transports.set(sessionId, transport);
-        },
-      });
+      // No session ID - only allow initialize requests to create new sessions
+      const isInitialize = typeof req.body === 'object' && req.body !== null && 'method' in req.body && req.body.method === 'initialize';
+      if (!isInitialize) {
+        sendErrorResponse(res, 400, -32000, 'Bad Request: No session ID provided', requestId);
+        return;
+      }
 
-      server.onclose = async () => {
-        const sid = transport.sessionId;
-        if (sid && transports.has(sid)) {
-          transports.delete(sid);
-        }
-      };
-
+      // Create new session for initialize request
+      const { server, transport } = createSession();
       await server.connect(transport);
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error({ error: errorMessage }, 'Error handling MCP request');
-      if (!res.headersSent) {
-        const requestId = typeof req.body === 'object' && req.body !== null && 'id' in req.body
-          ? (req.body as { id: unknown }).id
-          : null;
-        res.status(500).json({
-          jsonrpc: '2.0',
-          error: { code: -32603, message: 'Internal server error' },
-          id: requestId,
-        });
-      }
+      const requestId = typeof req.body === 'object' && req.body !== null && 'id' in req.body ? req.body.id : null;
+      sendErrorResponse(res, 500, -32603, 'Internal server error', requestId);
     }
   });
 
   return app;
 }
 
+/**
+ * Main entry point
+ */
 async function main(): Promise<void> {
   try {
     const app = createApp();
@@ -418,24 +380,18 @@ async function main(): Promise<void> {
       logger.info({ port: PORT }, 'MCP Calculator Server started');
     });
 
-    server.timeout = 0;
-    server.keepAliveTimeout = 65000;
-    server.headersTimeout = 66000;
-
+    // Graceful shutdown handler
     const shutdown = async () => {
       logger.info('Shutting down...');
       for (const [sessionId, transport] of transports.entries()) {
         try {
           await transport.close();
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          logger.error({ error: errorMessage, sessionId }, 'Error closing transport');
+          logger.error({ error: error instanceof Error ? error.message : String(error), sessionId }, 'Error closing transport');
         }
       }
       transports.clear();
-      await new Promise<void>((resolve) => {
-        server.close(() => resolve());
-      });
+      await new Promise<void>((resolve) => server.close(() => resolve()));
       process.exit(0);
     };
 
