@@ -137,6 +137,12 @@ services:
       - "traefik.http.routers.${STACK_NAME:-prod}-n8n-secure.tls=true"
       - "traefik.http.routers.${STACK_NAME:-prod}-n8n-secure.tls.certresolver=le"
 
+  # MCP Services
+  mcp-calculator:
+    extends: { file: docker-compose.mcp-calculator.yml, service: mcp-calculator }
+    container_name: ${STACK_NAME:-prod}-mcp-calculator
+    # No Traefik labels - internal service only
+
 networks:
   traefik-net:
     external: true

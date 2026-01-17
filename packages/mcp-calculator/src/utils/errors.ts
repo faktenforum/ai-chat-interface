@@ -1,7 +1,3 @@
-/**
- * Custom error classes for calculator operations
- */
-
 export class CalculatorError extends Error {
   constructor(
     message: string,

@@ -1,5 +1,6 @@
 services:
   mcp-calculator:
+    # Internal service only - not exposed via Traefik
     # For local development, use build context
     # For production/Portainer, use image from registry
     build:
@@ -35,7 +36,3 @@ services:
         reservations:
           cpus: '0.25'
           memory: 128M
-
-networks:
-  app-net:
-    driver: bridge

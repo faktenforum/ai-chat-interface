@@ -436,27 +436,12 @@ mcpSettings:
     # - 'http://n8n:5678'        # Internal n8n service (Docker network)
     # - 'https://n8n.${DOMAIN}'  # External n8n URL (production)
 
-# MCP Calculator Server Integration
-# Production-ready calculator MCP server with basic arithmetic operations
+# MCP Calculator Server
 mcpServers:
   calculator:
     type: streamable-http
     url: http://mcp-calculator:3000/mcp
-    headers:
-      X-User-ID: "{{LIBRECHAT_USER_ID}}"
-      X-User-Name: "{{LIBRECHAT_USER_USERNAME}}"
-    timeout: 30000
-    initTimeout: 10000
-    title: "Calculator"
-    description: "Performs basic arithmetic operations: addition, subtraction, multiplication, division"
-    serverInstructions: |
-      Use the calculator for mathematical operations. Available operations:
-      - add(a, b): Adds two numbers together
-      - subtract(a, b): Subtracts b from a
-      - multiply(a, b): Multiplies two numbers
-      - divide(a, b): Divides a by b (handles division by zero with error message)
-      Always use these tools for calculations instead of computing manually.
-      The tools provide accurate results and handle edge cases like division by zero.
+    initTimeout: 120000
     chatMenu: true
     startup: true
 

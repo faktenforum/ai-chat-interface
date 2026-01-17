@@ -8,9 +8,11 @@ COPY tsconfig.json ./
 COPY config/ ./config/
 COPY src/ ./src/
 
-# Copy roles.json to a location that won't be overwritten by volumes
-# The librechat-config volume mounts to /app/config, so we need roles.json elsewhere
-RUN mkdir -p /app/data && cp /app/config/roles.json /app/data/roles.json
+# Copy config files to locations that won't be overwritten by volumes
+# The librechat-config volume mounts to /app/config, so we need to preserve source files
+RUN mkdir -p /app/data && \
+    cp /app/config/roles.json /app/data/roles.json && \
+    cp /app/config/librechat.yaml /app/data/librechat.yaml
 
 # Install production dependencies
 RUN npm install --production --silent

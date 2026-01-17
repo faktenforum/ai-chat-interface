@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
+import { fileURLToPath } from 'url';
 import express, { type Request, type Response } from 'express';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StreamableHttpServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { add, subtract, multiply, divide, getHistory, clearHistory } from './tools/calculator.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { add, subtract, multiply, divide, getHistory } from './tools/calculator.js';
 import { logger } from './utils/logger.js';
 import { CalculatorError } from './utils/errors.js';
-import type {
+import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   ListResourcesRequestSchema,
@@ -16,18 +18,28 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
-const API_KEYS = process.env.API_KEYS ? process.env.API_KEYS.split(',').map((k) => k.trim()) : [];
 
-/**
- * Create and configure the MCP server
- */
-function createMCPServer(): Server {
+const transports = new Map<string, StreamableHTTPServerTransport>();
+
+function getSessionId(headers: Request['headers']): string | undefined {
+  const header = headers['mcp-session-id'];
+  if (typeof header === 'string') {
+    return header;
+  }
+  if (Array.isArray(header) && header.length > 0 && typeof header[0] === 'string') {
+    return header[0];
+  }
+  return undefined;
+}
+
+function createServer() {
   const server = new Server(
     {
       name: 'calculator-mcp-server',
       version: '1.0.0',
     },
     {
+      instructions: 'MCP Server providing basic arithmetic operations: add, subtract, multiply, divide',
       capabilities: {
         tools: {},
         resources: {},
@@ -36,87 +48,59 @@ function createMCPServer(): Server {
     },
   );
 
-  // List available tools
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return {
-      tools: [
-        {
-          name: 'add',
-          description: 'Adds two numbers together',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              a: {
-                type: 'number',
-                description: 'First number',
-              },
-              b: {
-                type: 'number',
-                description: 'Second number',
-              },
-            },
-            required: ['a', 'b'],
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: [
+      {
+        name: 'add',
+        description: 'Adds two numbers together',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            a: { type: 'number', description: 'First number' },
+            b: { type: 'number', description: 'Second number' },
           },
+          required: ['a', 'b'],
         },
-        {
-          name: 'subtract',
-          description: 'Subtracts the second number from the first number',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              a: {
-                type: 'number',
-                description: 'First number (minuend)',
-              },
-              b: {
-                type: 'number',
-                description: 'Second number (subtrahend)',
-              },
-            },
-            required: ['a', 'b'],
+      },
+      {
+        name: 'subtract',
+        description: 'Subtracts the second number from the first number',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            a: { type: 'number', description: 'First number (minuend)' },
+            b: { type: 'number', description: 'Second number (subtrahend)' },
           },
+          required: ['a', 'b'],
         },
-        {
-          name: 'multiply',
-          description: 'Multiplies two numbers together',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              a: {
-                type: 'number',
-                description: 'First number',
-              },
-              b: {
-                type: 'number',
-                description: 'Second number',
-              },
-            },
-            required: ['a', 'b'],
+      },
+      {
+        name: 'multiply',
+        description: 'Multiplies two numbers together',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            a: { type: 'number', description: 'First number' },
+            b: { type: 'number', description: 'Second number' },
           },
+          required: ['a', 'b'],
         },
-        {
-          name: 'divide',
-          description: 'Divides the first number by the second number. Returns an error if dividing by zero.',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              a: {
-                type: 'number',
-                description: 'First number (dividend)',
-              },
-              b: {
-                type: 'number',
-                description: 'Second number (divisor)',
-              },
-            },
-            required: ['a', 'b'],
+      },
+      {
+        name: 'divide',
+        description: 'Divides the first number by the second number. Returns an error if dividing by zero.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            a: { type: 'number', description: 'First number (dividend)' },
+            b: { type: 'number', description: 'Second number (divisor)' },
           },
+          required: ['a', 'b'],
         },
-      ],
-    };
-  });
+      },
+    ],
+  }));
 
-  // Handle tool calls
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
@@ -134,25 +118,21 @@ function createMCPServer(): Server {
           throw new CalculatorError(`Unknown tool: ${name}`, 'UNKNOWN_TOOL');
       }
     } catch (error) {
-      logger.error({ tool: name, args, error }, 'Tool execution failed');
-      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error({ tool: name, args, error: errorMessage }, 'Tool execution failed');
+
       if (error instanceof CalculatorError) {
         return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error.message}`,
-            },
-          ],
+          content: [{ type: 'text', text: `Error: ${error.message}` }],
           isError: true,
         };
       }
-      
+
       return {
         content: [
           {
             type: 'text',
-            text: `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
+            text: `Unexpected error: ${errorMessage}`,
           },
         ],
         isError: true,
@@ -160,27 +140,23 @@ function createMCPServer(): Server {
     }
   });
 
-  // List available resources
-  server.setRequestHandler(ListResourcesRequestSchema, async () => {
-    return {
-      resources: [
-        {
-          uri: 'calculator://info',
-          name: 'Server Information',
-          description: 'Information about the calculator MCP server',
-          mimeType: 'application/json',
-        },
-        {
-          uri: 'calculator://history',
-          name: 'Calculation History',
-          description: 'Recent calculation history (last 100 operations)',
-          mimeType: 'application/json',
-        },
-      ],
-    };
-  });
+  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    resources: [
+      {
+        uri: 'calculator://info',
+        name: 'Server Information',
+        description: 'Information about the calculator MCP server',
+        mimeType: 'application/json',
+      },
+      {
+        uri: 'calculator://history',
+        name: 'Calculation History',
+        description: 'Recent calculation history (last 100 operations)',
+        mimeType: 'application/json',
+      },
+    ],
+  }));
 
-  // Read resources
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const { uri } = request.params;
 
@@ -208,13 +184,12 @@ function createMCPServer(): Server {
     }
 
     if (uri === 'calculator://history') {
-      const history = getHistory();
       return {
         contents: [
           {
             uri,
             mimeType: 'application/json',
-            text: JSON.stringify(history, null, 2),
+            text: JSON.stringify(getHistory(), null, 2),
           },
         ],
       };
@@ -223,19 +198,15 @@ function createMCPServer(): Server {
     throw new CalculatorError(`Unknown resource: ${uri}`, 'UNKNOWN_RESOURCE');
   });
 
-  // List available prompts
-  server.setRequestHandler(ListPromptsRequestSchema, async () => {
-    return {
-      prompts: [
-        {
-          name: 'calculator_usage',
-          description: 'Instructions on how to use the calculator tools',
-        },
-      ],
-    };
-  });
+  server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+    prompts: [
+      {
+        name: 'calculator_usage',
+        description: 'Instructions on how to use the calculator tools',
+      },
+    ],
+  }));
 
-  // Get prompt
   server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     const { name } = request.params;
 
@@ -254,14 +225,7 @@ Available tools:
 - multiply(a, b): Multiplies two numbers
 - divide(a, b): Divides a by b (returns error if b is zero)
 
-Always use these tools for calculations instead of computing manually. The tools provide accurate results and handle edge cases like division by zero.
-
-Example usage:
-- To calculate 5 + 3, use the add tool with a=5 and b=3
-- To calculate 10 / 2, use the divide tool with a=10 and b=2
-- Division by zero will return an error message
-
-The calculator maintains a history of recent calculations that can be accessed via resources.`,
+Always use these tools for calculations instead of computing manually.`,
             },
           },
         ],
@@ -271,90 +235,172 @@ The calculator maintains a history of recent calculations that can be accessed v
     throw new CalculatorError(`Unknown prompt: ${name}`, 'UNKNOWN_PROMPT');
   });
 
-  // Error handler
-  server.onerror = (error) => {
-    logger.error({ error }, 'MCP server error');
-  };
 
-  return server;
+  return { server };
 }
 
-/**
- * Create Express app with MCP server
- */
 function createApp(): express.Application {
   const app = express();
-
-  // Middleware
-  app.use(express.json());
-  app.use(express.text({ type: 'text/plain' }));
-
-  // Request logging middleware
-  app.use((req: Request, res: Response, next: express.NextFunction) => {
-    logger.info(
-      {
-        method: req.method,
-        path: req.path,
-        ip: req.ip,
-        userAgent: req.get('user-agent'),
-      },
-      'Incoming request',
-    );
-    next();
-  });
-
-  // Optional API key authentication
-  const authenticate = (req: Request, res: Response, next: express.NextFunction): void => {
-    if (API_KEYS.length === 0) {
-      // No API keys configured, allow all requests
-      next();
-      return;
-    }
-
-    const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
-    
-    if (!apiKey || typeof apiKey !== 'string' || !API_KEYS.includes(apiKey)) {
-      res.status(401).json({ error: 'Unauthorized: Invalid or missing API key' });
-      return;
-    }
-
-    next();
-  };
+  app.use(express.json({ limit: '10mb' }));
 
   // Health check endpoint
   app.get('/health', (_req: Request, res: Response) => {
     res.json({
       status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      version: '1.0.0',
+      server: {
+        name: 'calculator-mcp-server',
+        version: '1.0.0'
+      },
+      transport: 'streamable-http',
+      activeSessions: transports.size
     });
   });
 
-  // MCP endpoint (streamable-http)
-  // Note: StreamableHttpServerTransport handles the full request/response cycle
-  // We create a new transport instance per request
-  app.post('/mcp', authenticate, async (req: Request, res: Response) => {
+  app.get('/mcp', async (req: Request, res: Response) => {
+    const sessionId = getSessionId(req.headers);
+
+    if (!sessionId) {
+      if (!res.headersSent) {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: { code: -32000, message: 'Bad Request: No session ID provided' },
+          id: null,
+        });
+      }
+      return;
+    }
+
+    const transport = transports.get(sessionId);
+    if (!transport) {
+      logger.warn({ sessionId, totalSessions: transports.size }, 'GET: Session not found');
+      if (!res.headersSent) {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: { code: -32000, message: 'Bad Request: Session not found' },
+          id: null,
+        });
+      }
+      return;
+    }
+
     try {
-      // Create a new MCP server instance for this request
-      // (The SDK may handle connection pooling internally)
-      const requestServer = createMCPServer();
-      
-      // Create transport - it will handle the request body and response
-      const transport = new StreamableHttpServerTransport('/mcp', res);
-      
-      // Connect the server to the transport
-      // The transport will process the request body from req and send responses via res
-      await requestServer.connect(transport);
-      
-      // The transport handles everything from here
-      // It reads from the request and writes to the response
+      req.socket.setTimeout(0);
+      req.socket.setNoDelay(true);
+      req.socket.setKeepAlive(true, 60000);
     } catch (error) {
-      logger.error({ error }, 'Error handling MCP request');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error({ sessionId, error: errorMessage }, 'Error configuring socket');
+    }
+
+    try {
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error({ sessionId, error: errorMessage }, 'Error in transport.handleRequest');
       if (!res.headersSent) {
         res.status(500).json({
-          error: 'Internal server error',
-          message: error instanceof Error ? error.message : String(error),
+          jsonrpc: '2.0',
+          error: { code: -32603, message: 'Internal server error' },
+          id: null,
+        });
+      }
+    }
+  });
+
+  app.delete('/mcp', async (req: Request, res: Response) => {
+    const sessionId = getSessionId(req.headers);
+
+    if (!sessionId) {
+      if (!res.headersSent) {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: { code: -32000, message: 'Bad Request: No valid session ID provided' },
+          id: null,
+        });
+      }
+      return;
+    }
+
+    const transport = transports.get(sessionId);
+    if (!transport) {
+      if (!res.headersSent) {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: { code: -32000, message: 'Bad Request: No valid session ID provided' },
+          id: null,
+        });
+      }
+      return;
+    }
+
+    try {
+      await transport.handleRequest(req, res, req.body);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error({ error: errorMessage, sessionId }, 'Error handling session termination');
+      if (!res.headersSent) {
+        res.status(500).json({
+          jsonrpc: '2.0',
+          error: { code: -32603, message: 'Error handling session termination' },
+          id: null,
+        });
+      }
+    }
+  });
+
+  app.post('/mcp', async (req: Request, res: Response) => {
+    try {
+      const sessionId = getSessionId(req.headers);
+
+      if (sessionId) {
+        const transport = transports.get(sessionId);
+        if (transport) {
+          await transport.handleRequest(req, res, req.body);
+          return;
+        }
+        if (!res.headersSent) {
+          const requestId = typeof req.body === 'object' && req.body !== null && 'id' in req.body
+            ? (req.body as { id: unknown }).id
+            : null;
+          res.status(400).json({
+            jsonrpc: '2.0',
+            error: { code: -32000, message: 'Bad Request: Invalid session ID' },
+            id: requestId,
+          });
+        }
+        return;
+      }
+
+      const { server } = createServer();
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        enableJsonResponse: true,
+        onsessioninitialized: (sessionId: string) => {
+          logger.info({ sessionId, totalSessions: transports.size + 1 }, 'Session initialized');
+          transports.set(sessionId, transport);
+        },
+      });
+
+      server.onclose = async () => {
+        const sid = transport.sessionId;
+        if (sid && transports.has(sid)) {
+          transports.delete(sid);
+        }
+      };
+
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error({ error: errorMessage }, 'Error handling MCP request');
+      if (!res.headersSent) {
+        const requestId = typeof req.body === 'object' && req.body !== null && 'id' in req.body
+          ? (req.body as { id: unknown }).id
+          : null;
+        res.status(500).json({
+          jsonrpc: '2.0',
+          error: { code: -32603, message: 'Internal server error' },
+          id: requestId,
         });
       }
     }
@@ -363,46 +409,49 @@ function createApp(): express.Application {
   return app;
 }
 
-/**
- * Start the server
- */
 async function main(): Promise<void> {
   try {
     const app = createApp();
+    app.disable('x-powered-by');
 
-    app.listen(PORT, '0.0.0.0', () => {
-      logger.info(
-        {
-          port: PORT,
-          nodeEnv: process.env.NODE_ENV || 'development',
-          hasApiKeys: API_KEYS.length > 0,
-        },
-        'MCP Calculator Server started',
-      );
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      logger.info({ port: PORT }, 'MCP Calculator Server started');
     });
 
-    // Graceful shutdown
-    process.on('SIGTERM', () => {
-      logger.info('SIGTERM received, shutting down gracefully');
+    server.timeout = 0;
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000;
+
+    const shutdown = async () => {
+      logger.info('Shutting down...');
+      for (const [sessionId, transport] of transports.entries()) {
+        try {
+          await transport.close();
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          logger.error({ error: errorMessage, sessionId }, 'Error closing transport');
+        }
+      }
+      transports.clear();
+      await new Promise<void>((resolve) => {
+        server.close(() => resolve());
+      });
       process.exit(0);
-    });
+    };
 
-    process.on('SIGINT', () => {
-      logger.info('SIGINT received, shutting down gracefully');
-      process.exit(0);
-    });
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
   } catch (error) {
     logger.error({ error }, 'Failed to start server');
     process.exit(1);
   }
 }
 
-// Start server if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch((error) => {
-    console.error('Fatal error:', error);
+    logger.error({ error }, 'Fatal error');
     process.exit(1);
   });
 }
 
-export { createApp, createMCPServer };
+export { createApp, createServer };
