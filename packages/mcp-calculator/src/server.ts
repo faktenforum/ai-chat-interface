@@ -3,19 +3,12 @@ import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'url';
 import express, { type Request, type Response } from 'express';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import * as z from 'zod';
 import { add, subtract, multiply, divide, getHistory } from './tools/calculator.js';
 import { logger } from './utils/logger.js';
 import { CalculatorError } from './utils/errors.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  ListResourcesRequestSchema,
-  ReadResourceRequestSchema,
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
@@ -34,179 +27,153 @@ function getSessionId(headers: Request['headers']): string | undefined {
  * Creates and configures the MCP server with all handlers
  */
 function createServer() {
-  const server = new Server(
+  const server = new McpServer(
     {
       name: 'calculator-mcp-server',
       version: '1.0.0',
     },
     {
-      instructions: 'MCP Server providing basic arithmetic operations: add, subtract, multiply, divide',
       capabilities: {
         tools: {},
         resources: {},
         prompts: {},
       },
+      instructions: `You have access to a calculator MCP server for performing mathematical operations.
+
+Usage guidelines:
+- Always use the calculator tools for mathematical calculations instead of computing manually
+- The calculator maintains a history of recent operations (accessible via the history resource)
+- All operations are precise and handle decimal numbers correctly
+- Division by zero will return an error - always check for this case when dividing`,
     },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [
-      {
-        name: 'add',
-        description: 'Adds two numbers together',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            a: { type: 'number', description: 'First number' },
-            b: { type: 'number', description: 'Second number' },
-          },
-          required: ['a', 'b'],
-        },
-      },
-      {
-        name: 'subtract',
-        description: 'Subtracts the second number from the first number',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            a: { type: 'number', description: 'First number (minuend)' },
-            b: { type: 'number', description: 'Second number (subtrahend)' },
-          },
-          required: ['a', 'b'],
-        },
-      },
-      {
-        name: 'multiply',
-        description: 'Multiplies two numbers together',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            a: { type: 'number', description: 'First number' },
-            b: { type: 'number', description: 'Second number' },
-          },
-          required: ['a', 'b'],
-        },
-      },
-      {
-        name: 'divide',
-        description: 'Divides the first number by the second number. Returns an error if dividing by zero.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            a: { type: 'number', description: 'First number (dividend)' },
-            b: { type: 'number', description: 'Second number (divisor)' },
-          },
-          required: ['a', 'b'],
-        },
-      },
-    ],
-  }));
-
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-
+  // Register tools
+  server.registerTool('add', {
+    description: 'Adds two numbers together',
+    inputSchema: {
+      a: z.number().describe('First number'),
+      b: z.number().describe('Second number'),
+    },
+  }, async (args: { a: number; b: number }) => {
     try {
-      switch (name) {
-        case 'add':
-          return await add(args);
-        case 'subtract':
-          return await subtract(args);
-        case 'multiply':
-          return await multiply(args);
-        case 'divide':
-          return await divide(args);
-        default:
-          throw new CalculatorError(`Unknown tool: ${name}`, 'UNKNOWN_TOOL');
-      }
+      return await add(args);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error({ tool: name, args, error: errorMessage }, 'Tool execution failed');
-
+      logger.error({ tool: 'add', args, error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
       return {
-        content: [{ type: 'text', text: error instanceof CalculatorError ? `Error: ${error.message}` : `Unexpected error: ${errorMessage}` }],
+        content: [{ type: 'text', text: error instanceof CalculatorError ? `Error: ${error.message}` : `Unexpected error: ${error instanceof Error ? error.message : String(error)}` }],
         isError: true,
       };
     }
   });
 
-  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
-    resources: [
-      {
-        uri: 'calculator://info',
-        name: 'Server Information',
-        description: 'Information about the calculator MCP server',
-        mimeType: 'application/json',
-      },
-      {
-        uri: 'calculator://history',
-        name: 'Calculation History',
-        description: 'Recent calculation history (last 100 operations)',
-        mimeType: 'application/json',
-      },
-    ],
-  }));
-
-  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-    const { uri } = request.params;
-
-    if (uri === 'calculator://info') {
+  server.registerTool('subtract', {
+    description: 'Subtracts the second number from the first number',
+    inputSchema: {
+      a: z.number().describe('First number (minuend)'),
+      b: z.number().describe('Second number (subtrahend)'),
+    },
+  }, async (args: { a: number; b: number }) => {
+    try {
+      return await subtract(args);
+    } catch (error) {
+      logger.error({ tool: 'subtract', args, error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
       return {
-        contents: [
-          {
-            uri,
-            mimeType: 'application/json',
-            text: JSON.stringify(
-              {
-                name: 'calculator-mcp-server',
-                version: '1.0.0',
-                description: 'MCP Server providing basic arithmetic operations',
-                tools: ['add', 'subtract', 'multiply', 'divide'],
-                uptime: process.uptime(),
-                nodeVersion: process.version,
-              },
-              null,
-              2,
-            ),
-          },
-        ],
+        content: [{ type: 'text', text: error instanceof CalculatorError ? `Error: ${error.message}` : `Unexpected error: ${error instanceof Error ? error.message : String(error)}` }],
+        isError: true,
       };
     }
-
-    if (uri === 'calculator://history') {
-      return {
-        contents: [
-          {
-            uri,
-            mimeType: 'application/json',
-            text: JSON.stringify(getHistory(), null, 2),
-          },
-        ],
-      };
-    }
-
-    throw new CalculatorError(`Unknown resource: ${uri}`, 'UNKNOWN_RESOURCE');
   });
 
-  server.setRequestHandler(ListPromptsRequestSchema, async () => ({
-    prompts: [
-      {
-        name: 'calculator_usage',
-        description: 'Instructions on how to use the calculator tools',
-      },
-    ],
-  }));
-
-  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-    const { name } = request.params;
-
-    if (name === 'calculator_usage') {
+  server.registerTool('multiply', {
+    description: 'Multiplies two numbers together',
+    inputSchema: {
+      a: z.number().describe('First number'),
+      b: z.number().describe('Second number'),
+    },
+  }, async (args: { a: number; b: number }) => {
+    try {
+      return await multiply(args);
+    } catch (error) {
+      logger.error({ tool: 'multiply', args, error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
       return {
-        messages: [
-          {
-            role: 'system',
-            content: {
-              type: 'text',
-              text: `You have access to calculator tools for performing mathematical operations:
+        content: [{ type: 'text', text: error instanceof CalculatorError ? `Error: ${error.message}` : `Unexpected error: ${error instanceof Error ? error.message : String(error)}` }],
+        isError: true,
+      };
+    }
+  });
+
+  server.registerTool('divide', {
+    description: 'Divides the first number by the second number. Returns an error if dividing by zero.',
+    inputSchema: {
+      a: z.number().describe('First number (dividend)'),
+      b: z.number().describe('Second number (divisor)'),
+    },
+  }, async (args: { a: number; b: number }) => {
+    try {
+      return await divide(args);
+    } catch (error) {
+      logger.error({ tool: 'divide', args, error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
+      return {
+        content: [{ type: 'text', text: error instanceof CalculatorError ? `Error: ${error.message}` : `Unexpected error: ${error instanceof Error ? error.message : String(error)}` }],
+        isError: true,
+      };
+    }
+  });
+
+  // Register resources
+  server.registerResource('info', 'calculator://info', {
+    description: 'Information about the calculator MCP server',
+    mimeType: 'application/json',
+  }, async () => {
+    return {
+      contents: [
+        {
+          uri: 'calculator://info',
+          mimeType: 'application/json',
+          text: JSON.stringify(
+            {
+              name: 'calculator-mcp-server',
+              version: '1.0.0',
+              description: 'MCP Server providing basic arithmetic operations',
+              tools: ['add', 'subtract', 'multiply', 'divide'],
+              uptime: process.uptime(),
+              nodeVersion: process.version,
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+    };
+  });
+
+  server.registerResource('history', 'calculator://history', {
+    description: 'Recent calculation history (last 100 operations)',
+    mimeType: 'application/json',
+  }, async () => {
+    return {
+      contents: [
+        {
+          uri: 'calculator://history',
+          mimeType: 'application/json',
+          text: JSON.stringify(getHistory(), null, 2),
+        },
+      ],
+    };
+  });
+
+  // Register prompts
+  server.registerPrompt('calculator_usage', {
+    description: 'Instructions on how to use the calculator tools',
+  }, async () => {
+    return {
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `You have access to calculator tools for performing mathematical operations:
 
 Available tools:
 - add(a, b): Adds two numbers together
@@ -215,23 +182,20 @@ Available tools:
 - divide(a, b): Divides a by b (returns error if b is zero)
 
 Always use these tools for calculations instead of computing manually.`,
-            },
           },
-        ],
-      };
-    }
-
-    throw new CalculatorError(`Unknown prompt: ${name}`, 'UNKNOWN_PROMPT');
+        },
+      ],
+    };
   });
 
-  return { server };
+  return server;
 }
 
 /**
  * Creates a new session for an initialize request
  */
-function createSession(): { server: Server; transport: StreamableHTTPServerTransport } {
-  const { server } = createServer();
+function createSession(): { server: McpServer; transport: StreamableHTTPServerTransport } {
+  const server = createServer();
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
     enableJsonResponse: true,
@@ -241,7 +205,7 @@ function createSession(): { server: Server; transport: StreamableHTTPServerTrans
     },
   });
 
-  server.onclose = async () => {
+  server.server.onclose = async () => {
     const sid = transport.sessionId;
     if (sid && transports.has(sid)) {
       logger.info({ sessionId: sid, totalSessions: transports.size - 1 }, 'Session closed');

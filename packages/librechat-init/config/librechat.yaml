@@ -442,8 +442,9 @@ mcpServers:
     type: streamable-http
     url: http://mcp-calculator:3000/mcp
     initTimeout: 120000
-    chatMenu: false
+    chatMenu: false # See TODO.md
     startup: true
+    serverInstructions: true
 
 # n8n MCP Server Integration (Future - disabled)
 # To integrate n8n workflows with LibreChat Agents via MCP:
