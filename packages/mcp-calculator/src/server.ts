@@ -7,7 +7,7 @@ import express, { type Request, type Response } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import * as z from 'zod';
-import { add, subtract, multiply, divide, getHistory } from './tools/calculator.ts';
+import { add, subtract, multiply, divide } from './tools/calculator.ts';
 import { logger } from './utils/logger.ts';
 import { CalculatorError } from './utils/errors.ts';
 
@@ -43,7 +43,6 @@ function createServer() {
 
 Usage guidelines:
 - Always use the calculator tools for mathematical calculations instead of computing manually
-- The calculator maintains a history of recent operations (last 100) - use get_history tool to retrieve it
 - All operations are precise and handle decimal numbers correctly
 - Division by zero will return an error - always check for this case when dividing`,
     },
@@ -122,47 +121,6 @@ Usage guidelines:
     }
   });
 
-  server.registerTool('get_history', {
-    description: 'Retrieves the calculation history (last 100 operations). Returns a list of recent calculations with operation type, operands, result, and timestamp.',
-    inputSchema: {
-      limit: z.number().optional().describe('Maximum number of history entries to return (default: all, max: 100)'),
-    },
-  }, async (args: { limit?: number }) => {
-    try {
-      const history = getHistory();
-      const limit = args.limit ? Math.min(args.limit, 100) : history.length;
-      const limitedHistory = history.slice(0, limit);
-
-      if (limitedHistory.length === 0) {
-        return {
-          content: [{ type: 'text', text: 'No calculation history available.' }],
-        };
-      }
-
-      const historyText = limitedHistory
-        .map((entry, index) => {
-          const timestamp = entry.timestamp.toISOString();
-          return `${index + 1}. ${entry.operation}(${entry.a}, ${entry.b}) = ${entry.result} [${timestamp}]`;
-        })
-        .join('\n');
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Calculation History (${limitedHistory.length} ${limitedHistory.length === 1 ? 'entry' : 'entries'}):\n\n${historyText}`,
-          },
-        ],
-      };
-    } catch (error) {
-      logger.error({ tool: 'get_history', args, error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
-      return {
-        content: [{ type: 'text', text: `Unexpected error: ${error instanceof Error ? error.message : String(error)}` }],
-        isError: true,
-      };
-    }
-  });
-
   // Register resources
   server.registerResource('info', 'calculator://info', {
     description: 'Information about the calculator MCP server',
@@ -178,7 +136,7 @@ Usage guidelines:
               name: 'calculator-mcp-server',
               version: '1.0.0',
               description: 'MCP Server providing basic arithmetic operations',
-              tools: ['add', 'subtract', 'multiply', 'divide', 'get_history'],
+              tools: ['add', 'subtract', 'multiply', 'divide'],
               uptime: process.uptime(),
               nodeVersion: process.version,
             },
@@ -190,20 +148,6 @@ Usage guidelines:
     };
   });
 
-  server.registerResource('history', 'calculator://history', {
-    description: 'Recent calculation history (last 100 operations)',
-    mimeType: 'application/json',
-  }, async () => {
-    return {
-      contents: [
-        {
-          uri: 'calculator://history',
-          mimeType: 'application/json',
-          text: JSON.stringify(getHistory(), null, 2),
-        },
-      ],
-    };
-  });
 
   // Register prompts
   server.registerPrompt('calculator_usage', {
