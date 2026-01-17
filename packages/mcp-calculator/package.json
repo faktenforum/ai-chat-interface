@@ -11,7 +11,8 @@
     "dev": "tsx watch src/server.ts",
     "lint": "eslint . --ext .ts",
     "test": "echo \"Tests to be implemented\"",
-    "test:integration": "bash test/integration.sh"
+    "test:integration": "./test/integration.ts",
+    "test:http": "./test/http-test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.2",
