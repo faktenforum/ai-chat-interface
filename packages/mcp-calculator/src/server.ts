@@ -1,4 +1,5 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings
+
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'url';
@@ -6,9 +7,9 @@ import express, { type Request, type Response } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import * as z from 'zod';
-import { add, subtract, multiply, divide, getHistory } from './tools/calculator.js';
-import { logger } from './utils/logger.js';
-import { CalculatorError } from './utils/errors.js';
+import { add, subtract, multiply, divide, getHistory } from './tools/calculator.ts';
+import { logger } from './utils/logger.ts';
+import { CalculatorError } from './utils/errors.ts';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 

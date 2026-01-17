@@ -1,7 +1,7 @@
 import type { TextContent } from '@modelcontextprotocol/sdk/types.js';
-import { BinaryOperationSchema, type BinaryOperation } from '../schemas/calculator.schema.js';
-import { DivisionByZeroError, InvalidInputError } from '../utils/errors.js';
-import { logger } from '../utils/logger.js';
+import { BinaryOperationSchema, type BinaryOperation } from '../schemas/calculator.schema.ts';
+import { DivisionByZeroError, InvalidInputError } from '../utils/errors.ts';
+import { logger } from '../utils/logger.ts';
 
 interface CalculationHistory {
   operation: string;

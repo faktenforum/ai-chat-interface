@@ -1,23 +1,4 @@
-# Multi-stage build for production
-FROM node:24-alpine AS builder
-
-WORKDIR /app
-
-# Copy package files
-COPY package.json ./
-
-# Install dependencies (including dev dependencies for build)
-RUN npm install
-
-# Copy source files
-COPY tsconfig.json ./
-COPY src ./src
-
-# Build TypeScript
-RUN npm run build
-
-# Production stage
-FROM node:24-alpine AS production
+FROM node:24-alpine
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S appgroup && \
@@ -28,12 +9,15 @@ WORKDIR /app
 # Copy package files
 COPY package.json ./
 
-# Install only production dependencies
-RUN npm install --only=production && \
-    npm cache clean --force
+# Copy TypeScript config
+COPY tsconfig.json ./
 
-# Copy built files from builder
-COPY --from=builder /app/dist ./dist
+# Copy source files
+COPY src ./src
+
+# Install only production dependencies
+RUN npm install --production --silent && \
+    npm cache clean --force
 
 # Change ownership to non-root user
 RUN chown -R appuser:appgroup /app
@@ -48,5 +32,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) })"
 
-# Start the server
-CMD ["node", "dist/server.js"]
+# Run with TypeScript support (like librechat-init)
+CMD ["node", "--experimental-specifier-resolution=node", "--experimental-strip-types", "--experimental-transform-types", "--no-warnings", "src/server.ts"]
