@@ -1,0 +1,133 @@
+---
+name: create-new-mcp
+description: Guide for integrating new MCP servers into the Docker stack
+---
+
+# New MCP Server Integration Checklist
+
+## 1. NPM Package Structure
+Create `packages/mcp-{name}/`:
+- `package.json`: `@ai-chat-interface/mcp-{name}`, `type: "module"`, dependencies: `@modelcontextprotocol/sdk`, `zod`, `express`, `pino`, `dotenv`
+- `tsconfig.json`: ES2022, NodeNext, strict mode, noEmit (run TS directly)
+- `src/server.ts`: Express server with `/mcp` endpoint, session management via `mcp-session-id` header, health endpoint at `/health`
+- `src/tools/`: Tool implementations with Zod schemas
+- `src/utils/logger.ts`: Pino logger with `LOG_LEVEL` env var
+- `src/utils/errors.ts`: Custom error classes
+- `Dockerfile`: Node 24-alpine, non-root user, run TS directly with `--experimental-strip-types`, healthcheck
+- `.dockerignore`, `.gitignore`: Standard Node.js patterns
+
+## 2. Docker Compose Base File
+Create `docker-compose.mcp-{name}.yml`:
+- Service: `mcp-{name}`
+- Image: `ghcr.io/faktenforum/mcp-{name}:dev` (commented build section for local dev)
+- Networks: `app-net` only (internal service, no Traefik)
+- Environment: `PORT`, `LOG_LEVEL`, optional `API_KEYS`
+- Expose port (no publish)
+- Healthcheck: HTTP GET `/health`
+- Resource limits: 0.5 CPU, 256M memory
+
+## 3. Extension Files
+Add to compose files:
+- `docker-compose.local.yml`: Extend service, add `env_file: .env.local`, override with `build` section
+- `docker-compose.local-source.yml`: Extend service, add `env_file: .env.local`
+- `docker-compose.prod.yml`: Extend service, add `container_name: ${STACK_NAME:-prod}-mcp-{name}`
+
+**No Traefik labels** - MCP servers are internal only, accessed via Docker network.
+
+## 4. Environment Variables
+Add to `env.local.example`, `env.prod.example`, `env.dev.example`:
+```bash
+# MCP {Name} Server
+MCP_{NAME}_PORT=3000
+MCP_{NAME}_LOG_LEVEL=info
+# Optional: API keys for authentication (comma-separated)
+# MCP_{NAME}_API_KEYS=
+```
+
+## 5. GitHub Actions Workflow
+Create `.github/workflows/build-mcp-{name}.yml`:
+- Trigger: Push to `packages/mcp-{name}/**` or workflow file changes
+- Build context: `./packages/mcp-{name}`
+- Image: `ghcr.io/faktenforum/mcp-{name}`
+- Tags: `latest` (default branch), `dev` (feature branches), branch name
+- Platform: `linux/amd64`
+- Cache: GitHub Actions cache
+
+## 6. LibreChat Configuration
+Update `packages/librechat-init/config/librechat.yaml`:
+
+**Add to `mcpSettings.allowedDomains`:**
+```yaml
+mcpSettings:
+  allowedDomains:
+    - 'mcp-{name}'  # MCP {Name} service (Docker network)
+```
+
+**Add to `mcpServers`:**
+```yaml
+mcpServers:
+  {name}:
+    type: streamable-http
+    url: http://mcp-{name}:{PORT}/mcp
+    initTimeout: 120000
+    chatMenu: true  # Show in chat dropdown (or false for agents only)
+    startup: true   # Auto-start with LibreChat
+    serverInstructions: true  # Include server instructions
+```
+
+## 7. Server Implementation Pattern
+```typescript
+// Session management
+const transports = new Map<string, StreamableHTTPServerTransport>();
+
+function getSessionId(headers: Request['headers']): string | undefined {
+  const header = headers['mcp-session-id'] || headers['Mcp-Session-Id'];
+  return typeof header === 'string' ? header : undefined;
+}
+
+// Express routes
+app.post('/mcp', async (req, res) => {
+  const sessionId = getSessionId(req.headers) || randomUUID();
+  let transport = transports.get(sessionId);
+  if (!transport) {
+    transport = new StreamableHTTPServerTransport('/mcp', res);
+    transports.set(sessionId, transport);
+    await server.connect(transport);
+  }
+  // Handle request...
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'mcp-{name}' });
+});
+```
+
+## 8. Documentation
+- Update `docs/SERVICES.md`: Add to internal services table, add details section
+- Update `docs/README.md`: Add link if service-specific docs created
+- Create `packages/mcp-{name}/README.md`: Tool descriptions, development setup
+
+## 9. Naming Conventions
+- Package name: `@ai-chat-interface/mcp-{name}` (kebab-case)
+- Service name: `mcp-{name}` (kebab-case)
+- Container name: `${STACK_NAME:-prod}-mcp-{name}` (production), `mcp-{name}` (local)
+- Image: `ghcr.io/faktenforum/mcp-{name}`
+- LibreChat server key: `{name}` (camelCase or kebab-case)
+- Environment prefix: `MCP_{NAME}` (UPPER_SNAKE_CASE)
+
+## 10. Testing
+- Local dev: `npm run dev` in package directory
+- Integration test: `packages/mcp-{name}/test/integration.ts`
+- HTTP test: `packages/mcp-{name}/test/http-test.ts`
+- Docker: `docker compose -f docker-compose.local.yml up -d mcp-{name}`
+- Verify: `curl http://localhost:{PORT}/health`
+- LibreChat: Check agent configuration, test tools in chat
+
+## 11. Key Differences from Regular Services
+- **No Traefik**: Internal only, accessed via Docker network
+- **TypeScript direct execution**: No build step, use `--experimental-strip-types`
+- **Session management**: Required for streamable-http transport
+- **Health endpoint**: Required for Docker healthchecks
+- **LibreChat config**: Must add to `mcpSettings.allowedDomains` and `mcpServers`
+- **Network**: `app-net` only (no `traefik-net`)
+- **Port**: Expose only, never publish
