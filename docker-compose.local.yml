@@ -137,6 +137,16 @@ services:
       - "traefik.http.routers.n8n.entrypoints=web"
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
 
+  # MCP Services
+  mcp-calculator:
+    extends: { file: docker-compose.mcp-calculator.yml, service: mcp-calculator }
+    env_file: .env.local
+    # Override: use build for local development instead of image from registry
+    build:
+      context: ./packages/mcp-calculator
+      dockerfile: Dockerfile
+    # No Traefik labels - internal service only
+
   # Additional Services
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }

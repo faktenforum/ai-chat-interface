@@ -67,6 +67,13 @@
   - Mistral Console: https://console.mistral.ai/
   - LibreChat Docs: https://www.librechat.ai/docs/features/ocr
 
+### MCP Tools
+
+- [ ] Reduce SSE stream disconnection error logs
+  - Problem: LibreChat logs show repeated "SSE stream disconnected" errors (TypeError: terminated, AbortError: This operation was aborted) even though MCP tools function correctly
+  - Impact: Functionality works, but error logs are noisy and may indicate unnecessary reconnection attempts
+  - Solution: Investigate if this is expected LibreChat behavior or if server-side improvements can reduce connection churn
+
 ---
 
 ## Providers

@@ -17,6 +17,7 @@ This document provides an overview of all services in the AI Chat Interface stac
 | **VectorDB** | RAG vector database (PostgreSQL + pgvector) | ❌ | ❌ | ✅ Internal only |
 | **RAG API** | Retrieval-Augmented Generation API | ❌ | ❌ | ✅ Internal only |
 | **n8n PostgreSQL** | n8n database | ❌ | ❌ | ✅ Internal only |
+| **MCP Calculator** | MCP server providing calculator tools for LibreChat agents | ❌ | ❌ | ✅ Internal only |
 | **Firecrawl Services** | Internal Firecrawl dependencies | ❌ | ❌ | ✅ Internal only |
 | - playwright-service | Browser automation | ❌ | ❌ | ✅ Internal only |
 | - redis | Firecrawl cache/queue | ❌ | ❌ | ✅ Internal only |
@@ -95,6 +96,11 @@ This document provides an overview of all services in the AI Chat Interface stac
 - **Network**: `app-net` only
 - **Behavior**: Waits for n8n readiness, then calls `/rest/owner/setup` API if credentials are provided
 
+#### MCP Calculator
+- **Purpose**: MCP server providing calculator tools for LibreChat agents
+- **Network**: `app-net` only
+- **Access**: Only accessible from LibreChat API
+
 #### Firecrawl Internal Services
 - **playwright-service**: Browser automation for web scraping
 - **redis**: Cache and queue management
@@ -112,7 +118,7 @@ This document provides an overview of all services in the AI Chat Interface stac
 
 2. **`app-net`** (Bridge network)
    - LibreChat ecosystem internal communication
-   - LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API, n8n, n8n-init, n8n PostgreSQL
+   - LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API, n8n, n8n-init, n8n PostgreSQL, MCP Calculator
 
 3. **`firecrawl-network`** (Bridge network)
    - Firecrawl internal services only

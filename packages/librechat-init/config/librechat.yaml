@@ -419,21 +419,32 @@ registration:
 #     - 'google.com'
 #     # - 'http://10.225.26.25:7894'  # Internal IP with protocol/port (uncomment if needed)
 
-# MCP Settings (disabled - SSRF protection for MCP Server Remote Transports)
+# MCP Settings (SSRF protection for MCP Server Remote Transports)
 # SECURITY: If not configured, SSRF targets are blocked (localhost, private IPs, .internal/.local TLDs)
 # To allow internal targets like host.docker.internal, they MUST be explicitly added
 # Supports wildcards: '*.example.com' matches 'api.example.com', 'staging.example.com', etc.
 # Supports protocol/port restrictions: 'https://api.example.com:8443'
-# mcpSettings:
-#   allowedDomains:
-#     - 'host.docker.internal'    # Docker host access (required for Docker setups)
-#     - 'localhost'               # Local development
-#     - '*.example.com'           # Wildcard subdomain
-#     - 'https://secure.api.com'  # Protocol-restricted
-#     - 'http://internal:8080'    # Protocol and port restricted
-#     # n8n Integration (uncomment when MCP bridge is ready)
-#     # - 'http://n8n:5678'        # Internal n8n service (Docker network)
-#     # - 'https://n8n.${DOMAIN}'  # External n8n URL (production)
+mcpSettings:
+  allowedDomains:
+    - 'host.docker.internal'    # Docker host access (required for Docker setups)
+    - 'localhost'               # Local development
+    - 'mcp-calculator'           # MCP Calculator service (Docker network)
+    # - '*.example.com'           # Wildcard subdomain
+    # - 'https://secure.api.com'  # Protocol-restricted
+    # - 'http://internal:8080'    # Protocol and port restricted
+    # n8n Integration (uncomment when MCP bridge is ready)
+    # - 'http://n8n:5678'        # Internal n8n service (Docker network)
+    # - 'https://n8n.${DOMAIN}'  # External n8n URL (production)
+
+# MCP Calculator Server
+mcpServers:
+  calculator:
+    type: streamable-http
+    url: http://mcp-calculator:3000/mcp
+    initTimeout: 120000
+    chatMenu: true # See TODO.md
+    startup: true
+    serverInstructions: true
 
 # n8n MCP Server Integration (Future - disabled)
 # To integrate n8n workflows with LibreChat Agents via MCP:
@@ -441,7 +452,6 @@ registration:
 # 2. Configure the MCP server below as a streamable-http type
 # 3. Add n8n domain to mcpSettings.allowedDomains (see above)
 # Example configuration (uncomment when ready):
-# mcpServers:
 #   n8n:
 #     type: streamable-http
 #     url: http://n8n:5678/mcp  # Internal Docker network URL

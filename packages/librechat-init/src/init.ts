@@ -8,7 +8,9 @@ import { initializeRoles } from './init-roles.ts';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const CONFIG_SOURCE = join(__dirname, '../config/librechat.yaml');
+// Source config is copied to /app/data during build to avoid volume mount conflicts
+// The librechat-config volume mounts to /app/config, which would overwrite the source file
+const CONFIG_SOURCE = '/app/data/librechat.yaml';
 const CONFIG_TARGET = '/app/config/librechat.yaml';
 const CONFIG_DIR = '/app/config';
 
