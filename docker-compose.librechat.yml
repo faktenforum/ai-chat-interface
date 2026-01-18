@@ -31,7 +31,7 @@ services:
 
   api:
     container_name: LibreChat
-    image: ghcr.io/danny-avila/librechat-dev:latest
+    image: ghcr.io/danny-avila/librechat:v0.8.2-rc3
     restart: always
     user: "${UID:-1000}:${GID:-1000}"
     environment:
