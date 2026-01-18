@@ -442,7 +442,7 @@ mcpServers:
     type: streamable-http
     url: http://mcp-calculator:3000/mcp
     initTimeout: 120000
-    chatMenu: false # See TODO.md
+    chatMenu: true # See TODO.md
     startup: true
     serverInstructions: true
 

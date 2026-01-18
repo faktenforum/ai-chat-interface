@@ -141,6 +141,10 @@ services:
   mcp-calculator:
     extends: { file: docker-compose.mcp-calculator.yml, service: mcp-calculator }
     env_file: .env.local
+    # Override: use build for local development instead of image from registry
+    build:
+      context: ./packages/mcp-calculator
+      dockerfile: Dockerfile
     # No Traefik labels - internal service only
 
   # Additional Services

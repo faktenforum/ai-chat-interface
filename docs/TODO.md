@@ -69,11 +69,6 @@
 
 ### MCP Tools
 
-- [ ] Fix MCP tool activation in empty chats
-  - Problem: MCP tools appear in the chat menu but cannot be activated in new, empty chats until the first message is sent
-  - Current workaround: `chatMenu: false` set in `librechat.yaml` to hide MCP tools from chat menu until issue is resolved
-  - Solution: Create LibreChat issue/PR to enable MCP tool activation in empty chats, or ensure tools are only shown when they can be activated
-
 - [ ] Reduce SSE stream disconnection error logs
   - Problem: LibreChat logs show repeated "SSE stream disconnected" errors (TypeError: terminated, AbortError: This operation was aborted) even though MCP tools function correctly
   - Impact: Functionality works, but error logs are noisy and may indicate unnecessary reconnection attempts

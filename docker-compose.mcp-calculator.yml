@@ -1,11 +1,11 @@
 services:
   mcp-calculator:
     # Internal service only - not exposed via Traefik
-    # For local development, use build context
-    # For production/Portainer, use image from registry
-    build:
-      context: ./packages/mcp-calculator
-      dockerfile: Dockerfile
+    # For local development, uncomment build section and use: docker-compose -f docker-compose.mcp-calculator.yml build
+    # For production/Portainer, use image from registry (build section commented out)
+    # build:
+    #   context: ./packages/mcp-calculator
+    #   dockerfile: Dockerfile
     image: ghcr.io/faktenforum/mcp-calculator:latest
     container_name: mcp-calculator
     restart: always
