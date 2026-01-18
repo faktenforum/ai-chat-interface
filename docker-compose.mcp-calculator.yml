@@ -9,7 +9,7 @@ services:
     # build:
     #   context: ./packages/mcp-calculator
     #   dockerfile: Dockerfile
-    image: ghcr.io/faktenforum/mcp-calculator:dev
+    image: ghcr.io/faktenforum/mcp-calculator:latest
     container_name: mcp-calculator
     restart: always
     environment:
