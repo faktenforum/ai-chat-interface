@@ -13,6 +13,7 @@
         "setup:dev": "./scripts/setup-env.ts --dev",
         "setup:dev:yes": "./scripts/setup-env.ts --dev --yes",
         "prepare:dev": "./scripts/prepare-dev-submodules.sh",
+        "build:local": "docker compose -f docker-compose.local.yml --env-file .env.local build",
         "start:local": "docker compose -f docker-compose.local.yml --env-file .env.local up -d",
         "stop:local": "docker compose -f docker-compose.local.yml --env-file .env.local down",
         "restart:local": "docker compose -f docker-compose.local.yml --env-file .env.local restart",

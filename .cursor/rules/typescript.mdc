@@ -1,0 +1,6 @@
+---
+globs: *.ts
+alwaysApply: false
+---
+* Prefer asynchronous methods
+* Run typescript directly using `node` with `--experimental-strip-types` and `--experimental-transform-types` and `--no-warnings`

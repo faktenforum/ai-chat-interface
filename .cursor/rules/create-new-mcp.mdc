@@ -63,19 +63,51 @@ mcpSettings:
     - 'mcp-{name}'  # MCP {Name} service (Docker network)
 ```
 
-**Add to `mcpServers`:**
+**Add to `mcpServers` (include title, description, iconPath):**
 ```yaml
 mcpServers:
   {name}:
     type: streamable-http
     url: http://mcp-{name}:{PORT}/mcp
+    title: {Display Name}  # Human-readable title shown in LibreChat UI
+    description: {Brief, user-friendly description}  # Keep short (truncated in UI), avoid technical terms like "MCP Server"
+    iconPath: /images/mcp-{name}-icon.svg  # Path relative to LibreChat's public images directory
     initTimeout: 120000
     chatMenu: true  # Show in chat dropdown (or false for agents only)
     startup: true   # Auto-start with LibreChat
     serverInstructions: true  # Include server instructions
 ```
 
-## 7. Server Implementation Pattern
+**Description guidelines:**
+- Keep descriptions short (UI truncates long text)
+- Use simple, user-friendly language (target audience: end users, not developers)
+- Avoid technical terms like "MCP Server", "API", "endpoint", etc.
+- Focus on what the tool does, not how it works
+- Example: "Mathematische Berechnungen und Rechenoperationen" instead of "MCP Server für mathematische Berechnungen"
+
+**Important:** Icons are served via LibreChat's `/images/` route (accessible from browser). The icon file is copied by `librechat-init` during initialization, not served directly by the MCP server. This avoids exposing the MCP server to external traffic.
+
+## 7. MCP Server UI Assets (Title, Description, Icon)
+
+**Icon Setup (via librechat-init):**
+1. Create icon file: `packages/librechat-init/assets/mcp-{name}-icon.svg` (24x24 SVG recommended, Lucide icons compatible)
+   - Naming convention: `mcp-{name}-icon.svg` (must match this pattern)
+   - The icon copying logic automatically discovers all files matching `mcp-*-icon.svg` pattern
+2. No code changes needed: The icon copying logic in `packages/librechat-init/src/init.ts` automatically copies all MCP icons from the assets directory
+   - Icons are copied from `/app/assets/` to `/images/` during initialization
+   - The logic scans for files matching the pattern `mcp-*-icon.svg`
+
+**Why this approach:**
+- Icons must be accessible from browser (LibreChat web UI), but MCP servers are internal-only
+- `librechat-init` copies icons to `/images/` volume, which is served by LibreChat's static route
+- No need to expose MCP server via Traefik or deploy it for icon serving
+- Works in both local development and Portainer/production (Git-based builds)
+
+**After changes:** Rebuild `librechat-init` image and restart stack:
+- Local: `npm run build:local` (or `npm run build:local librechat-init` for service-specific build)
+- Production/Portainer: Redeploy stack from Git (automatic rebuild) or manually trigger rebuild
+
+## 8. Server Implementation Pattern
 ```typescript
 // Session management
 const transports = new Map<string, StreamableHTTPServerTransport>();
@@ -102,12 +134,12 @@ app.get('/health', (req, res) => {
 });
 ```
 
-## 8. Documentation
+## 9. Documentation
 - Update `docs/SERVICES.md`: Add to internal services table, add details section
 - Update `docs/README.md`: Add link if service-specific docs created
 - Create `packages/mcp-{name}/README.md`: Tool descriptions, development setup
 
-## 9. Naming Conventions
+## 10. Naming Conventions
 - Package name: `@ai-chat-interface/mcp-{name}` (kebab-case)
 - Service name: `mcp-{name}` (kebab-case)
 - Container name: `${STACK_NAME:-prod}-mcp-{name}` (production), `mcp-{name}` (local)
@@ -115,7 +147,7 @@ app.get('/health', (req, res) => {
 - LibreChat server key: `{name}` (camelCase or kebab-case)
 - Environment prefix: `MCP_{NAME}` (UPPER_SNAKE_CASE)
 
-## 10. Testing
+## 11. Testing
 - Local dev: `npm run dev` in package directory
 - Integration test: `packages/mcp-{name}/test/integration.ts`
 - HTTP test: `packages/mcp-{name}/test/http-test.ts`
@@ -123,11 +155,13 @@ app.get('/health', (req, res) => {
 - Verify: `curl http://localhost:{PORT}/health`
 - LibreChat: Check agent configuration, test tools in chat
 
-## 11. Key Differences from Regular Services
+## 12. Key Differences from Regular Services
 - **No Traefik**: Internal only, accessed via Docker network
 - **TypeScript direct execution**: No build step, use `--experimental-strip-types`
 - **Session management**: Required for streamable-http transport
 - **Health endpoint**: Required for Docker healthchecks
-- **LibreChat config**: Must add to `mcpSettings.allowedDomains` and `mcpServers`
+- **LibreChat config**: Must add to `mcpSettings.allowedDomains` and `mcpServers` with `title`, `description`, `iconPath`
+- **Icon serving**: Icons served via LibreChat's `/images/` route (copied by `librechat-init`), not directly by MCP server
 - **Network**: `app-net` only (no `traefik-net`)
 - **Port**: Expose only, never publish
+- **UI assets**: Title, description, and icon configured in `librechat.yaml`, not in MCP server code

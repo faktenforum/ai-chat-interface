@@ -37,6 +37,7 @@ npm run start:local
 **Restart services (preserves data):**
 ```bash
 npm run setup:yes
+npm run build:local # Rebuild images if config files changed (e.g., librechat.yaml)
 npm run stop:local # Use -v flag to delete all data and reset the stack: npm run stop:local -- -v
 npm run start:local
 ```

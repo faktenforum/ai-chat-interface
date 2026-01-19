@@ -52,12 +52,22 @@
   - Problem: Upload option shown for all OpenRouter models (provider-level), not model-level
   - Solution: Create LibreChat issue/PR to add model-level vision detection, or use alternative provider
   - Discussion: [#11333](https://github.com/danny-avila/LibreChat/discussions/11333) - Image Upload Option Shown for Non-Vision Models
-- [ ] Add multilingual support for model descriptions
-  - Problem: Descriptions are single-language only (no i18n support)
-  - Solution: Create LibreChat feature request/PR for multilingual model descriptions
+- [ ] Add multilingual support for model specifications (modelSpecs)
+  - Problem: Model `label`, `description`, and `group` fields in `librechat.yaml` are single-language only (no i18n support)
+  - Impact: Currently hardcoded in German (e.g., "Vision Models (Open Source)", "Höchste Qualität für Gespräche..."), not adaptable to user language
+  - Solution: Create LibreChat feature request/PR for multilingual model specifications
+  - Workaround: Use English as default language or maintain separate configs per language
+- [ ] Add multilingual support for MCP server configuration (title, description)
+  - Problem: MCP server `title` and `description` in `librechat.yaml` are single-language only
+  - Impact: Currently hardcoded in German (e.g., "Rechner", "Mathematische Berechnungen"), not adaptable to user language
+  - Solution: Create LibreChat feature request/PR to support i18n for MCP server metadata (similar to model descriptions)
+  - Workaround: Use English as default language or maintain separate configs per language
 - [ ] Fix custom icon theme support
   - Problem: Custom icons (Data URIs/URLs) rendered as `<img>` tags, cannot use `currentColor` for theme adaptation
   - Solution: Create LibreChat PR to render SVGs inline or add CSS variable support for icon colors
+  - Affected components: `MCPServerMenuItem.tsx`, `MCPServerCard.tsx`, `StackedMCPIcons.tsx`
+  - Impact: MCP server icons (e.g., calculator) appear in fixed color (dark grey) instead of adapting to theme
+  - Workaround: None - requires LibreChat code changes to render SVGs inline instead of `<img>` tags
 
 ### OCR (Optical Character Recognition)
 

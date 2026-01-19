@@ -61,9 +61,18 @@ npm run start:local
 ```
 
 **Available npm scripts:**
+- `npm run build:local` - Build Docker images (required after config changes)
 - `npm run start:local` - Start services (preserves data)
 - `npm run stop:local` - Stop services (preserves data)
 - `npm run restart:local` - Restart services (preserves data)
+
+**Important:** If you modify `packages/librechat-init/config/librechat.yaml` or add MCP server icons to `packages/librechat-init/assets/`, you must rebuild the `librechat-init` image and restart the stack:
+```bash
+npm run build:local
+npm run stop:local
+npm run start:local
+```
+The `librechat-init` container writes the config and copies icons to volumes that are read by LibreChat. Changes to source files are only applied after rebuilding the image.
 
 **Note:** The `--env-file .env.local` flag is required so Docker Compose can resolve variables when parsing the compose file.
 

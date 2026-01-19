@@ -25,6 +25,7 @@ New to the project? Start here:
 ## Development
 
 - **[Development Guide](DEVELOPMENT.md)** - Working with git submodules and the development stack
+- **[Cursor Rules](CURSOR_RULES.md)** - Using AI agents to integrate new services and MCP servers
 
 ## Project Management
 

@@ -16,6 +16,8 @@
 
 Portainer CE can be unreliable with bind-mounting a **single file** from a Git repo. We therefore generate `librechat.yaml` via an init container (`librechat-init`) into a **named volume** (`librechat-config`). The `librechat-init` service also handles file permissions setup and MongoDB role initialization.
 
+**Important:** If you modify `packages/librechat-init/config/librechat.yaml` (e.g., MCP server configuration, title, description, iconPath) or add MCP server icons to `packages/librechat-init/assets/`, the `librechat-init` image must be rebuilt. In Portainer, this happens automatically when you redeploy the stack from Git, but you may need to manually trigger a rebuild if using GitOps updates.
+
 ## Networking (important)
 
 - `traefik-net` (compose key) is mapped to external Docker network **`loadbalancer-net`**
