@@ -317,11 +317,11 @@ services:
     networks:
       - firecrawl-network
     healthcheck:
-      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping && rabbitmq-diagnostics -q check_port_connectivity"]
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping || exit 1"]
       interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 40s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   firecrawl-api:
     container_name: firecrawl-api
