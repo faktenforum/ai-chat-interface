@@ -31,12 +31,14 @@ For detailed setup and deployment instructions, see the [Documentation](docs/REA
 **Quick setup for local development:**
 ```bash
 npm run setup
-docker compose -f docker-compose.local.yml --env-file .env.local up -d
+npm run start:local
 ```
 
-**Full reset (cleanup and restart):**
+**Restart services (preserves data):**
 ```bash
-npm run setup:yes && docker compose -f docker-compose.local.yml down -v && sleep 3 && docker compose -f docker-compose.local.yml --env-file .env.local up -d
+npm run setup:yes
+npm run stop:local # Use -v flag to delete all data and reset the stack: npm run stop:local -- -v
+npm run start:local
 ```
 
 ## Documentation
