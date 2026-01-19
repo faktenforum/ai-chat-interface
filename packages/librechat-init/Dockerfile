@@ -7,6 +7,7 @@ COPY package.json package-lock.json* ./
 COPY tsconfig.json ./
 COPY config/ ./config/
 COPY src/ ./src/
+COPY assets/ ./assets/
 
 # Copy config files to locations that won't be overwritten by volumes
 # The librechat-config volume mounts to /app/config, so we need to preserve source files

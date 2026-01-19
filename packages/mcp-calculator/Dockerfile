@@ -15,6 +15,9 @@ COPY tsconfig.json ./
 # Copy source files
 COPY src ./src
 
+# Copy assets (icons, etc.)
+COPY assets ./assets
+
 # Install only production dependencies
 RUN npm install --production --silent && \
     npm cache clean --force

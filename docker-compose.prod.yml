@@ -8,6 +8,7 @@ services:
     pull_policy: build
     volumes:
       - librechat-config:/app/config
+      - ./images:/images
       - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
 
@@ -141,6 +142,10 @@ services:
   mcp-calculator:
     extends: { file: docker-compose.mcp-calculator.yml, service: mcp-calculator }
     container_name: ${STACK_NAME:-prod}-mcp-calculator
+    build:
+      context: ./packages/mcp-calculator
+      dockerfile: Dockerfile
+    pull_policy: build
     # No Traefik labels - internal service only
 
 networks:

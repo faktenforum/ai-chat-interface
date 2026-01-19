@@ -441,8 +441,11 @@ mcpServers:
   calculator:
     type: streamable-http
     url: http://mcp-calculator:3000/mcp
+    title: Rechner
+    description: Mathematische Berechnungen und Rechenoperationen
+    iconPath: /images/mcp-calculator-icon.svg
     initTimeout: 120000
-    chatMenu: true # See TODO.md
+    chatMenu: true
     startup: true
     serverInstructions: true
 

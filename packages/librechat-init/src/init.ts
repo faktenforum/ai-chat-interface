@@ -1,5 +1,5 @@
 #!/usr/bin/env -S node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { setupPermissions } from './setup-permissions.ts';
@@ -13,6 +13,11 @@ const __dirname = dirname(__filename);
 const CONFIG_SOURCE = '/app/data/librechat.yaml';
 const CONFIG_TARGET = '/app/config/librechat.yaml';
 const CONFIG_DIR = '/app/config';
+
+// MCP icon paths
+const ASSETS_DIR = '/app/assets';
+const IMAGES_DIR = '/images';
+const MCP_ICON_PATTERN = /^mcp-.*-icon\.svg$/;
 
 /**
  * Environment variables that must be resolved at initialization time.
@@ -63,7 +68,7 @@ async function main() {
 
   try {
     // Task 1: Copy LibreChat config and resolve placeholders
-    console.log('[1/3] Setting up LibreChat configuration...');
+    console.log('[1/4] Setting up LibreChat configuration...');
     if (existsSync(CONFIG_SOURCE)) {
       // Ensure target directory exists (named volumes are empty by default)
       if (!existsSync(CONFIG_DIR)) {
@@ -84,12 +89,37 @@ async function main() {
       throw new Error(`Config file not found: ${CONFIG_SOURCE}`);
     }
 
-    // Task 2: Setup file permissions
-    console.log('\n[2/3] Setting up file permissions...');
+    // Task 2: Copy MCP icons to images directory
+    console.log('\n[2/4] Copying MCP icons...');
+    if (!existsSync(IMAGES_DIR)) {
+      mkdirSync(IMAGES_DIR, { recursive: true });
+      console.log('✓ Created images directory');
+    }
+
+    if (existsSync(ASSETS_DIR)) {
+      const assets = readdirSync(ASSETS_DIR);
+      const iconFiles = assets.filter((file) => MCP_ICON_PATTERN.test(file));
+      
+      if (iconFiles.length === 0) {
+        console.log('⚠ No MCP icons found in assets directory (optional)');
+      } else {
+        for (const iconFile of iconFiles) {
+          const sourcePath = join(ASSETS_DIR, iconFile);
+          const targetPath = join(IMAGES_DIR, iconFile);
+          copyFileSync(sourcePath, targetPath);
+          console.log(`✓ Copied ${iconFile}`);
+        }
+      }
+    } else {
+      console.log('⚠ Assets directory not found (optional):', ASSETS_DIR);
+    }
+
+    // Task 3: Setup file permissions
+    console.log('\n[3/4] Setting up file permissions...');
     await setupPermissions();
 
-    // Task 3: Initialize MongoDB roles
-    console.log('\n[3/3] Initializing MongoDB roles...');
+    // Task 4: Initialize MongoDB roles
+    console.log('\n[4/4] Initializing MongoDB roles...');
     await initializeRoles();
 
     console.log('\n=========================================');
