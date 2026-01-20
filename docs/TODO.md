@@ -27,8 +27,7 @@
 
 ### Custom Roles Support
 - [ ] Add API endpoint and frontend support for custom roles
-  - Problem: Custom roles (e.g., DEVELOPER) are created in MongoDB but not visible in AdminSettingsDialog (only USER/ADMIN hardcoded)
-  - Solution: Create LibreChat PR to add `GET /api/roles` endpoint and update `AdminSettingsDialog` to load roles dynamically
+  - Custom roles created in MongoDB not visible in AdminSettingsDialog (only USER/ADMIN hardcoded)
   - Repository: [danny-avila/LibreChat](https://github.com/danny-avila/LibreChat)
 
 ### Agents
@@ -41,30 +40,18 @@
 
 ### RAG API - OpenRouter Embeddings Support
 - [ ] Create feature request for OpenRouter provider support in RAG API
-  - Problem: OpenRouter requires `HTTP-Referer` and `X-Title` headers for embeddings API, but `langchain`'s `OpenAIEmbeddings` doesn't set them automatically
-  - Current workaround: Using `openai/text-embedding-3-small` instead of `baai/bge-m3` (multilingual, open source)
-  - Solution: Request RAG API to add OpenRouter-specific header support or custom client configuration
+  - OpenRouter requires `HTTP-Referer` and `X-Title` headers for embeddings API
   - Repository: [danny-avila/librechat-rag-api](https://github.com/danny-avila/librechat-rag-api)
 
 ### Model Specs Improvements
 
 - [ ] Fix vision model detection for "Upload to AI Provider" option
-  - Problem: Upload option shown for all OpenRouter models (provider-level), not model-level
-  - Solution: Create LibreChat issue/PR to add model-level vision detection, or use alternative provider
-  - Discussion: [#11333](https://github.com/danny-avila/LibreChat/discussions/11333) - Image Upload Option Shown for Non-Vision Models
-- [ ] Add multilingual support for model specifications (modelSpecs)
-  - Problem: Model `label`, `description`, and `group` fields in `librechat.yaml` are single-language only (no i18n support)
-  - Impact: Currently hardcoded in German (e.g., "Vision Models (Open Source)", "Höchste Qualität für Gespräche..."), not adaptable to user language
-  - Solution: Create LibreChat feature request/PR for multilingual model specifications
-  - Workaround: Use English as default language or maintain separate configs per language
-- [ ] Add multilingual support for MCP server configuration (title, description)
-  - Problem: MCP server `title` and `description` in `librechat.yaml` are single-language only
-  - Impact: Currently hardcoded in German (e.g., "Rechner", "Mathematische Berechnungen"), not adaptable to user language
-  - Solution: Create LibreChat feature request/PR to support i18n for MCP server metadata (similar to model descriptions)
-  - Workaround: Use English as default language or maintain separate configs per language
+  - LibreChat discussion [#11333](https://github.com/danny-avila/LibreChat/discussions/11333)
+- [ ] Add multilingual support for custom titles, labels, and descriptions
+  - LibreChat discussion [#7666](https://github.com/danny-avila/LibreChat/discussions/7666) - multilingual support for user-defined content (model specs, MCP servers, interface config, agents)
+  - Related: [#10183](https://github.com/danny-avila/LibreChat/issues/10183) (model fields)
 - [ ] Fix custom icon theme support
-  - Problem: Custom icons (MCP servers, model selection groups) rendered as `<img>` tags, cannot use `currentColor` for theme adaptation
-  - Solution: LibreChat issue [#11442](https://github.com/danny-avila/LibreChat/issues/11442) - render SVGs inline or add CSS variable support for icon colors
+  - LibreChat issue [#11442](https://github.com/danny-avila/LibreChat/issues/11442) - custom icons don't adapt to theme colors
 
 ### OCR (Optical Character Recognition)
 
@@ -77,16 +64,11 @@
 ### MCP Tools
 
 - [ ] Fix MCP image generation tools sending artifacts to non-vision models
-  - Problem: MCP tools returning `ImageContent` are converted to artifacts and sent to LLM, causing errors for non-vision models
-  - Impact: Image generation works but triggers "404 No endpoints found that support image input" errors
-  - Solution: LibreChat issue [#11413](https://github.com/danny-avila/LibreChat/issues/11413) - needs fix in artifact handling logic
+  - LibreChat issue [#11413](https://github.com/danny-avila/LibreChat/issues/11413)
 - [ ] Fix negative max_tokens error with Scaleway/Mistral provider
-  - Problem: MCP image generation fails with "max_tokens must be at least 1, got -1271527" when using Scaleway provider
-  - Solution: LibreChat issue [#11435](https://github.com/danny-avila/LibreChat/issues/11435) - add Scaleway to RECOGNIZED_PROVIDERS
+  - LibreChat issue [#11435](https://github.com/danny-avila/LibreChat/issues/11435)
 - [ ] Reduce SSE stream disconnection error logs
-  - Problem: LibreChat logs show repeated "SSE stream disconnected" errors (TypeError: terminated, AbortError: This operation was aborted) even though MCP tools function correctly
-  - Impact: Functionality works, but error logs are noisy and may indicate unnecessary reconnection attempts
-  - Solution: Investigate if this is expected LibreChat behavior or if server-side improvements can reduce connection churn
+  - Investigate if this is expected LibreChat behavior or if server-side improvements can reduce connection churn
 
 ---
 
