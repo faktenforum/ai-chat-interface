@@ -83,6 +83,9 @@
   - Problem: MCP tools returning `ImageContent` are converted to artifacts and sent to LLM, causing errors for non-vision models
   - Impact: Image generation works but triggers "404 No endpoints found that support image input" errors
   - Solution: LibreChat issue [#11413](https://github.com/danny-avila/LibreChat/issues/11413) - needs fix in artifact handling logic
+- [ ] Fix negative max_tokens error with Scaleway/Mistral provider
+  - Problem: MCP image generation fails with "max_tokens must be at least 1, got -1271527" when using Scaleway provider
+  - Solution: LibreChat issue [#11435](https://github.com/danny-avila/LibreChat/issues/11435) - add Scaleway to RECOGNIZED_PROVIDERS
 - [ ] Reduce SSE stream disconnection error logs
   - Problem: LibreChat logs show repeated "SSE stream disconnected" errors (TypeError: terminated, AbortError: This operation was aborted) even though MCP tools function correctly
   - Impact: Functionality works, but error logs are noisy and may indicate unnecessary reconnection attempts
