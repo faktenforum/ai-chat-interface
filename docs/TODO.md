@@ -63,11 +63,8 @@
   - Solution: Create LibreChat feature request/PR to support i18n for MCP server metadata (similar to model descriptions)
   - Workaround: Use English as default language or maintain separate configs per language
 - [ ] Fix custom icon theme support
-  - Problem: Custom icons (Data URIs/URLs) rendered as `<img>` tags, cannot use `currentColor` for theme adaptation
-  - Solution: Create LibreChat PR to render SVGs inline or add CSS variable support for icon colors
-  - Affected components: `MCPServerMenuItem.tsx`, `MCPServerCard.tsx`, `StackedMCPIcons.tsx`
-  - Impact: MCP server icons (e.g., calculator) appear in fixed color (dark grey) instead of adapting to theme
-  - Workaround: None - requires LibreChat code changes to render SVGs inline instead of `<img>` tags
+  - Problem: Custom icons (MCP servers, model selection groups) rendered as `<img>` tags, cannot use `currentColor` for theme adaptation
+  - Solution: LibreChat issue [#11442](https://github.com/danny-avila/LibreChat/issues/11442) - render SVGs inline or add CSS variable support for icon colors
 
 ### OCR (Optical Character Recognition)
 
