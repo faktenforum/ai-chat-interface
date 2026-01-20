@@ -1,0 +1,37 @@
+{
+  "name": "@ai-chat-interface/mcp-image-gen",
+  "version": "1.0.0",
+  "description": "MCP Image Generation Server for LibreChat - Generate images using OpenRouter API",
+  "type": "module",
+  "main": "src/server.ts",
+  "scripts": {
+    "start": "./src/server.ts",
+    "start:local": "dotenv -e ../../.env.local -- ./src/server.ts",
+    "dev": "node --watch --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
+    "dev:local": "dotenv -e ../../.env.local -- node --watch --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
+    "lint": "eslint . --ext .ts",
+    "test": "echo \"Tests to be implemented\"",
+    "test:integration": "./test/integration.ts",
+    "test:integration:local": "dotenv -e ../../.env.local -- ./test/integration.ts",
+    "test:http": "./test/http-test.ts",
+    "test:http:local": "dotenv -e ../../.env.local -- ./test/http-test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.2",
+    "zod": "^4.3.5",
+    "express": "^5.2.1",
+    "pino": "^10.2.1",
+    "dotenv": "^17.2.3",
+    "axios": "^1.13.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.9",
+    "typescript": "^5.9.3",
+    "tsx": "^4.21.0",
+    "dotenv-cli": "^11.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

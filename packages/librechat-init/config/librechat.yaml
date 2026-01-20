@@ -429,6 +429,7 @@ mcpSettings:
     - 'host.docker.internal'    # Docker host access (required for Docker setups)
     - 'localhost'               # Local development
     - 'mcp-calculator'           # MCP Calculator service (Docker network)
+    - 'mcp-image-gen'            # MCP Image Generation service (Docker network)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
     # - 'http://internal:8080'    # Protocol and port restricted
@@ -445,6 +446,17 @@ mcpServers:
     description: Mathematische Berechnungen und Rechenoperationen
     iconPath: /images/mcp-calculator-icon.svg
     initTimeout: 120000
+    chatMenu: true
+    startup: true
+    serverInstructions: true
+
+  image-gen:
+    type: streamable-http
+    url: http://mcp-image-gen:3001/mcp
+    title: Bildgenerierung
+    description: Bilder aus Textbeschreibungen erstellen
+    iconPath: /images/mcp-image-gen-icon.svg
+    initTimeout: 180000
     chatMenu: true
     startup: true
     serverInstructions: true
