@@ -124,6 +124,35 @@ endpoints:
         HTTP-Referer: "$${OPENROUTER_SITE_URL}"
         X-Title: "$${OPENROUTER_APP_NAME}"
 
+    - name: Scaleway
+      apiKey: "$${SCALEWAY_API_KEY}"
+      baseURL: "$${SCALEWAY_BASE_URL}"
+      iconURL: "https://www.scaleway.com/favicon/website/favicon.svg"
+      # BASE_URL construction: If SCALEWAY_PROJECT_ID is set, the initialization script
+      # automatically constructs the BASE_URL as https://api.scaleway.ai/{project_id}/v1.
+      # Otherwise, the default SCALEWAY_BASE_URL value is used.
+      models:
+        default: [
+          "llama-3.3-70b-instruct",           # Chat - Generally Available
+          "qwen3-235b-a22b-instruct-2507",    # Chat - Generally Available
+          "mistral-small-3.2-24b-instruct-2506", # Chat, Vision - Generally Available
+          "gpt-oss-120b",                      # Chat - Generally Available
+          "qwen3-coder-30b-a3b-instruct",     # Chat (Code) - Generally Available
+          "pixtral-12b-2409",                 # Chat, Vision - Generally Available
+          "holo2-30b-a3b",                    # Chat, Vision - PREVIEW
+          "devstral-2-123b-instruct-2512",    # Chat - PREVIEW
+          "gemma-3-27b-it",                   # Chat, Vision - PREVIEW
+          "voxtral-small-24b-2507",           # Chat, Audio transcription - PREVIEW
+          "qwen3-embedding-8b",               # Embeddings - Generally Available
+          "bge-multilingual-gemma2"           # Embeddings - Generally Available
+        ]
+        fetch: true
+      titleConvo: true
+      summarize: true
+      headers:
+        HTTP-Referer: "$${SCALEWAY_SITE_URL}"
+        X-Title: "$${SCALEWAY_APP_NAME}"
+
 # Model Specs: Define default model for new users
 # This prevents "My Agents" from being selected when users have no agents
 # Note: Memory function uses a separate model (configured in memory.agent section)
@@ -300,6 +329,79 @@ modelSpecs:
         endpoint: "OpenRouter"
         endpointType: "custom"
         model: "glm/glm-4.7"
+
+    # ==========================================
+    # Scaleway Models (Europe - Hosted)
+    # ==========================================
+    - name: "scaleway-llama-3.3-70b"
+      label: "Llama 3.3 70B (Scaleway)"
+      description: "Gehostet in Europa auf Scaleway. Sehr gut für allgemeine Gespräche und Aufgaben. Von Meta (Llama-Serie)."
+      group: "Text Models (Europe - Scaleway)"
+      groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvdC1tZXNzYWdlLXNxdWFyZS1pY29uIGx1Y2lkZS1ib3QtbWVzc2FnZS1zcXVhcmUiPjxwYXRoIGQ9Ik0xMiA2VjJIOCIvPjxwYXRoIGQ9Ik0xNSAxMXYyIi8+PHBhdGggZD0iTTIgMTJoMiIvPjxwYXRoIGQ9Ik0yMCAxMmgyIi8+PHBhdGggZD0iTTIwIDE2YTIgMiAwIDAgMS0yIDJIOC44MjhhMiAyIDAgMCAwLTEuNDE0LjU4NmwtMi4yMDIgMi4yMDJBLjcxLjcxIDAgMCAxIDQgMjAuMjg2VjhhMiAyIDAgMCAxIDItMmgxMmEyIDIgMCAwIDEgMiAyeiIvPjxwYXRoIGQ9Ik05IDExdjIiLz48L3N2Zz4="
+      order: 1
+      webSearch: true
+      fileSearch: true
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "llama-3.3-70b-instruct"
+    
+    - name: "scaleway-qwen3-235b"
+      label: "Qwen3 235B (Scaleway)"
+      description: "Sehr großes Modell für komplexe Aufgaben. Gehostet in Europa auf Scaleway. Von Qwen."
+      group: "Text Models (Europe - Scaleway)"
+      order: 2
+      webSearch: true
+      fileSearch: true
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "qwen3-235b-a22b-instruct-2507"
+    
+    - name: "scaleway-mistral-small-3.2"
+      label: "Mistral Small 3.2 24B (Scaleway)"
+      description: "Unterstützt Chat und Vision. Europäisches Modell (Mistral), gehostet in Europa auf Scaleway."
+      group: "Vision Models (Europe - Scaleway)"
+      groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWV5ZS1pY29uIGx1Y2lkZS1leWUiPjxwYXRoIGQ9Ik0yLjA2MiAxMi4zNDhhMSAxIDAgMCAxIDAtLjY5NiAxMC43NSAxMC43NSAwIDAgMSAxOS44NzYgMCAxIDEgMCAwIDEgMCAuNjk2IDEwLjc1IDEwLjc1IDAgMCAxLTE5Ljg3NiAwIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIvPjwvc3ZnPg=="
+      order: 1
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "mistral-small-3.2-24b-instruct-2506"
+    
+    - name: "scaleway-pixtral-12b"
+      label: "Pixtral 12B (Scaleway)"
+      description: "Vision-Modell für Bildverständnis und Chat. Gehostet in Europa auf Scaleway. Von Mistral."
+      group: "Vision Models (Europe - Scaleway)"
+      order: 2
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "pixtral-12b-2409"
+    
+    - name: "scaleway-qwen3-coder-30b"
+      label: "Qwen3 Coder 30B (Scaleway)"
+      description: "Spezialisiert auf Programmierung und Code-Generierung. Gehostet in Europa auf Scaleway. Von Qwen."
+      group: "Text Models (Europe - Scaleway)"
+      order: 3
+      webSearch: true
+      fileSearch: true
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "qwen3-coder-30b-a3b-instruct"
+    
+    - name: "scaleway-gpt-oss-120b"
+      label: "GPT-OSS 120B (Scaleway)"
+      description: "Großes Open-Source-Modell für komplexe Aufgaben. Gehostet in Europa auf Scaleway."
+      group: "Text Models (Europe - Scaleway)"
+      order: 4
+      webSearch: true
+      fileSearch: true
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "gpt-oss-120b"
 
 
 webSearch:

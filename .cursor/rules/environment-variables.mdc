@@ -1,0 +1,35 @@
+---
+name: environment-variables
+description: Guidelines for creating and managing environment variables in the Docker stack
+---
+
+# Environment Variables Guidelines
+
+## 1. Example Files
+Add variables to all three example files (`env.local.example`, `env.prod.example`, `env.dev.example`). Use `${VAR_NAME}` expansions in examples - `setup-env.ts` resolves them to final `.env` files.
+
+## 2. Naming Patterns
+Prefix: `{SERVICE}_` in UPPER_SNAKE_CASE (e.g., `N8N_`, `FIRECRAWL_`). Common patterns: `{SERVICE}_HOST`, `{SERVICE}_PORT`, `{SERVICE}_PROTOCOL`, `{SERVICE}_SECURE_COOKIE`, `{SERVICE}_BASIC_AUTH_*`, `{SERVICE}_POSTGRES_*`, `{SERVICE}_ENCRYPTION_KEY`, `{SERVICE}_SECRET_KEY`.
+
+## 3. Environment-Specific Defaults
+**Local**: `http`, `localhost`, no auth, `SECURE_COOKIE=false`, placeholders for secrets. **Prod/Dev**: `https`, production/dev domains, auth enabled, `SECURE_COOKIE=true`, auto-generated secrets via `setup-env.ts` (leave empty or `change-me`).
+
+## 4. Setup Script Integration (`scripts/setup-env.ts`)
+**Auto-Generated** (`AUTO_GENERATED`): Hex secrets `genSecret(n)`, base64 `genBase64Secret(n)`, usernames `genUsername('prefix')`, passwords `genPassword(n)`. **User Prompts** (`PROMPTS`): `type: 'password'` for secrets/API keys, `type: 'input'` for optional configs, `prodOnly: true` to skip in local mode. Script also resolves all `${VAR_NAME}` expansions from example files.
+
+## 5. Security
+Never hardcode credentials. Use `change-me` placeholders or leave empty for auto-generated secrets. Add to `AUTO_GENERATED` for automatic generation. Use `type: 'password'` in prompts. Mark prod-only with `prodOnly: true`. Defaults: HTTPS + secure cookies for prod/dev.
+
+## 6. Variable Expansions
+**In `env.xxx.example` files**: Variable expansions using `${VAR_NAME}` syntax are **allowed and recommended**:
+- Example: `DOMAIN_CLIENT=${PROTOCOL}://chat.${DOMAIN}`, `RAG_JWT_SECRET=${LIBRECHAT_JWT_SECRET}`
+- `setup-env.ts` automatically resolves all expansions when generating final `.env` files
+- Ensure referenced variables are defined before use in the same file
+
+**In final `.env` files**: Variable expansions are **NOT allowed** - all values must be fully resolved. The setup script handles this automatically.
+
+## 7. Comments
+Explain purpose, format examples, optionality, auto-generation status, external docs. Example: `# Encryption key (auto-generated if empty via setup-env.ts)`
+
+## 8. Migration Support
+Add to `MIGRATIONS` in `setup-env.ts`: `'OLD_VAR_NAME': 'NEW_VAR_NAME'` to preserve existing configs after renames.

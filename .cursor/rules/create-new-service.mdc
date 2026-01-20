@@ -22,18 +22,13 @@ Add service to:
 - `docker-compose.prod.yml`: Extend service, add `container_name: ${STACK_NAME:-prod}-{service}`, add Traefik labels (HTTP + HTTPS), add volumes with `${STACK_NAME:-prod}-` prefix
 
 ## 3. Environment Variables
-Add to all three example files:
-- `env.local.example`: Local defaults (http, no auth, localhost domains)
-- `env.prod.example`: Production defaults (https, auth enabled, production domains)
-- `env.dev.example`: Dev defaults (https, auth enabled, dev domains - online accessible)
-
-Pattern: `{SERVICE}_HOST`, `{SERVICE}_PROTOCOL`, `{SERVICE}_SECURE_COOKIE`, `{SERVICE}_BASIC_AUTH_*`, database vars, encryption keys
-
-## 4. Setup Script Integration
-Update `scripts/setup-env.ts`:
-- Add auto-generated secrets to `AUTO_GENERATED` object (hex/base64 secrets, usernames)
-- Add user prompts to `PROMPTS` object (passwords, API keys, optional configs)
-- Use `genSecret()`, `genBase64Secret()`, `genUsername()` helpers
+See `.cursor/rules/environment-variables.mdc` for detailed guidelines on:
+- Adding variables to example files (`env.local.example`, `env.prod.example`, `env.dev.example`)
+- Naming patterns and conventions
+- Environment-specific defaults (local vs prod vs dev)
+- Setup script integration (`AUTO_GENERATED` and `PROMPTS` objects)
+- Security best practices
+- Variable expansions and migrations
 
 ## 5. GitHub Actions Workflow (Optional)
 For services requiring CI/CD builds, create `.github/workflows/build-{service}.yml`:
@@ -91,7 +86,7 @@ Add to volumes section in all compose files:
 - Volume names: `${STACK_NAME:-prod}-{service}-data` (production), `{service}_data` (local)
 - Traefik routers: `${STACK_NAME:-prod}-{service}` (production), `{service}` (local)
 - Image names: `ghcr.io/faktenforum/{service}` (lowercase, hyphens)
-- Environment prefix: `{SERVICE}` (UPPER_SNAKE_CASE)
+- Environment variables: See `.cursor/rules/environment-variables.mdc` for naming patterns and prefix conventions
 
 ## 11. Testing
 - Run `npm run setup:yes` to generate env files

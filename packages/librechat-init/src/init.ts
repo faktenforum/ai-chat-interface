@@ -61,6 +61,36 @@ function resolveConfigPlaceholders(content: string): string {
   return resolved;
 }
 
+/**
+ * Constructs and injects service-specific BASE_URL values into YAML configuration.
+ * 
+ * Some services require dynamic BASE_URL construction based on environment variables
+ * (e.g., Scaleway requires project ID in the URL path).
+ * 
+ * @param content - YAML content with ${VAR} placeholders (after resolveConfigPlaceholders)
+ * @returns YAML content with constructed BASE_URL values injected
+ */
+function injectConstructedBaseURLs(content: string): string {
+  let resolved = content;
+
+  // Scaleway: Construct BASE_URL with project ID if provided
+  // Format: https://api.scaleway.ai/{project_id}/v1
+  const scalewayProjectId = process.env.SCALEWAY_PROJECT_ID?.trim();
+  if (scalewayProjectId) {
+    const constructedBaseURL = `https://api.scaleway.ai/${scalewayProjectId}/v1`;
+    // Replace ${SCALEWAY_BASE_URL} placeholder with constructed URL
+    resolved = resolved.replace(
+      /baseURL:\s*"\$\{SCALEWAY_BASE_URL\}"/g,
+      `baseURL: "${constructedBaseURL}"`
+    );
+    // Update environment variable for consistency
+    process.env.SCALEWAY_BASE_URL = constructedBaseURL;
+    console.log(`✓ Constructed Scaleway baseURL with project ID: ${constructedBaseURL.replace(scalewayProjectId, '***')}`);
+  }
+
+  return resolved;
+}
+
 async function main() {
   console.log('=========================================');
   console.log('LibreChat Initialization Started');
@@ -79,8 +109,11 @@ async function main() {
       // Read source config
       const sourceContent = readFileSync(CONFIG_SOURCE, 'utf-8');
       
-      // Resolve environment variable placeholders
-      const resolvedContent = resolveConfigPlaceholders(sourceContent);
+      // Step 1: Resolve environment variable placeholders (converts $${VAR} to ${VAR})
+      let resolvedContent = resolveConfigPlaceholders(sourceContent);
+      
+      // Step 2: Inject constructed BASE_URL values (e.g., Scaleway with project ID)
+      resolvedContent = injectConstructedBaseURLs(resolvedContent);
       
       // Write resolved config to target
       writeFileSync(CONFIG_TARGET, resolvedContent, 'utf-8');
