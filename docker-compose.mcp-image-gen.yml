@@ -1,0 +1,36 @@
+services:
+  mcp-image-gen:
+    # Internal service only - not exposed via Traefik
+    # For local development, build section is used automatically
+    # For production/Portainer, build section is defined in docker-compose.prod.yml
+    # Fallback image (used if build fails or for local testing without build)
+    image: ghcr.io/faktenforum/mcp-image-gen:latest
+    container_name: mcp-image-gen
+    restart: always
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${MCP_IMAGE_GEN_PORT:-3001}
+      LOG_LEVEL: ${MCP_IMAGE_GEN_LOG_LEVEL:-info}
+      OPENROUTER_API_KEY: ${OPENROUTER_KEY}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+    expose:
+      - "3001"
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # Security: read-only root filesystem where possible
+    read_only: false
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M

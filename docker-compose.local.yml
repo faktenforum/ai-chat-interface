@@ -147,6 +147,15 @@ services:
       dockerfile: Dockerfile
     # No Traefik labels - internal service only
 
+  mcp-image-gen:
+    extends: { file: docker-compose.mcp-image-gen.yml, service: mcp-image-gen }
+    env_file: .env.local
+    # Override: use build for local development instead of image from registry
+    build:
+      context: ./packages/mcp-image-gen
+      dockerfile: Dockerfile
+    # No Traefik labels - internal service only
+
   # Additional Services
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }

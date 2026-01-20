@@ -18,6 +18,7 @@ This document provides an overview of all services in the AI Chat Interface stac
 | **RAG API** | Retrieval-Augmented Generation API | ❌ | ❌ | ✅ Internal only |
 | **n8n PostgreSQL** | n8n database | ❌ | ❌ | ✅ Internal only |
 | **MCP Calculator** | MCP server providing calculator tools for LibreChat agents | ❌ | ❌ | ✅ Internal only |
+| **MCP Image Generation** | MCP server providing image generation via OpenRouter API | ❌ | ❌ | ✅ Internal only |
 | **Firecrawl Services** | Internal Firecrawl dependencies | ❌ | ❌ | ✅ Internal only |
 | - playwright-service | Browser automation | ❌ | ❌ | ✅ Internal only |
 | - redis | Firecrawl cache/queue | ❌ | ❌ | ✅ Internal only |
@@ -101,6 +102,17 @@ This document provides an overview of all services in the AI Chat Interface stac
 - **Network**: `app-net` only
 - **Access**: Only accessible from LibreChat API
 
+#### MCP Image Generation
+- **Purpose**: MCP server providing image generation capabilities via OpenRouter API for LibreChat agents
+- **Network**: `app-net` only
+- **Access**: Only accessible from LibreChat API
+- **Tools**: 
+  - `generate_image`: Generate images from text descriptions
+  - `list_known_models`: List curated models with characteristics
+  - `list_available_models`: Query OpenRouter for all available image models
+  - `check_model`: Verify if a model supports image generation
+- **Models**: Supports FLUX.2 Pro, FLUX.2 Flex, Gemini Image Generation, and other OpenRouter-compatible models
+
 #### Firecrawl Internal Services
 - **playwright-service**: Browser automation for web scraping
 - **redis**: Cache and queue management
@@ -118,7 +130,7 @@ This document provides an overview of all services in the AI Chat Interface stac
 
 2. **`app-net`** (Bridge network)
    - LibreChat ecosystem internal communication
-   - LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API, n8n, n8n-init, n8n PostgreSQL, MCP Calculator
+   - LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API, n8n, n8n-init, n8n PostgreSQL, MCP Calculator, MCP Image Generation
 
 3. **`firecrawl-network`** (Bridge network)
    - Firecrawl internal services only

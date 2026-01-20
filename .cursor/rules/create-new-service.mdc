@@ -11,12 +11,13 @@ Create `docker-compose.{service}.yml`:
 - Use `environment:` section (Portainer compatibility - no `env_file` only)
 - Define all volumes in `volumes:` section
 - Set appropriate networks (`app-net` for internal, `traefik-net` + `app-net` for exposed)
-- Add healthchecks for database dependencies
+- Add healthchecks: HTTP GET `/health` or service-specific check, interval 30s, timeout 10s, retries 3, start_period 40s
+- Resource limits: CPU (0.5-2.0), memory (256M-2G) based on service needs
 - Comment: "Traefik labels defined in docker-compose.prod.yml and docker-compose.local.yml"
 
 ## 2. Extension Files
 Add service to:
-- `docker-compose.local.yml`: Extend service, add `env_file: .env.local`, add Traefik labels (HTTP only)
+- `docker-compose.local.yml`: Extend service, add `env_file: .env.local`, add Traefik labels (HTTP only), override with `build` section if needed
 - `docker-compose.local-source.yml`: Same as local.yml (if service supports source builds)
 - `docker-compose.prod.yml`: Extend service, add `container_name: ${STACK_NAME:-prod}-{service}`, add Traefik labels (HTTP + HTTPS), add volumes with `${STACK_NAME:-prod}-` prefix
 
@@ -34,7 +35,16 @@ Update `scripts/setup-env.ts`:
 - Add user prompts to `PROMPTS` object (passwords, API keys, optional configs)
 - Use `genSecret()`, `genBase64Secret()`, `genUsername()` helpers
 
-## 5. Traefik Labels
+## 5. GitHub Actions Workflow (Optional)
+For services requiring CI/CD builds, create `.github/workflows/build-{service}.yml`:
+- Trigger: Push to `packages/{service}/**` or workflow file changes
+- Build context: `./packages/{service}` or service-specific path
+- Image: `ghcr.io/faktenforum/{service}`
+- Tags: `latest` (default branch), `dev` (feature branches), branch name
+- Platform: `linux/amd64`
+- Cache: GitHub Actions cache for faster builds
+
+## 6. Traefik Labels
 **Local** (`docker-compose.local.yml`):
 ```yaml
 labels:
@@ -59,30 +69,34 @@ labels:
   - "traefik.http.routers.${STACK_NAME:-prod}-{service}-secure.tls.certresolver=le"
 ```
 
-## 6. Volumes
+## 7. Volumes
 Add to volumes section in all compose files:
 - **Local**: `{service}_data:` (simple name)
 - **Production**: `{service}_data: name: ${STACK_NAME:-prod}-{service}-data`
 
-## 7. Documentation
+## 8. Documentation
 - Update `docs/SERVICES.md`: Add to matrix table, add details section
 - Update `docs/README.md`: Add link if service-specific docs created
 - Create `docs/{SERVICE}.md` if service needs detailed setup notes
 
-## 8. Security
+## 9. Security
 - **Production/Dev**: Enable HTTPS, Basic Auth, secure cookies
 - **Local**: HTTP only, no auth required
 - Generate encryption keys via `setup-env.ts`
 - Never hardcode credentials
 
-## 9. Naming
-- Service names: lowercase with hyphens
+## 10. Naming Conventions
+- Service names: lowercase with hyphens (kebab-case)
 - Container names: `${STACK_NAME:-prod}-{service}` (production), `{service}` (local)
 - Volume names: `${STACK_NAME:-prod}-{service}-data` (production), `{service}_data` (local)
 - Traefik routers: `${STACK_NAME:-prod}-{service}` (production), `{service}` (local)
+- Image names: `ghcr.io/faktenforum/{service}` (lowercase, hyphens)
+- Environment prefix: `{SERVICE}` (UPPER_SNAKE_CASE)
 
-## 10. Testing
+## 11. Testing
 - Run `npm run setup:yes` to generate env files
-- Test locally: `docker compose -f docker-compose.local.yml up -d`
-- Verify Traefik routing: `http://{service}.localhost`
+- Test locally: `docker compose -f docker-compose.local.yml up -d {service}`
+- Verify health: `curl http://localhost:{PORT}/health` (if health endpoint exists)
+- Verify Traefik routing: `http://{service}.${DOMAIN:-localhost}`
 - Check logs: `docker compose logs {service}`
+- Verify container status: `docker compose ps {service}`

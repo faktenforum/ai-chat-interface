@@ -148,6 +148,15 @@ services:
     pull_policy: build
     # No Traefik labels - internal service only
 
+  mcp-image-gen:
+    extends: { file: docker-compose.mcp-image-gen.yml, service: mcp-image-gen }
+    container_name: ${STACK_NAME:-prod}-mcp-image-gen
+    build:
+      context: ./packages/mcp-image-gen
+      dockerfile: Dockerfile
+    pull_policy: build
+    # No Traefik labels - internal service only
+
 networks:
   traefik-net:
     external: true
