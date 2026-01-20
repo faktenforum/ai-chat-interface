@@ -6,12 +6,11 @@ import { fileURLToPath } from 'url';
 import express, { type Request, type Response } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import * as z from 'zod';
 import { generateImage, listKnownModels, listAvailableModels, checkModel } from './tools/image-gen.ts';
 import { OpenRouterClient } from './services/openrouter.ts';
 import { logger } from './utils/logger.ts';
-import { ImageGenError } from './utils/errors.ts';
-import { ASPECT_RATIOS, IMAGE_SIZES } from './schemas/image-gen.schema.ts';
+import { withToolErrorHandler } from './utils/tool-handler.ts';
+import { GenerateImageSchema, CheckModelSchema } from './schemas/image-gen.schema.ts';
 
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY || '';
@@ -25,17 +24,11 @@ if (!OPENROUTER_API_KEY) {
 // Session management
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
-/**
- * Extracts session ID from request headers (supports both lowercase and capitalized header names)
- */
 function getSessionId(headers: Request['headers']): string | undefined {
   const header = headers['mcp-session-id'] || headers['Mcp-Session-Id'];
   return typeof header === 'string' ? header : undefined;
 }
 
-/**
- * Creates and configures the MCP server with all handlers
- */
 function createServer() {
   const openRouterClient = new OpenRouterClient(OPENROUTER_API_KEY, OPENROUTER_BASE_URL);
 
@@ -52,111 +45,63 @@ function createServer() {
       },
       instructions: `You have access to image generation tools via OpenRouter.
 
-Usage guidelines:
+Usage:
 - Use generate_image to create images from text descriptions
-- Always enhance basic prompts with details: lighting, composition, mood, style, colors, and visual elements (3-6 sentences minimum)
-- Default model (FLUX.2 Pro) provides highest quality for most use cases
-- Use list_known_models to see recommended models with their strengths and weaknesses
-- Use list_available_models to discover all available image generation models from OpenRouter
-- Use check_model to verify if a specific model exists and supports image generation
-- For Gemini models (models with "gemini" in the name), you can specify aspect_ratio (16:9, 9:16, etc.) and image_size (1K, 2K, 4K)
-- When an image is generated, it will be displayed directly - do not repeat the description in detail`,
+- Enhance prompts with details: lighting, composition, mood, style, colors (3-6 sentences minimum)
+- Default model (FLUX.2 Pro) provides highest quality but is more expensive
+- Prefer list_known_models over list_available_models for curated, well-tested models with detailed characteristics
+- Only use list_available_models if searching for specific models not in the known list or if there's an error with known models
+- For high-quality: FLUX.2 Pro or FLUX.2 Flex
+- For fast/cost-effective with aspect ratio control: Gemini models
+- Use check_model to verify model support
+- Gemini models support aspect_ratio (16:9, 9:16, etc.) and image_size (1K, 2K, 4K)`,
     },
   );
 
-  // Register generate_image tool
-  server.registerTool('generate_image', {
-    description: 'Generate high-quality images from text descriptions using OpenRouter-supported models like FLUX.2-Pro, FLUX.2-Flex, or Gemini Image Generation. Supports various models optimized for different use cases.',
-    inputSchema: {
-      prompt: z
-        .string()
-        .min(1)
-        .describe('Detailed text description of the image to generate. Should be 3-6 sentences, focusing on visual elements, lighting, composition, mood, and style.'),
-      model: z
-        .string()
-        .optional()
-        .default('black-forest-labs/flux.2-pro')
-        .describe('The image generation model to use. Any OpenRouter-compatible image generation model can be used. Defaults to FLUX.2-Pro for best quality. Examples: black-forest-labs/flux.2-pro, google/gemini-2.5-flash-image-preview, etc.'),
-      aspect_ratio: z
-        .enum(ASPECT_RATIOS)
-        .optional()
-        .describe('Aspect ratio for the generated image. Only supported for Gemini models. Defaults to 1:1 (square).'),
-      image_size: z
-        .enum(IMAGE_SIZES)
-        .optional()
-        .describe('Image size/resolution. Only supported for Gemini models. Defaults to 1K.'),
+  server.registerTool(
+    'generate_image',
+    {
+      description: 'Generate high-quality images from text descriptions using OpenRouter-supported models like FLUX.2-Pro, FLUX.2-Flex, or Gemini Image Generation.',
+      inputSchema: GenerateImageSchema,
     },
-  }, async (args: { prompt: string; model?: string; aspect_ratio?: string; image_size?: string }) => {
-    try {
-      return await generateImage(args, openRouterClient);
-    } catch (error) {
-      logger.error({ tool: 'generate_image', args, error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
-      return {
-        content: [{ type: 'text', text: error instanceof ImageGenError ? `Error: ${error.message}` : `Unexpected error: ${error instanceof Error ? error.message : String(error)}` }],
-        isError: true,
-      };
-    }
-  });
+    withToolErrorHandler('generate_image', (args) => generateImage(args, openRouterClient)),
+  );
 
-  // Register list_known_models tool
-  server.registerTool('list_known_models', {
-    description: 'List curated image generation models with their characteristics, strengths, weaknesses, and recommended use cases. These are well-tested models with known capabilities.',
-    inputSchema: {},
-  }, async () => {
-    try {
-      return listKnownModels();
-    } catch (error) {
-      logger.error({ tool: 'list_known_models', error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
-      return {
-        content: [{ type: 'text', text: `Unexpected error: ${error instanceof Error ? error.message : String(error)}` }],
-        isError: true,
-      };
-    }
-  });
-
-  // Register list_available_models tool
-  server.registerTool('list_available_models', {
-    description: 'Query OpenRouter API to get a list of all available image generation models. This dynamically fetches the current list of models that support image generation, including newly added models.',
-    inputSchema: {},
-  }, async () => {
-    try {
-      return await listAvailableModels(openRouterClient);
-    } catch (error) {
-      logger.error({ tool: 'list_available_models', error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
-      return {
-        content: [{ type: 'text', text: `Error: ${error instanceof Error ? error.message : String(error)}` }],
-        isError: true,
-      };
-    }
-  });
-
-  // Register check_model tool
-  server.registerTool('check_model', {
-    description: 'Check if a specific model exists in OpenRouter and supports image generation. Useful for validating model IDs before using them with generate_image.',
-    inputSchema: {
-      model: z
-        .string()
-        .min(1)
-        .describe('The model identifier to check (e.g., "black-forest-labs/flux.2-pro")'),
+  server.registerTool(
+    'list_known_models',
+    {
+      description: 'List curated image generation models with their characteristics, strengths, weaknesses, and recommended use cases. Prefer this over list_available_models unless searching for specific models not in this list or if there\'s an error with known models.',
+      inputSchema: {},
     },
-  }, async (args: { model: string }) => {
-    try {
-      return await checkModel(args, openRouterClient);
-    } catch (error) {
-      logger.error({ tool: 'check_model', args, error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
-      return {
-        content: [{ type: 'text', text: error instanceof ImageGenError ? `Error: ${error.message}` : `Unexpected error: ${error instanceof Error ? error.message : String(error)}` }],
-        isError: true,
-      };
-    }
-  });
+    withToolErrorHandler('list_known_models', () => Promise.resolve(listKnownModels())),
+  );
 
-  // Register resources
-  server.registerResource('info', 'image-gen://info', {
-    description: 'Information about the image generation MCP server',
-    mimeType: 'application/json',
-  }, async () => {
-    return {
+  server.registerTool(
+    'list_available_models',
+    {
+      description: 'Query OpenRouter API to get a list of all available image generation models. Dynamically fetches current models including newly added ones. Use this only if searching for specific models not in list_known_models or if there\'s an error with known models. Prefer list_known_models for curated, well-tested models.',
+      inputSchema: {},
+    },
+    withToolErrorHandler('list_available_models', () => listAvailableModels(openRouterClient)),
+  );
+
+  server.registerTool(
+    'check_model',
+    {
+      description: 'Check if a specific model exists in OpenRouter and supports image generation. Useful for validating model IDs before using them with generate_image.',
+      inputSchema: CheckModelSchema,
+    },
+    withToolErrorHandler('check_model', (args) => checkModel(args, openRouterClient)),
+  );
+
+  server.registerResource(
+    'info',
+    'image-gen://info',
+    {
+      description: 'Information about the image generation MCP server',
+      mimeType: 'application/json',
+    },
+    async () => ({
       contents: [
         {
           uri: 'image-gen://info',
@@ -176,42 +121,12 @@ Usage guidelines:
           ),
         },
       ],
-    };
-  });
-
-  // Register prompts
-  server.registerPrompt('image_gen_usage', {
-    description: 'Instructions on how to use the image generation tools',
-  }, async () => {
-    return {
-      messages: [
-        {
-          role: 'user',
-          content: {
-            type: 'text',
-            text: `You have access to image generation tools via OpenRouter:
-
-Available tools:
-- generate_image(prompt, model?, aspect_ratio?, image_size?): Generate images from text descriptions
-- list_known_models(): List curated models with their characteristics
-- list_available_models(): Query OpenRouter for all available image models
-- check_model(model): Verify if a model exists and supports image generation
-
-Always enhance basic prompts with details: lighting, composition, mood, style, colors, and visual elements (3-6 sentences minimum).
-Default model (FLUX.2 Pro) provides highest quality.
-For Gemini models, you can specify aspect_ratio and image_size.`,
-          },
-        },
-      ],
-    };
-  });
+    }),
+  );
 
   return server;
 }
 
-/**
- * Creates a new session for an initialize request
- */
 function createSession(): { server: McpServer; transport: StreamableHTTPServerTransport } {
   const server = createServer();
   const transport = new StreamableHTTPServerTransport({
@@ -234,9 +149,6 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
   return { server, transport };
 }
 
-/**
- * Sends a JSON-RPC error response
- */
 function sendErrorResponse(res: Response, status: number, code: number, message: string, id: unknown = null): void {
   if (res.headersSent) return;
   res.status(status).json({
@@ -246,14 +158,10 @@ function sendErrorResponse(res: Response, status: number, code: number, message:
   });
 }
 
-/**
- * Creates and configures the Express application
- */
 function createApp(): express.Application {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
 
-  // Health check endpoint
   app.get('/health', (_req: Request, res: Response) => {
     res.json({
       status: 'ok',
@@ -263,7 +171,6 @@ function createApp(): express.Application {
     });
   });
 
-  // SSE stream endpoint (GET /mcp)
   app.get('/mcp', async (req: Request, res: Response) => {
     const sessionId = getSessionId(req.headers);
 
@@ -286,7 +193,6 @@ function createApp(): express.Application {
     }
   });
 
-  // Session termination endpoint (DELETE /mcp)
   app.delete('/mcp', async (req: Request, res: Response) => {
     const sessionId = getSessionId(req.headers);
 
@@ -311,7 +217,6 @@ function createApp(): express.Application {
     }
   });
 
-  // Main MCP endpoint (POST /mcp)
   app.post('/mcp', async (req: Request, res: Response) => {
     try {
       const sessionId = getSessionId(req.headers);
@@ -350,9 +255,6 @@ function createApp(): express.Application {
   return app;
 }
 
-/**
- * Main entry point
- */
 async function main(): Promise<void> {
   try {
     const app = createApp();
@@ -362,7 +264,6 @@ async function main(): Promise<void> {
       logger.info({ port: PORT }, 'MCP Image Generation Server started');
     });
 
-    // Graceful shutdown handler
     const shutdown = async () => {
       logger.info('Shutting down...');
       for (const [sessionId, transport] of transports.entries()) {

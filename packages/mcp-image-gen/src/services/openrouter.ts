@@ -1,7 +1,8 @@
 import axios, { type AxiosInstance } from 'axios';
 import { logger } from '../utils/logger.ts';
-import { OpenRouterAPIError, ModelNotFoundError } from '../utils/errors.ts';
+import { OpenRouterAPIError } from '../utils/errors.ts';
 import type { GenerateImageInput } from '../schemas/image-gen.schema.ts';
+import { KNOWN_MODELS } from '../constants/models.ts';
 
 export interface OpenRouterModel {
   id: string;
@@ -64,7 +65,7 @@ export class OpenRouterClient {
   async generateImage(input: GenerateImageInput): Promise<string> {
     const { prompt, model, aspect_ratio, image_size } = input;
 
-    // Check if model supports aspect ratio (Gemini models typically do)
+    // Check if model supports aspect ratio
     const supportsAspectRatio = this.supportsAspectRatio(model);
     const supportsImageSize = this.supportsImageSize(model);
 
@@ -82,7 +83,12 @@ export class OpenRouterClient {
       );
     }
 
-    const requestBody: Record<string, unknown> = {
+    const requestBody: {
+      model: string;
+      messages: Array<{ role: string; content: string }>;
+      modalities: string[];
+      image_config?: { aspect_ratio?: string; image_size?: string };
+    } = {
       model,
       messages: [
         {
@@ -93,7 +99,6 @@ export class OpenRouterClient {
       modalities: ['image', 'text'],
     };
 
-    // Add image_config for models that support it (e.g., Gemini models)
     if (supportsAspectRatio && (aspect_ratio || image_size)) {
       requestBody.image_config = {};
       if (aspect_ratio) {
@@ -111,14 +116,14 @@ export class OpenRouterClient {
       const message = response.data.choices?.[0]?.message;
       const images = message?.images || [];
 
-      logger.debug({ 
-        hasMessage: !!message, 
+      logger.debug({
+        hasMessage: !!message,
         imagesCount: images.length,
         hasImageUrl: images[0]?.image_url ? true : false
       }, 'OpenRouter API response received');
 
       if (!images || images.length === 0 || !images[0]?.image_url) {
-        logger.error({ 
+        logger.error({
           responseData: JSON.stringify(response.data).substring(0, 500),
           message: message ? JSON.stringify(message).substring(0, 500) : 'no message'
         }, 'No image data in OpenRouter response');
@@ -218,19 +223,13 @@ export class OpenRouterClient {
     }
   }
 
-  /**
-   * Check if a model supports aspect ratio configuration
-   */
-  private supportsAspectRatio(model: string): boolean {
-    // Check if it's a Gemini model by name
-    return model.toLowerCase().includes('gemini');
+  private supportsAspectRatio(modelId: string): boolean {
+    const knownModel = KNOWN_MODELS[modelId as keyof typeof KNOWN_MODELS];
+    return knownModel?.supportsAspectRatio ?? modelId.toLowerCase().includes('gemini');
   }
 
-  /**
-   * Check if a model supports image size configuration
-   */
-  private supportsImageSize(model: string): boolean {
-    // Currently only Gemini models support image size
-    return model.toLowerCase().includes('gemini');
+  private supportsImageSize(modelId: string): boolean {
+    const knownModel = KNOWN_MODELS[modelId as keyof typeof KNOWN_MODELS];
+    return knownModel?.supportsImageSize ?? modelId.toLowerCase().includes('gemini');
   }
 }
