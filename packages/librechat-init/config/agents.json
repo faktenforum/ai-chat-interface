@@ -1,0 +1,53 @@
+{
+  "agents": [
+    {
+      "id": "shared-agent-001",
+      "name": "Fact-Checking Assistant",
+      "description": "Assists with fact-checking and verification tasks",
+      "instructions": "You are a fact-checking assistant. Always verify information from reliable sources and provide citations.",
+      "provider": "Scaleway",
+      "model": "mistral-small-3.2-24b-instruct-2506",
+      "model_parameters": {
+        "temperature": 0.3,
+        "top_p": 0.9
+      },
+      "tools": [
+        "web_search",
+        "file_search"
+      ],
+      "category": "general",
+      "conversation_starters": [
+        "Verify this claim",
+        "Check this fact",
+        "Find sources for this statement"
+      ],
+      "recursion_limit": 25,
+      "isCollaborative": false,
+      "permissions": {
+        "public": true,
+        "publicEdit": false
+      }
+    },
+    {
+      "id": "shared-agent-002",
+      "name": "Research Assistant",
+      "description": "Helps with research and information gathering",
+      "instructions": "You are a research assistant. Help users gather and organize information from various sources.",
+      "provider": "Scaleway",
+      "model": "llama-3.3-70b-instruct",
+      "model_parameters": {
+        "temperature": 0.5
+      },
+      "tools": [
+        "web_search",
+        "file_search",
+        "execute_code"
+      ],
+      "category": "general",
+      "permissions": {
+        "public": true,
+        "publicEdit": false
+      }
+    }
+  ]
+}

@@ -13,7 +13,9 @@ COPY assets/ ./assets/
 # The librechat-config volume mounts to /app/config, so we need to preserve source files
 RUN mkdir -p /app/data && \
     cp /app/config/roles.json /app/data/roles.json && \
-    cp /app/config/librechat.yaml /app/data/librechat.yaml
+    cp /app/config/librechat.yaml /app/data/librechat.yaml && \
+    (cp /app/config/agents.json /app/data/agents.json 2>/dev/null || echo "agents.json not found, skipping") && \
+    (cp /app/config/agents.private.json /app/data/agents.private.json 2>/dev/null || echo "agents.private.json not found, skipping")
 
 # Install production dependencies
 RUN npm install --production --silent

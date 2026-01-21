@@ -5,7 +5,8 @@
   "type": "module",
   "description": "LibreChat initialization service",
   "dependencies": {
-    "mongoose": "^8.12.1"
+    "mongoose": "^8.12.1",
+    "nanoid": "^5.0.9"
   },
   "devDependencies": {
     "@types/node": "^25.0.9"

@@ -4,6 +4,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { setupPermissions } from './setup-permissions.ts';
 import { initializeRoles } from './init-roles.ts';
+import { initializeAgents } from './init-agents.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -98,7 +99,7 @@ async function main() {
 
   try {
     // Task 1: Copy LibreChat config and resolve placeholders
-    console.log('[1/4] Setting up LibreChat configuration...');
+    console.log('[1/5] Setting up LibreChat configuration...');
     if (existsSync(CONFIG_SOURCE)) {
       // Ensure target directory exists (named volumes are empty by default)
       if (!existsSync(CONFIG_DIR)) {
@@ -123,7 +124,7 @@ async function main() {
     }
 
     // Task 2: Copy MCP icons to images directory
-    console.log('\n[2/4] Copying MCP icons...');
+    console.log('\n[2/5] Copying MCP icons...');
     if (!existsSync(IMAGES_DIR)) {
       mkdirSync(IMAGES_DIR, { recursive: true });
       console.log('✓ Created images directory');
@@ -148,12 +149,16 @@ async function main() {
     }
 
     // Task 3: Setup file permissions
-    console.log('\n[3/4] Setting up file permissions...');
+    console.log('\n[3/5] Setting up file permissions...');
     await setupPermissions();
 
     // Task 4: Initialize MongoDB roles
-    console.log('\n[4/4] Initializing MongoDB roles...');
+    console.log('\n[4/5] Initializing MongoDB roles...');
     await initializeRoles();
+
+    // Task 5: Initialize agents from configuration
+    console.log('\n[5/5] Initializing agents from configuration...');
+    await initializeAgents();
 
     console.log('\n=========================================');
     console.log('✓ LibreChat Initialization Completed');
