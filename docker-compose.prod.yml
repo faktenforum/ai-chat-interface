@@ -12,6 +12,17 @@ services:
       - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
 
+  librechat-post-init:
+    extends: { file: docker-compose.librechat.yml, service: librechat-post-init }
+    container_name: ${STACK_NAME:-prod}-librechat-post-init
+    build:
+      context: ./packages/librechat-init
+      dockerfile: Dockerfile
+    pull_policy: build
+    volumes:
+      - mongodata:/mongo_data
+      - mongoconfig:/mongo_configdb
+
   mongodb-init:
     extends: { file: docker-compose.librechat.yml, service: mongodb-init }
     container_name: ${STACK_NAME:-prod}-mongodb-init

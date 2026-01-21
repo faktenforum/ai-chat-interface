@@ -37,6 +37,13 @@ services:
   librechat-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-init }
     env_file: .env.local
+
+  librechat-post-init:
+    extends: { file: docker-compose.librechat.yml, service: librechat-post-init }
+    env_file: .env.local
+    volumes:
+      - mongodata:/mongo_data
+      - mongoconfig:/mongo_configdb
     volumes:
       - librechat-config:/app/config
       - ./logs:/logs

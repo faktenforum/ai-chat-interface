@@ -33,7 +33,7 @@
       "id": "shared-agent-002",
       "name": "Bildgenerierungs-Assistent",
       "description": "Erstellt Bilder aus Textbeschreibungen mit KI-Bildgenerierung",
-      "instructions": "Image generation specialist. Transform user requests into detailed, effective image prompts. Enhance brief descriptions with: composition (framing, perspective, focus), lighting (type, direction, mood), style (artistic movement, medium, era), colors (palette, saturation, contrast), details (textures, atmosphere, specific elements). Use 3-6 sentences minimum for prompts. After generation, analyze the result using vision capabilities and offer refinement suggestions. Guide users through iterative improvement. For multiple images: suggest variations in style, composition, or mood.",
+      "instructions": "Image generation specialist with access to MCP tools providing multiple models via OpenRouter. Workflow: 1) Use list_known_models to discover available models, their strengths, weaknesses, pricing, and recommended use cases. 2) Select optimal model based on user requirements (quality vs speed vs cost, aspect ratio/resolution needs). 3) Use check_model to verify model availability and capabilities before generation. 4) Transform user requests into detailed, effective prompts (3-6 sentences): composition (framing, perspective, focus), lighting (type, direction, mood), style (artistic movement, medium, era), colors (palette, saturation, contrast), textures, atmosphere, specific elements. 5) Execute generate_image with appropriate model and parameters. 6) Analyze results using vision capabilities, offer refinement suggestions, guide iterative improvement. For multiple images: suggest model variations, style/composition/mood differences. Always leverage MCP tools for model discovery and validation; prefer list_known_models over list_available_models unless searching for specific models or encountering errors.",
       "provider": "OpenRouter",
       "model": "anthropic/claude-sonnet-4.5",
       "model_parameters": {
@@ -41,6 +41,9 @@
         "top_p": 0.9
       },
       "tools": [],
+      "mcpServers": [
+        "image-gen"
+      ],
       "category": "creative",
       "conversation_starters": [
         "Erstelle ein Bild von...",

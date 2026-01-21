@@ -50,6 +50,13 @@ services:
       - ./meili_data_v1.12:/meili_data
       - mongoconfig:/mongo_configdb
 
+  librechat-post-init:
+    extends: { file: docker-compose.librechat.yml, service: librechat-post-init }
+    env_file: .env.local
+    volumes:
+      - mongodata:/mongo_data
+      - mongoconfig:/mongo_configdb
+
   meilisearch:
     extends: { file: docker-compose.librechat.yml, service: meilisearch }
     env_file: .env.local

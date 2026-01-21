@@ -1,10 +1,17 @@
-# LibreChat Init Service
+# LibreChat Init Services
 
-Unified initialization service for LibreChat that handles:
+Two initialization services for LibreChat:
+
+## librechat-init
+Runs before LibreChat API starts and handles:
 1. LibreChat YAML configuration setup
 2. File permissions configuration
 3. MongoDB role initialization
-4. Agent initialization from configuration
+
+## librechat-post-init
+Runs after LibreChat API starts and handles:
+4. Agent initialization from configuration (via API)
+5. Future post-initialization tasks (extensible)
 
 ## Structure
 
@@ -16,10 +23,13 @@ librechat-init/
 │   ├── agents.json            # Shared agents definition (in repository)
 │   └── agents.private.json    # Private agents (not in repository, optional)
 ├── src/
-│   ├── init.ts                # Main orchestrator
+│   ├── init.ts                # Main orchestrator (librechat-init)
+│   ├── init-agents-only.ts    # Agent-only orchestrator (librechat-post-init)
 │   ├── setup-permissions.ts
 │   ├── init-roles.ts
-│   └── init-agents.ts
+│   ├── init-agents.ts         # Agent initialization logic
+│   └── lib/
+│       └── librechat-api-client.ts  # API client for agent management
 ├── package.json
 ├── tsconfig.json
 └── Dockerfile
@@ -47,7 +57,14 @@ Edit `config/roles.json` to add or modify custom roles:
 
 ### Shared Agents
 
+**Note:** Agent initialization runs in a separate service (`librechat-post-init`) that starts after the LibreChat API is ready. This avoids circular dependencies and allows for future post-initialization tasks.
+
 Agents can be defined in two files:
+
+**MCP Server Support:** Agents can automatically include all tools from MCP servers by specifying `mcpServers` array. The system will:
+- Add the server marker (`sys__server__sys_mcp_<serverName>`) for UI recognition
+- Automatically fetch and add all individual tools from the MCP server via API
+- Tools are fetched at initialization time, ensuring they're always up-to-date
 
 1. **`config/agents.json`** - Public agents that are committed to the repository and shared across all instances
 2. **`config/agents.private.json`** - Private agents (optional, not in repository) for instance-specific configurations
@@ -70,6 +87,7 @@ Basic structure for both files:
         "temperature": 0.3
       },
       "tools": ["web_search", "file_search"],
+      "mcpServers": ["image-gen"],
       "category": "general",
       "permissions": {
         "public": true,
@@ -81,9 +99,11 @@ Basic structure for both files:
 ```
 
 **Key fields:**
-- `id`: Optional unique identifier. If omitted, auto-generated as `agent_<nanoid>`
+- `id`: Optional unique identifier. If omitted, auto-generated as `agent_<nanoid>`. Note: The API generates its own IDs, so this is only a reference identifier.
 - `provider`: Must match a configured endpoint name (e.g., "Scaleway", "OpenRouter")
 - `model`: Model identifier for the provider
+- `tools`: Array of tool identifiers (e.g., `["web_search", "file_search"]`)
+- `mcpServers`: Array of MCP server names (e.g., `["image-gen"]`). All tools from these servers will be automatically added.
 - `permissions.owner`: Optional email of user to grant owner permissions. If not specified, uses the system user (see "User Selection" below)
 - `permissions.public`: If `true`, grants public VIEW access
 - `permissions.publicEdit`: If `true` and `isCollaborative: true`, grants public EDIT access
