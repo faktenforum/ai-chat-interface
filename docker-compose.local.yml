@@ -32,6 +32,10 @@ services:
     volumes:
       - mongodata:/data/db
       - mongoconfig:/data/configdb
+    ports:
+      # Expose MongoDB port for local development (Cursor MCP integration)
+      # Only accessible from localhost, not exposed to external networks
+      - "127.0.0.1:27017:27017"
 
   # LibreChat Services
   librechat-init:

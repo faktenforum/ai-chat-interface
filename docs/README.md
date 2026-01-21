@@ -26,6 +26,7 @@ New to the project? Start here:
 
 - **[Development Guide](DEVELOPMENT.md)** - Working with git submodules and the development stack
 - **[Cursor Rules](CURSOR_RULES.md)** - Using AI agents to integrate new services and MCP servers
+- **[Cursor MongoDB MCP](CURSOR_MONGODB_MCP.md)** - Connecting Cursor to local LibreChat MongoDB database
 
 ## Project Management
 
