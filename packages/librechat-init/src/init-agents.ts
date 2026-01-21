@@ -1,7 +1,16 @@
 import mongoose from 'mongoose';
 import { nanoid } from 'nanoid';
 import { connectToMongoDB, disconnectFromMongoDB, User, type IUser } from './utils/mongodb.ts';
-import { loadConfigFile, loadOptionalConfigFile, getSystemUserId } from './utils/config.ts';
+import { loadOptionalConfigFile, getSystemUserId } from './utils/config.ts';
+import { createAgent, updateAgent, getAgent, deleteAgent, type AgentData } from './utils/librechat-models.ts';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Set up require for accessing models (AclEntry, AccessRole)
+// We'll create these schemas locally since we can't access LibreChat's in Docker
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Configuration paths
 const PUBLIC_AGENTS_PATH = '/app/data/agents.json';
@@ -21,7 +30,7 @@ interface AgentConfig {
   category?: string;
   conversation_starters?: string[];
   recursion_limit?: number;
-  access_level?: number;
+  /** @deprecated Use ACL permissions instead - only set for backward compatibility */
   isCollaborative?: boolean;
   permissions?: {
     owner?: string;
@@ -64,27 +73,43 @@ const DEFAULT_ACCESS_ROLES = [
   },
 ] as const;
 
-// Mongoose schemas
-const agentSchema = new mongoose.Schema({
-  id: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true,
-  },
-}, { strict: false, collection: 'agents' });
-const Agent = mongoose.models.Agent || mongoose.model('Agent', agentSchema);
+// Create schemas for AclEntry and AccessRole (needed for permissions)
+// These are simplified versions matching LibreChat's structure
+function createAclEntrySchema(): mongoose.Schema {
+  return new mongoose.Schema({}, { strict: false, collection: 'aclentries', timestamps: true });
+}
 
-const aclEntrySchema = new mongoose.Schema({}, { strict: false, collection: 'aclentries' });
-const AclEntry = mongoose.models.AclEntry || mongoose.model('AclEntry', aclEntrySchema);
+function createAccessRoleSchema(): mongoose.Schema {
+  return new mongoose.Schema({}, { strict: false, collection: 'accessroles', timestamps: true });
+}
 
-const accessRoleSchema = new mongoose.Schema({}, { strict: false, collection: 'accessroles' });
-const AccessRole = mongoose.models.AccessRole || mongoose.model('AccessRole', accessRoleSchema);
+function getAclEntryModel(): mongoose.Model<Record<string, unknown>> {
+  if (mongoose.models.AclEntry) {
+    return mongoose.models.AclEntry as mongoose.Model<Record<string, unknown>>;
+  }
+  return mongoose.model<Record<string, unknown>>('AclEntry', createAclEntrySchema());
+}
+
+function getAccessRoleModel(): mongoose.Model<Record<string, unknown>> {
+  if (mongoose.models.AccessRole) {
+    return mongoose.models.AccessRole as mongoose.Model<Record<string, unknown>>;
+  }
+  return mongoose.model<Record<string, unknown>>('AccessRole', createAccessRoleSchema());
+}
+
+// Helper to get models
+function getModels() {
+  return {
+    AclEntry: getAclEntryModel(),
+    AccessRole: getAccessRoleModel(),
+  };
+}
 
 /**
  * Seed default access roles if they don't exist
  */
 async function seedAccessRoles(): Promise<void> {
+  const { AccessRole } = getModels();
   for (const roleData of DEFAULT_ACCESS_ROLES) {
     const existingRole = await AccessRole.findOne({ accessRoleId: roleData.accessRoleId });
     if (!existingRole) {
@@ -105,6 +130,7 @@ async function grantAgentPermission(
   grantedBy: mongoose.Types.ObjectId
 ): Promise<void> {
   try {
+    const { AccessRole, AclEntry } = getModels();
     const role = await AccessRole.findOne({ accessRoleId });
     if (!role) {
       throw new Error(`Access role ${accessRoleId} not found`);
@@ -145,42 +171,52 @@ async function grantAgentPermission(
 
 /**
  * Build agent data object from configuration
+ * Simplified - versioning is now handled by LibreChat's createAgent/updateAgent functions
  */
-function buildAgentData(agentConfig: AgentConfig, authorId: mongoose.Types.ObjectId, timestamp: Date): Record<string, unknown> {
-  const agentData: Record<string, unknown> = {
+function buildAgentData(agentConfig: AgentConfig, authorId: string): AgentData {
+  const agentData: AgentData = {
     id: agentConfig.id || `agent_${nanoid()}`,
     name: agentConfig.name,
     provider: agentConfig.provider,
     model: agentConfig.model,
-    author: authorId,
+    author: authorId, // Pass as string, will be converted to ObjectId by wrapper
     category: agentConfig.category || 'general',
-    isCollaborative: agentConfig.isCollaborative || false,
-    createdAt: timestamp,
-    updatedAt: timestamp,
+    // Required fields that LibreChat expects
+    support_contact: {
+      name: '',
+      email: '',
+    },
+    // Default empty arrays for fields that may be set later
+    edges: [],
+    projectIds: [],
+    // Set artifacts to empty string (will be set via capabilities if needed)
+    artifacts: '',
   };
   
   // Add optional fields only if defined
   if (agentConfig.description) agentData.description = agentConfig.description;
   if (agentConfig.instructions) agentData.instructions = agentConfig.instructions;
   if (agentConfig.model_parameters) agentData.model_parameters = agentConfig.model_parameters;
-  if (agentConfig.tools && agentConfig.tools.length > 0) agentData.tools = agentConfig.tools;
+  if (agentConfig.tools && agentConfig.tools.length > 0) {
+    agentData.tools = agentConfig.tools;
+    // Note: mcpServerNames will be extracted automatically by LibreChat's createAgent/updateAgent
+  } else {
+    agentData.tools = [];
+  }
+  // conversation_starters: Supported in schema and displayed in chat, but not editable in Agent UI
   if (agentConfig.conversation_starters && agentConfig.conversation_starters.length > 0) {
     agentData.conversation_starters = agentConfig.conversation_starters;
+  } else {
+    agentData.conversation_starters = [];
   }
   if (agentConfig.recursion_limit !== undefined) agentData.recursion_limit = agentConfig.recursion_limit;
-  if (agentConfig.access_level !== undefined) agentData.access_level = agentConfig.access_level;
+  
+  // Deprecated fields - only set if explicitly provided (for backward compatibility)
+  if (agentConfig.isCollaborative !== undefined) {
+    agentData.isCollaborative = agentConfig.isCollaborative;
+  }
   
   return agentData;
-}
-
-/**
- * Build version data from agent data (without author)
- */
-function buildVersionData(agentData: Record<string, unknown>): Record<string, unknown> {
-  const versionData = { ...agentData };
-  delete versionData.author;
-  delete versionData.id;
-  return versionData;
 }
 
 export async function initializeAgents(): Promise<void> {
@@ -232,24 +268,112 @@ export async function initializeAgents(): Promise<void> {
     for (const agentConfig of allAgents) {
       try {
         const agentId = agentConfig.id || `agent_${nanoid()}`;
-        const existingAgent = await Agent.findOne({ id: agentId });
-        const timestamp = new Date();
+        const { AclEntry } = getModels();
         
-        const agentData = buildAgentData(agentConfig, systemUserId, timestamp);
-        const versionData = buildVersionData(agentData);
-        agentData.versions = [versionData];
-
-        let savedAgent;
+        // Check if agent exists
+        const existingAgent = await getAgent({ id: agentId });
+        
+        // If agent exists but has critical issues (e.g., missing model), delete and recreate
         if (existingAgent) {
-          Object.assign(existingAgent, agentData);
-          await existingAgent.save();
-          savedAgent = existingAgent.toObject();
-          console.log(`  ✓ Updated agent: ${agentConfig.name} (${agentId})`);
+          const hasCriticalIssues = !existingAgent.model || 
+            !existingAgent.versions || 
+            !Array.isArray(existingAgent.versions) ||
+            existingAgent.versions.length === 0 ||
+            !(existingAgent.versions[existingAgent.versions.length - 1] as Record<string, unknown>)?.model;
+          
+          if (hasCriticalIssues) {
+            console.log(`  ⚠ Agent ${agentId} has critical issues, deleting and recreating...`);
+            await deleteAgent({ id: agentId });
+            // Also delete ACL entries for this agent
+            const { AclEntry } = getModels();
+            await AclEntry.deleteMany({ 
+              resourceType: 'agent', 
+              resourceId: existingAgent._id 
+            });
+            console.log(`  ✓ Deleted problematic agent ${agentId}, will recreate`);
+          }
+        }
+        
+        // Build agent data (simplified - versioning handled by LibreChat functions)
+        const agentData = buildAgentData(agentConfig, systemUserId.toString());
+
+        let savedAgent: Record<string, unknown>;
+        if (existingAgent && !existingAgent.model) {
+          // Agent exists but is invalid - was deleted above, so create new
+          savedAgent = await createAgent(agentData);
+          console.log(`  ✓ Created agent: ${agentConfig.name} (${agentId}) - model: ${savedAgent.model}`);
+          agentsCreated++;
+        } else if (existingAgent) {
+          // Update existing agent using LibreChat's updateAgent
+          // Build update data - only include fields that should be updated
+          const updateData: Record<string, unknown> = {
+            name: agentData.name,
+            provider: agentData.provider,
+            model: agentData.model, // CRITICAL: Must be on top-level
+            category: agentData.category || 'general',
+          };
+          
+          // Add optional fields only if they are defined
+          if (agentData.description !== undefined) updateData.description = agentData.description;
+          if (agentData.instructions !== undefined) updateData.instructions = agentData.instructions;
+          if (agentData.model_parameters !== undefined) updateData.model_parameters = agentData.model_parameters;
+          if (agentData.tools !== undefined) updateData.tools = agentData.tools;
+          if (agentData.conversation_starters !== undefined) updateData.conversation_starters = agentData.conversation_starters;
+          if (agentData.recursion_limit !== undefined) updateData.recursion_limit = agentData.recursion_limit;
+          if (agentData.edges !== undefined) updateData.edges = agentData.edges;
+          if (agentData.projectIds !== undefined) updateData.projectIds = agentData.projectIds;
+          if (agentData.artifacts !== undefined) updateData.artifacts = agentData.artifacts;
+          if (agentData.support_contact !== undefined) updateData.support_contact = agentData.support_contact;
+          if (agentData.isCollaborative !== undefined) updateData.isCollaborative = agentData.isCollaborative;
+          
+          // Use LibreChat's updateAgent - it handles versioning, mcpServerNames, etc.
+          savedAgent = await updateAgent(
+            { id: agentId },
+            updateData,
+            { updatingUserId: systemUserId.toString() }
+          ) as Record<string, unknown>;
+          
+          if (!savedAgent) {
+            throw new Error(`Failed to update agent ${agentId}`);
+          }
+          
+          // Verify model is present
+          if (!savedAgent.model) {
+            console.error(`  ✗ ERROR: Agent ${agentId} missing model field after update!`);
+            throw new Error(`Agent ${agentId} missing model field after update`);
+          }
+          
+          console.log(`  ✓ Updated agent: ${agentConfig.name} (${agentId}) - model: ${savedAgent.model}, provider: ${savedAgent.provider}`);
+          
+          // Verify getAgent returns the model
+          const testGetAgent = await getAgent({ id: agentId });
+          if (!testGetAgent || !testGetAgent.model) {
+            console.error(`  ✗ ERROR: getAgent() does not return model field for ${agentId}!`);
+          } else {
+            console.log(`  ✓ Verified: getAgent() returns model: ${testGetAgent.model}`);
+          }
+          
           agentsUpdated++;
         } else {
-          const createdAgent = await Agent.create(agentData);
-          savedAgent = createdAgent.toObject();
-          console.log(`  ✓ Created agent: ${agentConfig.name} (${agentId})`);
+          // Create new agent using LibreChat's createAgent
+          savedAgent = await createAgent(agentData);
+          
+          // Verify model is present
+          if (!savedAgent.model) {
+            console.error(`  ✗ ERROR: Agent ${agentId} missing model field after creation!`);
+            throw new Error(`Agent ${agentId} missing model field after creation`);
+          }
+          
+          console.log(`  ✓ Created agent: ${agentConfig.name} (${agentId}) - model: ${savedAgent.model}`);
+          
+          // Verify getAgent returns the model
+          const testGetAgent = await getAgent({ id: agentId });
+          if (!testGetAgent || !testGetAgent.model) {
+            console.error(`  ✗ ERROR: getAgent() does not return model field for ${agentId}!`);
+          } else {
+            console.log(`  ✓ Verified: getAgent() returns model: ${testGetAgent.model}`);
+          }
+          
           agentsCreated++;
         }
 
@@ -257,7 +381,9 @@ export async function initializeAgents(): Promise<void> {
         const permissions = agentConfig.permissions || {};
         
         // Owner permissions
-        let ownerUserId = systemUserId;
+        let ownerUserId: mongoose.Types.ObjectId = typeof systemUserId === 'string' 
+          ? new mongoose.Types.ObjectId(systemUserId)
+          : systemUserId as mongoose.Types.ObjectId;
         if (permissions.owner) {
           const ownerUser = await User.findOne({ email: permissions.owner });
           if (ownerUser) {
@@ -267,12 +393,21 @@ export async function initializeAgents(): Promise<void> {
           }
         }
         
+        // Convert savedAgent._id to ObjectId if it's a string
+        const agentObjectId = typeof savedAgent._id === 'string' 
+          ? new mongoose.Types.ObjectId(savedAgent._id)
+          : savedAgent._id as mongoose.Types.ObjectId;
+        
+        const systemUserIdObjectId = typeof systemUserId === 'string' 
+          ? new mongoose.Types.ObjectId(systemUserId)
+          : systemUserId as mongoose.Types.ObjectId;
+        
         await grantAgentPermission(
-          savedAgent._id,
+          agentObjectId,
           'user',
           ownerUserId,
           ACCESS_ROLE_OWNER,
-          systemUserId
+          systemUserIdObjectId
         );
 
         // Public permissions
@@ -282,11 +417,11 @@ export async function initializeAgents(): Promise<void> {
             : ACCESS_ROLE_VIEWER;
           
           await grantAgentPermission(
-            savedAgent._id,
+            agentObjectId,
             'public',
             null,
             publicRoleId,
-            systemUserId
+            systemUserIdObjectId
           );
           
           console.log(`    ✓ Granted public ${publicRoleId === ACCESS_ROLE_EDITOR ? 'EDIT' : 'VIEW'} access`);

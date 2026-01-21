@@ -2,13 +2,13 @@
   "agents": [
     {
       "id": "shared-agent-001",
-      "name": "Fact-Checking Assistant",
-      "description": "Assists with fact-checking and verification tasks",
-      "instructions": "You are a fact-checking assistant. Always verify information from reliable sources and provide citations.",
+      "name": "Recherche-Assistent",
+      "description": "Hilft bei der Recherche und Informationsbeschaffung aus verschiedenen Quellen",
+      "instructions": "Multi-step research assistant. Gather information from multiple sources, synthesize findings, cite sources with URLs. For complex queries: break into sub-questions, research each systematically, cross-reference findings, present structured summary with evidence levels. Use web_search for current info, file_search for uploaded documents, execute_code for data analysis. Prioritize: accuracy > completeness > speed. Always fact-check claims, provide source URLs, flag conflicting information.",
       "provider": "Scaleway",
-      "model": "mistral-small-3.2-24b-instruct-2506",
+      "model": "qwen3-235b-a22b-instruct-2507",
       "model_parameters": {
-        "temperature": 0.3,
+        "temperature": 0.5,
         "top_p": 0.9
       },
       "tools": [
@@ -17,9 +17,10 @@
       ],
       "category": "general",
       "conversation_starters": [
-        "Verify this claim",
-        "Check this fact",
-        "Find sources for this statement"
+        "Recherchiere aktuelle Informationen zu...",
+        "Research current information about...",
+        "Fasse Quellen zu diesem Thema zusammen",
+        "Summarize sources on this topic"
       ],
       "recursion_limit": 25,
       "isCollaborative": false,
@@ -30,20 +31,25 @@
     },
     {
       "id": "shared-agent-002",
-      "name": "Research Assistant",
-      "description": "Helps with research and information gathering",
-      "instructions": "You are a research assistant. Help users gather and organize information from various sources.",
-      "provider": "Scaleway",
-      "model": "llama-3.3-70b-instruct",
+      "name": "Bildgenerierungs-Assistent",
+      "description": "Erstellt Bilder aus Textbeschreibungen mit KI-Bildgenerierung",
+      "instructions": "Image generation specialist. Transform user requests into detailed, effective image prompts. Enhance brief descriptions with: composition (framing, perspective, focus), lighting (type, direction, mood), style (artistic movement, medium, era), colors (palette, saturation, contrast), details (textures, atmosphere, specific elements). Use 3-6 sentences minimum for prompts. After generation, analyze the result using vision capabilities and offer refinement suggestions. Guide users through iterative improvement. For multiple images: suggest variations in style, composition, or mood.",
+      "provider": "OpenRouter",
+      "model": "anthropic/claude-sonnet-4.5",
       "model_parameters": {
-        "temperature": 0.5
+        "temperature": 0.7,
+        "top_p": 0.9
       },
-      "tools": [
-        "web_search",
-        "file_search",
-        "execute_code"
+      "tools": [],
+      "category": "creative",
+      "conversation_starters": [
+        "Erstelle ein Bild von...",
+        "Generate an image of...",
+        "Zeige mir verschiedene Stile für...",
+        "Show me different styles for..."
       ],
-      "category": "general",
+      "recursion_limit": 25,
+      "isCollaborative": false,
       "permissions": {
         "public": true,
         "publicEdit": false
