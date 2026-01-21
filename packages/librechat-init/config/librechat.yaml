@@ -69,20 +69,20 @@ memory:
     # Final results, conclusions, verified facts from completed fact-checks
     - "results"
   agent:
-    provider: "OpenRouter"
-    # Open Source model optimized for Memory tasks with better function calling precision
-    # deepseek/deepseek-chat: Excellent function calling, better at following instructions precisely
-    # Alternative: mistralai/mistral-large-2411 (European, good function calling)
-    model: "deepseek/deepseek-chat"
+    provider: "Scaleway"
+    # European Open Source model optimized for Memory tasks with cost-effective function calling
+    # mistral-small-3.2-24b-instruct-2506: Cost-effective (3-6x cheaper than 70B models), good function calling
+    # Supports 128K context window, improved function calling in v3.2, European-hosted
+    model: "mistral-small-3.2-24b-instruct-2506"
     instructions: |
-      Store ONLY substantial, reusable info using validKeys categories. NEVER: greetings, casual chat, trivial mentions, obvious statements. Store: preferences (communication style, topics, workflow), work_info (role, org, responsibilities), personal_info (name, location - only if explicitly shared), projects (current research/investigations), factcheck_info (verification methods), research_context (background, related work), sources (preferred outlets), output_format (article style), deadlines (important dates), expertise (specializations), results (verified facts, conclusions). Must be reusable across conversations. Delete outdated/corrected info promptly. If only greetings/casual chat/no substantial info, END IMMEDIATELY without tools. UPDATE STRATEGY: Check existing memories first. If matching category/key exists, UPDATE with `set_memory` by merging old+new info. Only create new if no match. NEVER delete+recreate. Token limit: 2000 per value.
+      Store reusable info via validKeys: preferences, work_info, personal_info, projects, factcheck_info, research_context, sources, output_format, deadlines, expertise, results. NEVER: greetings, casual chat, trivial/obvious statements. PRIORITY: Explicit user requests ("Merke dir", "Remember", "Speichere") → always store, even if minor. If only greetings/casual/no info AND no explicit request → END without tools. UPDATE: Check existing memories first. If match exists → UPDATE via `set_memory` (merge old+new). Only create new if no match. NEVER delete+recreate. Delete outdated/corrected promptly. Max 2000 tokens/value.
     model_parameters:
-      # Lower temperature for more precise, deterministic function calling decisions
-      # 0.2 provides better precision for memory task decisions
-      temperature: 0.2
-      # top_p: 0.8 provides controlled sampling - balances precision with flexibility
-      # Lower than 0.9 for more focused token selection in memory tasks
-      top_p: 0.8
+      # Low temperature (0.15) for precise, deterministic function calling decisions
+      # Mistral Small 3.2 performs best with temp 0.15 for reliable structured output
+      temperature: 0.15
+      # top_p: 0.95 provides controlled sampling while maintaining flexibility
+      # Optimal for Mistral models when paired with low temperature
+      top_p: 0.95
 
 endpoints:
   # Agents configuration
@@ -169,6 +169,7 @@ modelSpecs:
       group: "Empfohlen: Europa & Open Source"
       groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWxvY2staWNvbiBsdWNpZGUtbG9jayI+PHJlY3Qgd2lkdGg9IjE4IiBoZWlnaHQ9IjExIiB4PSIzIiB5PSIxMSIgcng9IjIiIHJ5PSIyIi8+PHBhdGggZD0iTTcgMTFWN2E1IDUgMCAwIDEgMTAgMHY0Ii8+PC9zdmc+"
       order: 1
+      default: true
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
@@ -179,7 +180,6 @@ modelSpecs:
       description: "Sehr großes Modell für komplexe Aufgaben."
       group: "Empfohlen: Europa & Open Source"
       order: 2
-      default: true
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
