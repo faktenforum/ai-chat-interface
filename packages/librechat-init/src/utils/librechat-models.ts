@@ -130,17 +130,23 @@ function createAgentSchema(): mongoose.Schema {
     },
     {
       timestamps: true,
+      strict: false, // Match LibreChat's schema behavior - allow fields not in schema
     }
   );
 }
 
 /**
  * Get or create Agent model
+ * If the model already exists (e.g., from LibreChat), use it directly
+ * Otherwise, create our own schema-compatible model
  */
 function getAgentModel(): mongoose.Model<Record<string, unknown>> {
+  // If model already exists (e.g., from LibreChat API), use it
   if (mongoose.models.Agent) {
     return mongoose.models.Agent as mongoose.Model<Record<string, unknown>>;
   }
+  
+  // Create our own schema-compatible model
   const schema = createAgentSchema();
   schema.index({ updatedAt: -1, _id: 1 });
   schema.index({ 'edges.to': 1 });
@@ -289,7 +295,6 @@ export async function updateAgent(
   if (directUpdates.tools !== undefined) {
     const mcpServerNames = extractMCPServerNames(directUpdates.tools as string[]);
     directUpdates.mcpServerNames = mcpServerNames;
-    updateData.mcpServerNames = mcpServerNames;
   }
 
   const shouldCreateVersion =
@@ -298,7 +303,7 @@ export async function updateAgent(
 
   if (shouldCreateVersion) {
     const duplicateVersion = isDuplicateVersion(
-      updateData,
+      directUpdates,
       versionData as Record<string, unknown>,
       (versions as unknown[]) || []
     );
@@ -325,14 +330,30 @@ export async function updateAgent(
     versionEntry.updatedBy = userId;
   }
 
+  // Build the MongoDB update object
+  // When using $push/$pull/$addToSet, we need to use $set for direct updates
+  const mongoUpdate: Record<string, unknown> = {};
+  
+  if (Object.keys(directUpdates).length > 0) {
+    mongoUpdate.$set = directUpdates;
+  }
+  
   if (shouldCreateVersion) {
-    updateData.$push = {
+    mongoUpdate.$push = {
       ...($push as Record<string, unknown> || {}),
       versions: versionEntry,
     };
   }
+  
+  if ($pull) {
+    mongoUpdate.$pull = $pull;
+  }
+  
+  if ($addToSet) {
+    mongoUpdate.$addToSet = $addToSet;
+  }
 
-  const updated = await Agent.findOneAndUpdate(searchParameter, updateData, mongoOptions).lean();
+  const updated = await Agent.findOneAndUpdate(searchParameter, mongoUpdate, mongoOptions).lean();
   return updated as Record<string, unknown> | null;
 }
 

@@ -258,8 +258,26 @@ export async function initializeAgents(): Promise<void> {
       console.log(`  Loading ${privateCount} agent(s) from agents.private.json`);
     }
 
-    const systemUserId = await getSystemUserId(User);
-    console.log(`  Using system user ID: ${systemUserId}`);
+    // Try to get system user ID, but skip agent initialization if no users exist yet
+    let systemUserId: mongoose.Types.ObjectId | string | null = null;
+    try {
+      systemUserId = await getSystemUserId(User);
+      console.log(`  Using system user ID: ${systemUserId}`);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('No users found')) {
+        console.log('  ℹ No users found in database - skipping agent initialization');
+        console.log('  ℹ Agents will be initialized after first user login');
+        // Connection will be closed in finally block
+        return;
+      }
+      throw error;
+    }
+    
+    if (!systemUserId) {
+      console.log('  ℹ No system user available - skipping agent initialization');
+      // Connection will be closed in finally block
+      return;
+    }
 
     let agentsCreated = 0;
     let agentsUpdated = 0;
@@ -276,13 +294,16 @@ export async function initializeAgents(): Promise<void> {
         // If agent exists but has critical issues (e.g., missing model), delete and recreate
         if (existingAgent) {
           const hasCriticalIssues = !existingAgent.model || 
+            !existingAgent.provider ||
             !existingAgent.versions || 
             !Array.isArray(existingAgent.versions) ||
             existingAgent.versions.length === 0 ||
-            !(existingAgent.versions[existingAgent.versions.length - 1] as Record<string, unknown>)?.model;
+            !(existingAgent.versions[existingAgent.versions.length - 1] as Record<string, unknown>)?.model ||
+            !(existingAgent.versions[existingAgent.versions.length - 1] as Record<string, unknown>)?.provider;
           
           if (hasCriticalIssues) {
             console.log(`  ⚠ Agent ${agentId} has critical issues, deleting and recreating...`);
+            console.log(`     Current state: model=${existingAgent.model}, provider=${existingAgent.provider}`);
             await deleteAgent({ id: agentId });
             // Also delete ACL entries for this agent
             const { AclEntry } = getModels();
@@ -291,6 +312,8 @@ export async function initializeAgents(): Promise<void> {
               resourceId: existingAgent._id 
             });
             console.log(`  ✓ Deleted problematic agent ${agentId}, will recreate`);
+            // Set existingAgent to null so it will be created fresh
+            (existingAgent as unknown) = null;
           }
         }
         
@@ -298,10 +321,10 @@ export async function initializeAgents(): Promise<void> {
         const agentData = buildAgentData(agentConfig, systemUserId.toString());
 
         let savedAgent: Record<string, unknown>;
-        if (existingAgent && !existingAgent.model) {
-          // Agent exists but is invalid - was deleted above, so create new
+        if (!existingAgent || !existingAgent.model || !existingAgent.provider) {
+          // Agent doesn't exist or is invalid - create new
           savedAgent = await createAgent(agentData);
-          console.log(`  ✓ Created agent: ${agentConfig.name} (${agentId}) - model: ${savedAgent.model}`);
+          console.log(`  ✓ Created agent: ${agentConfig.name} (${agentId}) - model: ${savedAgent.model}, provider: ${savedAgent.provider}`);
           agentsCreated++;
         } else if (existingAgent) {
           // Update existing agent using LibreChat's updateAgent

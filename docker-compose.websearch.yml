@@ -317,11 +317,14 @@ services:
     networks:
       - firecrawl-network
     healthcheck:
+      # Simplified but more reliable healthcheck: check if RabbitMQ is running and ready
+      # Using a single command that checks if the node is running and can respond
+      # This is more tolerant of temporary issues during startup
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      interval: 15s
+      timeout: 15s
+      retries: 15
+      start_period: 120s
 
   firecrawl-api:
     container_name: firecrawl-api
