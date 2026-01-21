@@ -1,37 +1,17 @@
 #!/usr/bin/env -S node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings
 import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, readdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import { setupPermissions } from './setup-permissions.ts';
 import { initializeRoles } from './init-roles.ts';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Source config is copied to /app/data during build to avoid volume mount conflicts
-// The librechat-config volume mounts to /app/config, which would overwrite the source file
-const CONFIG_SOURCE = '/app/data/librechat.yaml';
-const CONFIG_TARGET = '/app/config/librechat.yaml';
-const CONFIG_DIR = '/app/config';
-
-// MCP icon paths
-const ASSETS_DIR = '/app/assets';
-const IMAGES_DIR = '/images';
-const MCP_ICON_PATTERN = /^mcp-.*-icon\.svg$/;
-
-/**
- * Environment variables that must be resolved at initialization time.
- * These variables are used in interface configuration sections that LibreChat
- * reads once at startup and does not re-evaluate at runtime.
- *
- * Variables not in this list are converted from $${VAR} to ${VAR} format
- * so LibreChat can resolve them dynamically at runtime (e.g., webSearch config).
- */
-const INIT_TIME_ENV_VARS = [
-  'LIBRECHAT_CUSTOM_WELCOME',
-  'LIBRECHAT_PRIVACY_POLICY_URL',
-  'LIBRECHAT_TERMS_OF_SERVICE_URL',
-] as const;
+import {
+  CONFIG_SOURCE,
+  CONFIG_TARGET,
+  CONFIG_DIR,
+  ASSETS_DIR,
+  IMAGES_DIR,
+  MCP_ICON_PATTERN,
+  INIT_TIME_ENV_VARS,
+} from './utils/constants.ts';
 
 /**
  * Resolves environment variable placeholders in YAML configuration content.

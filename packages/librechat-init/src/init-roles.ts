@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { connectToMongoDB, disconnectFromMongoDB, User } from './utils/mongodb.ts';
 import { loadConfigFile } from './utils/config.ts';
+import { ROLES_CONFIG_PATH, ROLES_CONFIG_FALLBACK, SYSTEM_ROLES } from './utils/constants.ts';
 
 interface RolePermissions {
   PROMPTS?: { SHARED_GLOBAL?: boolean; USE?: boolean; CREATE?: boolean };
@@ -26,13 +27,6 @@ interface RoleConfig {
 interface RolesConfig {
   roles: RoleConfig[];
 }
-
-// Configuration paths
-const ROLES_CONFIG_PATH = '/app/data/roles.json';
-const ROLES_CONFIG_FALLBACK = '../config/roles.json';
-
-// System roles that should not be modified
-const SYSTEM_ROLES = ['ADMIN', 'USER'] as const;
 
 // Mongoose schemas
 const rolePermissionsSchema = new mongoose.Schema({

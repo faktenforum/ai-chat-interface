@@ -1,11 +1,15 @@
 import mongoose from 'mongoose';
+import { DEFAULT_MONGO_URI, MONGO_RETRY_ATTEMPTS, MONGO_RETRY_DELAY_MS } from './constants.ts';
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://mongodb:27017/LibreChat';
+const MONGO_URI = process.env.MONGO_URI || DEFAULT_MONGO_URI;
 
 /**
  * Wait for MongoDB to be ready and connect
  */
-export async function connectToMongoDB(maxRetries = 30, delayMs = 2000): Promise<void> {
+export async function connectToMongoDB(
+  maxRetries = MONGO_RETRY_ATTEMPTS,
+  delayMs = MONGO_RETRY_DELAY_MS
+): Promise<void> {
   // Check if already connected
   if (mongoose.connection.readyState === 1) {
     console.log('✓ Already connected to MongoDB');

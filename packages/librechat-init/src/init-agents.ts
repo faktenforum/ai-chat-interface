@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { nanoid } from 'nanoid';
 import { connectToMongoDB, disconnectFromMongoDB, User } from './utils/mongodb.ts';
 import { loadOptionalConfigFile, getSystemUserId } from './utils/config.ts';
 import {
@@ -8,14 +7,19 @@ import {
   type AgentCreateParams,
   type AgentUpdateParams,
   type PermissionUpdate,
-  type Principal,
 } from './lib/librechat-api-client.ts';
-
-// Configuration paths
-const PUBLIC_AGENTS_PATH = '/app/data/agents.json';
-const PUBLIC_AGENTS_FALLBACK = '../config/agents.json';
-const PRIVATE_AGENTS_PATH = '/app/data/agents.private.json';
-const PRIVATE_AGENTS_FALLBACK = '../config/agents.private.json';
+import {
+  PUBLIC_AGENTS_PATH,
+  PUBLIC_AGENTS_FALLBACK,
+  PRIVATE_AGENTS_PATH,
+  PRIVATE_AGENTS_FALLBACK,
+  ACCESS_ROLE_VIEWER,
+  ACCESS_ROLE_EDITOR,
+  ACCESS_ROLE_OWNER,
+  MCP_DELIMITER,
+  MCP_SERVER,
+  DEFAULT_API_URL,
+} from './utils/constants.ts';
 
 interface AgentConfig {
   id?: string;
@@ -43,15 +47,6 @@ interface AgentConfig {
 interface AgentsConfig {
   agents: AgentConfig[];
 }
-
-// Access role IDs (matching LibreChat's AccessRoleIds)
-const ACCESS_ROLE_VIEWER = 'agent_viewer';
-const ACCESS_ROLE_EDITOR = 'agent_editor';
-const ACCESS_ROLE_OWNER = 'agent_owner';
-
-// MCP constants (matching LibreChat's Constants)
-const MCP_DELIMITER = '_mcp_';
-const MCP_SERVER = 'sys__server__sys';
 
 /**
  * Convert MCP server names to tool identifiers
@@ -181,47 +176,59 @@ async function buildAgentUpdateData(
 }
 
 /**
+ * Determine public access role based on permissions
+ */
+function getPublicAccessRole(
+  isPublic: boolean,
+  publicEdit: boolean,
+  isCollaborative: boolean
+): string | undefined {
+  if (!isPublic) return undefined;
+  return publicEdit && isCollaborative ? ACCESS_ROLE_EDITOR : ACCESS_ROLE_VIEWER;
+}
+
+/**
  * Build permissions update data from configuration
  */
 function buildPermissions(
   agentConfig: AgentConfig,
-  systemUserId: string,
-  ownerUserId?: string | null
+  ownerUserId: string
 ): PermissionUpdate {
   const permissions = agentConfig.permissions || {};
-  const updated: Principal[] = [];
+  const updated: Array<{ type: 'user' | 'public'; id: string | null; accessRoleId: string }> = [];
 
   // Owner permissions
-  if (ownerUserId) {
-    updated.push({
-      type: 'user',
-      id: ownerUserId,
-      accessRoleId: ACCESS_ROLE_OWNER,
-    });
-  }
+  updated.push({
+    type: 'user',
+    id: ownerUserId,
+    accessRoleId: ACCESS_ROLE_OWNER,
+  });
 
   // Public permissions
   if (permissions.public) {
-    const publicRoleId =
-      permissions.publicEdit && agentConfig.isCollaborative
-        ? ACCESS_ROLE_EDITOR
-        : ACCESS_ROLE_VIEWER;
+    const publicRoleId = getPublicAccessRole(
+      permissions.public,
+      permissions.publicEdit || false,
+      agentConfig.isCollaborative || false
+    );
 
-    updated.push({
-      type: 'public',
-      id: null,
-      accessRoleId: publicRoleId,
-    });
+    if (publicRoleId) {
+      updated.push({
+        type: 'public',
+        id: null,
+        accessRoleId: publicRoleId,
+      });
+    }
   }
 
   return {
     updated: updated.length > 0 ? updated : undefined,
     public: permissions.public || false,
-    publicAccessRoleId: permissions.public
-      ? permissions.publicEdit && agentConfig.isCollaborative
-        ? ACCESS_ROLE_EDITOR
-        : ACCESS_ROLE_VIEWER
-      : undefined,
+    publicAccessRoleId: getPublicAccessRole(
+      permissions.public || false,
+      permissions.publicEdit || false,
+      agentConfig.isCollaborative || false
+    ),
   };
 }
 
@@ -254,7 +261,7 @@ export async function initializeAgents(): Promise<void> {
     }
 
     // Initialize API client
-    const apiURL = process.env.LIBRECHAT_API_URL || 'http://api:3080';
+    const apiURL = process.env.LIBRECHAT_API_URL || DEFAULT_API_URL;
     const jwtSecret = process.env.LIBRECHAT_JWT_SECRET || process.env.JWT_SECRET;
 
     if (!jwtSecret) {
@@ -314,89 +321,65 @@ export async function initializeAgents(): Promise<void> {
 
     for (const agentConfig of allAgents) {
       try {
-        const agentId = agentConfig.id || `agent_${nanoid()}`;
+        // Check if agent exists by name (API generates its own IDs)
+        const existingAgent = await client.findAgentByName(agentConfig.name, systemUserIdStr);
 
-        // Check if agent exists by name
-        // Note: API generates new IDs and ignores config ID, so we search by name
-        // The ID in config is just a reference identifier, not the actual database ID
-        let existingAgent: Agent | null = null;
-        try {
-          existingAgent = await client.findAgentByName(agentConfig.name, systemUserIdStr);
-        } catch (getError) {
-          // If findAgentByName throws an error, log it but continue to create
-          console.error(
-            `  ⚠ Error checking if agent "${agentConfig.name}" exists:`,
-            getError instanceof Error ? getError.message : String(getError)
-          );
-          existingAgent = null;
-        }
-
-        let savedAgent;
+        let savedAgent: Agent;
         if (!existingAgent) {
-          // Create new agent via API
+          // Create new agent
           const createData = await buildAgentCreateData(agentConfig, client, systemUserIdStr);
           savedAgent = await client.createAgent(createData, systemUserIdStr);
           console.log(
-            `  ✓ Created agent: ${agentConfig.name} (${savedAgent.id}) - model: ${savedAgent.model}, provider: ${savedAgent.provider}`
+            `  ✓ Created agent: ${agentConfig.name} (${savedAgent.id}) - ${savedAgent.provider}/${savedAgent.model}`
           );
           agentsCreated++;
         } else {
-          // Update existing agent via API (use the actual ID from the found agent)
+          // Update existing agent
           const updateData = await buildAgentUpdateData(agentConfig, client, systemUserIdStr);
           savedAgent = await client.updateAgent(existingAgent.id, updateData, systemUserIdStr);
           console.log(
-            `  ✓ Updated agent: ${agentConfig.name} (${existingAgent.id}) - model: ${savedAgent.model}, provider: ${savedAgent.provider}`
+            `  ✓ Updated agent: ${agentConfig.name} (${existingAgent.id}) - ${savedAgent.provider}/${savedAgent.model}`
           );
           agentsUpdated++;
         }
 
-        // Set permissions via API
-        const permissions = agentConfig.permissions || {};
-
         // Determine owner user ID
-        let ownerUserId: string | null = null;
+        const permissions = agentConfig.permissions || {};
+        let ownerUserId = systemUserIdStr;
+
         if (permissions.owner) {
           const ownerUser = await User.findOne({ email: permissions.owner });
           if (ownerUser) {
             ownerUserId = ownerUser._id.toString();
           } else {
             console.log(`  ⚠ Owner user ${permissions.owner} not found, using system user`);
-            ownerUserId = systemUserIdStr;
           }
-        } else {
-          ownerUserId = systemUserIdStr;
         }
 
-        // Get agent _id from saved agent (needed for permissions endpoint)
-        // The API returns _id as ObjectId string, which is what the permissions endpoint expects
+        // Apply permissions
         const agentObjectId = savedAgent._id;
         if (!agentObjectId) {
           console.error(`  ⚠ Agent "${agentConfig.name}" missing _id, skipping permissions`);
           continue;
         }
 
-        // Build and apply permissions
-        const permissionUpdate = buildPermissions(agentConfig, systemUserIdStr, ownerUserId);
-
         try {
-          // Use _id (ObjectId) for permissions endpoint, not the agent id
+          const permissionUpdate = buildPermissions(agentConfig, ownerUserId);
           await client.updateAgentPermissions(agentObjectId, permissionUpdate, systemUserIdStr);
 
           if (permissions.public) {
-            const publicRoleId =
-              permissions.publicEdit && agentConfig.isCollaborative
-                ? ACCESS_ROLE_EDITOR
-                : ACCESS_ROLE_VIEWER;
-            console.log(
-              `    ✓ Granted public ${publicRoleId === ACCESS_ROLE_EDITOR ? 'EDIT' : 'VIEW'} access`
+            const roleId = getPublicAccessRole(
+              permissions.public,
+              permissions.publicEdit || false,
+              agentConfig.isCollaborative || false
             );
+            console.log(`    ✓ Granted public ${roleId === ACCESS_ROLE_EDITOR ? 'EDIT' : 'VIEW'} access`);
           }
         } catch (permissionError) {
           console.error(
             `  ⚠ Failed to set permissions for agent "${agentConfig.name}":`,
             permissionError instanceof Error ? permissionError.message : String(permissionError)
           );
-          // Continue - permissions are optional, agent creation/update succeeded
         }
       } catch (error) {
         console.error(
