@@ -157,86 +157,83 @@ endpoints:
 # This prevents "My Agents" from being selected when users have no agents
 # Note: Memory function uses a separate model (configured in memory.agent section)
 # Chat models don't need Function Calling for Memory - Memory works independently
-# Models sorted by OpenRouter Top Weekly popularity (https://openrouter.ai/models?order=top-weekly)
-# Mix of Open Source and proprietary models, European models prioritized where available
+# Models grouped by privacy/transparency: Europe-hosted & Open Source prioritized
 modelSpecs:
   list:
     # ==========================================
-    # Vision Models (Open Source)
+    # Empfohlen: Europa & Open Source (Scaleway)
     # ==========================================
-    - name: "qwen2.5-vl-72b"
-      label: "Qwen2.5-VL 72B"
-      description: "Höchste Qualität für Gespräche und Bildverständnis. Kann Bilder analysieren und gleichzeitig natürlich chatten. Von Qwen."
-      group: "Vision Models (Open Source)"
-      groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWV5ZS1pY29uIGx1Y2lkZS1leWUiPjxwYXRoIGQ9Ik0yLjA2MiAxMi4zNDhhMSAxIDAgMCAxIDAtLjY5NiAxMC43NSAxMC43NSAwIDAgMSAxOS44NzYgMCAxIDEgMCAwIDEgMCAuNjk2IDEwLjc1IDEwLjc1IDAgMCAxLTE5Ljg3NiAwIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIvPjwvc3ZnPg=="
+    - name: "scaleway-llama-3.3-70b"
+      label: "Llama 3.3 70B"
+      description: "Sehr gut für allgemeine Gespräche und Aufgaben. Von Meta."
+      group: "Empfohlen: Europa & Open Source"
+      groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWxvY2staWNvbiBsdWNpZGUtbG9jayI+PHJlY3Qgd2lkdGg9IjE4IiBoZWlnaHQ9IjExIiB4PSIzIiB5PSIxMSIgcng9IjIiIHJ5PSIyIi8+PHBhdGggZD0iTTcgMTFWN2E1IDUgMCAwIDEgMTAgMHY0Ii8+PC9zdmc+"
       order: 1
       preset:
-        endpoint: "OpenRouter"
+        endpoint: "Scaleway"
         endpointType: "custom"
-        model: "qwen/qwen2.5-vl-72b-instruct"
+        model: "llama-3.3-70b-instruct"
     
-    - name: "qwen2.5-vl-32b"
-      label: "Qwen2.5-VL 32B"
-      description: "Gute Balance aus Qualität und Geschwindigkeit. Versteht Bilder und führt natürliche Gespräche. Von Qwen."
-      group: "Vision Models (Open Source)"
+    - name: "scaleway-qwen3-235b"
+      label: "Qwen3 235B"
+      description: "Sehr großes Modell für komplexe Aufgaben."
+      group: "Empfohlen: Europa & Open Source"
       order: 2
+      default: true
       preset:
-        endpoint: "OpenRouter"
+        endpoint: "Scaleway"
         endpointType: "custom"
-        model: "qwen/qwen2.5-vl-32b-instruct"
+        model: "qwen3-235b-a22b-instruct-2507"
     
-    - name: "llama-3.2-vision-90b"
-      label: "Llama 3.2 Vision 90B"
-      description: "Sehr gute Gesprächsqualität mit Bildverständnis. Kann Bilder beschreiben und analysieren. Von Meta (Llama-Serie)."
-      group: "Vision Models (Open Source)"
+    - name: "scaleway-qwen3-coder-30b"
+      label: "Qwen3 Coder 30B"
+      description: "Spezialisiert auf Programmierung und Code-Generierung."
+      group: "Empfohlen: Europa & Open Source"
       order: 3
       preset:
-        endpoint: "OpenRouter"
+        endpoint: "Scaleway"
         endpointType: "custom"
-        model: "meta-llama/llama-3.2-90b-vision-instruct"
+        model: "qwen3-coder-30b-a3b-instruct"
     
-    # ==========================================
-    # Vision Models (Proprietary) - Chat Only
-    # ==========================================
-    - name: "google-gemini-2.5-flash-lite"
-      label: "Gemini 2.5 Flash Lite"
-      description: "Schnell und kostengünstig. Optimiert für schnelle Antworten bei guter Qualität. Unterstützt Vision. Von Google."
-      group: "Vision Models (Proprietary)"
-      groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWV5ZS1pY29uIGx1Y2lkZS1leWUiPjxwYXRoIGQ9Ik0yLjA2MiAxMi4zNDhhMSAxIDAgMCAxIDAtLjY5NiAxMC43NSAxMC43NSAwIDAgMSAxOS44NzYgMCAxIDEgMCAwIDEgMCAuNjk2IDEwLjc1IDEwLjc1IDAgMCAxLTE5Ljg3NiAwIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIvPjwvc3ZnPg=="
-      order: 1
+    - name: "scaleway-gpt-oss-120b"
+      label: "GPT-OSS 120B"
+      description: "Großes Modell für komplexe Aufgaben."
+      group: "Empfohlen: Europa & Open Source"
+      order: 4
       preset:
-        endpoint: "OpenRouter"
+        endpoint: "Scaleway"
         endpointType: "custom"
-        model: "google/gemini-2.5-flash-lite"
+        model: "gpt-oss-120b"
     
-    # ==========================================
-    # Universal Models (Proprietary) - Vision + Tools
-    # ==========================================
-    - name: "claude-sonnet-4.5"
-      label: "Claude Sonnet 4.5"
-      description: "Eines der besten Modelle für komplexe Aufgaben und Programmierung. Optimiert für praktische Anwendungen. Unterstützt Vision und Tools. Von Anthropic."
-      group: "Universal Models (Proprietary)"
-      groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvdC1pY29uIGx1Y2lkZS1ib3QiPjxwYXRoIGQ9Ik0xMiA4VjRIOCIvPjxyZWN0IHdpZHRoPSIxNiIgaGVpZ2h0PSIxMiIgeD0iNCIgeT0iOCIgcng9IjIiLz48cGF0aCBkPSJNMiAxNGgyIi8+PHBhdGggZD0iTTIwIDE0aDIiLz48cGF0aCBkPSJNMTUgMTN2MiIvPjxwYXRoIGQ9Ik05IDEzdjIiLz48L3N2Zz4="
-      order: 1
-      webSearch: true
-      fileSearch: true
+    - name: "scaleway-mistral-small-3.2"
+      label: "Mistral Small 3.2 24B"
+      description: "Unterstützt Chat und Bilder."
+      group: "Empfohlen: Europa & Open Source"
+      order: 5
       preset:
-        endpoint: "OpenRouter"
+        endpoint: "Scaleway"
         endpointType: "custom"
-        model: "anthropic/claude-sonnet-4.5"
+        model: "mistral-small-3.2-24b-instruct-2506"
+    
+    - name: "scaleway-pixtral-12b"
+      label: "Pixtral 12B"
+      description: "Für Bildverständnis und Chat."
+      group: "Empfohlen: Europa & Open Source"
+      order: 6
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "pixtral-12b-2409"
     
     # ==========================================
-    # Text Models with Tools (Open Source)
+    # Open Source Modelle
     # ==========================================
     - name: "deepseek-v3.2"
       label: "DeepSeek V3.2"
-      description: "Kann sehr lange Gespräche führen und komplexe Aufgaben lösen. Sehr gut im logischen Denken. Von DeepSeek."
-      group: "Text Models with Tools (Open Source)"
+      description: "Kann sehr lange Gespräche führen und komplexe Aufgaben lösen. Sehr gut im logischen Denken."
+      group: "Open Source Modelle"
       groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvdC1tZXNzYWdlLXNxdWFyZS1pY29uIGx1Y2lkZS1ib3QtbWVzc2FnZS1zcXVhcmUiPjxwYXRoIGQ9Ik0xMiA2VjJIOCIvPjxwYXRoIGQ9Ik0xNSAxMXYyIi8+PHBhdGggZD0iTTIgMTJoMiIvPjxwYXRoIGQ9Ik0yMCAxMmgyIi8+PHBhdGggZD0iTTIwIDE2YTIgMiAwIDAgMS0yIDJIOC44MjhhMiAyIDAgMCAwLTEuNDE0LjU4NmwtMi4yMDIgMi4yMDJBLjcxLjcxIDAgMCAxIDQgMjAuMjg2VjhhMiAyIDAgMCAxIDItMmgxMmEyIDIgMCAwIDEgMiAyeiIvPjxwYXRoIGQ9Ik05IDExdjIiLz48L3N2Zz4="
       order: 1
-      default: true
-      webSearch: true
-      fileSearch: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
@@ -244,11 +241,9 @@ modelSpecs:
     
     - name: "llama-3.3-70b"
       label: "Llama 3.3 70B"
-      description: "Sehr beliebt für allgemeine Gespräche und Aufgaben. Von Meta (Llama-Serie)."
-      group: "Text Models with Tools (Open Source)"
+      description: "Sehr beliebt für allgemeine Gespräche und Aufgaben. Von Meta."
+      group: "Open Source Modelle"
       order: 2
-      webSearch: true
-      fileSearch: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
@@ -257,10 +252,8 @@ modelSpecs:
     - name: "xiaomi-mimo-v2-flash"
       label: "MiMo-V2-Flash"
       description: "Kann sehr lange Gespräche führen. Besonders gut für Wissensthemen, Wissenschaft und Finanzen. Von Xiaomi."
-      group: "Text Models with Tools (Open Source)"
+      group: "Open Source Modelle"
       order: 3
-      webSearch: true
-      fileSearch: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
@@ -268,11 +261,9 @@ modelSpecs:
     
     - name: "deepseek-chat-67b"
       label: "DeepSeek Chat 67B"
-      description: "Sehr beliebt, besonders gut für Programmierung und Code-Erstellung. Von DeepSeek."
-      group: "Text Models with Tools (Open Source)"
+      description: "Sehr beliebt, besonders gut für Programmierung und Code-Erstellung."
+      group: "Open Source Modelle"
       order: 4
-      webSearch: true
-      fileSearch: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
@@ -280,27 +271,63 @@ modelSpecs:
     
     - name: "llama-3.1-8b"
       label: "Llama 3.1 8B"
-      description: "Schnell und effizient. Gute Wahl für schnelle Antworten. Unterstützt Tool Calling. Von Meta (Llama-Serie)."
-      group: "Text Models with Tools (Open Source)"
+      description: "Schnell und effizient. Gute Wahl für schnelle Antworten. Von Meta."
+      group: "Open Source Modelle"
       order: 5
-      webSearch: true
-      fileSearch: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
         model: "meta-llama/llama-3.1-8b-instruct"
     
+    - name: "qwen2.5-vl-72b"
+      label: "Qwen2.5-VL 72B"
+      description: "Höchste Qualität für Gespräche und Bildverständnis. Kann Bilder analysieren und gleichzeitig natürlich chatten."
+      group: "Open Source Modelle"
+      order: 6
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "qwen/qwen2.5-vl-72b-instruct"
+    
+    - name: "qwen2.5-vl-32b"
+      label: "Qwen2.5-VL 32B"
+      description: "Gute Balance aus Qualität und Geschwindigkeit."
+      group: "Open Source Modelle"
+      order: 7
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "qwen/qwen2.5-vl-32b-instruct"
+    
+    - name: "llama-3.2-vision-90b"
+      label: "Llama 3.2 Vision 90B"
+      description: "Sehr gute Gesprächsqualität. Kann Bilder beschreiben und analysieren. Von Meta."
+      group: "Open Source Modelle"
+      order: 8
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "meta-llama/llama-3.2-90b-vision-instruct"
+    
     # ==========================================
-    # Text Models with Tools (Proprietary)
+    # Beliebte Premium-Modelle
     # ==========================================
+    - name: "claude-sonnet-4.5"
+      label: "Claude Sonnet 4.5"
+      description: "Eines der besten Modelle für komplexe Aufgaben und Programmierung. Optimiert für praktische Anwendungen."
+      group: "Beliebte Premium-Modelle"
+      groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvdC1pY29uIGx1Y2lkZS1ib3QiPjxwYXRoIGQ9Ik0xMiA4VjRIOCIvPjxyZWN0IHdpZHRoPSIxNiIgaGVpZ2h0PSIxMiIgeD0iNCIgeT0iOCIgcng9IjIiLz48cGF0aCBkPSJNMiAxNGgyIi8+PHBhdGggZD0iTTIwIDE0aDIiLz48cGF0aCBkPSJNMTUgMTN2MiIvPjxwYXRoIGQ9Ik05IDEzdjIiLz48L3N2Zz4="
+      order: 1
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "anthropic/claude-sonnet-4.5"
+    
     - name: "openai-gpt5-2"
       label: "GPT-5.2"
-      description: "Sehr gut für komplexe Aufgaben und mehrstufige Problemlösung. Von OpenAI (GPT-5-Serie)."
-      group: "Text Models with Tools (Proprietary)"
-      groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvdC1tZXNzYWdlLXNxdWFyZS1pY29uIGx1Y2lkZS1ib3QtbWVzc2FnZS1zcXVhcmUiPjxwYXRoIGQ9Ik0xMiA2VjJIOCIvPjxwYXRoIGQ9Ik0xNSAxMXYyIi8+PHBhdGggZD0iTTIgMTJoMiIvPjxwYXRoIGQ9Ik0yMCAxMmgyIi8+PHBhdGggZD0iTTIwIDE2YTIgMiAwIDAgMS0yIDJIOC44MjhhMiAyIDAgMCAwLTEuNDE0LjU4NmwtMi4yMDIgMi4yMDJBLjcxLjcxIDAgMCAxIDQgMjAuMjg2VjhhMiAyIDAgMCAxIDItMmgxMmEyIDIgMCAwIDEgMiAyeiIvPjxwYXRoIGQ9Ik05IDExdjIiLz48L3N2Zz4="
-      order: 1
-      webSearch: true
-      fileSearch: true
+      description: "Sehr gut für komplexe Aufgaben und mehrstufige Problemlösung. Von OpenAI."
+      group: "Beliebte Premium-Modelle"
+      order: 2
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
@@ -308,11 +335,9 @@ modelSpecs:
     
     - name: "mistral-large-2411"
       label: "Mistral Large 2411"
-      description: "Sehr beliebt bei europäischen Nutzern. Von Mistral. Europäisches Unternehmen (französisch)."
-      group: "Text Models with Tools (Proprietary)"
-      order: 2
-      webSearch: true
-      fileSearch: true
+      description: "Sehr beliebt bei europäischen Nutzern. Europäisches Unternehmen (französisch)."
+      group: "Beliebte Premium-Modelle"
+      order: 3
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
@@ -320,88 +345,23 @@ modelSpecs:
     
     - name: "z-ai-glm-4.7"
       label: "GLM 4.7"
-      description: "Sehr gut im logischen Denken und komplexen Aufgaben. Fortgeschrittenes Sprachverständnis. Von Z.AI."
-      group: "Text Models with Tools (Proprietary)"
-      order: 3
-      webSearch: true
-      fileSearch: true
+      description: "Sehr gut im logischen Denken und komplexen Aufgaben. Fortgeschrittenes Sprachverständnis."
+      group: "Beliebte Premium-Modelle"
+      order: 4
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
         model: "glm/glm-4.7"
-
-    # ==========================================
-    # Scaleway Models (Europe - Hosted)
-    # ==========================================
-    - name: "scaleway-llama-3.3-70b"
-      label: "Llama 3.3 70B (Scaleway)"
-      description: "Gehostet in Europa auf Scaleway. Sehr gut für allgemeine Gespräche und Aufgaben. Von Meta (Llama-Serie)."
-      group: "Text Models (Europe - Scaleway)"
-      groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvdC1tZXNzYWdlLXNxdWFyZS1pY29uIGx1Y2lkZS1ib3QtbWVzc2FnZS1zcXVhcmUiPjxwYXRoIGQ9Ik0xMiA2VjJIOCIvPjxwYXRoIGQ9Ik0xNSAxMXYyIi8+PHBhdGggZD0iTTIgMTJoMiIvPjxwYXRoIGQ9Ik0yMCAxMmgyIi8+PHBhdGggZD0iTTIwIDE2YTIgMiAwIDAgMS0yIDJIOC44MjhhMiAyIDAgMCAwLTEuNDE0LjU4NmwtMi4yMDIgMi4yMDJBLjcxLjcxIDAgMCAxIDQgMjAuMjg2VjhhMiAyIDAgMCAxIDItMmgxMmEyIDIgMCAwIDEgMiAyeiIvPjxwYXRoIGQ9Ik05IDExdjIiLz48L3N2Zz4="
-      order: 1
-      webSearch: true
-      fileSearch: true
-      preset:
-        endpoint: "Scaleway"
-        endpointType: "custom"
-        model: "llama-3.3-70b-instruct"
     
-    - name: "scaleway-qwen3-235b"
-      label: "Qwen3 235B (Scaleway)"
-      description: "Sehr großes Modell für komplexe Aufgaben. Gehostet in Europa auf Scaleway. Von Qwen."
-      group: "Text Models (Europe - Scaleway)"
-      order: 2
-      webSearch: true
-      fileSearch: true
+    - name: "google-gemini-2.5-flash-lite"
+      label: "Gemini 2.5 Flash Lite"
+      description: "Schnell und kostengünstig. Optimiert für schnelle Antworten bei guter Qualität."
+      group: "Beliebte Premium-Modelle"
+      order: 5
       preset:
-        endpoint: "Scaleway"
+        endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "qwen3-235b-a22b-instruct-2507"
-    
-    - name: "scaleway-mistral-small-3.2"
-      label: "Mistral Small 3.2 24B (Scaleway)"
-      description: "Unterstützt Chat und Vision. Europäisches Modell (Mistral), gehostet in Europa auf Scaleway."
-      group: "Vision Models (Europe - Scaleway)"
-      groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWV5ZS1pY29uIGx1Y2lkZS1leWUiPjxwYXRoIGQ9Ik0yLjA2MiAxMi4zNDhhMSAxIDAgMCAxIDAtLjY5NiAxMC43NSAxMC43NSAwIDAgMSAxOS44NzYgMCAxIDEgMCAwIDEgMCAuNjk2IDEwLjc1IDEwLjc1IDAgMCAxLTE5Ljg3NiAwIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIvPjwvc3ZnPg=="
-      order: 1
-      preset:
-        endpoint: "Scaleway"
-        endpointType: "custom"
-        model: "mistral-small-3.2-24b-instruct-2506"
-    
-    - name: "scaleway-pixtral-12b"
-      label: "Pixtral 12B (Scaleway)"
-      description: "Vision-Modell für Bildverständnis und Chat. Gehostet in Europa auf Scaleway. Von Mistral."
-      group: "Vision Models (Europe - Scaleway)"
-      order: 2
-      preset:
-        endpoint: "Scaleway"
-        endpointType: "custom"
-        model: "pixtral-12b-2409"
-    
-    - name: "scaleway-qwen3-coder-30b"
-      label: "Qwen3 Coder 30B (Scaleway)"
-      description: "Spezialisiert auf Programmierung und Code-Generierung. Gehostet in Europa auf Scaleway. Von Qwen."
-      group: "Text Models (Europe - Scaleway)"
-      order: 3
-      webSearch: true
-      fileSearch: true
-      preset:
-        endpoint: "Scaleway"
-        endpointType: "custom"
-        model: "qwen3-coder-30b-a3b-instruct"
-    
-    - name: "scaleway-gpt-oss-120b"
-      label: "GPT-OSS 120B (Scaleway)"
-      description: "Großes Open-Source-Modell für komplexe Aufgaben. Gehostet in Europa auf Scaleway."
-      group: "Text Models (Europe - Scaleway)"
-      order: 4
-      webSearch: true
-      fileSearch: true
-      preset:
-        endpoint: "Scaleway"
-        endpointType: "custom"
-        model: "gpt-oss-120b"
+        model: "google/gemini-2.5-flash-lite"
 
 
 webSearch:
@@ -548,7 +508,7 @@ mcpServers:
     description: Mathematische Berechnungen und Rechenoperationen
     iconPath: /images/mcp-calculator-icon.svg
     initTimeout: 120000
-    chatMenu: true
+    chatMenu: false
     startup: true
     serverInstructions: true
 
@@ -559,7 +519,7 @@ mcpServers:
     description: Bilder aus Textbeschreibungen erstellen
     iconPath: /images/mcp-image-gen-icon.svg
     initTimeout: 180000
-    chatMenu: true
+    chatMenu: false
     startup: true
     serverInstructions: true
 
@@ -591,17 +551,32 @@ ocr:
 # File Configuration - Define supported MIME types for OCR and other file operations
 fileConfig:
   ocr:
+    # Mistral OCR supports: PNG, JPEG/JPG, AVIF (images) + PDF, DOCX, PPTX (documents)
+    # Using image/.* to allow all image formats - unsupported ones will fall back to text parsing
     supportedMimeTypes:
       - "image/.*"
       - "application/pdf"
+      - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"  # DOCX
+      - "application/vnd.openxmlformats-officedocument.presentationml.presentation"  # PPTX
+      - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"  # XLSX
   text:
+    # All text/* MIME types (covers: plain, javascript, python, html, markdown, css, csv, etc.)
+    # Plus specific application/* MIME types for text-based formats
     supportedMimeTypes:
       - "text/.*"
       - "application/json"
-      - "application/x-yaml"
+      - "application/yaml"
+      - "application/csv"
+      - "application/typescript"
+      - "application/sql"
+      - "application/xml"
+      - "application/x-sh"
+      - "application/vnd.coffeescript"
   stt:
+    # Audio formats supported by Azure OpenAI STT and other STT providers
+    # Formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, webm, aac, opus, wma
     supportedMimeTypes:
-      - "audio/.*"
+      - "^audio/(mp3|mpeg|mpeg3|mp4|m4a|mpga|wav|wave|x-wav|ogg|vorbis|webm|flac|x-flac|aac|wma|opus)$"
 
 # File Strategy (Granular) - disabled (default: "local" for all file types)
 # Allows different storage strategies for different file types
