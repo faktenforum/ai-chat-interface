@@ -34,7 +34,13 @@ export interface OpenRouterImageResponse {
           url: string;
         };
       }>;
-      content?: string;
+      content?: string | Array<{
+        type: string;
+        text?: string;
+        image_url?: {
+          url: string;
+        };
+      }>;
     };
   }>;
 }
@@ -83,10 +89,14 @@ export class OpenRouterClient {
       );
     }
 
+    // For Gemini models, use response_modalities to explicitly request image output
+    const isGeminiModel = model.toLowerCase().includes('gemini');
+    
     const requestBody: {
       model: string;
       messages: Array<{ role: string; content: string }>;
-      modalities: string[];
+      modalities?: string[];
+      response_modalities?: string[];
       image_config?: { aspect_ratio?: string; image_size?: string };
     } = {
       model,
@@ -96,8 +106,16 @@ export class OpenRouterClient {
           content: prompt,
         },
       ],
-      modalities: ['image', 'text'],
     };
+
+    // Set modalities based on model type
+    if (isGeminiModel) {
+      // For Gemini, explicitly request image in response
+      requestBody.response_modalities = ['image'];
+    } else {
+      // For other models, use modalities to indicate we want image output
+      requestBody.modalities = ['image', 'text'];
+    }
 
     if (supportsAspectRatio && (aspect_ratio || image_size)) {
       requestBody.image_config = {};
@@ -114,21 +132,54 @@ export class OpenRouterClient {
     try {
       const response = await this.client.post<OpenRouterImageResponse>('/chat/completions', requestBody);
       const message = response.data.choices?.[0]?.message;
-      const images = message?.images || [];
-
+      
+      // Log response structure for debugging (truncate large responses)
+      const responseStr = JSON.stringify(response.data);
       logger.debug({
+        fullResponse: responseStr.length > 2000 ? responseStr.substring(0, 2000) + '... (truncated)' : responseStr,
         hasMessage: !!message,
-        imagesCount: images.length,
-        hasImageUrl: images[0]?.image_url ? true : false
+        messageKeys: message ? Object.keys(message) : [],
+        messageContentType: typeof message?.content,
+        messageContentIsArray: Array.isArray(message?.content),
       }, 'OpenRouter API response received');
 
+      // Try to extract image from images array first
+      let images = message?.images || [];
+      
+      // If no images array, try to extract from content array (alternative response format)
+      if (images.length === 0 && Array.isArray(message?.content)) {
+        logger.debug('No images array found, checking content array');
+        const imageContent = message.content.find(
+          (item) => item.type === 'image_url' && item.image_url?.url
+        );
+        if (imageContent?.image_url?.url) {
+          images = [{
+            type: 'image_url',
+            image_url: {
+              url: imageContent.image_url.url,
+            },
+          }];
+          logger.debug('Found image in content array');
+        }
+      }
+
+      logger.debug({
+        imagesCount: images.length,
+        hasImageUrl: images[0]?.image_url ? true : false,
+        messageContent: typeof message?.content === 'string' ? message.content.substring(0, 200) : 'not a string',
+      }, 'Image extraction attempt');
+
       if (!images || images.length === 0 || !images[0]?.image_url) {
+        // Log full response for debugging
+        const fullResponseStr = JSON.stringify(response.data, null, 2);
         logger.error({
-          responseData: JSON.stringify(response.data).substring(0, 500),
-          message: message ? JSON.stringify(message).substring(0, 500) : 'no message'
+          responseData: fullResponseStr.substring(0, 2000),
+          message: message ? JSON.stringify(message, null, 2).substring(0, 2000) : 'no message',
+          messageType: typeof message?.content,
+          isContentArray: Array.isArray(message?.content),
         }, 'No image data in OpenRouter response');
         throw new OpenRouterAPIError(
-          'No image data returned from OpenRouter API. The model may not support image generation or the request may have failed.',
+          'No image data returned from OpenRouter API. The model may not support image generation or the request may have failed. Check the logs for the full response structure.',
         );
       }
 

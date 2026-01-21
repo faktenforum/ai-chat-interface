@@ -150,12 +150,23 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
 }
 
 function sendErrorResponse(res: Response, status: number, code: number, message: string, id: unknown = null): void {
-  if (res.headersSent) return;
-  res.status(status).json({
-    jsonrpc: '2.0',
-    error: { code, message },
-    id,
-  });
+  if (res.headersSent || res.closed || res.destroyed || res.socket?.destroyed) {
+    return;
+  }
+  
+  try {
+    res.status(status).json({
+      jsonrpc: '2.0',
+      error: { code, message },
+      id,
+    });
+  } catch (error) {
+    // Silently fail if connection is already closed
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (!errorMessage.includes('ECONNRESET') && !errorMessage.includes('EPIPE')) {
+      logger.warn({ error: errorMessage, status, code, message, id }, 'Failed to send error response');
+    }
+  }
 }
 
 function createApp(): express.Application {
@@ -188,8 +199,14 @@ function createApp(): express.Application {
     try {
       await transport.handleRequest(req, res);
     } catch (error) {
-      logger.error({ sessionId, error: error instanceof Error ? error.message : String(error) }, 'Error in transport.handleRequest');
-      sendErrorResponse(res, 500, -32603, 'Internal server error');
+      // Log connection closure errors but don't treat them as critical
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('aborted') || errorMessage.includes('closed') || errorMessage.includes('ECONNRESET')) {
+        logger.warn({ sessionId, error: errorMessage }, 'Client connection closed during request');
+      } else {
+        logger.error({ sessionId, error: errorMessage }, 'Error in transport.handleRequest');
+        sendErrorResponse(res, 500, -32603, 'Internal server error');
+      }
     }
   });
 
@@ -212,8 +229,16 @@ function createApp(): express.Application {
       transports.delete(sessionId);
       logger.info({ sessionId, totalSessions: transports.size }, 'Session deleted');
     } catch (error) {
-      logger.error({ error: error instanceof Error ? error.message : String(error), sessionId }, 'Error handling session termination');
-      sendErrorResponse(res, 500, -32603, 'Error handling session termination');
+      // Always clean up session on error
+      transports.delete(sessionId);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('aborted') || errorMessage.includes('closed') || errorMessage.includes('ECONNRESET')) {
+        logger.warn({ sessionId, error: errorMessage }, 'Connection closed during session termination');
+      } else {
+        logger.error({ error: errorMessage, sessionId }, 'Error handling session termination');
+        sendErrorResponse(res, 500, -32603, 'Error handling session termination');
+      }
     }
   });
 
@@ -226,7 +251,17 @@ function createApp(): express.Application {
       if (sessionId) {
         const transport = transports.get(sessionId);
         if (transport) {
-          await transport.handleRequest(req, res, req.body);
+          try {
+            await transport.handleRequest(req, res, req.body);
+          } catch (transportError) {
+            const errorMessage = transportError instanceof Error ? transportError.message : String(transportError);
+            // Log connection closure errors but don't treat them as critical
+            if (errorMessage.includes('aborted') || errorMessage.includes('closed') || errorMessage.includes('ECONNRESET')) {
+              logger.warn({ sessionId, requestId, error: errorMessage }, 'Client connection closed during tool execution');
+            } else {
+              throw transportError;
+            }
+          }
           return;
         }
         sendErrorResponse(res, 404, -32000, 'Session not found', requestId);
@@ -246,9 +281,15 @@ function createApp(): express.Application {
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error({ error: errorMessage }, 'Error handling MCP request');
       const requestId = typeof req.body === 'object' && req.body !== null && 'id' in req.body ? req.body.id : null;
-      sendErrorResponse(res, 500, -32603, 'Internal server error', requestId);
+      
+      // Log connection closure errors but don't treat them as critical
+      if (errorMessage.includes('aborted') || errorMessage.includes('closed') || errorMessage.includes('ECONNRESET')) {
+        logger.warn({ requestId, error: errorMessage }, 'Client connection closed during request');
+      } else {
+        logger.error({ error: errorMessage, requestId }, 'Error handling MCP request');
+        sendErrorResponse(res, 500, -32603, 'Internal server error', requestId);
+      }
     }
   });
 
