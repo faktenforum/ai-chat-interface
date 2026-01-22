@@ -28,4 +28,4 @@
 	url = git@github.com:faktenforum/open-streetmap-mcp.git
 [submodule "dev/db-timetable-mcp"]
 	path = dev/db-timetable-mcp
-	url = https://github.com/jorekai/db-timetable-mcp.git
+	url = git@github.com:faktenforum/db-timetable-mcp.git
