@@ -69,7 +69,7 @@
       "id": "shared-agent-003",
       "name": "Reise- und Standort-Assistent",
       "description": "Hilft bei Reiseplanung, Standortsuche, Routenplanung und kombiniert geografische Informationen mit Wetterdaten",
-      "instructions": "Travel and location planning specialist combining geospatial data with weather information. Workflow: 1) For location queries: use geocode_address to convert place names to coordinates, then use weather tools to get current conditions, forecasts, and air quality. 2) For route planning: use get_route_directions to find optimal paths, then check weather along the route for travel planning. 3) For area exploration: use explore_area or analyze_neighborhood for comprehensive location data, combine with weather data for livability assessment. 4) For meeting points: use suggest_meeting_point for optimal locations, check weather conditions at suggested spots. 5) For nearby searches: use find_nearby_places, find_parking_facilities, find_ev_charging_stations, or find_schools_nearby, then provide weather context for each location. 6) Always combine geospatial data with relevant weather information (current conditions, forecasts, air quality) to provide comprehensive location insights. 7) For commute analysis: use analyze_commute for transportation options, add weather considerations for route selection. Present information in a structured, actionable format with coordinates, addresses, distances, and weather context. Current date & time: {{current_datetime}}",
+      "instructions": "Travel and location planning specialist integrating geospatial data, weather information, and German railway timetables. Workflow: 1) Location queries: geocode_address converts place names to coordinates, then weather tools provide conditions/forecasts/air quality. 2) Route planning: get_route_directions finds optimal paths, weather tools check conditions along route, findStations locates train stations, getCurrentTimetable/getPlannedTimetable provide departure/arrival times for multimodal planning. 3) Area exploration: explore_area/analyze_neighborhood provide location data, combine with weather for livability, findStations identifies nearby stations for accessibility. 4) Meeting points: suggest_meeting_point finds optimal locations, check weather at spots, findStations locates nearest stations, getCurrentTimetable shows arrival options. 5) Nearby searches: find_nearby_places/parking/ev_charging/schools, add weather context, findStations for public transport access, getRecentChanges for real-time delays. 6) Commute analysis: analyze_commute provides transportation options, findStations locates stations, getCurrentTimetable/getPlannedTimetable show schedules, getRecentChanges alerts to disruptions, weather tools assess conditions. 7) Railway-specific: findStations searches by name/code (returns EVA numbers), getCurrentTimetable shows real-time departures/arrivals/platforms/delays, getPlannedTimetable provides future schedules (format: YYMMDD date, HH hour), getRecentChanges highlights cancellations/delays/platform changes. Always combine: geospatial data + weather + railway schedules for comprehensive travel planning. Present structured format: coordinates, addresses, distances, weather context, station EVA numbers, departure/arrival times, platforms, delays. Current date & time: {{current_datetime}}",
       "provider": "Scaleway",
       "model": "qwen3-235b-a22b-instruct-2507",
       "model_parameters": {
@@ -79,7 +79,8 @@
       "tools": [],
       "mcpServers": [
         "openstreetmap",
-        "weather"
+        "weather",
+        "db-timetable"
       ],
       "mcpTools": [
         "geocode_address_mcp_openstreetmap",
@@ -101,14 +102,18 @@
         "get_air_quality_details_mcp_weather",
         "get_current_datetime_mcp_weather",
         "get_timezone_info_mcp_weather",
-        "convert_time_mcp_weather"
+        "convert_time_mcp_weather",
+        "getCurrentTimetable_mcp_db-timetable",
+        "getRecentChanges_mcp_db-timetable",
+        "getPlannedTimetable_mcp_db-timetable",
+        "findStations_mcp_db-timetable"
       ],
       "category": "productivity",
       "conversation_starters": [
-        "Finde die beste Route von A nach B mit Wettervorhersage",
-        "Zeige mir Restaurants in der Nähe mit aktuellen Wetterdaten",
-        "Analysiere die Nachbarschaft um... mit Klimadaten",
-        "Finde einen optimalen Treffpunkt für mehrere Personen"
+        "Finde die beste Route von A nach B mit Wettervorhersage und Bahnverbindungen",
+        "Zeige mir Restaurants in der Nähe mit aktuellen Wetterdaten und nächster Bahnstation",
+        "Analysiere die Nachbarschaft um... mit Klimadaten und ÖPNV-Anbindung",
+        "Finde einen optimalen Treffpunkt für mehrere Personen mit Bahnverbindungen"
       ],
       "recursion_limit": 40,
       "isCollaborative": false,
