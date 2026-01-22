@@ -1,7 +1,8 @@
 services:
   mcp-openstreetmap:
     # Internal service only - not exposed via Traefik
-    # Build section is defined in extension files (docker-compose.local.yml, etc.)
+    # For local development, build section is used automatically
+    # For production/Portainer, build section is defined in docker-compose.prod.yml
     # Fallback image (used if build fails or for local testing without build)
     image: python:3.13-slim
     container_name: mcp-openstreetmap
@@ -14,8 +15,7 @@ services:
     networks:
       - app-net
     healthcheck:
-      # OpenStreetMap MCP server uses HTTP transport
-      # Using socket connectivity check (no /health endpoint available)
+      # Socket connectivity check (no /health endpoint available)
       test: ["CMD-SHELL", "python -c 'import socket; s=socket.socket(); s.settimeout(1); result=s.connect_ex((\"localhost\", ${MCP_OPENSTREETMAP_PORT:-3004})); s.close(); exit(0 if result == 0 else 1)'"]
       interval: 30s
       timeout: 10s

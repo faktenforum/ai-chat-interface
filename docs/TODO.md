@@ -78,8 +78,8 @@
 - [ ] Update OpenStreetMap MCP server to use official version after PR merge
   - Status: Currently using fork `faktenforum/open-streetmap-mcp` with merged `bump-fastmcp` branch
   - Fork includes HTTP transport support and Dockerfile from PR [#10](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/10)
-  - Dependencies patch (removed `dependencies` parameter) committed to fork
-  - Once PR #10 is merged upstream, consider switching to official version
+  - Our improvements submitted as PR [#11](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/11): Docker port configuration and FastMCP 0.2.0+ compatibility
+  - Once PRs #10 and #11 are merged upstream, consider switching to official version
 
 ---
 
