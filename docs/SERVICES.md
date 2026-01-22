@@ -20,6 +20,7 @@ This document provides an overview of all services in the AI Chat Interface stac
 | **MCP Calculator** | MCP server providing calculator tools for LibreChat agents | ❌ | ❌ | ✅ Internal only |
 | **MCP Image Generation** | MCP server providing image generation via OpenRouter API | ❌ | ❌ | ✅ Internal only |
 | **MCP Firecrawl** | MCP server providing web scraping tools for LibreChat agents | ❌ | ❌ | ✅ Internal only |
+| **MCP Weather** | MCP server providing weather, air quality, and timezone tools for LibreChat agents | ❌ | ❌ | ✅ Internal only |
 | **Firecrawl Services** | Internal Firecrawl dependencies | ❌ | ❌ | ✅ Internal only |
 | - playwright-service | Browser automation | ❌ | ❌ | ✅ Internal only |
 | - redis | Firecrawl cache/queue | ❌ | ❌ | ✅ Internal only |
@@ -121,6 +122,17 @@ This document provides an overview of all services in the AI Chat Interface stac
 - **Tools**: `firecrawl_scrape`, `firecrawl_batch_scrape`, `firecrawl_map`, `firecrawl_crawl`, `firecrawl_search`, `firecrawl_extract`
 - **Image**: `ghcr.io/firecrawl/firecrawl-mcp-server:latest`
 
+#### MCP Weather
+- **Purpose**: MCP server providing weather, air quality, and timezone tools for LibreChat agents
+- **Network**: `app-net` only
+- **Access**: Only accessible from LibreChat API
+- **Tools**: 
+  - Weather: `get_current_weather`, `get_weather_by_datetime_range`, `get_weather_details`
+  - Air Quality: `get_air_quality`, `get_air_quality_details`
+  - Timezone: `get_current_datetime`, `get_timezone_info`, `convert_time`
+- **Image**: `dog830228/mcp_weather_server:latest`
+- **API**: Free Open-Meteo API (no API key required)
+
 #### Firecrawl Internal Services
 - **playwright-service**: Browser automation for web scraping
 - **redis**: Cache and queue management
@@ -138,7 +150,7 @@ This document provides an overview of all services in the AI Chat Interface stac
 
 2. **`app-net`** (Bridge network)
    - LibreChat ecosystem internal communication
-   - LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API, n8n, n8n-init, n8n PostgreSQL, MCP Calculator, MCP Image Generation, MCP Firecrawl
+   - LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API, n8n, n8n-init, n8n PostgreSQL, MCP Calculator, MCP Image Generation, MCP Firecrawl, MCP Weather
 
 3. **`firecrawl-network`** (Bridge network)
    - Firecrawl internal services only

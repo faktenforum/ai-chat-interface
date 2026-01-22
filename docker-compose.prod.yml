@@ -181,6 +181,11 @@ services:
     pull_policy: build
     # No Traefik labels - internal service only
 
+  mcp-weather:
+    extends: { file: docker-compose.mcp-weather.yml, service: mcp-weather }
+    container_name: ${STACK_NAME:-prod}-mcp-weather
+    # No Traefik labels - internal service only
+
 networks:
   traefik-net:
     external: true

@@ -1,0 +1,37 @@
+services:
+  mcp-weather:
+    # Internal service only - not exposed via Traefik
+    # Uses published Docker image with streamable-http support
+    image: dog830228/mcp_weather_server:latest
+    container_name: mcp-weather
+    restart: always
+    command: ["sh", "-c", "uv run python -m mcp_weather_server --mode streamable-http --host 0.0.0.0 --port $${MCP_WEATHER_PORT:-3005}"]
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      MCP_WEATHER_PORT: ${MCP_WEATHER_PORT:-3005}
+    expose:
+      - "3005"
+    networks:
+      - app-net
+    healthcheck:
+      # Socket connectivity check (no HTTP health endpoint available)
+      test: ["CMD-SHELL", "python -c 'import socket; s=socket.socket(); s.settimeout(1); result=s.connect_ex((\"localhost\", 3005)); s.close(); exit(0 if result == 0 else 1)'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    read_only: false
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"

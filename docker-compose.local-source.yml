@@ -183,6 +183,11 @@ services:
       dockerfile: Dockerfile
     # No Traefik labels - internal service only
 
+  mcp-weather:
+    extends: { file: docker-compose.mcp-weather.yml, service: mcp-weather }
+    env_file: .env.local
+    # No Traefik labels - internal service only
+
   # Additional Services
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }

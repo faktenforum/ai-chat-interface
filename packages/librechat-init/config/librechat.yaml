@@ -494,6 +494,7 @@ mcpSettings:
     - 'mcp-image-gen'            # MCP Image Generation service (Docker network)
     - 'mcp-firecrawl'           # MCP Firecrawl service (Docker network)
     - 'mcp-openstreetmap'       # MCP OpenStreetMap service (Docker network)
+    - 'mcp-weather'             # MCP Weather service (Docker network)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
     # - 'http://internal:8080'    # Protocol and port restricted
@@ -533,7 +534,18 @@ mcpServers:
     iconPath: /images/mcp-openstreetmap-icon.svg
     initTimeout: 120000
     chatMenu: true
-    startup: false
+    startup: true
+    serverInstructions: true
+
+  weather:
+    type: streamable-http
+    url: http://mcp-weather:3005/mcp
+    title: Wetter
+    description: Aktuelle Wetterdaten, Luftqualität und Zeitzoneninformationen
+    iconPath: /images/mcp-weather-icon.svg
+    initTimeout: 120000
+    chatMenu: true
+    startup: true
     serverInstructions: true
 
   # This MCP tool is very helpful when special URLs need to be read. Unfortunately, the connection to the MCP server is currently too unstable and has therefore been deactivated for the time being.
