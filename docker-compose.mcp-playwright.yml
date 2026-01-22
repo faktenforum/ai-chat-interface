@@ -15,8 +15,8 @@ services:
     networks:
       - app-net
     healthcheck:
-      # HTTP health endpoint check (port matches MCP_PLAYWRIGHT_PORT default: 3006)
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3006/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      # Socket connectivity check (no /health endpoint available in Microsoft Playwright MCP server)
+      test: ["CMD", "node", "-e", "const net = require('net'); const socket = new net.Socket(); socket.setTimeout(5000); socket.once('connect', () => { socket.destroy(); process.exit(0); }); socket.once('error', () => process.exit(1)); socket.once('timeout', () => { socket.destroy(); process.exit(1); }); socket.connect(3006, 'localhost');"]
       interval: 30s
       timeout: 10s
       retries: 3
