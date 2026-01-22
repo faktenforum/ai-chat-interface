@@ -495,6 +495,7 @@ mcpSettings:
     - 'mcp-firecrawl'           # MCP Firecrawl service (Docker network)
     - 'mcp-openstreetmap'       # MCP OpenStreetMap service (Docker network)
     - 'mcp-weather'             # MCP Weather service (Docker network)
+    - 'mcp-playwright'          # MCP Playwright service (Docker network)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
     # - 'http://internal:8080'    # Protocol and port restricted
@@ -543,6 +544,17 @@ mcpServers:
     title: Wetter
     description: Aktuelle Wetterdaten, Luftqualität und Zeitzoneninformationen
     iconPath: /images/mcp-weather-icon.svg
+    initTimeout: 120000
+    chatMenu: true
+    startup: true
+    serverInstructions: true
+
+  playwright:
+    type: streamable-http
+    url: http://mcp-playwright:3006/mcp
+    title: Browser Automatisierung
+    description: Webseiten durchsuchen, interagieren und automatisieren
+    iconPath: /images/mcp-playwright-icon.svg
     initTimeout: 120000
     chatMenu: true
     startup: true

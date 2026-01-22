@@ -80,6 +80,9 @@
   - Fork includes HTTP transport support and Dockerfile from PR [#10](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/10)
   - Our improvements submitted as PR [#11](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/11): Docker port configuration and FastMCP 0.2.0+ compatibility
   - Once PRs #10 and #11 are merged upstream, consider switching to official version
+- [ ] Playwright MCP: Screenshot responses mix Markdown/JSON format
+  - Issue: [microsoft/playwright-mcp#1324](https://github.com/microsoft/playwright-mcp/issues/1324)
+  - Workaround: Using `--image-responses omit` (removes images from responses)
 
 ---
 

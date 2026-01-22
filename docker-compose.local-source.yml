@@ -44,7 +44,6 @@ services:
     volumes:
       - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
-    volumes:
       - librechat-config:/app/config
       - ./logs:/logs
       - ./images:/images
@@ -178,6 +177,8 @@ services:
     extends: { file: docker-compose.mcp-openstreetmap.yml, service: mcp-openstreetmap }
     env_file: .env.local
     # Build from submodule Dockerfile (like rag_api)
+    # Use unique image name to avoid layering on top of base image (python:3.13-slim)
+    image: ghcr.io/faktenforum/mcp-openstreetmap:latest
     build:
       context: ./dev/open-streetmap-mcp
       dockerfile: Dockerfile
@@ -185,6 +186,11 @@ services:
 
   mcp-weather:
     extends: { file: docker-compose.mcp-weather.yml, service: mcp-weather }
+    env_file: .env.local
+    # No Traefik labels - internal service only
+
+  mcp-playwright:
+    extends: { file: docker-compose.mcp-playwright.yml, service: mcp-playwright }
     env_file: .env.local
     # No Traefik labels - internal service only
 

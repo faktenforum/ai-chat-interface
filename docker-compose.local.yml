@@ -185,6 +185,11 @@ services:
     env_file: .env.local
     # No Traefik labels - internal service only
 
+  mcp-playwright:
+    extends: { file: docker-compose.mcp-playwright.yml, service: mcp-playwright }
+    env_file: .env.local
+    # No Traefik labels - internal service only
+
   # Additional Services
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }
