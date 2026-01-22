@@ -124,6 +124,10 @@ const PROMPTS: Record<string, PromptConfig> = {
     'LIBRECHAT_JINA_API_KEY': { message: 'Jina API Key (optional, press enter to skip):', type: 'input' },
     'LIBRECHAT_OCR_API_KEY': { message: 'Mistral OCR API Key (optional, press enter to skip):', type: 'password' },
 
+    // DB Timetable MCP Server
+    'MCP_DB_TIMETABLE_CLIENT_ID': { message: 'DB Timetable API Client ID (optional, press enter to skip):', type: 'input' },
+    'MCP_DB_TIMETABLE_CLIENT_SECRET': { message: 'DB Timetable API Client Secret (optional, press enter to skip):', type: 'password' },
+
     // Mongo (using --noauth, so INITDB credentials not needed)
     'LIBRECHAT_MONGO_DATABASE': { message: 'Mongo Database Name:', type: 'input', defaultGen: () => 'librechat' },
 

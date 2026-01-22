@@ -194,6 +194,17 @@ services:
     env_file: .env.local
     # No Traefik labels - internal service only
 
+  mcp-db-timetable:
+    extends: { file: docker-compose.mcp-db-timetable.yml, service: mcp-db-timetable }
+    env_file: .env.local
+    # Build from submodule Dockerfile (like rag_api)
+    # Use unique image name to avoid layering on top of base image (node:25-alpine)
+    image: ghcr.io/faktenforum/mcp-db-timetable:latest
+    build:
+      context: ./dev/db-timetable-mcp
+      dockerfile: Dockerfile
+    # No Traefik labels - internal service only
+
   # Additional Services
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }

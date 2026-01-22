@@ -496,6 +496,7 @@ mcpSettings:
     - 'mcp-openstreetmap'       # MCP OpenStreetMap service (Docker network)
     - 'mcp-weather'             # MCP Weather service (Docker network)
     - 'mcp-playwright'          # MCP Playwright service (Docker network)
+    - 'mcp-db-timetable'        # MCP DB Timetable service (Docker network)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
     # - 'http://internal:8080'    # Protocol and port restricted
@@ -534,7 +535,7 @@ mcpServers:
     description: Geografische Suche, Routenplanung und Standortinformationen
     iconPath: /images/mcp-openstreetmap-icon.svg
     initTimeout: 120000
-    chatMenu: true
+    chatMenu: false
     startup: true
     serverInstructions: true
 
@@ -545,7 +546,7 @@ mcpServers:
     description: Aktuelle Wetterdaten, Luftqualität und Zeitzoneninformationen
     iconPath: /images/mcp-weather-icon.svg
     initTimeout: 120000
-    chatMenu: true
+    chatMenu: false
     startup: true
     serverInstructions: true
 
@@ -555,6 +556,17 @@ mcpServers:
     title: Browser Automatisierung
     description: Webseiten durchsuchen, interagieren und automatisieren
     iconPath: /images/mcp-playwright-icon.svg
+    initTimeout: 120000
+    chatMenu: false
+    startup: false
+    serverInstructions: true
+
+  db-timetable:
+    type: streamable-http
+    url: http://mcp-db-timetable:3007/sse
+    title: DB Fahrplan
+    description: Aktuelle Fahrpläne, Stationssuche und Zugverbindungen der Deutschen Bahn
+    iconPath: /images/mcp-db-timetable-icon.svg
     initTimeout: 120000
     chatMenu: true
     startup: true

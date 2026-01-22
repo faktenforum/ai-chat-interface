@@ -189,6 +189,12 @@ services:
     container_name: ${STACK_NAME:-prod}-mcp-playwright
     # No Traefik labels - internal service only
 
+  mcp-db-timetable:
+    extends: { file: docker-compose.mcp-db-timetable.yml, service: mcp-db-timetable }
+    container_name: ${STACK_NAME:-prod}-mcp-db-timetable
+    image: ghcr.io/faktenforum/mcp-db-timetable:dev
+    # No Traefik labels - internal service only
+
 networks:
   traefik-net:
     external: true
