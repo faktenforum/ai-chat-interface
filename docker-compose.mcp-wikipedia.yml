@@ -1,0 +1,59 @@
+services:
+  mcp-wikipedia:
+    # Internal service only - not exposed via Traefik
+    # For local development, build section is used automatically
+    # For production/Portainer, build section is defined in docker-compose.prod.yml
+    # Fallback image (used if build fails or for local testing without build)
+    # Note: Using Python base image with pip install at runtime
+    # For better performance, consider building a custom image with pre-installed package
+    # Updated to Python 3.12 (stable, well-supported) - Python 3.14 is latest but 3.12 is more stable
+    image: python:3.12-slim
+    container_name: mcp-wikipedia
+    restart: always
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${MCP_WIKIPEDIA_PORT:-3002}
+      HOST: 0.0.0.0
+      # Optional: Wikipedia Personal Access Token (to avoid rate limiting)
+      WIKIPEDIA_ACCESS_TOKEN: ${MCP_WIKIPEDIA_ACCESS_TOKEN:-}
+      # Optional: Wikipedia language code (default: en)
+      WIKIPEDIA_LANGUAGE: ${MCP_WIKIPEDIA_LANGUAGE:-en}
+      # Optional: Enable caching for improved performance
+      WIKIPEDIA_ENABLE_CACHE: ${MCP_WIKIPEDIA_ENABLE_CACHE:-false}
+    expose:
+      - "3002"
+    networks:
+      - app-net
+    # Command to run Wikipedia MCP server with SSE transport
+    # Note: Package is installed at runtime for simplicity
+    # For production, consider building a custom image with pre-installed package
+    # The server automatically reads WIKIPEDIA_ACCESS_TOKEN and WIKIPEDIA_LANGUAGE from environment
+    # Using PORT environment variable from shell ($$PORT) since Docker Compose already expanded ${PORT}
+    # Note: Using 'exec' to replace shell process, ensuring proper signal handling
+    # Upgrading fastmcp to latest version (v2.14.3+) to fix ASGI compatibility issues with LibreChat
+    command: ["/bin/sh", "-c", "pip install --no-cache-dir -q --upgrade fastmcp wikipedia-mcp && exec wikipedia-mcp --transport sse --host 0.0.0.0 --port \"$$PORT\""]
+    healthcheck:
+      # Wikipedia MCP server with SSE transport may not have a /health endpoint
+      # Using a simple connectivity check instead
+      test: ["CMD-SHELL", "python -c 'import socket; s=socket.socket(); s.settimeout(1); result=s.connect_ex((\"localhost\", ${MCP_WIKIPEDIA_PORT:-3002})); s.close(); exit(0 if result == 0 else 1)'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Security: read-only root filesystem where possible
+    read_only: false
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"

@@ -28,6 +28,7 @@ New to the project? Start here:
 - **[Cursor Rules](CURSOR_RULES.md)** - Using AI agents to integrate new services and MCP servers
 - **[Cursor MongoDB MCP](CURSOR_MONGODB_MCP.md)** - Connecting Cursor to local LibreChat MongoDB database
 - **[Agent Firecrawl Tools](AGENT_FIRECRAWL_TOOLS.md)** - Firecrawl MCP tool recommendations and testing guide
+- **[Agent Wikipedia Tools](AGENT_WIKIPEDIA_TOOLS.md)** - Wikipedia MCP tool recommendations and usage guide
 
 ## Project Management
 

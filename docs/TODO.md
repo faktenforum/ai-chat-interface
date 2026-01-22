@@ -75,6 +75,12 @@
   - The tool is very helpful for reading special URLs, but connection issues prevent reliable usage
   - Waiting for fix before re-enabling in `librechat.yaml` and `agents.json`
   - Related to SSE stream disconnection issue above
+- [ ] Re-enable Wikipedia MCP server after SSE transport compatibility issue is resolved
+  - Status: Currently disabled due to SSE transport compatibility issues between FastMCP and LibreChat
+  - The server runs correctly but LibreChat's SSE client closes the connection immediately
+  - Known issue: [LibreChat Discussion #10424](https://github.com/danny-avila/LibreChat/discussions/10424)
+  - Waiting for: Compatibility fix in LibreChat/FastMCP OR wikipedia-mcp streamable-http support
+  - Server container: Running successfully on port 3002
 
 ---
 

@@ -172,6 +172,11 @@ services:
     extends: { file: docker-compose.mcp-firecrawl.yml, service: mcp-firecrawl }
     container_name: ${STACK_NAME:-prod}-mcp-firecrawl
 
+  mcp-wikipedia:
+    extends: { file: docker-compose.mcp-wikipedia.yml, service: mcp-wikipedia }
+    container_name: ${STACK_NAME:-prod}-mcp-wikipedia
+    # No Traefik labels - internal service only
+
 networks:
   traefik-net:
     external: true

@@ -151,7 +151,7 @@ services:
 
   mongodb:
     container_name: mongodb
-    image: mongo
+    image: mongo:8.2
     restart: always
     user: "${UID:-1000}:${GID:-1000}"
     volumes:

@@ -493,6 +493,7 @@ mcpSettings:
     - 'mcp-calculator'           # MCP Calculator service (Docker network)
     - 'mcp-image-gen'            # MCP Image Generation service (Docker network)
     - 'mcp-firecrawl'           # MCP Firecrawl service (Docker network)
+    - 'mcp-wikipedia'           # MCP Wikipedia service (Docker network)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
     # - 'http://internal:8080'    # Protocol and port restricted
@@ -531,6 +532,22 @@ mcpServers:
   #   title: Web Scraping
   #   description: Webseiten scrapen, durchsuchen und analysieren
   #   iconPath: /images/mcp-firecrawl-icon.svg
+  #   initTimeout: 120000
+  #   chatMenu: true
+  #   startup: true
+  #   serverInstructions: true
+
+  # Wikipedia MCP Server - Currently disabled due to SSE transport compatibility issues
+  # The server runs correctly but LibreChat's SSE client closes the connection immediately
+  # This is a known issue with FastMCP and LibreChat's SSE transport implementation
+  # See: https://github.com/danny-avila/LibreChat/discussions/10424
+  # TODO: Re-enable when compatibility issue is resolved or when wikipedia-mcp supports streamable-http
+  # wikipedia:
+  #   type: sse
+  #   url: http://mcp-wikipedia:3002/sse
+  #   title: Wikipedia
+  #   description: Informationen aus Wikipedia abrufen und durchsuchen
+  #   iconPath: /images/mcp-wikipedia-icon.svg
   #   initTimeout: 120000
   #   chatMenu: true
   #   startup: true
