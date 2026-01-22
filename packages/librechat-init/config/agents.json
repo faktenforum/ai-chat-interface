@@ -15,17 +15,7 @@
         "web_search",
         "file_search"
       ],
-      // This MCP tool is very helpful when special URLs need to be read. Unfortunately, the connection to the MCP server is currently too unstable and has therefore been deactivated for the time being.
-      // "mcpServers": [
-      //   "firecrawl"
-      // ],
-      // "mcpTools": [
-      //   "firecrawl_scrape_mcp_firecrawl",
-      //   "firecrawl_extract_mcp_firecrawl",
-      //   "firecrawl_map_mcp_firecrawl",
-      //   "firecrawl_batch_scrape_mcp_firecrawl",
-      //   "firecrawl_crawl_mcp_firecrawl",
-      // ],
+      "mcpServers": [],
       "category": "general",
       "conversation_starters": [
         "Recherchiere aktuelle Informationen zu...",
@@ -69,6 +59,58 @@
         "Show me different styles for..."
       ],
       "recursion_limit": 25,
+      "isCollaborative": false,
+      "permissions": {
+        "public": true,
+        "publicEdit": false
+      }
+    },
+    {
+      "id": "shared-agent-003",
+      "name": "Reise- und Standort-Assistent",
+      "description": "Hilft bei Reiseplanung, Standortsuche, Routenplanung und kombiniert geografische Informationen mit Wetterdaten",
+      "instructions": "Travel and location planning specialist combining geospatial data with weather information. Workflow: 1) For location queries: use geocode_address to convert place names to coordinates, then use weather tools to get current conditions, forecasts, and air quality. 2) For route planning: use get_route_directions to find optimal paths, then check weather along the route for travel planning. 3) For area exploration: use explore_area or analyze_neighborhood for comprehensive location data, combine with weather data for livability assessment. 4) For meeting points: use suggest_meeting_point for optimal locations, check weather conditions at suggested spots. 5) For nearby searches: use find_nearby_places, find_parking_facilities, find_ev_charging_stations, or find_schools_nearby, then provide weather context for each location. 6) Always combine geospatial data with relevant weather information (current conditions, forecasts, air quality) to provide comprehensive location insights. 7) For commute analysis: use analyze_commute for transportation options, add weather considerations for route selection. Present information in a structured, actionable format with coordinates, addresses, distances, and weather context. Current date & time: {{current_datetime}}",
+      "provider": "Scaleway",
+      "model": "qwen3-235b-a22b-instruct-2507",
+      "model_parameters": {
+        "temperature": 0.6,
+        "top_p": 0.9
+      },
+      "tools": [],
+      "mcpServers": [
+        "openstreetmap",
+        "weather"
+      ],
+      "mcpTools": [
+        "geocode_address_mcp_openstreetmap",
+        "reverse_geocode_mcp_openstreetmap",
+        "find_nearby_places_mcp_openstreetmap",
+        "get_route_directions_mcp_openstreetmap",
+        "search_category_mcp_openstreetmap",
+        "suggest_meeting_point_mcp_openstreetmap",
+        "explore_area_mcp_openstreetmap",
+        "find_schools_nearby_mcp_openstreetmap",
+        "analyze_commute_mcp_openstreetmap",
+        "find_ev_charging_stations_mcp_openstreetmap",
+        "analyze_neighborhood_mcp_openstreetmap",
+        "find_parking_facilities_mcp_openstreetmap",
+        "get_current_weather_mcp_weather",
+        "get_weather_byDateTimeRange_mcp_weather",
+        "get_weather_details_mcp_weather",
+        "get_air_quality_mcp_weather",
+        "get_air_quality_details_mcp_weather",
+        "get_current_datetime_mcp_weather",
+        "get_timezone_info_mcp_weather",
+        "convert_time_mcp_weather"
+      ],
+      "category": "productivity",
+      "conversation_starters": [
+        "Finde die beste Route von A nach B mit Wettervorhersage",
+        "Zeige mir Restaurants in der Nähe mit aktuellen Wetterdaten",
+        "Analysiere die Nachbarschaft um... mit Klimadaten",
+        "Finde einen optimalen Treffpunkt für mehrere Personen"
+      ],
+      "recursion_limit": 40,
       "isCollaborative": false,
       "permissions": {
         "public": true,
