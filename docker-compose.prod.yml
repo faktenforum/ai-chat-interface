@@ -172,6 +172,15 @@ services:
     extends: { file: docker-compose.mcp-firecrawl.yml, service: mcp-firecrawl }
     container_name: ${STACK_NAME:-prod}-mcp-firecrawl
 
+  mcp-openstreetmap:
+    extends: { file: docker-compose.mcp-openstreetmap.yml, service: mcp-openstreetmap }
+    container_name: ${STACK_NAME:-prod}-mcp-openstreetmap
+    build:
+      context: ./dev/open-streetmap-mcp
+      dockerfile: Dockerfile
+    pull_policy: build
+    # No Traefik labels - internal service only
+
 networks:
   traefik-net:
     external: true

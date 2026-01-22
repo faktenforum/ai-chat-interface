@@ -75,6 +75,11 @@
   - The tool is very helpful for reading special URLs, but connection issues prevent reliable usage
   - Waiting for fix before re-enabling in `librechat.yaml` and `agents.json`
   - Related to SSE stream disconnection issue above
+- [ ] Update OpenStreetMap MCP server to use official version after PR merge
+  - Status: Currently using fork `faktenforum/open-streetmap-mcp` with merged `bump-fastmcp` branch
+  - Fork includes HTTP transport support and Dockerfile from PR [#10](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/10)
+  - Dependencies patch (removed `dependencies` parameter) committed to fork
+  - Once PR #10 is merged upstream, consider switching to official version
 
 ---
 

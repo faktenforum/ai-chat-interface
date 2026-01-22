@@ -13,6 +13,7 @@ This project includes the following git submodules:
 - **dev/firecrawl** - Firecrawl web scraping service
 - **dev/searxng** - SearXNG metasearch engine (reference only - uses official Docker image)
 - **dev/n8n** - n8n workflow automation platform
+- **dev/open-streetmap-mcp** - OpenStreetMap MCP server (fork with HTTP transport support)
 
 ## Documentation
 

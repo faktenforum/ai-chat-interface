@@ -493,6 +493,7 @@ mcpSettings:
     - 'mcp-calculator'           # MCP Calculator service (Docker network)
     - 'mcp-image-gen'            # MCP Image Generation service (Docker network)
     - 'mcp-firecrawl'           # MCP Firecrawl service (Docker network)
+    - 'mcp-openstreetmap'       # MCP OpenStreetMap service (Docker network)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
     # - 'http://internal:8080'    # Protocol and port restricted
@@ -522,6 +523,17 @@ mcpServers:
     initTimeout: 180000
     chatMenu: false
     startup: true
+    serverInstructions: true
+
+  openstreetmap:
+    type: streamable-http
+    url: http://mcp-openstreetmap:3004/mcp
+    title: OpenStreetMap
+    description: Geografische Suche, Routenplanung und Standortinformationen
+    iconPath: /images/mcp-openstreetmap-icon.svg
+    initTimeout: 120000
+    chatMenu: true
+    startup: false
     serverInstructions: true
 
   # This MCP tool is very helpful when special URLs need to be read. Unfortunately, the connection to the MCP server is currently too unstable and has therefore been deactivated for the time being.

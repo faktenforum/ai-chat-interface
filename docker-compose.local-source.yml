@@ -174,6 +174,15 @@ services:
     extends: { file: docker-compose.mcp-firecrawl.yml, service: mcp-firecrawl }
     env_file: .env.local
 
+  mcp-openstreetmap:
+    extends: { file: docker-compose.mcp-openstreetmap.yml, service: mcp-openstreetmap }
+    env_file: .env.local
+    # Build from submodule Dockerfile (like rag_api)
+    build:
+      context: ./dev/open-streetmap-mcp
+      dockerfile: Dockerfile
+    # No Traefik labels - internal service only
+
   # Additional Services
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }
