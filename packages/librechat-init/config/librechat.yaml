@@ -497,6 +497,7 @@ mcpSettings:
     - 'mcp-weather'             # MCP Weather service (Docker network)
     - 'mcp-playwright'          # MCP Playwright service (Docker network)
     - 'mcp-db-timetable'        # MCP DB Timetable service (Docker network)
+    - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
     # - 'http://internal:8080'    # Protocol and port restricted
@@ -567,6 +568,20 @@ mcpServers:
     title: DB Fahrplan
     description: Aktuelle Fahrpläne, Stationssuche und Zugverbindungen der Deutschen Bahn
     iconPath: /images/mcp-db-timetable-icon.svg
+    initTimeout: 120000
+    chatMenu: false
+    startup: true
+    serverInstructions: true
+
+  github:
+    type: streamable-http
+    url: https://api.githubcopilot.com/mcp/
+    title: GitHub
+    description: Repository-Verwaltung, Issues, Pull Requests und Code-Analyse
+    iconPath: /images/mcp-github-icon.svg
+    headers:
+      Authorization: "Bearer ${GITHUB_MCP_PAT}"
+      X-MCP-Readonly: "true"
     initTimeout: 120000
     chatMenu: true
     startup: true
