@@ -81,6 +81,11 @@
   - Known issue: [LibreChat Discussion #10424](https://github.com/danny-avila/LibreChat/discussions/10424)
   - Monitor for: Compatibility fixes in LibreChat/FastMCP OR wikipedia-mcp streamable-http support
   - Server container: Running successfully on port 3002
+- [ ] Update OpenStreetMap MCP server to use official version after PR merge
+  - Status: Currently using fork `faktenforum/open-streetmap-mcp` with merged `bump-fastmcp` branch
+  - Fork includes HTTP transport support and Dockerfile from PR [#10](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/10)
+  - Our improvements submitted as PR [#11](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/11): Docker port configuration and FastMCP 0.2.0+ compatibility
+  - Once PRs #10 and #11 are merged upstream, consider switching to official version
 
 ---
 

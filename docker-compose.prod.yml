@@ -177,6 +177,15 @@ services:
     container_name: ${STACK_NAME:-prod}-mcp-wikipedia
     # No Traefik labels - internal service only
 
+  mcp-openstreetmap:
+    extends: { file: docker-compose.mcp-openstreetmap.yml, service: mcp-openstreetmap }
+    container_name: ${STACK_NAME:-prod}-mcp-openstreetmap
+    build:
+      context: ./dev/open-streetmap-mcp
+      dockerfile: Dockerfile
+    pull_policy: build
+    # No Traefik labels - internal service only
+
 networks:
   traefik-net:
     external: true
