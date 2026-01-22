@@ -26,3 +26,6 @@
 [submodule "dev/open-streetmap-mcp"]
 	path = dev/open-streetmap-mcp
 	url = git@github.com:faktenforum/open-streetmap-mcp.git
+[submodule "dev/db-timetable-mcp"]
+	path = dev/db-timetable-mcp
+	url = https://github.com/jorekai/db-timetable-mcp.git
