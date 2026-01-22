@@ -537,21 +537,22 @@ mcpServers:
   #   startup: true
   #   serverInstructions: true
 
-  # Wikipedia MCP Server - Currently disabled due to SSE transport compatibility issues
-  # The server runs correctly but LibreChat's SSE client closes the connection immediately
+  # Wikipedia MCP Server
+  # Note: Currently experiencing SSE transport compatibility issues with LibreChat
+  # The server runs correctly but LibreChat's SSE client may close the connection immediately
   # This is a known issue with FastMCP and LibreChat's SSE transport implementation
   # See: https://github.com/danny-avila/LibreChat/discussions/10424
-  # TODO: Re-enable when compatibility issue is resolved or when wikipedia-mcp supports streamable-http
-  # wikipedia:
-  #   type: sse
-  #   url: http://mcp-wikipedia:3002/sse
-  #   title: Wikipedia
-  #   description: Informationen aus Wikipedia abrufen und durchsuchen
-  #   iconPath: /images/mcp-wikipedia-icon.svg
-  #   initTimeout: 120000
-  #   chatMenu: true
-  #   startup: true
-  #   serverInstructions: true
+  # TODO: Test again when compatibility issue is resolved or when wikipedia-mcp supports streamable-http
+  wikipedia:
+    type: sse
+    url: http://mcp-wikipedia:3002/sse
+    title: Wikipedia
+    description: Informationen aus Wikipedia abrufen und durchsuchen
+    iconPath: /images/mcp-wikipedia-icon.svg
+    initTimeout: 120000
+    chatMenu: true
+    startup: true
+    serverInstructions: true
 
 # n8n MCP Server Integration (Future - disabled)
 # To integrate n8n workflows with LibreChat Agents via MCP:

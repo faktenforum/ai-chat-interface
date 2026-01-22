@@ -2,21 +2,26 @@
 
 Tool recommendations and usage guide for Wikipedia MCP server integration.
 
-## ⚠️ Current Status: Disabled
+## ⚠️ Current Status: Active but May Experience Connection Issues
 
-**The Wikipedia MCP server is currently disabled due to SSE transport compatibility issues between FastMCP and LibreChat.**
+**The Wikipedia MCP server is configured and active, but may experience SSE transport compatibility issues with LibreChat.**
 
-The server runs correctly and responds to requests, but LibreChat's SSE client closes the connection immediately after establishing it. This is a known compatibility issue with FastMCP-based servers and LibreChat's SSE transport implementation.
+The server runs correctly and responds to requests, but LibreChat's SSE client may close the connection immediately after establishing it. This is a known compatibility issue with FastMCP-based servers and LibreChat's SSE transport implementation.
 
 **Related Issues:**
 - [LibreChat Discussion #10424](https://github.com/danny-avila/LibreChat/discussions/10424) - Streamable-HTTP Transport Closes Immediately
 - [LibreChat Discussion #9621](https://github.com/danny-avila/LibreChat/discussions/9621) - Transport error: SSE stream disconnected
 
-**Workaround:** The server can be re-enabled once:
-1. The compatibility issue is resolved in LibreChat or FastMCP
-2. Or wikipedia-mcp adds support for streamable-http transport (newer MCP spec)
+**Testing:** If you encounter connection issues:
+1. Check LibreChat logs for SSE connection errors
+2. Verify the server container is running: `docker ps | grep wikipedia`
+3. Check server logs: `docker logs mcp-wikipedia`
 
-**Server Status:** The Docker container runs successfully, but the MCP connection fails during initialization.
+**Future Improvements:**
+- Wait for compatibility fix in LibreChat or FastMCP
+- Or wait for wikipedia-mcp to add streamable-http transport support (newer MCP spec)
+
+**Server Status:** The Docker container runs successfully. Connection stability may vary depending on LibreChat/FastMCP compatibility.
 
 ## Available Tools
 
