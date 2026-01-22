@@ -23,3 +23,6 @@
 [submodule "dev/n8n"]
 	path = dev/n8n
 	url = git@github.com:n8n-io/n8n.git
+[submodule "dev/open-streetmap-mcp"]
+	path = dev/open-streetmap-mcp
+	url = git@github.com:faktenforum/open-streetmap-mcp.git
