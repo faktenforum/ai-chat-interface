@@ -40,7 +40,7 @@ Agents are defined in two files (both optional):
 1. **`config/agents.json`** - Shared agents (committed to repository)
 2. **`config/agents.private.json`** - Private agents (git-ignored, instance-specific)
 
-**MCP Server Support:** Specify `mcpServers` array to automatically include all tools from MCP servers.
+**MCP Server Support:** Specify `mcpServers` to include MCP server tools. Optionally specify `mcpTools` to explicitly enable specific tools.
 
 Example:
 
@@ -49,16 +49,19 @@ Example:
   "agents": [
     {
       "name": "Research Assistant",
-      "description": "Helps with research",
-      "instructions": "System instructions",
       "provider": "Scaleway",
       "model": "mistral-small-3.2-24b-instruct-2506",
       "tools": ["web_search", "file_search"],
+      "mcpServers": ["firecrawl"],
+      "mcpTools": ["firecrawl_search_mcp_firecrawl", "firecrawl_scrape_mcp_firecrawl"],
+      "permissions": { "public": true }
+    },
+    {
+      "name": "Image Generator",
+      "provider": "OpenRouter",
+      "model": "anthropic/claude-sonnet-4.5",
       "mcpServers": ["image-gen"],
-      "permissions": {
-        "public": true,
-        "publicEdit": false
-      }
+      "permissions": { "public": true }
     }
   ]
 }
@@ -67,8 +70,9 @@ Example:
 **Key fields:**
 - `provider`: Must match a configured endpoint name
 - `model`: Model identifier for the provider
-- `tools`: Array of tool identifiers
-- `mcpServers`: Array of MCP server names (all tools automatically added)
+- `tools`: Array of non-MCP tool identifiers
+- `mcpServers`: Array of MCP server names. If `mcpTools` is omitted, all tools from the server are loaded at runtime.
+- `mcpTools`: Optional array of explicit MCP tool keys (format: `toolName_mcp_serverName`). If specified, only these tools are enabled.
 - `permissions.owner`: Optional email for owner permissions (defaults to system user)
 - `permissions.public`: If `true`, grants public VIEW access
 - `permissions.publicEdit`: If `true` and `isCollaborative: true`, grants public EDIT access

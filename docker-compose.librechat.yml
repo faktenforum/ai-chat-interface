@@ -62,6 +62,12 @@ services:
     image: ghcr.io/danny-avila/librechat:v0.8.2-rc3
     restart: always
     user: "${UID:-1000}:${GID:-1000}"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
     environment:
       HOST: ${LIBRECHAT_HOST:-0.0.0.0}
       MONGO_URI: ${LIBRECHAT_MONGO_URI}

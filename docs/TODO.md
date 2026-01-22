@@ -68,7 +68,13 @@
 - [ ] Fix negative max_tokens error with Scaleway/Mistral provider
   - LibreChat issue [#11435](https://github.com/danny-avila/LibreChat/issues/11435)
 - [ ] Reduce SSE stream disconnection error logs
-  - Investigate if this is expected LibreChat behavior or if server-side improvements can reduce connection churn
+  - Known issue: `streamable-http` MCP servers use stateless HTTP POST while LibreChat's `StreamableHTTPClientTransport` attempts SSE streams, causing "Bad Request" errors. Servers function correctly. Log rotation configured.
+  - Related: [LibreChat Discussion #11230](https://github.com/danny-avila/LibreChat/discussions/11230)
+- [ ] Re-enable Firecrawl MCP server after connection stability is fixed
+  - Status: Currently disabled due to unstable connection to MCP server
+  - The tool is very helpful for reading special URLs, but connection issues prevent reliable usage
+  - Waiting for fix before re-enabling in `librechat.yaml` and `agents.json`
+  - Related to SSE stream disconnection issue above
 
 ---
 

@@ -492,6 +492,7 @@ mcpSettings:
     - 'localhost'               # Local development
     - 'mcp-calculator'           # MCP Calculator service (Docker network)
     - 'mcp-image-gen'            # MCP Image Generation service (Docker network)
+    - 'mcp-firecrawl'           # MCP Firecrawl service (Docker network)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
     # - 'http://internal:8080'    # Protocol and port restricted
@@ -509,7 +510,7 @@ mcpServers:
     iconPath: /images/mcp-calculator-icon.svg
     initTimeout: 120000
     chatMenu: false
-    startup: true
+    startup: false
     serverInstructions: true
 
   image-gen:
@@ -522,6 +523,18 @@ mcpServers:
     chatMenu: false
     startup: true
     serverInstructions: true
+
+  # This MCP tool is very helpful when special URLs need to be read. Unfortunately, the connection to the MCP server is currently too unstable and has therefore been deactivated for the time being.
+  # firecrawl:
+  #   type: streamable-http
+  #   url: http://mcp-firecrawl:3003/mcp
+  #   title: Web Scraping
+  #   description: Webseiten scrapen, durchsuchen und analysieren
+  #   iconPath: /images/mcp-firecrawl-icon.svg
+  #   initTimeout: 120000
+  #   chatMenu: true
+  #   startup: true
+  #   serverInstructions: true
 
 # n8n MCP Server Integration (Future - disabled)
 # To integrate n8n workflows with LibreChat Agents via MCP:

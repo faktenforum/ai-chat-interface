@@ -168,6 +168,10 @@ services:
     pull_policy: build
     # No Traefik labels - internal service only
 
+  mcp-firecrawl:
+    extends: { file: docker-compose.mcp-firecrawl.yml, service: mcp-firecrawl }
+    container_name: ${STACK_NAME:-prod}-mcp-firecrawl
+
 networks:
   traefik-net:
     external: true

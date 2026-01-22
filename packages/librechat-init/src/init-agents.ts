@@ -18,6 +18,7 @@ import {
   ACCESS_ROLE_OWNER,
   MCP_DELIMITER,
   MCP_SERVER,
+  MCP_ALL,
   DEFAULT_API_URL,
 } from './utils/constants.ts';
 
@@ -30,8 +31,10 @@ interface AgentConfig {
   model: string;
   model_parameters?: Record<string, unknown>;
   tools?: string[];
-  /** MCP server names to automatically add all tools from (e.g., ["image-gen", "web-search"]) */
+  /** MCP server names. If mcpTools is omitted, all tools are loaded at runtime. */
   mcpServers?: string[];
+  /** Optional: Explicit MCP tool keys (format: toolName_mcp_serverName). If specified, only these tools are enabled. */
+  mcpTools?: string[];
   category?: string;
   conversation_starters?: string[];
   recursion_limit?: number;
@@ -49,30 +52,33 @@ interface AgentsConfig {
 }
 
 /**
- * Convert MCP server names to tool identifiers
- * Adds server marker (sys__server__sys_mcp_<serverName>) and all individual tool keys
- * @param mcpServers - Array of MCP server names
- * @param client - LibreChat API client instance
- * @param userId - User ID for API authentication
- * @returns Array of tool identifiers
+ * Convert MCP server names to tool identifiers.
+ * Adds server marker and explicit tools, or "all tools" marker if no explicit tools specified.
  */
-async function convertMCPServersToTools(
+function convertMCPServersToTools(
   mcpServers: string[],
-  client: LibreChatAPIClient,
-  userId: string
-): Promise<string[]> {
+  explicitTools: string[] | undefined
+): string[] {
   const tools: string[] = [];
+  const explicitToolsSet = explicitTools ? new Set(explicitTools) : new Set<string>();
 
   for (const serverName of mcpServers) {
-    // Add the server marker (required for UI to recognize MCP server)
+    // Server marker required for UI to recognize MCP server
     tools.push(`${MCP_SERVER}${MCP_DELIMITER}${serverName}`);
 
-    // Fetch and add all individual tools from the server
-    const serverTools = await client.getMCPServerTools(serverName, userId);
-    if (serverTools.length > 0) {
-      tools.push(...serverTools);
+    // Filter explicit tools for this server
+    const serverSuffix = `${MCP_DELIMITER}${serverName}`;
+    const serverExplicitTools = Array.from(explicitToolsSet).filter((tool) =>
+      tool.endsWith(serverSuffix)
+    );
+
+    if (serverExplicitTools.length > 0) {
+      tools.push(...serverExplicitTools);
+      console.log(`    ✓ Added ${serverExplicitTools.length} explicit tool(s) for MCP server: ${serverName}`);
     } else {
-      console.warn(`  ⚠ No tools retrieved for MCP server: ${serverName}`);
+      // LibreChat will load all tools at runtime
+      tools.push(`${MCP_ALL}${MCP_DELIMITER}${serverName}`);
+      console.log(`    ✓ Added "all tools" marker for MCP server: ${serverName}`);
     }
   }
 
@@ -80,24 +86,20 @@ async function convertMCPServersToTools(
 }
 
 /**
- * Build tools array from configuration, including MCP servers
- * Combines manually specified tools with automatically fetched MCP server tools
- * @param agentConfig - Agent configuration
- * @param client - LibreChat API client instance
- * @param userId - User ID for API authentication
- * @returns Combined array of tool identifiers
+ * Build tools array from configuration, including MCP servers.
+ * Combines manually specified tools with MCP server tools.
  */
-async function buildToolsArray(
-  agentConfig: AgentConfig,
-  client: LibreChatAPIClient,
-  userId: string
-): Promise<string[]> {
+function buildToolsArray(agentConfig: AgentConfig): string[] {
   const tools: string[] = [...(agentConfig.tools || [])];
 
   // Add MCP server tools if specified
   if (agentConfig.mcpServers && agentConfig.mcpServers.length > 0) {
-    const mcpTools = await convertMCPServersToTools(agentConfig.mcpServers, client, userId);
+    const mcpTools = convertMCPServersToTools(agentConfig.mcpServers, agentConfig.mcpTools);
     tools.push(...mcpTools);
+  } else if (agentConfig.mcpTools && agentConfig.mcpTools.length > 0) {
+    // Explicit tools without server declaration (legacy support)
+    tools.push(...agentConfig.mcpTools);
+    console.log(`    ✓ Added ${agentConfig.mcpTools.length} explicit MCP tool(s)`);
   }
 
   return tools;
@@ -122,7 +124,7 @@ async function buildAgentCreateData(
     },
     edges: [],
     artifacts: '',
-    tools: await buildToolsArray(agentConfig, client, userId),
+    tools: buildToolsArray(agentConfig),
   };
 
   // Add optional fields only if defined
@@ -161,7 +163,7 @@ async function buildAgentUpdateData(
     updateData.model_parameters = agentConfig.model_parameters;
   }
   // Build tools array including MCP servers
-  updateData.tools = await buildToolsArray(agentConfig, client, userId);
+  updateData.tools = buildToolsArray(agentConfig);
   if (agentConfig.conversation_starters !== undefined) {
     updateData.conversation_starters = agentConfig.conversation_starters;
   }
@@ -233,9 +235,9 @@ function buildPermissions(
 }
 
 /**
- * Initialize agents from configuration files
- * Loads agents from agents.json and agents.private.json, creates/updates them via API
- * Handles MCP server tool discovery and automatic tool addition
+ * Initialize agents from configuration files.
+ * Loads agents from agents.json and agents.private.json, creates/updates them via API.
+ * Handles MCP server tool configuration (explicit tools or auto-load all).
  */
 export async function initializeAgents(): Promise<void> {
   try {

@@ -170,6 +170,10 @@ services:
     env_file: .env.local
     # No Traefik labels - internal service only
 
+  mcp-firecrawl:
+    extends: { file: docker-compose.mcp-firecrawl.yml, service: mcp-firecrawl }
+    env_file: .env.local
+
   # Additional Services
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }

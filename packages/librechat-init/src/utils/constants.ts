@@ -36,6 +36,7 @@ export const ACCESS_ROLE_OWNER = 'agent_owner';
 // MCP constants (matching LibreChat's Constants)
 export const MCP_DELIMITER = '_mcp_';
 export const MCP_SERVER = 'sys__server__sys';
+export const MCP_ALL = 'sys__all__sys';
 
 // MongoDB defaults
 export const DEFAULT_MONGO_URI = 'mongodb://mongodb:27017/LibreChat';

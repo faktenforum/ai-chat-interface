@@ -1,0 +1,40 @@
+services:
+  mcp-firecrawl:
+    image: ghcr.io/firecrawl/firecrawl-mcp-server:latest
+    container_name: mcp-firecrawl
+    restart: always
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${MCP_FIRECRAWL_PORT:-3003}
+      HOST: 0.0.0.0
+      HTTP_STREAMABLE_SERVER: "true"
+      FIRECRAWL_API_URL: ${FIRECRAWL_API_URL:-http://firecrawl-api:3002}
+      FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
+    expose:
+      - "3003"
+    networks:
+      - app-net
+    depends_on:
+      firecrawl-api:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    read_only: false
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
