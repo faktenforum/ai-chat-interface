@@ -6,10 +6,6 @@ import {
   JWT_EXPIRES_IN,
 } from '../utils/constants.ts';
 
-/**
- * LibreChat API Client for agent management
- * Provides HTTP client interface to LibreChat API endpoints
- */
 export class LibreChatAPIClient {
   private baseURL: string;
   private jwtSecret: string;
@@ -20,9 +16,6 @@ export class LibreChatAPIClient {
     this.jwtSecret = jwtSecret;
   }
 
-  /**
-   * Generate JWT token for API authentication
-   */
   private generateToken(userId: string): string {
     if (this.tokenCache.has(userId)) {
       return this.tokenCache.get(userId)!;
@@ -33,17 +26,11 @@ export class LibreChatAPIClient {
     return token;
   }
 
-  /**
-   * Get authorization header with JWT token
-   */
   private getAuthHeader(userId: string): string {
     const token = this.generateToken(userId);
     return `Bearer ${token}`;
   }
 
-  /**
-   * Extract error message from response (handles JSON, SSE, and plain text)
-   */
   private extractErrorMessage(responseText: string, contentType: string): string {
     if (responseText.trim().startsWith('event:') || responseText.trim().startsWith('data:')) {
       const errorMatch = responseText.match(/event:\s*err\s*\n\s*data:\s*(.+)/);
@@ -70,24 +57,12 @@ export class LibreChatAPIClient {
     return responseText.substring(0, 200);
   }
 
-  /**
-   * Check if error indicates "not found"
-   */
   private isNotFoundError(status: number, errorMessage: string): boolean {
     if (status === 404) return true;
     const lower = errorMessage.toLowerCase();
     return lower.includes('not found') || lower.includes('agent not found');
   }
 
-  /**
-   * Make HTTP request to LibreChat API
-   * @param method - HTTP method
-   * @param path - API path
-   * @param userId - User ID for JWT authentication
-   * @param body - Request body (will be JSON stringified)
-   * @param allow404 - If true, 404 errors return null instead of throwing
-   * @returns Parsed response data or null (if allow404 and 404)
-   */
   private async request<T>(
     method: string,
     path: string,
@@ -108,7 +83,6 @@ export class LibreChatAPIClient {
     const contentType = response.headers.get('content-type') || '';
     const responseText = await response.text();
 
-    // Handle errors
     if (!response.ok) {
       if (allow404 && this.isNotFoundError(response.status, responseText)) {
         return null;
@@ -118,12 +92,10 @@ export class LibreChatAPIClient {
       throw new Error(errorMessage || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    // Handle empty responses
     if (response.status === 204 || !responseText.trim()) {
       return undefined as unknown as T;
     }
 
-    // Handle SSE errors in successful responses (should not happen)
     if (responseText.trim().startsWith('event:') || responseText.trim().startsWith('data:')) {
       const errorMatch = responseText.match(/event:\s*err\s*\n\s*data:\s*(.+)/);
       if (errorMatch) {
@@ -132,7 +104,6 @@ export class LibreChatAPIClient {
       throw new Error(`Unexpected SSE response: ${responseText.substring(0, 200)}`);
     }
 
-    // Parse JSON response
     try {
       return JSON.parse(responseText) as T;
     } catch (parseError) {
@@ -142,12 +113,6 @@ export class LibreChatAPIClient {
     }
   }
 
-  /**
-   * Check if API is available with retries
-   * @param maxRetries - Maximum number of retry attempts
-   * @param delayMs - Delay between retries in milliseconds
-   * @returns true if API is available, false otherwise
-   */
   async waitForAPI(
     maxRetries = API_RETRY_ATTEMPTS,
     delayMs = API_RETRY_DELAY_MS
@@ -170,7 +135,7 @@ export class LibreChatAPIClient {
           return true;
         }
       } catch {
-        // Ignore errors, continue retrying
+        // Continue retrying
       }
 
       if (i < maxRetries - 1) {
@@ -185,9 +150,6 @@ export class LibreChatAPIClient {
     return false;
   }
 
-  /**
-   * Create a new agent
-   */
   async createAgent(data: AgentCreateParams, userId: string): Promise<Agent> {
     const result = await this.request<Agent>('POST', '/api/agents', userId, data, false);
     if (result === null) {
@@ -196,9 +158,6 @@ export class LibreChatAPIClient {
     return result;
   }
 
-  /**
-   * Update an existing agent
-   */
   async updateAgent(id: string, data: AgentUpdateParams, userId: string): Promise<Agent> {
     const result = await this.request<Agent>('PATCH', `/api/agents/${id}`, userId, data, false);
     if (result === null) {
@@ -207,19 +166,10 @@ export class LibreChatAPIClient {
     return result;
   }
 
-  /**
-   * Get an agent by ID
-   * Returns null if agent not found (404)
-   */
   async getAgent(id: string, userId: string): Promise<Agent | null> {
     return await this.request<Agent>('GET', `/api/agents/${id}`, userId, undefined, true);
   }
 
-  /**
-   * Get MCP tools for a specific server
-   * Returns array of tool keys (e.g., ["generate_image_mcp_image-gen", ...])
-   * Returns empty array on error (non-blocking)
-   */
   async getMCPServerTools(serverName: string, userId: string): Promise<string[]> {
     try {
       const url = `${this.baseURL}/api/mcp/tools`;
@@ -261,12 +211,6 @@ export class LibreChatAPIClient {
     }
   }
 
-  /**
-   * Find an agent by name (exact match, case-insensitive)
-   * @param name - Agent name to search for
-   * @param userId - User ID for API authentication
-   * @returns Matching agent or null if not found
-   */
   async findAgentByName(name: string, userId: string): Promise<Agent | null> {
     try {
       const url = `${this.baseURL}/api/agents?search=${encodeURIComponent(name)}`;
@@ -294,9 +238,6 @@ export class LibreChatAPIClient {
     }
   }
 
-  /**
-   * Update agent permissions
-   */
   async updateAgentPermissions(
     agentId: string,
     permissions: PermissionUpdate,
@@ -310,10 +251,6 @@ export class LibreChatAPIClient {
     );
   }
 }
-
-/**
- * Type definitions matching LibreChat API
- */
 
 export interface Agent {
   _id?: string;

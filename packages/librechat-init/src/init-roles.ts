@@ -52,9 +52,6 @@ const roleSchema = new mongoose.Schema({
 
 const Role = mongoose.models.Role || mongoose.model('Role', roleSchema);
 
-/**
- * Check if a role name is a system role
- */
 function isSystemRole(roleName: string): boolean {
   return SYSTEM_ROLES.includes(roleName.toUpperCase() as typeof SYSTEM_ROLES[number]);
 }

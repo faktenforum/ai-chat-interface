@@ -51,10 +51,6 @@ interface AgentsConfig {
   agents: AgentConfig[];
 }
 
-/**
- * Convert MCP server names to tool identifiers.
- * Adds server marker and explicit tools, or "all tools" marker if no explicit tools specified.
- */
 function convertMCPServersToTools(
   mcpServers: string[],
   explicitTools: string[] | undefined
@@ -63,10 +59,8 @@ function convertMCPServersToTools(
   const explicitToolsSet = explicitTools ? new Set(explicitTools) : new Set<string>();
 
   for (const serverName of mcpServers) {
-    // Server marker required for UI to recognize MCP server
     tools.push(`${MCP_SERVER}${MCP_DELIMITER}${serverName}`);
 
-    // Filter explicit tools for this server
     const serverSuffix = `${MCP_DELIMITER}${serverName}`;
     const serverExplicitTools = Array.from(explicitToolsSet).filter((tool) =>
       tool.endsWith(serverSuffix)
@@ -76,7 +70,6 @@ function convertMCPServersToTools(
       tools.push(...serverExplicitTools);
       console.log(`    ✓ Added ${serverExplicitTools.length} explicit tool(s) for MCP server: ${serverName}`);
     } else {
-      // LibreChat will load all tools at runtime
       tools.push(`${MCP_ALL}${MCP_DELIMITER}${serverName}`);
       console.log(`    ✓ Added "all tools" marker for MCP server: ${serverName}`);
     }
@@ -85,19 +78,13 @@ function convertMCPServersToTools(
   return tools;
 }
 
-/**
- * Build tools array from configuration, including MCP servers.
- * Combines manually specified tools with MCP server tools.
- */
 function buildToolsArray(agentConfig: AgentConfig): string[] {
   const tools: string[] = [...(agentConfig.tools || [])];
 
-  // Add MCP server tools if specified
   if (agentConfig.mcpServers && agentConfig.mcpServers.length > 0) {
     const mcpTools = convertMCPServersToTools(agentConfig.mcpServers, agentConfig.mcpTools);
     tools.push(...mcpTools);
   } else if (agentConfig.mcpTools && agentConfig.mcpTools.length > 0) {
-    // Explicit tools without server declaration (legacy support)
     tools.push(...agentConfig.mcpTools);
     console.log(`    ✓ Added ${agentConfig.mcpTools.length} explicit MCP tool(s)`);
   }
@@ -105,9 +92,6 @@ function buildToolsArray(agentConfig: AgentConfig): string[] {
   return tools;
 }
 
-/**
- * Build agent create data from configuration
- */
 async function buildAgentCreateData(
   agentConfig: AgentConfig,
   client: LibreChatAPIClient,
@@ -127,7 +111,6 @@ async function buildAgentCreateData(
     tools: buildToolsArray(agentConfig),
   };
 
-  // Add optional fields only if defined
   if (agentConfig.description) agentData.description = agentConfig.description;
   if (agentConfig.instructions) agentData.instructions = agentConfig.instructions;
   if (agentConfig.model_parameters) agentData.model_parameters = agentConfig.model_parameters;
@@ -141,9 +124,6 @@ async function buildAgentCreateData(
   return agentData;
 }
 
-/**
- * Build agent update data from configuration
- */
 async function buildAgentUpdateData(
   agentConfig: AgentConfig,
   client: LibreChatAPIClient,
@@ -156,13 +136,11 @@ async function buildAgentUpdateData(
     category: agentConfig.category || 'general',
   };
 
-  // Add optional fields only if they are defined
   if (agentConfig.description !== undefined) updateData.description = agentConfig.description;
   if (agentConfig.instructions !== undefined) updateData.instructions = agentConfig.instructions;
   if (agentConfig.model_parameters !== undefined) {
     updateData.model_parameters = agentConfig.model_parameters;
   }
-  // Build tools array including MCP servers
   updateData.tools = buildToolsArray(agentConfig);
   if (agentConfig.conversation_starters !== undefined) {
     updateData.conversation_starters = agentConfig.conversation_starters;
@@ -177,9 +155,6 @@ async function buildAgentUpdateData(
   return updateData;
 }
 
-/**
- * Determine public access role based on permissions
- */
 function getPublicAccessRole(
   isPublic: boolean,
   publicEdit: boolean,
@@ -189,9 +164,6 @@ function getPublicAccessRole(
   return publicEdit && isCollaborative ? ACCESS_ROLE_EDITOR : ACCESS_ROLE_VIEWER;
 }
 
-/**
- * Build permissions update data from configuration
- */
 function buildPermissions(
   agentConfig: AgentConfig,
   ownerUserId: string
@@ -199,14 +171,12 @@ function buildPermissions(
   const permissions = agentConfig.permissions || {};
   const updated: Array<{ type: 'user' | 'public'; id: string | null; accessRoleId: string }> = [];
 
-  // Owner permissions
   updated.push({
     type: 'user',
     id: ownerUserId,
     accessRoleId: ACCESS_ROLE_OWNER,
   });
 
-  // Public permissions
   if (permissions.public) {
     const publicRoleId = getPublicAccessRole(
       permissions.public,
@@ -234,14 +204,8 @@ function buildPermissions(
   };
 }
 
-/**
- * Initialize agents from configuration files.
- * Loads agents from agents.json and agents.private.json, creates/updates them via API.
- * Handles MCP server tool configuration (explicit tools or auto-load all).
- */
 export async function initializeAgents(): Promise<void> {
   try {
-    // Load agent configurations
     const publicAgents = loadOptionalConfigFile<AgentsConfig>(
       PUBLIC_AGENTS_PATH,
       PUBLIC_AGENTS_FALLBACK,
@@ -256,13 +220,11 @@ export async function initializeAgents(): Promise<void> {
 
     const allAgents = [...publicAgents, ...privateAgents];
 
-    // Skip if no agents configured
     if (allAgents.length === 0) {
       console.log('ℹ No agents configured - skipping agent initialization');
       return;
     }
 
-    // Initialize API client
     const apiURL = process.env.LIBRECHAT_API_URL || DEFAULT_API_URL;
     const jwtSecret = process.env.LIBRECHAT_JWT_SECRET || process.env.JWT_SECRET;
 
@@ -272,8 +234,6 @@ export async function initializeAgents(): Promise<void> {
     }
 
     const client = new LibreChatAPIClient(apiURL, jwtSecret);
-
-    // Check API availability (non-blocking, allows graceful degradation)
     const apiAvailable = await client.waitForAPI();
 
     if (!apiAvailable) {
@@ -283,7 +243,6 @@ export async function initializeAgents(): Promise<void> {
       return;
     }
 
-    // Connect to MongoDB to get system user
     await connectToMongoDB();
 
     const publicCount = publicAgents.length;
@@ -296,7 +255,6 @@ export async function initializeAgents(): Promise<void> {
       console.log(`  Loading ${privateCount} agent(s) from agents.private.json`);
     }
 
-    // Get system user ID (required for agent creation/updates)
     let systemUserId: mongoose.Types.ObjectId | string | null = null;
     try {
       systemUserId = await getSystemUserId(User);
@@ -323,12 +281,10 @@ export async function initializeAgents(): Promise<void> {
 
     for (const agentConfig of allAgents) {
       try {
-        // Check if agent exists by name (API generates its own IDs)
         const existingAgent = await client.findAgentByName(agentConfig.name, systemUserIdStr);
 
         let savedAgent: Agent;
         if (!existingAgent) {
-          // Create new agent
           const createData = await buildAgentCreateData(agentConfig, client, systemUserIdStr);
           savedAgent = await client.createAgent(createData, systemUserIdStr);
           console.log(
@@ -336,7 +292,6 @@ export async function initializeAgents(): Promise<void> {
           );
           agentsCreated++;
         } else {
-          // Update existing agent
           const updateData = await buildAgentUpdateData(agentConfig, client, systemUserIdStr);
           savedAgent = await client.updateAgent(existingAgent.id, updateData, systemUserIdStr);
           console.log(
@@ -345,7 +300,6 @@ export async function initializeAgents(): Promise<void> {
           agentsUpdated++;
         }
 
-        // Determine owner user ID
         const permissions = agentConfig.permissions || {};
         let ownerUserId = systemUserIdStr;
 
@@ -358,7 +312,6 @@ export async function initializeAgents(): Promise<void> {
           }
         }
 
-        // Apply permissions
         const agentObjectId = savedAgent._id;
         if (!agentObjectId) {
           console.error(`  ⚠ Agent "${agentConfig.name}" missing _id, skipping permissions`);
