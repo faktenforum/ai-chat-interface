@@ -16,6 +16,7 @@ This project includes the following git submodules:
 - **dev/open-streetmap-mcp** - OpenStreetMap MCP server (fork with HTTP transport support)
 - **dev/db-timetable-mcp** - Deutsche Bahn Timetable MCP server
 - **dev/stackoverflow-mcp** - Stack Overflow MCP server
+- **dev/npm-search-mcp** - npm Search MCP server (fork with HTTP transport support)
 
 ## Documentation
 

@@ -21,7 +21,10 @@ Add service to:
 - `docker-compose.local.yml`: Extend service, add `env_file: .env.local`, add Traefik labels (HTTP only), override with `build` section if needed
 - `docker-compose.local-source.yml`: Same as local.yml (if service supports source builds)
 - `docker-compose.prod.yml`: Extend service, add `container_name: ${STACK_NAME:-prod}-{service}`, add Traefik labels (HTTP + HTTPS), add volumes with `${STACK_NAME:-prod}-` prefix
-- **Critical**: When adding `build` section, ALWAYS set unique `image:` name (e.g., `ghcr.io/faktenforum/{service}:latest` for main branch, `:dev` for feature branches). Never use the same name as the base image (`FROM`), as Docker will layer builds recursively causing layer limit errors.
+- **Production image strategy**:
+  - **Services with GitHub Actions workflow** (Section 5): Use `image: ghcr.io/faktenforum/{service}:dev` only, no `build` section. Images are built and pushed by CI/CD.
+  - **Services with custom/modified Dockerfiles** (no workflow): Use `build` section with unique `image:` name (e.g., `ghcr.io/faktenforum/{service}:latest`). Never use the same name as base image (`FROM`), as Docker will layer builds recursively causing layer limit errors.
+  - **Official/unmodified images**: Use `image:` directly from official registry (e.g., `postgres:16`, `redis:7-alpine`). No `build` section needed.
 
 ## 3. Environment Variables
 See `.cursor/rules/environment-variables.mdc` for detailed guidelines on:
@@ -33,7 +36,7 @@ See `.cursor/rules/environment-variables.mdc` for detailed guidelines on:
 - Variable expansions and migrations
 
 ## 5. GitHub Actions Workflow (Required)
-**Mandatory** for services in repo (direct or submodule). Create `.github/workflows/build-{service}.yml` following existing patterns (see `build-mcp-calculator.yml`, `build-mcp-db-timetable.yml`):
+**Mandatory** for services with custom/modified Dockerfiles in repo (direct or submodule). Create `.github/workflows/build-{service}.yml` following existing patterns (see `build-mcp-calculator.yml`, `build-mcp-db-timetable.yml`):
 - **Trigger**: Push to `{service-path}/**` and workflow file changes; include relevant branches (e.g., `main`, `feat/agents`)
 - **Checkout**: Add `submodules: true` if service is in `dev/` (submodule), omit for direct repo services
 - **Build context**: `./{service-path}` (e.g., `./packages/{service}`, `./dev/{service}`)
@@ -43,6 +46,7 @@ See `.cursor/rules/environment-variables.mdc` for detailed guidelines on:
 - **Platform**: `linux/amd64`
 - **Cache**: GitHub Actions cache (`cache-from: type=gha`, `cache-to: type=gha,mode=max`)
 - **Permissions**: `contents: read`, `packages: write`
+- **Production usage**: Services with workflows MUST use `image: ghcr.io/faktenforum/{service}:dev` in `docker-compose.prod.yml` (no `build` section). Official images without modifications don't need workflows.
 
 ## 6. Traefik Labels
 **Local** (`docker-compose.local.yml`):

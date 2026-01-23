@@ -214,6 +214,17 @@ services:
       dockerfile: Dockerfile
     # No Traefik labels - internal service only
 
+  mcp-npm-search:
+    extends: { file: docker-compose.mcp-npm-search.yml, service: mcp-npm-search }
+    env_file: .env.local
+    # Build from submodule Dockerfile
+    # Use unique image name to prevent Docker layering built image on base image
+    image: ghcr.io/faktenforum/mcp-npm-search:latest
+    build:
+      context: ./dev/npm-search-mcp
+      dockerfile: Dockerfile
+    # No Traefik labels - internal service only
+
   # Additional Services
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }

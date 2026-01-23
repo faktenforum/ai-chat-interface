@@ -498,6 +498,7 @@ mcpSettings:
     - 'mcp-playwright'          # MCP Playwright service (Docker network)
     - 'mcp-db-timetable'        # MCP DB Timetable service (Docker network)
     - 'mcp-stackoverflow'       # MCP StackOverflow service (Docker network)
+    - 'mcp-npm-search'           # MCP npm Search service (Docker network)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
@@ -580,6 +581,17 @@ mcpServers:
     title: Stack Overflow
     description: Programmierlösungen und Fehlerbehebung finden
     iconPath: /images/mcp-stackoverflow-icon.svg
+    initTimeout: 120000
+    chatMenu: true
+    startup: true
+    serverInstructions: true
+
+  npm-search:
+    type: streamable-http
+    url: http://mcp-npm-search:3009/mcp
+    title: npm Suche
+    description: npm-Pakete durchsuchen und finden
+    iconPath: /images/mcp-npm-search-icon.svg
     initTimeout: 120000
     chatMenu: true
     startup: true
