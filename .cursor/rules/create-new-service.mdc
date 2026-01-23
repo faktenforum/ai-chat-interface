@@ -32,14 +32,17 @@ See `.cursor/rules/environment-variables.mdc` for detailed guidelines on:
 - Security best practices
 - Variable expansions and migrations
 
-## 5. GitHub Actions Workflow (Optional)
-For services requiring CI/CD builds, create `.github/workflows/build-{service}.yml`:
-- Trigger: Push to `packages/{service}/**` or workflow file changes
-- Build context: `./packages/{service}` or service-specific path
-- Image: `ghcr.io/faktenforum/{service}`
-- Tags: `latest` (default branch), `dev` (feature branches), branch name
-- Platform: `linux/amd64`
-- Cache: GitHub Actions cache for faster builds
+## 5. GitHub Actions Workflow (Required)
+**Mandatory** for services in repo (direct or submodule). Create `.github/workflows/build-{service}.yml` following existing patterns (see `build-mcp-calculator.yml`, `build-mcp-db-timetable.yml`):
+- **Trigger**: Push to `{service-path}/**` and workflow file changes; include relevant branches (e.g., `main`, `feat/agents`)
+- **Checkout**: Add `submodules: true` if service is in `dev/` (submodule), omit for direct repo services
+- **Build context**: `./{service-path}` (e.g., `./packages/{service}`, `./dev/{service}`)
+- **Dockerfile**: `./{service-path}/Dockerfile`
+- **Image**: `ghcr.io/faktenforum/{service}` (lowercase, hyphens)
+- **Tags**: `latest` (default branch), `dev` (feature branches), branch name via `type=ref,event=branch`
+- **Platform**: `linux/amd64`
+- **Cache**: GitHub Actions cache (`cache-from: type=gha`, `cache-to: type=gha,mode=max`)
+- **Permissions**: `contents: read`, `packages: write`
 
 ## 6. Traefik Labels
 **Local** (`docker-compose.local.yml`):
