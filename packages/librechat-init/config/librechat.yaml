@@ -567,7 +567,7 @@ mcpServers:
 
   db-timetable:
     type: streamable-http
-    url: http://mcp-db-timetable:3007/sse
+    url: http://mcp-db-timetable:3007/mcp
     title: DB Fahrplan
     description: Aktuelle Fahrpläne, Stationssuche und Zugverbindungen der Deutschen Bahn
     iconPath: /images/mcp-db-timetable-icon.svg
