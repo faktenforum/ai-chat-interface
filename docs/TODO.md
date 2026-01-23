@@ -80,9 +80,13 @@
   - Fork includes HTTP transport support and Dockerfile from PR [#10](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/10)
   - Our improvements submitted as PR [#11](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/11): Docker port configuration and FastMCP 0.2.0+ compatibility
   - Once PRs #10 and #11 are merged upstream, consider switching to official version
-- [ ] Playwright MCP: Screenshot responses mix Markdown/JSON format
-  - Issue: [microsoft/playwright-mcp#1324](https://github.com/microsoft/playwright-mcp/issues/1324)
-  - Workaround: Using `--image-responses omit` (removes images from responses)
+- [ ] Fix MCP tools returning malformed responses mixing text and JSON
+  - Issue: [LibreChat #11494](https://github.com/danny-avila/LibreChat/issues/11494) - MCP image responses with mixed text content are not displayed
+  - Affected tools:
+    - Mapbox MCP: [mapbox/mcp-server#103](https://github.com/mapbox/mcp-server/issues/103) - Tool responses mix text and JSON instead of using structured content arrays
+    - Playwright MCP: [microsoft/playwright-mcp#1324](https://github.com/microsoft/playwright-mcp/issues/1324) - Screenshot responses mix Markdown/JSON format
+  - Workaround: Using `--image-responses omit` for Playwright (removes images from responses)
+  - Root cause: Tools return responses that mix plain text with embedded JSON objects instead of using proper MCP specification format with structured content arrays
 
 ---
 

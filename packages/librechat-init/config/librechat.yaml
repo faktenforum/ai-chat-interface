@@ -500,6 +500,7 @@ mcpSettings:
     - 'mcp-stackoverflow'       # MCP StackOverflow service (Docker network)
     - 'mcp-npm-search'           # MCP npm Search service (Docker network)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
+    - 'mcp.mapbox.com'           # Mapbox MCP Server (remote hosted)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
     # - 'http://internal:8080'    # Protocol and port restricted
@@ -608,6 +609,19 @@ mcpServers:
       X-MCP-Readonly: "true"
     initTimeout: 120000
     chatMenu: false
+    startup: true
+    serverInstructions: true
+
+  mapbox:
+    type: streamable-http
+    url: https://mcp.mapbox.com/mcp
+    title: Mapbox
+    description: Geografische Suche, Routenplanung, Geocoding und Kartenvisualisierung
+    iconPath: /images/mcp-mapbox-icon.svg
+    headers:
+      Authorization: "Bearer ${MCP_MAPBOX_ACCESS_TOKEN}"
+    initTimeout: 120000
+    chatMenu: true
     startup: true
     serverInstructions: true
 
