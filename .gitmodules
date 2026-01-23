@@ -32,3 +32,6 @@
 [submodule "dev/stackoverflow-mcp"]
 	path = dev/stackoverflow-mcp
 	url = git@github.com:faktenforum/stackoverflow-mcp.git
+[submodule "dev/npm-search-mcp"]
+	path = dev/npm-search-mcp
+	url = git@github.com:faktenforum/npm-search-mcp-server.git
