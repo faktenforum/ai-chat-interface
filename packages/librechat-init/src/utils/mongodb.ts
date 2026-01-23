@@ -3,6 +3,10 @@ import { DEFAULT_MONGO_URI, MONGO_RETRY_ATTEMPTS, MONGO_RETRY_DELAY_MS } from '.
 
 const MONGO_URI = process.env.MONGO_URI || DEFAULT_MONGO_URI;
 
+/**
+ * Connects to MongoDB with retry logic.
+ * @throws Error if connection fails after maximum retries
+ */
 export async function connectToMongoDB(
   maxRetries = MONGO_RETRY_ATTEMPTS,
   delayMs = MONGO_RETRY_DELAY_MS
@@ -11,9 +15,9 @@ export async function connectToMongoDB(
     console.log('✓ Already connected to MongoDB');
     return;
   }
-  
+
   console.log('Waiting for MongoDB to be ready...');
-  
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 5000 });
@@ -21,13 +25,16 @@ export async function connectToMongoDB(
       return;
     } catch {
       console.log(`  Attempt ${i + 1}/${maxRetries}...`);
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
-  
+
   throw new Error('MongoDB not available after maximum retries');
 }
 
+/**
+ * Disconnects from MongoDB if connected.
+ */
 export async function disconnectFromMongoDB(): Promise<void> {
   if (mongoose.connection.readyState === 1) {
     await mongoose.disconnect();
@@ -35,10 +42,18 @@ export async function disconnectFromMongoDB(): Promise<void> {
   }
 }
 
+/**
+ * User document interface.
+ */
 export interface IUser extends mongoose.Document {
   _id: mongoose.Types.ObjectId;
   email: string;
   role: string;
 }
 
-export const User = mongoose.models.User || mongoose.model<IUser>('User', new mongoose.Schema({}, { strict: false }));
+/**
+ * Mongoose model for User collection.
+ */
+export const User =
+  mongoose.models.User ||
+  mongoose.model<IUser>('User', new mongoose.Schema({}, { strict: false }));

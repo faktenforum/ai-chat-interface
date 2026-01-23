@@ -22,6 +22,9 @@ import {
   DEFAULT_API_URL,
 } from './utils/constants.ts';
 
+/**
+ * Agent configuration from JSON files.
+ */
 interface AgentConfig {
   id?: string;
   name: string;
@@ -51,6 +54,10 @@ interface AgentsConfig {
   agents: AgentConfig[];
 }
 
+/**
+ * Converts MCP server names to LibreChat tool format.
+ * If explicit tools are provided, uses those; otherwise uses "all tools" marker.
+ */
 function convertMCPServersToTools(
   mcpServers: string[],
   explicitTools: string[] | undefined
@@ -78,13 +85,16 @@ function convertMCPServersToTools(
   return tools;
 }
 
+/**
+ * Builds the complete tools array for an agent, combining regular tools and MCP tools.
+ */
 function buildToolsArray(agentConfig: AgentConfig): string[] {
   const tools: string[] = [...(agentConfig.tools || [])];
 
-  if (agentConfig.mcpServers && agentConfig.mcpServers.length > 0) {
+  if (agentConfig.mcpServers?.length > 0) {
     const mcpTools = convertMCPServersToTools(agentConfig.mcpServers, agentConfig.mcpTools);
     tools.push(...mcpTools);
-  } else if (agentConfig.mcpTools && agentConfig.mcpTools.length > 0) {
+  } else if (agentConfig.mcpTools?.length > 0) {
     tools.push(...agentConfig.mcpTools);
     console.log(`    ✓ Added ${agentConfig.mcpTools.length} explicit MCP tool(s)`);
   }
@@ -92,69 +102,49 @@ function buildToolsArray(agentConfig: AgentConfig): string[] {
   return tools;
 }
 
-async function buildAgentCreateData(
-  agentConfig: AgentConfig,
-  client: LibreChatAPIClient,
-  userId: string
-): Promise<AgentCreateParams> {
-  const agentData: AgentCreateParams = {
+/**
+ * Builds agent creation payload from configuration.
+ */
+function buildAgentCreateData(agentConfig: AgentConfig): AgentCreateParams {
+  return {
     name: agentConfig.name,
     provider: agentConfig.provider,
     model: agentConfig.model,
     category: agentConfig.category || 'general',
-    support_contact: {
-      name: '',
-      email: '',
-    },
+    description: agentConfig.description,
+    instructions: agentConfig.instructions,
+    model_parameters: agentConfig.model_parameters,
+    tools: buildToolsArray(agentConfig),
+    conversation_starters: agentConfig.conversation_starters,
+    recursion_limit: agentConfig.recursion_limit,
+    support_contact: { name: '', email: '' },
     edges: [],
     artifacts: '',
-    tools: buildToolsArray(agentConfig),
   };
-
-  if (agentConfig.description) agentData.description = agentConfig.description;
-  if (agentConfig.instructions) agentData.instructions = agentConfig.instructions;
-  if (agentConfig.model_parameters) agentData.model_parameters = agentConfig.model_parameters;
-  if (agentConfig.conversation_starters && agentConfig.conversation_starters.length > 0) {
-    agentData.conversation_starters = agentConfig.conversation_starters;
-  }
-  if (agentConfig.recursion_limit !== undefined) {
-    agentData.recursion_limit = agentConfig.recursion_limit;
-  }
-
-  return agentData;
 }
 
-async function buildAgentUpdateData(
-  agentConfig: AgentConfig,
-  client: LibreChatAPIClient,
-  userId: string
-): Promise<AgentUpdateParams> {
-  const updateData: AgentUpdateParams = {
+/**
+ * Builds agent update payload from configuration.
+ */
+function buildAgentUpdateData(agentConfig: AgentConfig): AgentUpdateParams {
+  return {
     name: agentConfig.name,
     provider: agentConfig.provider,
     model: agentConfig.model,
     category: agentConfig.category || 'general',
+    description: agentConfig.description,
+    instructions: agentConfig.instructions,
+    model_parameters: agentConfig.model_parameters,
+    tools: buildToolsArray(agentConfig),
+    conversation_starters: agentConfig.conversation_starters,
+    recursion_limit: agentConfig.recursion_limit,
+    isCollaborative: agentConfig.isCollaborative,
   };
-
-  if (agentConfig.description !== undefined) updateData.description = agentConfig.description;
-  if (agentConfig.instructions !== undefined) updateData.instructions = agentConfig.instructions;
-  if (agentConfig.model_parameters !== undefined) {
-    updateData.model_parameters = agentConfig.model_parameters;
-  }
-  updateData.tools = buildToolsArray(agentConfig);
-  if (agentConfig.conversation_starters !== undefined) {
-    updateData.conversation_starters = agentConfig.conversation_starters;
-  }
-  if (agentConfig.recursion_limit !== undefined) {
-    updateData.recursion_limit = agentConfig.recursion_limit;
-  }
-  if (agentConfig.isCollaborative !== undefined) {
-    updateData.isCollaborative = agentConfig.isCollaborative;
-  }
-
-  return updateData;
 }
 
+/**
+ * Determines the public access role based on permissions.
+ */
 function getPublicAccessRole(
   isPublic: boolean,
   publicEdit: boolean,
@@ -164,61 +154,141 @@ function getPublicAccessRole(
   return publicEdit && isCollaborative ? ACCESS_ROLE_EDITOR : ACCESS_ROLE_VIEWER;
 }
 
-function buildPermissions(
-  agentConfig: AgentConfig,
-  ownerUserId: string
-): PermissionUpdate {
+/**
+ * Builds permission update payload from agent configuration.
+ */
+function buildPermissions(agentConfig: AgentConfig, ownerUserId: string): PermissionUpdate {
   const permissions = agentConfig.permissions || {};
-  const updated: Array<{ type: 'user' | 'public'; id: string | null; accessRoleId: string }> = [];
+  const isPublic = permissions.public || false;
+  const publicEdit = permissions.publicEdit || false;
+  const isCollaborative = agentConfig.isCollaborative || false;
+  const publicRoleId = getPublicAccessRole(isPublic, publicEdit, isCollaborative);
 
-  updated.push({
-    type: 'user',
-    id: ownerUserId,
-    accessRoleId: ACCESS_ROLE_OWNER,
-  });
+  const updated: Array<{ type: 'user' | 'public'; id: string | null; accessRoleId: string }> = [
+    { type: 'user', id: ownerUserId, accessRoleId: ACCESS_ROLE_OWNER },
+  ];
 
-  if (permissions.public) {
-    const publicRoleId = getPublicAccessRole(
-      permissions.public,
-      permissions.publicEdit || false,
-      agentConfig.isCollaborative || false
-    );
-
-    if (publicRoleId) {
-      updated.push({
-        type: 'public',
-        id: null,
-        accessRoleId: publicRoleId,
-      });
-    }
+  if (isPublic && publicRoleId) {
+    updated.push({ type: 'public', id: null, accessRoleId: publicRoleId });
   }
 
   return {
     updated: updated.length > 0 ? updated : undefined,
-    public: permissions.public || false,
-    publicAccessRoleId: getPublicAccessRole(
-      permissions.public || false,
-      permissions.publicEdit || false,
-      agentConfig.isCollaborative || false
-    ),
+    public: isPublic,
+    publicAccessRoleId: publicRoleId,
   };
 }
 
+/**
+ * Loads agent configurations from public and private config files.
+ * Returns both the agents array and counts for logging.
+ */
+function loadAgentConfigs(): { agents: AgentConfig[]; publicCount: number; privateCount: number } {
+  const publicAgents = loadOptionalConfigFile<AgentsConfig>(
+    PUBLIC_AGENTS_PATH,
+    PUBLIC_AGENTS_FALLBACK,
+    { agents: [] }
+  ).agents;
+
+  const privateAgents = loadOptionalConfigFile<AgentsConfig>(
+    PRIVATE_AGENTS_PATH,
+    PRIVATE_AGENTS_FALLBACK,
+    { agents: [] }
+  ).agents;
+
+  return {
+    agents: [...publicAgents, ...privateAgents],
+    publicCount: publicAgents.length,
+    privateCount: privateAgents.length,
+  };
+}
+
+/**
+ * Resolves the owner user ID from agent configuration or falls back to system user.
+ */
+async function resolveOwnerUserId(
+  agentConfig: AgentConfig,
+  systemUserId: string
+): Promise<string> {
+  const ownerEmail = agentConfig.permissions?.owner;
+  if (!ownerEmail) return systemUserId;
+
+  const ownerUser = await User.findOne({ email: ownerEmail });
+  if (ownerUser) {
+    return ownerUser._id.toString();
+  }
+
+  console.log(`  ⚠ Owner user ${ownerEmail} not found, using system user`);
+  return systemUserId;
+}
+
+/**
+ * Processes a single agent: creates or updates it and sets permissions.
+ */
+async function processAgent(
+  agentConfig: AgentConfig,
+  client: LibreChatAPIClient,
+  systemUserId: string
+): Promise<{ created: boolean; updated: boolean; skipped: boolean }> {
+  const existingAgent = await client.findAgentByName(agentConfig.name, systemUserId);
+
+  let savedAgent: Agent;
+  const isNew = !existingAgent;
+
+  if (isNew) {
+    const createData = buildAgentCreateData(agentConfig);
+    savedAgent = await client.createAgent(createData, systemUserId);
+    console.log(
+      `  ✓ Created agent: ${agentConfig.name} (${savedAgent.id}) - ${savedAgent.provider}/${savedAgent.model}`
+    );
+  } else {
+    const updateData = buildAgentUpdateData(agentConfig);
+    savedAgent = await client.updateAgent(existingAgent.id, updateData, systemUserId);
+    console.log(
+      `  ✓ Updated agent: ${agentConfig.name} (${existingAgent.id}) - ${savedAgent.provider}/${savedAgent.model}`
+    );
+  }
+
+  const agentObjectId = savedAgent._id;
+  if (!agentObjectId) {
+    console.error(`  ⚠ Agent "${agentConfig.name}" missing _id, skipping permissions`);
+    return { created: isNew, updated: !isNew, skipped: false };
+  }
+
+  try {
+    const ownerUserId = await resolveOwnerUserId(agentConfig, systemUserId);
+    const permissionUpdate = buildPermissions(agentConfig, ownerUserId);
+    await client.updateAgentPermissions(agentObjectId, permissionUpdate, systemUserId);
+
+    if (agentConfig.permissions?.public) {
+      const roleId = getPublicAccessRole(
+        agentConfig.permissions.public,
+        agentConfig.permissions.publicEdit || false,
+        agentConfig.isCollaborative || false
+      );
+      console.log(`    ✓ Granted public ${roleId === ACCESS_ROLE_EDITOR ? 'EDIT' : 'VIEW'} access`);
+    }
+  } catch (permissionError) {
+    console.error(
+      `  ⚠ Failed to set permissions for agent "${agentConfig.name}":`,
+      permissionError instanceof Error ? permissionError.message : String(permissionError)
+    );
+  }
+
+  return { created: isNew, updated: !isNew, skipped: false };
+}
+
+/**
+ * Initializes agents from configuration files.
+ * Creates or updates agents in LibreChat and sets their permissions.
+ */
+/**
+ * Initializes agents from configuration files.
+ * Creates or updates agents in LibreChat and sets their permissions.
+ */
 export async function initializeAgents(): Promise<void> {
   try {
-    const publicAgents = loadOptionalConfigFile<AgentsConfig>(
-      PUBLIC_AGENTS_PATH,
-      PUBLIC_AGENTS_FALLBACK,
-      { agents: [] }
-    ).agents;
-
-    const privateAgents = loadOptionalConfigFile<AgentsConfig>(
-      PRIVATE_AGENTS_PATH,
-      PRIVATE_AGENTS_FALLBACK,
-      { agents: [] }
-    ).agents;
-
-    const allAgents = [...publicAgents, ...privateAgents];
+    const { agents: allAgents, publicCount, privateCount } = loadAgentConfigs();
 
     if (allAgents.length === 0) {
       console.log('ℹ No agents configured - skipping agent initialization');
@@ -239,14 +309,11 @@ export async function initializeAgents(): Promise<void> {
     if (!apiAvailable) {
       console.log('  ⚠ LibreChat API not available - skipping agent initialization');
       console.log('  ℹ Agents will be initialized after API is ready');
-      console.log('  ℹ You can manually trigger agent initialization later');
       return;
     }
 
     await connectToMongoDB();
 
-    const publicCount = publicAgents.length;
-    const privateCount = privateAgents.length;
     console.log('Initializing agents from configuration...');
     if (publicCount > 0) {
       console.log(`  Loading ${publicCount} agent(s) from agents.json`);
@@ -274,82 +341,28 @@ export async function initializeAgents(): Promise<void> {
     }
 
     const systemUserIdStr = systemUserId.toString();
-
-    let agentsCreated = 0;
-    let agentsUpdated = 0;
-    let agentsSkipped = 0;
+    const stats = { created: 0, updated: 0, skipped: 0 };
 
     for (const agentConfig of allAgents) {
       try {
-        const existingAgent = await client.findAgentByName(agentConfig.name, systemUserIdStr);
-
-        let savedAgent: Agent;
-        if (!existingAgent) {
-          const createData = await buildAgentCreateData(agentConfig, client, systemUserIdStr);
-          savedAgent = await client.createAgent(createData, systemUserIdStr);
-          console.log(
-            `  ✓ Created agent: ${agentConfig.name} (${savedAgent.id}) - ${savedAgent.provider}/${savedAgent.model}`
-          );
-          agentsCreated++;
-        } else {
-          const updateData = await buildAgentUpdateData(agentConfig, client, systemUserIdStr);
-          savedAgent = await client.updateAgent(existingAgent.id, updateData, systemUserIdStr);
-          console.log(
-            `  ✓ Updated agent: ${agentConfig.name} (${existingAgent.id}) - ${savedAgent.provider}/${savedAgent.model}`
-          );
-          agentsUpdated++;
-        }
-
-        const permissions = agentConfig.permissions || {};
-        let ownerUserId = systemUserIdStr;
-
-        if (permissions.owner) {
-          const ownerUser = await User.findOne({ email: permissions.owner });
-          if (ownerUser) {
-            ownerUserId = ownerUser._id.toString();
-          } else {
-            console.log(`  ⚠ Owner user ${permissions.owner} not found, using system user`);
-          }
-        }
-
-        const agentObjectId = savedAgent._id;
-        if (!agentObjectId) {
-          console.error(`  ⚠ Agent "${agentConfig.name}" missing _id, skipping permissions`);
-          continue;
-        }
-
-        try {
-          const permissionUpdate = buildPermissions(agentConfig, ownerUserId);
-          await client.updateAgentPermissions(agentObjectId, permissionUpdate, systemUserIdStr);
-
-          if (permissions.public) {
-            const roleId = getPublicAccessRole(
-              permissions.public,
-              permissions.publicEdit || false,
-              agentConfig.isCollaborative || false
-            );
-            console.log(`    ✓ Granted public ${roleId === ACCESS_ROLE_EDITOR ? 'EDIT' : 'VIEW'} access`);
-          }
-        } catch (permissionError) {
-          console.error(
-            `  ⚠ Failed to set permissions for agent "${agentConfig.name}":`,
-            permissionError instanceof Error ? permissionError.message : String(permissionError)
-          );
-        }
+        const result = await processAgent(agentConfig, client, systemUserIdStr);
+        stats.created += result.created ? 1 : 0;
+        stats.updated += result.updated ? 1 : 0;
+        stats.skipped += result.skipped ? 1 : 0;
       } catch (error) {
         console.error(
           `  ✗ Error processing agent ${agentConfig.name}:`,
           error instanceof Error ? error.message : String(error)
         );
-        agentsSkipped++;
+        stats.skipped++;
       }
     }
 
     console.log(`✓ Agent initialization completed:`);
-    console.log(`  - Created: ${agentsCreated}`);
-    console.log(`  - Updated: ${agentsUpdated}`);
-    if (agentsSkipped > 0) {
-      console.log(`  - Skipped: ${agentsSkipped}`);
+    console.log(`  - Created: ${stats.created}`);
+    console.log(`  - Updated: ${stats.updated}`);
+    if (stats.skipped > 0) {
+      console.log(`  - Skipped: ${stats.skipped}`);
     }
   } catch (error) {
     console.error('✗ Error during agent initialization:', error);

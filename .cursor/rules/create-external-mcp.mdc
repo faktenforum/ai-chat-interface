@@ -140,7 +140,7 @@ Unlike Docker-based MCP servers, external MCP servers require **none** of the fo
 ## Naming Conventions
 
 - **LibreChat server key**: `{name}` (camelCase or kebab-case, e.g., `mapbox`, `github`)
-- **Environment variable**: `{NAME}_ACCESS_TOKEN` or `{NAME}_API_KEY` (UPPER_SNAKE_CASE, e.g., `MAPBOX_ACCESS_TOKEN`, `GITHUB_MCP_PAT`)
+- **Environment variable**: `MCP_{NAME}_{TYPE}` (UPPER_SNAKE_CASE, e.g., `MCP_MAPBOX_ACCESS_TOKEN`, `MCP_GITHUB_PAT`)
 - **Icon filename**: `mcp-{name}-icon.svg` (must match pattern for auto-copy)
 - **Domain in allowedDomains**: Exact domain as used in URL (e.g., `mcp.mapbox.com`)
 
@@ -148,7 +148,7 @@ Unlike Docker-based MCP servers, external MCP servers require **none** of the fo
 
 After implementation:
 
-1. **Set environment variable**: Add `{NAME}_ACCESS_TOKEN` to `.env.local` (or production env file) with valid token
+1. **Set environment variable**: Add `MCP_{NAME}_{TYPE}` (e.g., `MCP_GITHUB_PAT`, `MCP_MAPBOX_ACCESS_TOKEN`) to `.env.local` (or production env file) with valid token
 2. **Rebuild librechat-init**: 
    - Local: `npm run build:local` (or `npm run build:local librechat-init`)
    - Production/Portainer: Redeploy from Git (auto-rebuild) or manual rebuild
@@ -174,7 +174,7 @@ mcpServers:
     description: Geografische Suche, Routenplanung, Geocoding und Kartenvisualisierung
     iconPath: /images/mcp-mapbox-icon.svg
     headers:
-      Authorization: "Bearer ${MAPBOX_ACCESS_TOKEN}"
+      Authorization: "Bearer ${MCP_MAPBOX_ACCESS_TOKEN}"
     initTimeout: 120000
     chatMenu: false
     startup: true
@@ -187,7 +187,7 @@ mcpServers:
 # Get your access token from: https://account.mapbox.com/access-tokens/
 # Required scopes: MAP:READ (secret), STYLES:READ (public), STYLES:TILES (public)
 # Optional scopes: FONTS:READ, VISION:READ, DATASETS:READ
-MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoieW91cnVzZXJuYW1lIiwiYSI6ImNsc...
+MCP_MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoieW91cnVzZXJuYW1lIiwiYSI6ImNsc...
 ```
 
 ### GitHub MCP Integration
@@ -206,7 +206,7 @@ mcpServers:
     description: Repository-Verwaltung, Issues, Pull Requests und Code-Analyse
     iconPath: /images/mcp-github-icon.svg
     headers:
-      Authorization: "Bearer ${GITHUB_MCP_PAT}"
+      Authorization: "Bearer ${MCP_GITHUB_PAT}"
       X-MCP-Readonly: "true"
     initTimeout: 120000
     chatMenu: false

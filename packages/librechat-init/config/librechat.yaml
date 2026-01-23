@@ -605,7 +605,7 @@ mcpServers:
     description: Repository-Verwaltung, Issues, Pull Requests und Code-Analyse
     iconPath: /images/mcp-github-icon.svg
     headers:
-      Authorization: "Bearer ${GITHUB_MCP_PAT}"
+      Authorization: "Bearer ${MCP_GITHUB_PAT}"
       X-MCP-Readonly: "true"
     initTimeout: 120000
     chatMenu: false
@@ -621,7 +621,7 @@ mcpServers:
     headers:
       Authorization: "Bearer ${MCP_MAPBOX_ACCESS_TOKEN}"
     initTimeout: 120000
-    chatMenu: true
+    chatMenu: false
     startup: true
     serverInstructions: true
 

@@ -112,6 +112,8 @@ services:
       CONFIG_PATH: /app/config/librechat.yaml
       OCR_API_KEY: ${LIBRECHAT_OCR_API_KEY:-}
       OCR_BASEURL: ${LIBRECHAT_OCR_BASEURL:-https://api.mistral.ai/v1}
+      MCP_GITHUB_PAT: ${MCP_GITHUB_PAT:-}
+      MCP_MAPBOX_ACCESS_TOKEN: ${MCP_MAPBOX_ACCESS_TOKEN:-}
     volumes:
       - ./images:/app/client/public/images
       - ./uploads:/app/uploads

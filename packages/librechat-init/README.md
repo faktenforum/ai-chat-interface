@@ -1,9 +1,11 @@
 # LibreChat Init Services
 
-Two initialization services:
+Initialization services for LibreChat configuration and agent setup.
 
-- **librechat-init**: Runs before API (config setup, permissions, roles)
-- **librechat-post-init**: Runs after API (agent initialization)
+## Services
+
+- **librechat-init**: Pre-API initialization (config, permissions, roles)
+- **librechat-post-init**: Post-API initialization (agents)
 
 ## Configuration
 
@@ -22,7 +24,9 @@ Two initialization services:
 }
 ```
 
-### Agents (`config/agents.json`, `config/agents.private.json`)
+### Agents
+
+**Files:** `config/agents.json` (public), `config/agents.private.json` (private)
 
 ```json
 {
@@ -40,17 +44,21 @@ Two initialization services:
 }
 ```
 
-**Fields:**
-- `mcpServers`: MCP server names (all tools loaded if `mcpTools` omitted)
+**MCP Configuration:**
+- `mcpServers`: Server names (all tools loaded if `mcpTools` omitted)
 - `mcpTools`: Explicit tool keys (`toolName_mcp_serverName`)
+
+**Permissions:**
 - `permissions.owner`: Email (defaults to system user)
 - `permissions.public`: Public VIEW access
 - `permissions.publicEdit`: Public EDIT (requires `isCollaborative: true`)
 
-**System user priority:** `LIBRECHAT_DEFAULT_ADMINS` → first admin → first user
+**System User Priority:** `LIBRECHAT_DEFAULT_ADMINS` → first admin → first user
 
-### Default Administrators
+### Environment Variables
 
 ```bash
 LIBRECHAT_DEFAULT_ADMINS=admin@example.com,admin2@example.com
+LIBRECHAT_API_URL=http://api:3080
+LIBRECHAT_JWT_SECRET=your-secret-key
 ```

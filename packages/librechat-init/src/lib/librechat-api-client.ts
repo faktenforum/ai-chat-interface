@@ -6,32 +6,45 @@ import {
   JWT_EXPIRES_IN,
 } from '../utils/constants.ts';
 
+/**
+ * HTTP client for LibreChat API with JWT authentication.
+ */
 export class LibreChatAPIClient {
   private baseURL: string;
   private jwtSecret: string;
   private tokenCache: Map<string, string> = new Map();
 
   constructor(baseURL: string, jwtSecret: string) {
-    this.baseURL = baseURL.replace(/\/$/, ''); // Remove trailing slash
+    this.baseURL = baseURL.replace(/\/$/, '');
     this.jwtSecret = jwtSecret;
   }
 
+  /**
+   * Generates or retrieves cached JWT token for a user.
+   */
   private generateToken(userId: string): string {
-    if (this.tokenCache.has(userId)) {
-      return this.tokenCache.get(userId)!;
-    }
+    const cached = this.tokenCache.get(userId);
+    if (cached) return cached;
 
     const token = jwt.sign({ id: userId }, this.jwtSecret, { expiresIn: JWT_EXPIRES_IN });
     this.tokenCache.set(userId, token);
     return token;
   }
 
+  /**
+   * Gets Authorization header value for a user.
+   */
   private getAuthHeader(userId: string): string {
-    const token = this.generateToken(userId);
-    return `Bearer ${token}`;
+    return `Bearer ${this.generateToken(userId)}`;
   }
 
+  /**
+   * Extracts error message from various response formats (SSE, JSON, plain text).
+   */
   private extractErrorMessage(responseText: string, contentType: string): string {
+    const truncated = responseText.substring(0, 200);
+
+    // Server-Sent Events format
     if (responseText.trim().startsWith('event:') || responseText.trim().startsWith('data:')) {
       const errorMatch = responseText.match(/event:\s*err\s*\n\s*data:\s*(.+)/);
       if (errorMatch) {
@@ -42,27 +55,46 @@ export class LibreChatAPIClient {
           return errorMatch[1];
         }
       }
-      return responseText.substring(0, 200);
+      return truncated;
     }
 
+    // JSON format
     if (contentType.includes('application/json')) {
       try {
         const parsed = JSON.parse(responseText);
-        return parsed.message || parsed.error || responseText.substring(0, 200);
+        return parsed.message || parsed.error || truncated;
       } catch {
         // Fall through to plain text
       }
     }
 
-    return responseText.substring(0, 200);
+    return truncated;
   }
 
+  /**
+   * Checks if an error response indicates a "not found" condition.
+   */
   private isNotFoundError(status: number, errorMessage: string): boolean {
     if (status === 404) return true;
     const lower = errorMessage.toLowerCase();
     return lower.includes('not found') || lower.includes('agent not found');
   }
 
+  /**
+   * Common headers for all API requests.
+   */
+  private getRequestHeaders(userId: string): Record<string, string> {
+    return {
+      'Content-Type': 'application/json',
+      Authorization: this.getAuthHeader(userId),
+      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+    };
+  }
+
+  /**
+   * Makes an authenticated HTTP request to the LibreChat API.
+   * @param allow404 - If true, returns null for 404 responses instead of throwing
+   */
   private async request<T>(
     method: string,
     path: string,
@@ -72,11 +104,7 @@ export class LibreChatAPIClient {
   ): Promise<T | null> {
     const response = await fetch(`${this.baseURL}${path}`, {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: this.getAuthHeader(userId),
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-      },
+      headers: this.getRequestHeaders(userId),
       body: body ? JSON.stringify(body) : undefined,
     });
 
@@ -92,10 +120,12 @@ export class LibreChatAPIClient {
       throw new Error(errorMessage || `HTTP ${response.status}: ${response.statusText}`);
     }
 
+    // No content
     if (response.status === 204 || !responseText.trim()) {
       return undefined as unknown as T;
     }
 
+    // Server-Sent Events error
     if (responseText.trim().startsWith('event:') || responseText.trim().startsWith('data:')) {
       const errorMatch = responseText.match(/event:\s*err\s*\n\s*data:\s*(.+)/);
       if (errorMatch) {
@@ -104,6 +134,7 @@ export class LibreChatAPIClient {
       throw new Error(`Unexpected SSE response: ${responseText.substring(0, 200)}`);
     }
 
+    // Parse JSON
     try {
       return JSON.parse(responseText) as T;
     } catch (parseError) {
@@ -113,6 +144,9 @@ export class LibreChatAPIClient {
     }
   }
 
+  /**
+   * Waits for the LibreChat API to become available with retries.
+   */
   async waitForAPI(
     maxRetries = API_RETRY_ATTEMPTS,
     delayMs = API_RETRY_DELAY_MS
@@ -150,38 +184,44 @@ export class LibreChatAPIClient {
     return false;
   }
 
+  /**
+   * Creates a new agent.
+   */
   async createAgent(data: AgentCreateParams, userId: string): Promise<Agent> {
     const result = await this.request<Agent>('POST', '/api/agents', userId, data, false);
-    if (result === null) {
+    if (!result) {
       throw new Error('Unexpected null response from createAgent');
     }
     return result;
   }
 
+  /**
+   * Updates an existing agent.
+   */
   async updateAgent(id: string, data: AgentUpdateParams, userId: string): Promise<Agent> {
     const result = await this.request<Agent>('PATCH', `/api/agents/${id}`, userId, data, false);
-    if (result === null) {
+    if (!result) {
       throw new Error('Unexpected null response from updateAgent');
     }
     return result;
   }
 
+  /**
+   * Gets an agent by ID. Returns null if not found.
+   */
   async getAgent(id: string, userId: string): Promise<Agent | null> {
     return await this.request<Agent>('GET', `/api/agents/${id}`, userId, undefined, true);
   }
 
+  /**
+   * Gets available tools for an MCP server.
+   */
   async getMCPServerTools(serverName: string, userId: string): Promise<string[]> {
     try {
       const url = `${this.baseURL}/api/mcp/tools`;
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        Authorization: this.getAuthHeader(userId),
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-      };
-
       const response = await fetch(url, {
         method: 'GET',
-        headers,
+        headers: this.getRequestHeaders(userId),
       });
 
       if (!response.ok) {
@@ -211,16 +251,15 @@ export class LibreChatAPIClient {
     }
   }
 
+  /**
+   * Finds an agent by name. Returns null if not found.
+   */
   async findAgentByName(name: string, userId: string): Promise<Agent | null> {
     try {
       const url = `${this.baseURL}/api/agents?search=${encodeURIComponent(name)}`;
       const response = await fetch(url, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: this.getAuthHeader(userId),
-          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-        },
+        headers: this.getRequestHeaders(userId),
       });
 
       if (!response.ok) {
@@ -238,6 +277,9 @@ export class LibreChatAPIClient {
     }
   }
 
+  /**
+   * Updates agent permissions.
+   */
   async updateAgentPermissions(
     agentId: string,
     permissions: PermissionUpdate,
@@ -252,6 +294,9 @@ export class LibreChatAPIClient {
   }
 }
 
+/**
+ * LibreChat agent entity.
+ */
 export interface Agent {
   _id?: string;
   id: string;
@@ -276,11 +321,17 @@ export interface Agent {
   [key: string]: unknown;
 }
 
+/**
+ * Agent avatar configuration.
+ */
 export interface AgentAvatar {
   filepath: string;
   source: string;
 }
 
+/**
+ * Parameters for creating a new agent.
+ */
 export interface AgentCreateParams {
   name?: string | null;
   description?: string | null;
@@ -301,6 +352,9 @@ export interface AgentCreateParams {
   agent_ids?: string[];
 }
 
+/**
+ * Parameters for updating an existing agent.
+ */
 export interface AgentUpdateParams {
   name?: string | null;
   description?: string | null;
@@ -324,11 +378,17 @@ export interface AgentUpdateParams {
   removeProjectIds?: string[];
 }
 
+/**
+ * Support contact information for an agent.
+ */
 export interface SupportContact {
   name?: string;
   email?: string;
 }
 
+/**
+ * Permission update payload for agents.
+ */
 export interface PermissionUpdate {
   updated?: Principal[];
   removed?: Principal[];
@@ -336,6 +396,9 @@ export interface PermissionUpdate {
   publicAccessRoleId?: string;
 }
 
+/**
+ * Permission principal (user, group, role, or public).
+ */
 export interface Principal {
   type: 'user' | 'group' | 'role' | 'public';
   id: string | null;
@@ -344,6 +407,9 @@ export interface Principal {
   source?: string;
 }
 
+/**
+ * Response from agent list API endpoint.
+ */
 export interface AgentListResponse {
   data: Agent[];
   has_more?: boolean;
