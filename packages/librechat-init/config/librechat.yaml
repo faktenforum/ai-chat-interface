@@ -497,6 +497,7 @@ mcpSettings:
     - 'mcp-weather'             # MCP Weather service (Docker network)
     - 'mcp-playwright'          # MCP Playwright service (Docker network)
     - 'mcp-db-timetable'        # MCP DB Timetable service (Docker network)
+    - 'mcp-stackoverflow'       # MCP StackOverflow service (Docker network)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
@@ -570,6 +571,17 @@ mcpServers:
     iconPath: /images/mcp-db-timetable-icon.svg
     initTimeout: 120000
     chatMenu: false
+    startup: true
+    serverInstructions: true
+
+  stackoverflow:
+    type: streamable-http
+    url: http://mcp-stackoverflow:3008/mcp
+    title: Stack Overflow
+    description: Programmierlösungen und Fehlerbehebung finden
+    iconPath: /images/mcp-stackoverflow-icon.svg
+    initTimeout: 120000
+    chatMenu: true
     startup: true
     serverInstructions: true
 

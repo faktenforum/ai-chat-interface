@@ -14,12 +14,14 @@ Create `docker-compose.{service}.yml`:
 - Add healthchecks: HTTP GET `/health` or service-specific check, interval 30s, timeout 10s, retries 3, start_period 40s
 - Resource limits: CPU (0.5-2.0), memory (256M-2G) based on service needs
 - Comment: "Traefik labels defined in docker-compose.prod.yml and docker-compose.local.yml"
+- **Image naming**: Base file uses fallback image (e.g., `node:24-alpine`, `python:3.13-slim`). Extension files with `build` sections MUST override with unique image name (e.g., `ghcr.io/faktenforum/{service}:latest`) to prevent Docker layering the built image on top of the base image, which causes layer limit issues.
 
 ## 2. Extension Files
 Add service to:
 - `docker-compose.local.yml`: Extend service, add `env_file: .env.local`, add Traefik labels (HTTP only), override with `build` section if needed
 - `docker-compose.local-source.yml`: Same as local.yml (if service supports source builds)
 - `docker-compose.prod.yml`: Extend service, add `container_name: ${STACK_NAME:-prod}-{service}`, add Traefik labels (HTTP + HTTPS), add volumes with `${STACK_NAME:-prod}-` prefix
+- **Critical**: When adding `build` section, ALWAYS set unique `image:` name (e.g., `ghcr.io/faktenforum/{service}:latest` for main branch, `:dev` for feature branches). Never use the same name as the base image (`FROM`), as Docker will layer builds recursively causing layer limit errors.
 
 ## 3. Environment Variables
 See `.cursor/rules/environment-variables.mdc` for detailed guidelines on:

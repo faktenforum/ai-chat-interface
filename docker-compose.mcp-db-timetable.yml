@@ -4,7 +4,7 @@ services:
     # For local development, build section is used automatically
     # For production/Portainer, build section is defined in docker-compose.prod.yml
     # Fallback image (used if build fails or for local testing without build)
-    image: node:25-alpine
+    image: node:24-alpine
     container_name: mcp-db-timetable
     restart: always
     environment:

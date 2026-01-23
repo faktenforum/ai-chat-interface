@@ -443,6 +443,18 @@ async function processEnvExample(
         finalEnvLines.push(`${key}=${currentValue !== undefined ? currentValue : defaultValue}`);
     }
 
+    // Preserve existing variables that weren't processed (e.g., optional/commented in example files)
+    // This ensures user-set values like API keys are retained even if not in example files
+    for (const [key, value] of Object.entries(existingEnv)) {
+        if (!processedKeys.has(key) && !AUTO_GENERATED[key] && !PROMPTS[key]) {
+            // Only preserve if it's not a migration target (old key to be replaced)
+            if (!Object.values(MIGRATIONS).includes(key)) {
+                finalEnvLines.push(`${key}=${value}`);
+                processedKeys.add(key);
+            }
+        }
+    }
+
     return finalEnvLines;
 }
 

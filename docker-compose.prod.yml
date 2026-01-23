@@ -195,6 +195,18 @@ services:
     image: ghcr.io/faktenforum/mcp-db-timetable:dev
     # No Traefik labels - internal service only
 
+  mcp-stackoverflow:
+    extends: { file: docker-compose.mcp-stackoverflow.yml, service: mcp-stackoverflow }
+    container_name: ${STACK_NAME:-prod}-mcp-stackoverflow
+    # Build from submodule Dockerfile
+    # Use unique image name to prevent Docker layering built image on base image
+    image: ghcr.io/faktenforum/mcp-stackoverflow:dev
+    build:
+      context: ./dev/stackoverflow-mcp
+      dockerfile: Dockerfile
+    pull_policy: build
+    # No Traefik labels - internal service only
+
 networks:
   traefik-net:
     external: true
