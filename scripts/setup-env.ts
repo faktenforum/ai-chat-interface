@@ -277,7 +277,7 @@ function resolveVariableExpansions(envLines: string[]): string[] {
     for (const line of envLines) {
         const trimmed = line.trim();
 
-        // Keep comments and empty lines as-is
+        // Skip comments and empty lines
         if (!trimmed || trimmed.startsWith('#')) {
             continue;
         }
@@ -359,23 +359,19 @@ function resolveVariableExpansions(envLines: string[]): string[] {
     for (const line of envLines) {
         const trimmed = line.trim();
 
-        // Keep comments and empty lines as-is
+        // Skip comments and empty lines
         if (!trimmed || trimmed.startsWith('#')) {
-            resolvedLines.push(line);
             continue;
         }
 
         const [key, ...valueParts] = trimmed.split('=');
         if (!key || valueParts.length === 0) {
-            resolvedLines.push(line);
             continue;
         }
 
         const entry = lineMap.get(key);
         if (entry) {
             resolvedLines.push(`${key}=${entry.value}`);
-        } else {
-            resolvedLines.push(line);
         }
     }
 
@@ -403,9 +399,8 @@ async function processEnvExample(
     for (const line of exampleContent.split('\n')) {
         const trimmed = line.trim();
 
-        // Keep comments and empty lines as-is
+        // Skip comments and empty lines
         if (!trimmed || trimmed.startsWith('#')) {
-            finalEnvLines.push(line);
             continue;
         }
 
@@ -468,26 +463,12 @@ function addProductionVariables(
     processedKeys: Set<string>
 ): string[] {
     const envLines: string[] = [];
-    let addedSection = false;
-    const sectionTitle = envContent.includes('Production-specific') 
-        ? 'Production-Only Configuration (from env.prod.example)'
-        : envContent.includes('Test environment-specific')
-        ? 'Test Environment Configuration (from env.dev.example)'
-        : 'Environment-Specific Configuration';
 
     for (const line of envContent.split('\n')) {
         const trimmed = line.trim();
 
-        // Keep comments and empty lines
+        // Skip comments and empty lines
         if (!trimmed || trimmed.startsWith('#')) {
-            if (!addedSection) {
-                envLines.push('');
-                envLines.push('# ═══════════════════════════════════════════════════════════════════════════');
-                envLines.push(`# ${sectionTitle}`);
-                envLines.push('# ═══════════════════════════════════════════════════════════════════════════');
-                addedSection = true;
-            }
-            envLines.push(line);
             continue;
         }
 
@@ -599,14 +580,20 @@ async function main() {
     // 7. Resolve variable expansions
     const resolvedEnvLines = resolveVariableExpansions(finalEnvLines);
 
-    // 8. Write final file
-    const finalContent = resolvedEnvLines.join('\n');
+    // 8. Filter out comments and empty lines
+    const filteredLines = resolvedEnvLines.filter(line => {
+        const trimmed = line.trim();
+        return trimmed && !trimmed.startsWith('#');
+    });
+
+    // 9. Write final file
+    const finalContent = filteredLines.join('\n');
     fs.writeFileSync(targetFile, finalContent);
 
-    // 9. Summary
+    // 10. Summary
     const processedKeys = new Set(
-        resolvedEnvLines
-            .filter(line => !line.trim().startsWith('#') && line.includes('='))
+        filteredLines
+            .filter(line => line.includes('='))
             .map(line => line.split('=')[0])
     );
     const newVarsCount = Array.from(processedKeys).filter(k => !existingEnv[k]).length;
