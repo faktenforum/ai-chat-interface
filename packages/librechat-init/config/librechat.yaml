@@ -582,7 +582,7 @@ mcpServers:
     description: Programmierlösungen und Fehlerbehebung finden
     iconPath: /images/mcp-stackoverflow-icon.svg
     initTimeout: 120000
-    chatMenu: true
+    chatMenu: false
     startup: true
     serverInstructions: true
 
@@ -593,7 +593,7 @@ mcpServers:
     description: npm-Pakete durchsuchen und finden
     iconPath: /images/mcp-npm-search-icon.svg
     initTimeout: 120000
-    chatMenu: true
+    chatMenu: false
     startup: true
     serverInstructions: true
 
@@ -607,7 +607,7 @@ mcpServers:
       Authorization: "Bearer ${GITHUB_MCP_PAT}"
       X-MCP-Readonly: "true"
     initTimeout: 120000
-    chatMenu: true
+    chatMenu: false
     startup: true
     serverInstructions: true
 
