@@ -9,18 +9,25 @@ description: Guide for integrating new MCP servers into the Docker stack
 
 ## Integration Patterns Overview
 
-Three integration patterns exist:
+Four integration patterns exist:
 
 1. **Self-written MCP server** (TypeScript/Node.js): Full NPM package in `packages/mcp-{name}/`, custom Dockerfile, GitHub Actions workflow. Examples: `mcp-calculator`, `mcp-image-gen`.
 2. **External published Docker image**: Use existing image directly, no package/Dockerfile needed. May require `command` override or custom healthcheck. Examples: `mcp-firecrawl`, `mcp-weather`.
 3. **External submodule with modifications**: Git submodule in `dev/{name}-mcp/`, build from submodule Dockerfile. Examples: `mcp-openstreetmap`.
+4. **External/remote hosted MCP server**: Remote hosted service accessible via HTTPS, no Docker setup required. Examples: GitHub MCP (`api.githubcopilot.com`), Mapbox MCP (`mcp.mapbox.com`). **See `@.cursor/rules/create-external-mcp.mdc` for this pattern.**
 
-**Common steps for all patterns:**
+**Common steps for patterns 1-3 (Docker-based):**
 - Docker Compose base file (`docker-compose.mcp-{name}.yml`)
 - Extension files (`docker-compose.local.yml`, `docker-compose.local-source.yml`, `docker-compose.prod.yml`)
 - Environment variables (`env.local.example`, `env.prod.example`, `env.dev.example`)
 - LibreChat configuration (`librechat.yaml`: `mcpSettings.allowedDomains`, `mcpServers`)
 - Icon asset (`packages/librechat-init/assets/mcp-{name}-icon.svg`)
+
+**Common steps for pattern 4 (external/remote):**
+- LibreChat configuration (`librechat.yaml`: `mcpSettings.allowedDomains`, `mcpServers`)
+- Environment variables (`env.local.example`, `env.prod.example`, `env.dev.example`)
+- Icon asset (`packages/librechat-init/assets/mcp-{name}-icon.svg`)
+- **No Docker Compose files needed**
 
 ## Pattern 1: Self-Written MCP Server
 
