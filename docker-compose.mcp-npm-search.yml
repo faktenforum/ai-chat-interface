@@ -1,9 +1,7 @@
 services:
   mcp-npm-search:
     # Internal service only - not exposed via Traefik
-    # For local development, build section is used automatically
-    # For production/Portainer, build section is defined in docker-compose.prod.yml
-    # Fallback image (used if build fails or for local testing without build)
+    # Build section defined in docker-compose.local-dev.yml and docker-compose.prod.yml
     image: node:24-alpine
     container_name: mcp-npm-search
     restart: always

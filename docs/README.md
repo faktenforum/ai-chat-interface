@@ -1,40 +1,37 @@
 # Documentation
 
-Welcome to the AI Chat Interface documentation. This directory contains comprehensive guides and information about the platform.
+Essential guides for the AI Chat Interface platform.
 
 ## Getting Started
 
-New to the project? Start here:
+- **[Getting Started](GETTING_STARTED.md)** - Setup, deployment, and usage
 
-- **[Getting Started](GETTING_STARTED.md)** - Setup instructions, deployment guides, and usage information
+## Core
 
-## Core Documentation
+- **[Goals](GOALS.md)** - Project principles and philosophy
+- **[Services](SERVICES.md)** - Service overview and network architecture
+- **[Administration](ADMINISTRATION.md)** - User management and administration
+- **[LibreChat Features](LIBRECHAT_FEATURES.md)** - LibreChat configuration and features
 
-- **[Goals](GOALS.md)** - Project goals, principles, and philosophy
-- **[Services](SERVICES.md)** - Overview of all services, their availability, and network architecture
-- **[Administration](ADMINISTRATION.md)** - LibreChat administration tools and user management
-- **[LibreChat Features](LIBRECHAT_FEATURES.md)** - Detailed documentation of LibreChat features and configuration
+## Deployment
 
-## Deployment & Configuration
-
-- **[Portainer Configuration](PORTAINER-CONFIG.md)** - Guide for deploying via Portainer, including GitOps automatic updates
-- **[Getting Started](GETTING_STARTED.md)** - Complete setup and deployment instructions
-- **[SearXNG Engines](SEARXNG_ENGINES.md)** - Configuration and usage of SearXNG search engines
-- **[n8n Setup Notes](N8N.md)** - Owner setup, Portainer env behavior, and user reset
+- **[Portainer Configuration](PORTAINER-CONFIG.md)** - Portainer deployment with GitOps
+- **[SearXNG Engines](SEARXNG_ENGINES.md)** - SearXNG configuration
+- **[n8n Setup Notes](N8N.md)** - n8n owner setup and configuration
 
 ## Development
 
-- **[Development Guide](DEVELOPMENT.md)** - Working with git submodules and the development stack
-- **[Submodule Sync Guide](SUBMODULE_SYNC.md)** - Synchronizing Faktenforum fork submodules with upstream repositories
-- **[Cursor Rules](CURSOR_RULES.md)** - Using AI agents to integrate new services and MCP servers
-- **[Cursor MongoDB MCP](CURSOR_MONGODB_MCP.md)** - Connecting Cursor to local LibreChat MongoDB database
-- **[Agent Firecrawl Tools](AGENT_FIRECRAWL_TOOLS.md)** - Firecrawl MCP tool recommendations and testing guide
+- **[Development Guide](DEVELOPMENT.md)** - Git submodules and development stack
+- **[Submodule Sync Guide](SUBMODULE_SYNC.md)** - Syncing fork submodules with upstream
+- **[Cursor Rules](CURSOR_RULES.md)** - Integrating services and MCP servers
+- **[Cursor MongoDB MCP](CURSOR_MONGODB_MCP.md)** - Cursor MongoDB integration
+- **[Agent Firecrawl Tools](AGENT_FIRECRAWL_TOOLS.md)** - Firecrawl MCP tool guide
 
-## Project Management
+## Project
 
 - **[TODO](TODO.md)** - Current tasks and improvements
 
-## Quick Links
+## Links
 
-- **Main Repository**: [GitHub](https://github.com/Faktenforum/ai-chat-interface)
+- **Repository**: [GitHub](https://github.com/Faktenforum/ai-chat-interface)
 - **Root README**: [../README.md](../README.md)

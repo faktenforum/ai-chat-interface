@@ -282,10 +282,6 @@ async function processAgent(
  * Initializes agents from configuration files.
  * Creates or updates agents in LibreChat and sets their permissions.
  */
-/**
- * Initializes agents from configuration files.
- * Creates or updates agents in LibreChat and sets their permissions.
- */
 export async function initializeAgents(): Promise<void> {
   try {
     const { agents: allAgents, publicCount, privateCount } = loadAgentConfigs();
