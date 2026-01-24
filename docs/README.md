@@ -25,6 +25,7 @@ New to the project? Start here:
 ## Development
 
 - **[Development Guide](DEVELOPMENT.md)** - Working with git submodules and the development stack
+- **[Submodule Sync Guide](SUBMODULE_SYNC.md)** - Synchronizing Faktenforum fork submodules with upstream repositories
 - **[Cursor Rules](CURSOR_RULES.md)** - Using AI agents to integrate new services and MCP servers
 - **[Cursor MongoDB MCP](CURSOR_MONGODB_MCP.md)** - Connecting Cursor to local LibreChat MongoDB database
 - **[Agent Firecrawl Tools](AGENT_FIRECRAWL_TOOLS.md)** - Firecrawl MCP tool recommendations and testing guide
