@@ -129,7 +129,7 @@ Same as above
 Unlike Docker-based MCP servers, external MCP servers require **none** of the following:
 
 - ❌ **Docker Compose files**: No `docker-compose.mcp-{name}.yml`
-- ❌ **Extension files**: No updates to `docker-compose.local.yml`, `docker-compose.local-source.yml`, `docker-compose.prod.yml`
+- ❌ **Extension files**: No updates to `docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, `docker-compose.dev.yml`
 - ❌ **NPM package**: No `packages/mcp-{name}/` directory
 - ❌ **Dockerfile**: No container image needed
 - ❌ **GitHub Actions workflow**: No build workflow needed

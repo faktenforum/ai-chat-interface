@@ -68,13 +68,13 @@ cd ../..
 **Using npm scripts (recommended):**
 ```bash
 npm run setup
-npm run start:local-source
+npm run start:local-dev
 ```
 
 **Or manually:**
 ```bash
-docker compose -f docker-compose.local-source.yml --env-file .env.local build
-docker compose -f docker-compose.local-source.yml --env-file .env.local up -d
+docker compose -f docker-compose.local-dev.yml --env-file .env.local build
+docker compose -f docker-compose.local-dev.yml --env-file .env.local up -d
 ```
 
 This builds images from submodules and starts all services.
@@ -87,6 +87,6 @@ git submodule update --remote
 
 After updating, rebuild affected services:
 ```bash
-docker compose -f docker-compose.local-source.yml --env-file .env.local build <service-name>
-docker compose -f docker-compose.local-source.yml --env-file .env.local up -d <service-name>
+docker compose -f docker-compose.local-dev.yml --env-file .env.local build <service-name>
+docker compose -f docker-compose.local-dev.yml --env-file .env.local up -d <service-name>
 ```

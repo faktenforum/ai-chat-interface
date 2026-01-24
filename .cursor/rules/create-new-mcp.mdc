@@ -18,7 +18,7 @@ Four integration patterns exist:
 
 **Common steps for patterns 1-3 (Docker-based):**
 - Docker Compose base file (`docker-compose.mcp-{name}.yml`)
-- Extension files (`docker-compose.local.yml`, `docker-compose.local-source.yml`, `docker-compose.prod.yml`)
+- Extension files (`docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, `docker-compose.dev.yml`)
 - Environment variables (`env.local.example`, `env.prod.example`, `env.dev.example`)
 - LibreChat configuration (`librechat.yaml`: `mcpSettings.allowedDomains`, `mcpServers`)
 - Icon asset (`packages/librechat-init/assets/mcp-{name}-icon.svg`)
@@ -81,7 +81,7 @@ Create `docker-compose.mcp-{name}.yml`:
 - Logging: json-file driver, max-size 10m, max-file 3, compress true
 
 ### 2.2 Extension Files
-In `docker-compose.local.yml`, `docker-compose.local-source.yml`, `docker-compose.prod.yml`:
+In `docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, `docker-compose.dev.yml`:
 - Extend base service: `extends: { file: docker-compose.mcp-{name}.yml, service: mcp-{name} }`
 - Add `env_file: .env.local` (local files only)
 - Add `container_name: ${STACK_NAME:-prod}-mcp-{name}` (prod only)
@@ -112,11 +112,12 @@ Create `docker-compose.mcp-{name}.yml`:
 - Logging: json-file driver, max-size 10m, max-file 3, compress true
 
 ### 3.3 Extension Files with Build
-In `docker-compose.local-source.yml` and `docker-compose.prod.yml`:
+In `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, and `docker-compose.dev.yml`:
 - Extend base service: `extends: { file: docker-compose.mcp-{name}.yml, service: mcp-{name} }`
-- **Build section**: `build: { context: ./dev/{name}-mcp, dockerfile: Dockerfile }`
-- **CRITICAL**: Always set unique `image:` name (e.g., `ghcr.io/faktenforum/mcp-{name}:latest` for main branch, `:dev` for feature branches) to prevent Docker layering built image on base image
-- Add `env_file: .env.local` (local-source only)
+- **Build section**: `build: { context: ./dev/{name}-mcp, dockerfile: Dockerfile }` (local-dev only)
+- **CRITICAL**: Always set unique `image:` name (e.g., `ghcr.io/faktenforum/mcp-{name}:latest` for prod, `:dev` for dev stacks) to prevent Docker layering built image on base image
+- Add `env_file: .env.local` (local-dev only)
+- For prod/dev: Use pre-built image from registry (no build section)
 - Add `container_name: ${STACK_NAME:-prod}-mcp-{name}` (prod only)
 - Add `pull_policy: build` (prod only)
 - Comment: `# Build from submodule Dockerfile (like rag_api)`
@@ -127,7 +128,7 @@ In `docker-compose.local-source.yml` and `docker-compose.prod.yml`:
 ## Common Steps (All Patterns)
 
 ### Extension Files & Environment Variables
-Follow `@.cursor/rules/create-new-service.mdc` sections 2-3, MCP-specific: **No Traefik labels** (internal only, Docker network access). Extension files: `docker-compose.local.yml`, `docker-compose.local-source.yml`, `docker-compose.prod.yml`. Environment pattern: `MCP_{NAME}_PORT=3000`, `MCP_{NAME}_LOG_LEVEL=info`, optional `MCP_{NAME}_API_KEYS` (comma-separated). Add to all three: `env.local.example`, `env.prod.example`, `env.dev.example`.
+Follow `@.cursor/rules/create-new-service.mdc` sections 2-3, MCP-specific: **No Traefik labels** (internal only, Docker network access). Extension files: `docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, `docker-compose.dev.yml`. Environment pattern: `MCP_{NAME}_PORT=3000`, `MCP_{NAME}_LOG_LEVEL=info`, optional `MCP_{NAME}_API_KEYS` (comma-separated). Add to all three: `env.local.example`, `env.prod.example`, `env.dev.example`.
 
 ### LibreChat Configuration
 Update `packages/librechat-init/config/librechat.yaml`:

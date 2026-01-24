@@ -1,3 +1,7 @@
+# Portainer dev/test deployment stack
+# Uses :dev image tags for feature branch testing
+# For production deployments, use docker-compose.prod.yml (uses :latest tags)
+
 services:
   librechat-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-init }
@@ -45,7 +49,7 @@ services:
     extends: { file: docker-compose.librechat.yml, service: api }
     container_name: ${STACK_NAME:-prod}-librechat
     # Use pre-built image from registry (built by GitHub Actions)
-    image: ghcr.io/faktenforum/librechat:latest
+    image: ghcr.io/faktenforum/librechat:dev
     networks:
       - traefik-net
       - app-net
@@ -178,7 +182,7 @@ services:
     extends: { file: docker-compose.mcp-openstreetmap.yml, service: mcp-openstreetmap }
     container_name: ${STACK_NAME:-prod}-mcp-openstreetmap
     # Use pre-built image from registry (built by GitHub Actions)
-    image: ghcr.io/faktenforum/mcp-openstreetmap:latest
+    image: ghcr.io/faktenforum/mcp-openstreetmap:dev
     # No Traefik labels - internal service only
 
   mcp-weather:
@@ -194,21 +198,21 @@ services:
   mcp-db-timetable:
     extends: { file: docker-compose.mcp-db-timetable.yml, service: mcp-db-timetable }
     container_name: ${STACK_NAME:-prod}-mcp-db-timetable
-    image: ghcr.io/faktenforum/mcp-db-timetable:latest
+    image: ghcr.io/faktenforum/mcp-db-timetable:dev
     # No Traefik labels - internal service only
 
   mcp-stackoverflow:
     extends: { file: docker-compose.mcp-stackoverflow.yml, service: mcp-stackoverflow }
     container_name: ${STACK_NAME:-prod}-mcp-stackoverflow
     # Use pre-built image from registry (built by GitHub Actions)
-    image: ghcr.io/faktenforum/mcp-stackoverflow:latest
+    image: ghcr.io/faktenforum/mcp-stackoverflow:dev
     # No Traefik labels - internal service only
 
   mcp-npm-search:
     extends: { file: docker-compose.mcp-npm-search.yml, service: mcp-npm-search }
     container_name: ${STACK_NAME:-prod}-mcp-npm-search
     # Use pre-built image from registry (built by GitHub Actions)
-    image: ghcr.io/faktenforum/mcp-npm-search:latest
+    image: ghcr.io/faktenforum/mcp-npm-search:dev
     # No Traefik labels - internal service only
 
 networks:

@@ -131,7 +131,7 @@ main() {
     echo ""
     log_info "Next steps:"
     log_info "  npm run setup"
-    log_info "  npm run start:local-source"
+    log_info "  npm run start:local-dev"
     echo ""
 }
 

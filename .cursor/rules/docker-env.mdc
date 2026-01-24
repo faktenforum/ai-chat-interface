@@ -25,9 +25,13 @@ Identical compose structure for local and production. Differences: environment f
 - **Rule**: Traefik-routed services → `traefik-net`; internal services → `app-net` only
 
 ### 4. Compose File Structure
-- **Entry points**: `docker-compose.yml` (standard), `docker-compose.dev.yml` (local builds), `docker-compose.prod.yml` (production)
+- **Entry points**:
+  - `docker-compose.local.yml` - Local development with official images
+  - `docker-compose.local-dev.yml` - Local development with submodule builds
+  - `docker-compose.prod.yml` - Portainer production (`:latest` tags)
+  - `docker-compose.dev.yml` - Portainer dev/test (`:dev` tags for feature branches)
 - **Extended files**: `docker-compose.librechat.yml`, `docker-compose.rag.yml`, `docker-compose.websearch.yml`, `docker-compose.traefik.yml`, `docker-compose.openwebui.yml` (never run standalone)
-- **Portainer**: Use `docker-compose.prod.yml` as compose path
+- **Portainer**: Use `docker-compose.prod.yml` (production) or `docker-compose.dev.yml` (dev/test) as compose path
 
 ### 5. Init Services
 - **librechat-init**: Unified init service (replaces old `config-init` + `setup-permissions`)
@@ -60,7 +64,7 @@ Identical compose structure for local and production. Differences: environment f
 
 ### 9. Service Integration Patterns
 - **Service Files**: Create `docker-compose.{service}.yml` with base service definitions
-- **Extension Pattern**: Use `extends:` in `docker-compose.local.yml`, `docker-compose.local-source.yml`, and `docker-compose.prod.yml`
+- **Extension Pattern**: Use `extends:` in `docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, and `docker-compose.dev.yml`
 - **Environment Variables**: Add to `env.local.example`, `env.prod.example`, `env.dev.example` (dev = online accessible, needs security)
 - **Auto-Generation**: Add secrets to `AUTO_GENERATED` in `scripts/setup-env.ts` (hex/base64 secrets, usernames)
 - **Prompts**: Add user inputs to `PROMPTS` in `scripts/setup-env.ts` (passwords, API keys, optional configs)

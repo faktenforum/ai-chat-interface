@@ -4,13 +4,28 @@
 
 - **Prerequisite**: external Docker network exists: `loadbalancer-net`
 - **Portainer**: Stacks → **Add stack** → **Git repository**
-  - Compose path: `docker-compose.prod.yml` (for production or test environment)
+  - **Compose path selection:**
+    - **Production**: `docker-compose.prod.yml` (uses `:latest` image tags from main branch)
+    - **Dev/Test**: `docker-compose.dev.yml` (uses `:dev` image tags for feature branch testing)
 - **Environment**:
   - **Production**: Locally generate `npm run setup:prod` (creates `.env.prod`)
   - **Test Environment**: Locally generate `npm run setup:dev` (creates `.env.dev`)
   - In Portainer: Stack → **Environment variables** (Advanced mode) → paste `.env.prod` or `.env.dev` contents
   - **Important**: The `STACK_NAME` variable in `.env.prod` (set to `prod`) and `.env.dev` (set to `dev`) ensures that container names, volumes, and networks are prefixed to avoid conflicts when running multiple stacks on the same host
 - **Deploy** the stack
+
+## Stack Selection
+
+**Production Stack (`docker-compose.prod.yml`):**
+- Uses `:latest` image tags (built from main branch)
+- Use for production deployments
+- Images are tagged as `latest` by GitHub Actions when pushing to main branch
+
+**Dev/Test Stack (`docker-compose.dev.yml`):**
+- Uses `:dev` image tags (built from feature branches)
+- Use for testing feature branches in Portainer
+- Images are tagged as `dev` by GitHub Actions when pushing to feature branches
+- Allows testing changes before merging to main
 
 ## Why `librechat-init` exists
 
