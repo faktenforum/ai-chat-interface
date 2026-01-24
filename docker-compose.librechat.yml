@@ -59,6 +59,7 @@ services:
 
   api:
     container_name: LibreChat
+    # Fallback image - overridden in extension files (local builds from submodule, prod uses registry)
     image: ghcr.io/danny-avila/librechat:v0.8.2-rc3
     restart: always
     user: "${UID:-1000}:${GID:-1000}"

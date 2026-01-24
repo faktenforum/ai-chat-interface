@@ -63,7 +63,18 @@ services:
 
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
+    # Build from submodule Dockerfile (like rag_api)
+    # Use unique image name to prevent Docker layering built image on base image
+    image: librechat:local
+    build:
+      context: ./dev/librechat
+      dockerfile: Dockerfile
+      target: node
     env_file: .env.local
+    volumes:
+      - ./dev/agents:/app/node_modules/@librechat/agents
+    environment:
+      NODE_ENV: development
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=ai-chat-interface_traefik-net"
