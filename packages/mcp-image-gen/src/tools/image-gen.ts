@@ -79,6 +79,19 @@ export async function listModels(
 ): Promise<{ content: TextContent[] }> {
   try {
     const apiModels = await openRouterClient.listImageModels();
+    // Create a Set of API model IDs for fast lookup
+    const apiModelIds = new Set(apiModels.map((model) => model.id));
+
+    // Check for known models that are not in the API response and log warnings
+    Object.values(KNOWN_MODELS).forEach((knownModel) => {
+      if (!apiModelIds.has(knownModel.id)) {
+        logger.warn(
+          { modelId: knownModel.id },
+          'Known model not found in OpenRouter API, excluding from list',
+        );
+      }
+    });
+
     const modelMap = new Map<string, { 
       id: string; 
       name: string; 
@@ -91,32 +104,33 @@ export async function listModels(
       recommendedUseCases?: string[];
     }>();
 
-    // Add known models first with their detailed metadata
-    Object.values(KNOWN_MODELS).forEach((model) => {
+    // Start with all API models (these are always included)
+    apiModels.forEach((model) => {
       modelMap.set(model.id, {
         id: model.id,
-        name: model.name,
+        name: model.name || model.id,
         pricing: model.pricing,
+        context_length: model.context_length,
         description: model.description,
-        strengths: model.strengths,
-        weaknesses: model.weaknesses,
-        recommendedUseCases: model.recommendedUseCases,
       });
     });
 
-    // Merge API models, preserving known model metadata when available
-    apiModels.forEach((model) => {
-      const existing = modelMap.get(model.id);
-      modelMap.set(model.id, {
-        id: model.id,
-        name: model.name || existing?.name || model.id,
-        pricing: model.pricing || existing?.pricing,
-        context_length: model.context_length,
-        description: model.description || existing?.description,
-        strengths: existing?.strengths,
-        weaknesses: existing?.weaknesses,
-        recommendedUseCases: existing?.recommendedUseCases,
-      });
+    // Merge in metadata from KNOWN_MODELS for models that exist in both
+    Object.values(KNOWN_MODELS).forEach((knownModel) => {
+      if (apiModelIds.has(knownModel.id)) {
+        const existing = modelMap.get(knownModel.id);
+        if (existing) {
+          modelMap.set(knownModel.id, {
+            ...existing,
+            name: existing.name || knownModel.name,
+            pricing: existing.pricing || knownModel.pricing,
+            description: existing.description || knownModel.description,
+            strengths: [...knownModel.strengths],
+            weaknesses: [...knownModel.weaknesses],
+            recommendedUseCases: [...knownModel.recommended_for],
+          });
+        }
+      }
     });
 
     const combinedModels = Array.from(modelMap.values());

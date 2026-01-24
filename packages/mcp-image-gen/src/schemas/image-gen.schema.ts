@@ -25,9 +25,8 @@ export const GenerateImageSchema = z.object({
     .describe('Detailed text description of the image to generate. Should be 3-6 sentences, focusing on visual elements, lighting, composition, mood, and style.'),
   model: z
     .string()
-    .optional()
-    .default('black-forest-labs/flux.2-pro')
-    .describe('The image generation model to use. Any OpenRouter-compatible image generation model can be used. Defaults to FLUX.2-Pro for best quality.'),
+    .min(1)
+    .describe('The image generation model to use. Any OpenRouter-compatible image generation model can be used. Required parameter.'),
   aspect_ratio: z
     .enum(ASPECT_RATIOS)
     .optional()

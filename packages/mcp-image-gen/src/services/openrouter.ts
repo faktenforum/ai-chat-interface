@@ -233,12 +233,16 @@ export class OpenRouterClient {
   }
 
   /**
-   * Get image generation models (filtered by output_modalities)
+   * Get image generation models (filtered by output_modalities or known models)
    */
   async listImageModels(): Promise<OpenRouterModel[]> {
     const allModels = await this.listModels();
+    const knownModelIds = new Set(Object.keys(KNOWN_MODELS));
+    
     return allModels.filter(
-      (model) => model.architecture?.output_modalities?.includes('image'),
+      (model) => 
+        model.architecture?.output_modalities?.includes('image') ||
+        knownModelIds.has(model.id),
     );
   }
 
@@ -253,6 +257,16 @@ export class OpenRouterClient {
     try {
       const models = await this.listModels();
       const model = models.find((m) => m.id === modelId);
+      const isKnownModel = KNOWN_MODELS[modelId as keyof typeof KNOWN_MODELS] !== undefined;
+
+      // If model is in KNOWN_MODELS, it definitely supports image generation
+      if (isKnownModel && !model) {
+        // Model is known but not in API - might be deprecated or temporarily unavailable
+        return {
+          exists: false,
+          supportsImageGeneration: false,
+        };
+      }
 
       if (!model) {
         return {
@@ -261,7 +275,10 @@ export class OpenRouterClient {
         };
       }
 
-      const supportsImageGeneration = model.architecture?.output_modalities?.includes('image') ?? false;
+      // Check if model supports image generation via output_modalities or if it's a known model
+      const supportsImageGeneration = 
+        (model.architecture?.output_modalities?.includes('image') ?? false) ||
+        isKnownModel;
 
       return {
         exists: true,
