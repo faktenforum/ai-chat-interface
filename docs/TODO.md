@@ -99,3 +99,9 @@
 ### Required Providers
 - [ ] Integrate ElevenLabs for TTS (Text-to-Speech)
 - [ ] Keep Jina reranker until replacement is ready (currently have free tokens for API key, not urgent)
+
+---
+
+## Upstream Contributions
+
+- [x] Improve support for OpenAI-compatible custom endpoints - [LibreChat PR #11499](https://github.com/danny-avila/LibreChat/pull/11499)
