@@ -117,14 +117,26 @@ npm run sync:forks:status  # Check status
 npm run sync:forks         # Sync all
 ```
 
-### Creating PR to Upstream
+### Fixing Bugs
+
+**For Upstream PRs (recommended):**
 ```bash
 cd dev/librechat
 git checkout upstream
-git checkout -b feature/my-feature
-# ... make changes ...
-git push origin feature/my-feature
-# Create PR on GitHub
+git checkout -b fix/bug-description
+# ... implement fix ...
+git push origin fix/bug-description
+# Create PR: faktenforum/LibreChat → danny-avila/LibreChat
+```
+
+**For Faktenforum-specific fixes:**
+```bash
+cd dev/librechat
+git checkout main
+git checkout -b fix/faktenforum-specific-bug
+# ... implement fix ...
+git checkout main && git merge fix/faktenforum-specific-bug
+git push origin main
 ```
 
 ### After Upstream Accepts PR
