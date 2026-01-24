@@ -247,6 +247,33 @@ export class OpenRouterClient {
   }
 
   /**
+   * Normalize model ID for matching (handles case-insensitive and namespace variations)
+   */
+  private normalizeModelId(modelId: string): string[] {
+    const normalized = modelId.toLowerCase().trim();
+    const variations: string[] = [modelId, normalized];
+    
+    // If ID doesn't have a namespace, try adding common namespaces
+    if (!normalized.includes('/')) {
+      // Try common prefixes for known models
+      if (normalized.includes('flux')) {
+        variations.push(`black-forest-labs/${normalized}`);
+        variations.push(`black-forest-labs/${modelId}`);
+      }
+      if (normalized.includes('gpt') || normalized.includes('image')) {
+        variations.push(`openai/${normalized}`);
+        variations.push(`openai/${modelId}`);
+      }
+      if (normalized.includes('gemini') || normalized.includes('nano')) {
+        variations.push(`google/${normalized}`);
+        variations.push(`google/${modelId}`);
+      }
+    }
+    
+    return variations;
+  }
+
+  /**
    * Check if a specific model exists and supports image generation
    */
   async checkModel(modelId: string): Promise<{
@@ -256,15 +283,56 @@ export class OpenRouterClient {
   }> {
     try {
       const models = await this.listModels();
-      const model = models.find((m) => m.id === modelId);
-      const isKnownModel = KNOWN_MODELS[modelId as keyof typeof KNOWN_MODELS] !== undefined;
+      const normalizedVariations = this.normalizeModelId(modelId);
+      
+      // Try exact match first
+      let model = models.find((m) => m.id === modelId);
+      
+      // If not found, try case-insensitive match
+      if (!model) {
+        const normalizedModelId = modelId.toLowerCase();
+        model = models.find((m) => m.id.toLowerCase() === normalizedModelId);
+      }
+      
+      // If still not found, try all variations
+      if (!model) {
+        for (const variation of normalizedVariations) {
+          model = models.find((m) => 
+            m.id === variation || m.id.toLowerCase() === variation.toLowerCase()
+          );
+          if (model) break;
+        }
+      }
+      
+      // Check if model is in KNOWN_MODELS (case-insensitive and with variations)
+      let knownModelKey: string | undefined;
+      let knownModel: typeof KNOWN_MODELS[keyof typeof KNOWN_MODELS] | undefined;
+      
+      for (const variation of normalizedVariations) {
+        knownModelKey = Object.keys(KNOWN_MODELS).find(
+          (key) => key.toLowerCase() === variation.toLowerCase()
+        );
+        if (knownModelKey) {
+          knownModel = KNOWN_MODELS[knownModelKey as keyof typeof KNOWN_MODELS];
+          break;
+        }
+      }
+      
+      const isKnownModel = knownModel !== undefined;
 
       // If model is in KNOWN_MODELS, it definitely supports image generation
-      if (isKnownModel && !model) {
-        // Model is known but not in API - might be deprecated or temporarily unavailable
+      // Even if not in API, we consider it as existing if it's in our known models
+      if (isKnownModel && knownModel && !model) {
+        // Model is known but not in API - return as existing with known model info
         return {
-          exists: false,
-          supportsImageGeneration: false,
+          exists: true,
+          supportsImageGeneration: true,
+          details: {
+            id: knownModel.id,
+            name: knownModel.name,
+            description: knownModel.description,
+            pricing: knownModel.pricing,
+          } as OpenRouterModel,
         };
       }
 

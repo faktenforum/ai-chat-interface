@@ -165,7 +165,7 @@ export async function listModels(
       content: [
         {
           type: 'text',
-          text: `# Available Image Generation Models\n\nFound ${totalCount} model(s)${knownCount > 0 ? ` (${knownCount} with detailed metadata)` : ''}:\n\n${formatted}\n\nNote: Models with detailed metadata (strengths, weaknesses, use cases) are well-tested and recommended. Other models are available from OpenRouter but may have limited testing.\n\nUse \`check_model\` to get detailed information about a specific model.`,
+          text: `# Available Image Generation Models\n\nFound ${totalCount} model(s)${knownCount > 0 ? ` (${knownCount} with detailed metadata)` : ''}:\n\n${formatted}\n\n## Usage\n\nTo generate an image, use the \`generate_image\` tool with the **exact Model ID** shown above. Example:\n\`\`\`json\n{\n  "model": "black-forest-labs/flux.2-pro",\n  "prompt": "A beautiful sunset over mountains"\n}\n\`\`\`\n\n**Important:** Use the Model ID exactly as shown (case-sensitive). Models with detailed metadata (strengths, weaknesses, use cases) are well-tested and recommended. Other models are available from OpenRouter but may have limited testing.\n\nUse \`check_model\` to verify a specific model ID before generating images.`,
         },
       ],
     };

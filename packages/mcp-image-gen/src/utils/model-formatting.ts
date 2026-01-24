@@ -10,7 +10,8 @@ export interface ModelInfo {
 }
 
 export function formatKnownModel(model: KnownModel): string {
-  return `**${model.name}** (${model.id})
+  return `**${model.name}**
+- **Model ID:** \`${model.id}\` (use this exact ID with \`generate_image\`)
 - Description: ${model.description}
 - Supports Aspect Ratio: ${model.supportsAspectRatio ? 'Yes' : 'No'}
 - Supports Image Size: ${model.supportsImageSize ? 'Yes' : 'No'}
@@ -28,7 +29,8 @@ export function formatApiModel(model: ModelInfo): string {
     : '';
   const description = model.description ? `\n  - Description: ${model.description}` : '';
   
-  return `**${model.name}** (${model.id})${description}${pricing}${contextLength}`;
+  return `**${model.name}**
+  - **Model ID:** \`${model.id}\` (use this exact ID with \`generate_image\`)${description}${pricing}${contextLength}`;
 }
 
 export function formatModelDetails(

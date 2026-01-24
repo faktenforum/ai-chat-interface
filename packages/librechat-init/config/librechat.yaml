@@ -98,6 +98,7 @@ endpoints:
       - "ocr"
       - "tools"
       - "web_search"
+      - "vision"
 
   custom:
     - name: OpenRouter
@@ -570,7 +571,7 @@ mcpServers:
     description: Bilder aus Textbeschreibungen erstellen
     iconPath: /images/mcp-image-gen-icon.svg
     initTimeout: 180000
-    chatMenu: false
+    chatMenu: true
     startup: true
     serverInstructions: true
 
@@ -603,7 +604,7 @@ mcpServers:
     description: Webseiten durchsuchen, interagieren und automatisieren
     iconPath: /images/mcp-playwright-icon.svg
     initTimeout: 120000
-    chatMenu: false
+    chatMenu: true
     startup: false
     serverInstructions: true
 
