@@ -131,10 +131,17 @@ Production and test environments are deployed via Portainer. See [Portainer Conf
    - **Why**: Portainer CE creates empty directories for bind-mounted files, making them unreadable
    - **Solution**: `docker-compose.librechat.yml` writes a config file with `$${VAR}` placeholders; LibreChat resolves them at runtime from environment variables
 
+3. **Updating Stack in Portainer (Web Interface):**
+   - Go to **Stacks** → Select your stack → **Editor**
+   - Set the branch you want to test (Reference field)
+   - Update environment variables if needed (Environment variables section)
+   - Click **Pull and redeploy** to fetch latest code and redeploy
+   - **Note**: All volumes are preserved during redeploy (data is not lost)
+
 **⚠️ Critical - Production Data Safety:**
-- **NEVER use `-v` flag in Portainer** - it will permanently delete all user data, chat history, and configurations
+- **NEVER check "Remove volumes" when deleting a stack** - it will permanently delete all user data, chat history, and configurations
 - Always backup data before any production operations
-- Use Portainer's built-in restart/stop functions which preserve volumes
+- Use Portainer's built-in restart/stop/redeploy functions which preserve volumes
 
 ## Local Development Tools
 

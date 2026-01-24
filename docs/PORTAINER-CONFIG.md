@@ -24,11 +24,21 @@ Portainer CE can be unreliable with bind-mounting a **single file** from a Git r
 - `app-net` is the internal network for service-to-service traffic (LibreChat ↔ MongoDB/Meilisearch/RAG/WebSearch)
 - **MongoDB does not need to be on `loadbalancer-net`**; it must be reachable from LibreChat on `app-net`
 
-## GitOps Updates (Automatic Updates via Webhooks)
+## Updating Stacks
+
+### Manual Update (Web Interface)
+
+1. Go to **Stacks** → Select your stack → **Editor**
+2. Set the branch you want to test (Reference field)
+3. Update environment variables if needed (Environment variables section)
+4. Click **Pull and redeploy**
+5. **Note**: All volumes are preserved during redeploy (data is not lost)
+
+### GitOps Updates (Automatic Updates via Webhooks)
 
 Enable automatic stack updates from GitHub using webhooks for immediate deployment when changes are pushed.
 
-### Setup
+**Setup:**
 
 1. **Enable GitOps in Portainer:**
    - Go to **Stacks** → Select your stack → **Editor**
@@ -47,7 +57,14 @@ Enable automatic stack updates from GitHub using webhooks for immediate deployme
 
 When changes are pushed to the repository, Portainer automatically pulls the latest code and updates the stack. All volumes are preserved (data is not lost).
 
-## Quick checks
+## Data Safety
+
+**⚠️ Important:**
+- **NEVER check "Remove volumes" when deleting a stack** - it will permanently delete all user data, chat history, and configurations
+- Always backup data before any production operations
+- Use **Pull and redeploy** or **Restart** functions which preserve volumes
+
+## Quick Checks
 
 - Config present: `docker exec <STACK_NAME>-librechat cat /app/config/librechat.yaml` (e.g., `prod-librechat` or `dev-librechat`)
 - Init logs: `docker logs <STACK_NAME>-librechat-init` (e.g., `prod-librechat-init` or `dev-librechat-init`)
