@@ -104,18 +104,15 @@ endpoints:
       apiKey: "$${OPENROUTER_KEY}"
       baseURL: "$${OPENROUTER_BASE_URL}"
       models:
-        # Mix of Open Source and proprietary models - Fallback list if fetch fails or fetch is disabled
-        # Sorted by Top Weekly popularity
+        # Premium models only - Fallback list if fetch fails or fetch is disabled
+        # Focus on top-performance proprietary models for special use cases
+        # Note: Open Source models should use Scaleway (Europa) for better privacy
         default: [
-          "anthropic/claude-sonnet-4.5",      # Top proprietary model
-          "deepseek/deepseek-v3.2",           # Best Open Source
-          "google/gemini-2.5-flash-lite",    # Google's lightweight reasoning model, optimized for speed and cost
-          "meta-llama/llama-3.3-70b-instruct", # Meta's latest, very popular
-          "openai/gpt-5.2",                   # Latest GPT-5 series
-          "xiaomi/mimo-v2-flash",             # Popular open-source model
-          "deepseek/deepseek-chat",           # Excellent for coding
-          "mistralai/mistral-large-2411",     # European option (French)
-          "mistralai/mistral-nemo"            # European option (French, smaller)
+          "anthropic/claude-sonnet-4.5",      # Top proprietary model (Vision, 200K Context)
+          "openai/gpt-5.2",                   # Latest GPT-5 series (Vision, 400K Context)
+          "google/gemini-2.5-flash-lite",    # Google's lightweight reasoning model (Vision)
+          "mistralai/mistral-large-2411",     # European premium option (French)
+          "glm/glm-4.7"                       # Advanced reasoning model
         ]
         fetch: true
       titleConvo: true
@@ -139,10 +136,6 @@ endpoints:
           "gpt-oss-120b",                      # Chat - Generally Available
           "qwen3-coder-30b-a3b-instruct",     # Chat (Code) - Generally Available
           "pixtral-12b-2409",                 # Chat, Vision - Generally Available
-          "holo2-30b-a3b",                    # Chat, Vision - PREVIEW
-          "devstral-2-123b-instruct-2512",    # Chat - PREVIEW
-          "gemma-3-27b-it",                   # Chat, Vision - PREVIEW
-          "voxtral-small-24b-2507",           # Chat, Audio transcription - PREVIEW
           "qwen3-embedding-8b",               # Embeddings - Generally Available
           "bge-multilingual-gemma2"           # Embeddings - Generally Available
         ]
@@ -157,15 +150,139 @@ endpoints:
 # This prevents "My Agents" from being selected when users have no agents
 # Note: Memory function uses a separate model (configured in memory.agent section)
 # Chat models don't need Function Calling for Memory - Memory works independently
-# Models grouped by privacy/transparency: Europe-hosted & Open Source prioritized
+#
+# ==========================================
+# MODELL-ANALYSE UND GRUPPIERUNG
+# ==========================================
+#
+# GRUPPE 1: "Empfohlen: Europa & Open Source" (Scaleway)
+# ------------------------------------------
+# Alle Modelle in dieser Gruppe sind:
+# - Open Source (Apache-2.0, Llama Community, MIT, etc.)
+# - In Europa gehostet (Scaleway Data Centers)
+# - DSGVO-konform
+# - Optimal für datenschutzkritische Anwendungen
+#
+# DETAILLIERTE MODELL-ANALYSE (Scaleway):
+#
+# CHAT MODELLE (Text-only):
+# -------------------------
+# 1. llama-3.3-70b-instruct (Meta)
+#    - Context: 100K, Output: 4K
+#    - License: Llama 3.3 Community
+#    - Use Case: Allgemeine Gespräche, gute Balance
+#    - Status: Generally Available, empfohlen von Scaleway
+#
+# 2. qwen3-235b-a22b-instruct-2507 (Qwen)
+#    - Context: 250K (größter verfügbarer Context!), Output: 8K
+#    - License: Apache-2.0
+#    - Use Case: Sehr komplexe Aufgaben, extrem lange Kontexte
+#    - Status: Generally Available
+#
+# 3. qwen3-coder-30b-a3b-instruct (Qwen)
+#    - Context: 128K, Output: 8K
+#    - License: Apache-2.0
+#    - Use Case: Programmierung, Code-Generierung, Code-Analyse
+#    - Status: Generally Available
+#
+# 4. gpt-oss-120b (OpenAI Open Source)
+#    - Context: 128K, Output: 8K
+#    - License: Apache-2.0
+#    - Use Case: Komplexe Aufgaben, GPT-kompatible API
+#    - Status: Generally Available
+#
+# CHAT & VISION MODELLE:
+# ----------------------
+# 5. mistral-small-3.2-24b-instruct-2506 (Mistral)
+#    - Context: 128K, Output: 8K
+#    - License: Apache-2.0
+#    - Use Case: Kosteneffektiv (3-6x günstiger als 70B), Vision, allgemeine Aufgaben
+#    - Status: Generally Available, EMPFOHLEN von Scaleway als Einstiegsmodell
+#    - Besonderheit: Beste Kosten-Nutzen-Balance
+#
+# 6. pixtral-12b-2409 (Mistral)
+#    - Context: 128K, Output: 4K
+#    - License: Apache-2.0
+#    - Use Case: Spezialisiert auf Bildverständnis, Bilder bis 32M Pixel
+#    - Status: Generally Available
+#
+# DEPRECATED MODELLE (nicht mehr verwenden):
+# - deepseek-r1-distill-llama-70b (EOL: 16. Apr 2026)
+# - mistral-nemo-instruct-2407 (EOL: 16. Apr 2026)
+# - llama-3.1-8b-instruct (EOL: 16. Apr 2026)
+#
+# GRUPPE 2: "Premium-Modelle" (OpenRouter)
+# ------------------------------------------
+# Diese Modelle sind:
+# - Top-Performance für spezielle Anwendungsfälle
+# - Closed Source (Anthropic, OpenAI, Google) oder spezielle Zugänge erforderlich
+# - Über OpenRouter gehostet (USA)
+# - Nur für nicht-datenschutzkritische Aufgaben empfohlen
+#
+# DETAILLIERTE MODELL-ANALYSE (OpenRouter Premium):
+#
+# 1. claude-sonnet-4.5 (Anthropic)
+#    - Context: 200K, Output: 64K
+#    - License: Closed Source (Proprietary)
+#    - Use Case: Top-Performance für komplexe Aufgaben, Programmierung, Reasoning
+#    - Vision: Ja
+#    - Pricing: $3/M input, $15/M output tokens
+#    - Besonderheit: Exzellentes Reasoning, sehr gute Code-Generierung
+#
+# 2. openai/gpt-5.2 (OpenAI)
+#    - Context: 400K (größter Context!), Output: 128K
+#    - License: Closed Source (Proprietary)
+#    - Use Case: Top-Performance, Dynamic Reasoning, komplexe Problemlösung
+#    - Vision: Ja
+#    - Pricing: $1.25/M input, $10/M output tokens
+#    - Besonderheit: ~80% weniger Halluzinationen als o3, 74.9% SWE-Bench accuracy
+#    - Hinweis: Erfordert eigenen OpenAI API Key
+#
+# 3. google/gemini-2.5-flash-lite (Google)
+#    - Context: Variabel, Output: Variabel
+#    - License: Closed Source (Proprietary)
+#    - Use Case: Schnell und kostengünstig, gute Qualität
+#    - Vision: Ja
+#    - Besonderheit: Optimiert für Geschwindigkeit bei guter Qualität
+#
+# 4. mistralai/mistral-large-2411 (Mistral)
+#    - Context: Variabel, Output: Variabel
+#    - License: Closed Source (Proprietary)
+#    - Use Case: Premium-Modell, europäisches Unternehmen
+#    - Besonderheit: Französisches Unternehmen, beliebt bei europäischen Nutzern
+#
+# 5. glm/glm-4.7 (Z.AI)
+#    - Context: Variabel, Output: Variabel
+#    - License: Closed Source (Proprietary)
+#    - Use Case: Exzellentes logisches Denken, komplexe Reasoning-Aufgaben
+#    - Besonderheit: Fortgeschrittenes Sprachverständnis
+#
+# EMPFEHLUNGEN NACH ANWENDUNGSFALL:
+# ----------------------------------
+# Datenschutzkritisch → Scaleway Modelle (Europa, Open Source)
+#   - Allgemein: mistral-small-3.2-24b (kosteneffektiv, Vision)
+#   - Komplex: llama-3.3-70b oder qwen3-235b
+#   - Code: qwen3-coder-30b
+#   - Vision: pixtral-12b oder mistral-small-3.2-24b
+#
+# Top Performance benötigt → Premium-Modelle (OpenRouter)
+#   - Best Overall: claude-sonnet-4.5
+#   - Largest Context: openai/gpt-5.2 (400K)
+#   - Fast & Cheap: google/gemini-2.5-flash-lite
+#   - European Premium: mistral-large-2411
+#   - Reasoning: glm/glm-4.7
+#
+# ==========================================
 modelSpecs:
   list:
     # ==========================================
     # Empfohlen: Europa & Open Source (Scaleway)
     # ==========================================
+    # Alle Modelle: Open Source, Europa-gehostet, DSGVO-konform
+    # Chat Modelle (Text-only)
     - name: "scaleway-llama-3.3-70b"
       label: "Llama 3.3 70B"
-      description: "Sehr gut für allgemeine Gespräche und Aufgaben. Von Meta."
+      description: "Meta's neuestes Modell. 100K Context, 4K Output. Sehr gut für allgemeine Gespräche und Aufgaben. Llama 3.3 Community License. Empfohlen von Scaleway."
       group: "Empfohlen: Europa & Open Source"
       groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWxvY2staWNvbiBsdWNpZGUtbG9jayI+PHJlY3Qgd2lkdGg9IjE4IiBoZWlnaHQ9IjExIiB4PSIzIiB5PSIxMSIgcng9IjIiIHJ5PSIyIi8+PHBhdGggZD0iTTcgMTFWN2E1IDUgMCAwIDEgMTAgMHY0Ii8+PC9zdmc+"
       order: 1
@@ -177,7 +294,7 @@ modelSpecs:
     
     - name: "scaleway-qwen3-235b"
       label: "Qwen3 235B"
-      description: "Sehr großes Modell für komplexe Aufgaben."
+      description: "Sehr großes Modell (235B Parameter). 250K Context, 8K Output. Optimal für komplexe Aufgaben und lange Kontexte. Apache-2.0 License."
       group: "Empfohlen: Europa & Open Source"
       order: 2
       preset:
@@ -187,7 +304,7 @@ modelSpecs:
     
     - name: "scaleway-qwen3-coder-30b"
       label: "Qwen3 Coder 30B"
-      description: "Spezialisiert auf Programmierung und Code-Generierung."
+      description: "Spezialisiert auf Programmierung und Code-Generierung. 128K Context, 8K Output. Apache-2.0 License."
       group: "Empfohlen: Europa & Open Source"
       order: 3
       preset:
@@ -205,11 +322,13 @@ modelSpecs:
         endpointType: "custom"
         model: "gpt-oss-120b"
     
+    # Chat & Vision Modelle
     - name: "scaleway-mistral-small-3.2"
       label: "Mistral Small 3.2 24B"
-      description: "Unterstützt Chat und Bilder."
+      description: "Kosteneffektiv (3-6x günstiger als 70B Modelle). 128K Context, 8K Output. Unterstützt Chat und Vision. Apache-2.0 License. Empfohlen von Scaleway als Einstiegsmodell."
       group: "Empfohlen: Europa & Open Source"
-      order: 5
+      order: 6
+      vision: true
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
@@ -217,107 +336,28 @@ modelSpecs:
     
     - name: "scaleway-pixtral-12b"
       label: "Pixtral 12B"
-      description: "Für Bildverständnis und Chat."
+      description: "Spezialisiert auf Bildverständnis und Chat. 128K Context, 4K Output. Unterstützt Bilder bis 32M Pixel. Apache-2.0 License."
       group: "Empfohlen: Europa & Open Source"
-      order: 6
+      order: 7
+      vision: true
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
         model: "pixtral-12b-2409"
     
     # ==========================================
-    # Open Source Modelle
+    # Premium-Modelle (OpenRouter)
     # ==========================================
-    - name: "deepseek-v3.2"
-      label: "DeepSeek V3.2"
-      description: "Kann sehr lange Gespräche führen und komplexe Aufgaben lösen. Sehr gut im logischen Denken."
-      group: "Open Source Modelle"
-      groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvdC1tZXNzYWdlLXNxdWFyZS1pY29uIGx1Y2lkZS1ib3QtbWVzc2FnZS1zcXVhcmUiPjxwYXRoIGQ9Ik0xMiA2VjJIOCIvPjxwYXRoIGQ9Ik0xNSAxMXYyIi8+PHBhdGggZD0iTTIgMTJoMiIvPjxwYXRoIGQ9Ik0yMCAxMmgyIi8+PHBhdGggZD0iTTIwIDE2YTIgMiAwIDAgMS0yIDJIOC44MjhhMiAyIDAgMCAwLTEuNDE0LjU4NmwtMi4yMDIgMi4yMDJBLjcxLjcxIDAgMCAxIDQgMjAuMjg2VjhhMiAyIDAgMCAxIDItMmgxMmEyIDIgMCAwIDEgMiAyeiIvPjxwYXRoIGQ9Ik05IDExdjIiLz48L3N2Zz4="
-      order: 1
-      preset:
-        endpoint: "OpenRouter"
-        endpointType: "custom"
-        model: "deepseek/deepseek-v3.2"
-    
-    - name: "llama-3.3-70b"
-      label: "Llama 3.3 70B"
-      description: "Sehr beliebt für allgemeine Gespräche und Aufgaben. Von Meta."
-      group: "Open Source Modelle"
-      order: 2
-      preset:
-        endpoint: "OpenRouter"
-        endpointType: "custom"
-        model: "meta-llama/llama-3.3-70b-instruct"
-    
-    - name: "xiaomi-mimo-v2-flash"
-      label: "MiMo-V2-Flash"
-      description: "Kann sehr lange Gespräche führen. Besonders gut für Wissensthemen, Wissenschaft und Finanzen. Von Xiaomi."
-      group: "Open Source Modelle"
-      order: 3
-      preset:
-        endpoint: "OpenRouter"
-        endpointType: "custom"
-        model: "xiaomi/mimo-v2-flash"
-    
-    - name: "deepseek-chat-67b"
-      label: "DeepSeek Chat 67B"
-      description: "Sehr beliebt, besonders gut für Programmierung und Code-Erstellung."
-      group: "Open Source Modelle"
-      order: 4
-      preset:
-        endpoint: "OpenRouter"
-        endpointType: "custom"
-        model: "deepseek/deepseek-chat"
-    
-    - name: "llama-3.1-8b"
-      label: "Llama 3.1 8B"
-      description: "Schnell und effizient. Gute Wahl für schnelle Antworten. Von Meta."
-      group: "Open Source Modelle"
-      order: 5
-      preset:
-        endpoint: "OpenRouter"
-        endpointType: "custom"
-        model: "meta-llama/llama-3.1-8b-instruct"
-    
-    - name: "qwen2.5-vl-72b"
-      label: "Qwen2.5-VL 72B"
-      description: "Höchste Qualität für Gespräche und Bildverständnis. Kann Bilder analysieren und gleichzeitig natürlich chatten."
-      group: "Open Source Modelle"
-      order: 6
-      preset:
-        endpoint: "OpenRouter"
-        endpointType: "custom"
-        model: "qwen/qwen2.5-vl-72b-instruct"
-    
-    - name: "qwen2.5-vl-32b"
-      label: "Qwen2.5-VL 32B"
-      description: "Gute Balance aus Qualität und Geschwindigkeit."
-      group: "Open Source Modelle"
-      order: 7
-      preset:
-        endpoint: "OpenRouter"
-        endpointType: "custom"
-        model: "qwen/qwen2.5-vl-32b-instruct"
-    
-    - name: "llama-3.2-vision-90b"
-      label: "Llama 3.2 Vision 90B"
-      description: "Sehr gute Gesprächsqualität. Kann Bilder beschreiben und analysieren. Von Meta."
-      group: "Open Source Modelle"
-      order: 8
-      preset:
-        endpoint: "OpenRouter"
-        endpointType: "custom"
-        model: "meta-llama/llama-3.2-90b-vision-instruct"
-    
-    # ==========================================
-    # Beliebte Premium-Modelle
-    # ==========================================
+    # Premium-Modelle: Top-Performance Modelle für spezielle Anwendungsfälle
+    # Diese Modelle sind Closed Source oder erfordern spezielle Zugänge
+    # Hosted über OpenRouter (USA), daher nur für nicht-datenschutzkritische Aufgaben
     - name: "claude-sonnet-4.5"
       label: "Claude Sonnet 4.5"
-      description: "Eines der besten Modelle für komplexe Aufgaben und Programmierung. Optimiert für praktische Anwendungen."
-      group: "Beliebte Premium-Modelle"
+      description: "Top-Performance Modell für komplexe Aufgaben, Programmierung und Reasoning. 200K Context, 64K Output. Unterstützt Vision. Closed Source (Anthropic)."
+      group: "Premium-Modelle"
       groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvdC1pY29uIGx1Y2lkZS1ib3QiPjxwYXRoIGQ9Ik0xMiA4VjRIOCIvPjxyZWN0IHdpZHRoPSIxNiIgaGVpZ2h0PSIxMiIgeD0iNCIgeT0iOCIgcng9IjIiLz48cGF0aCBkPSJNMiAxNGgyIi8+PHBhdGggZD0iTTIwIDE0aDIiLz48cGF0aCBkPSJNMTUgMTN2MiIvPjxwYXRoIGQ9Ik05IDEzdjIiLz48L3N2Zz4="
       order: 1
+      vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
@@ -325,19 +365,31 @@ modelSpecs:
     
     - name: "openai-gpt5-2"
       label: "GPT-5.2"
-      description: "Sehr gut für komplexe Aufgaben und mehrstufige Problemlösung. Von OpenAI."
-      group: "Beliebte Premium-Modelle"
+      description: "OpenAI's neuestes Top-Modell. 400K Context, 128K Output. Dynamic Reasoning, ~80% weniger Halluzinationen als o3. Unterstützt Vision. Closed Source (OpenAI)."
+      group: "Premium-Modelle"
       order: 2
+      vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
         model: "openai/gpt-5.2"
     
+    - name: "google-gemini-2.5-flash-lite"
+      label: "Gemini 2.5 Flash Lite"
+      description: "Schnell und kostengünstig. Optimiert für schnelle Antworten bei guter Qualität. Unterstützt Vision. Closed Source (Google)."
+      group: "Premium-Modelle"
+      order: 3
+      vision: true
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "google/gemini-2.5-flash-lite"
+    
     - name: "mistral-large-2411"
       label: "Mistral Large 2411"
-      description: "Sehr beliebt bei europäischen Nutzern. Europäisches Unternehmen (französisch)."
-      group: "Beliebte Premium-Modelle"
-      order: 3
+      description: "Premium-Modell von Mistral (französisches Unternehmen). Sehr beliebt bei europäischen Nutzern. Gute Balance aus Performance und Datenschutz."
+      group: "Premium-Modelle"
+      order: 4
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
@@ -345,23 +397,13 @@ modelSpecs:
     
     - name: "z-ai-glm-4.7"
       label: "GLM 4.7"
-      description: "Sehr gut im logischen Denken und komplexen Aufgaben. Fortgeschrittenes Sprachverständnis."
-      group: "Beliebte Premium-Modelle"
-      order: 4
-      preset:
-        endpoint: "OpenRouter"
-        endpointType: "custom"
-        model: "glm/glm-4.7"
-    
-    - name: "google-gemini-2.5-flash-lite"
-      label: "Gemini 2.5 Flash Lite"
-      description: "Schnell und kostengünstig. Optimiert für schnelle Antworten bei guter Qualität."
-      group: "Beliebte Premium-Modelle"
+      description: "Fortgeschrittenes Modell mit exzellentem logischen Denken. Sehr gut für komplexe Aufgaben und Reasoning. Closed Source (Z.AI)."
+      group: "Premium-Modelle"
       order: 5
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "google/gemini-2.5-flash-lite"
+        model: "glm/glm-4.7"
 
 
 webSearch:
