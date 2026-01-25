@@ -82,16 +82,6 @@ export async function listModels(
     // Create a Set of API model IDs for fast lookup
     const apiModelIds = new Set(apiModels.map((model) => model.id));
 
-    // Check for known models that are not in the API response and log warnings
-    Object.values(KNOWN_MODELS).forEach((knownModel) => {
-      if (!apiModelIds.has(knownModel.id)) {
-        logger.warn(
-          { modelId: knownModel.id },
-          'Known model not found in OpenRouter API, excluding from list',
-        );
-      }
-    });
-
     const modelMap = new Map<string, { 
       id: string; 
       name: string; 
@@ -104,32 +94,39 @@ export async function listModels(
       recommendedUseCases?: string[];
     }>();
 
-    // Start with all API models (these are always included)
-    apiModels.forEach((model) => {
-      modelMap.set(model.id, {
-        id: model.id,
-        name: model.name || model.id,
-        pricing: model.pricing,
-        context_length: model.context_length,
-        description: model.description,
+    // Start with all known models (always included, even if not in API response)
+    Object.values(KNOWN_MODELS).forEach((knownModel) => {
+      modelMap.set(knownModel.id, {
+        id: knownModel.id,
+        name: knownModel.name,
+        description: knownModel.description,
+        pricing: knownModel.pricing,
+        strengths: [...knownModel.strengths],
+        weaknesses: [...knownModel.weaknesses],
+        recommendedUseCases: [...knownModel.recommended_for],
       });
     });
 
-    // Merge in metadata from KNOWN_MODELS for models that exist in both
-    Object.values(KNOWN_MODELS).forEach((knownModel) => {
-      if (apiModelIds.has(knownModel.id)) {
-        const existing = modelMap.get(knownModel.id);
-        if (existing) {
-          modelMap.set(knownModel.id, {
-            ...existing,
-            name: existing.name || knownModel.name,
-            pricing: existing.pricing || knownModel.pricing,
-            description: existing.description || knownModel.description,
-            strengths: [...knownModel.strengths],
-            weaknesses: [...knownModel.weaknesses],
-            recommendedUseCases: [...knownModel.recommended_for],
-          });
-        }
+    // Then merge in API models (adds new models and updates existing ones with API data)
+    apiModels.forEach((model) => {
+      const existing = modelMap.get(model.id);
+      if (existing) {
+        // Update existing known model with API data (prefer API data when available)
+        modelMap.set(model.id, {
+          ...existing,
+          pricing: model.pricing || existing.pricing,
+          context_length: model.context_length,
+          description: model.description || existing.description,
+        });
+      } else {
+        // Add new API-only model
+        modelMap.set(model.id, {
+          id: model.id,
+          name: model.name || model.id,
+          pricing: model.pricing,
+          context_length: model.context_length,
+          description: model.description,
+        });
       }
     });
 
@@ -161,13 +158,31 @@ export async function listModels(
     const knownCount = combinedModels.filter(m => KNOWN_MODELS[m.id as keyof typeof KNOWN_MODELS]).length;
     const totalCount = combinedModels.length;
 
+    // Structure the response using proper Text Content format
+    // Split into logical sections for better readability
+    const headerText = `# Available Image Generation Models\n\nFound ${totalCount} model(s)${knownCount > 0 ? ` (${knownCount} with detailed metadata)` : ''}:`;
+    const modelsText = formatted;
+    const usageText = `## Usage\n\nTo generate an image, use the \`generate_image\` tool with the **exact Model ID** shown above. Example:\n\`\`\`json\n{\n  "model": "black-forest-labs/flux.2-pro",\n  "prompt": "A beautiful sunset over mountains"\n}\n\`\`\`\n\n**Important:** Use the Model ID exactly as shown (case-sensitive). Models with detailed metadata (strengths, weaknesses, use cases) are well-tested and recommended. Other models are available from OpenRouter but may have limited testing.\n\nUse \`check_model\` to verify a specific model ID before generating images.`;
+
+    const content: TextContent[] = [
+      {
+        type: 'text',
+        text: headerText,
+      },
+      {
+        type: 'text',
+        text: modelsText,
+      },
+      {
+        type: 'text',
+        text: usageText,
+      },
+    ];
+
+    logger.debug({ contentLength: content.length }, 'Returning list_models result with multiple text content blocks');
+
     return {
-      content: [
-        {
-          type: 'text',
-          text: `# Available Image Generation Models\n\nFound ${totalCount} model(s)${knownCount > 0 ? ` (${knownCount} with detailed metadata)` : ''}:\n\n${formatted}\n\n## Usage\n\nTo generate an image, use the \`generate_image\` tool with the **exact Model ID** shown above. Example:\n\`\`\`json\n{\n  "model": "black-forest-labs/flux.2-pro",\n  "prompt": "A beautiful sunset over mountains"\n}\n\`\`\`\n\n**Important:** Use the Model ID exactly as shown (case-sensitive). Models with detailed metadata (strengths, weaknesses, use cases) are well-tested and recommended. Other models are available from OpenRouter but may have limited testing.\n\nUse \`check_model\` to verify a specific model ID before generating images.`,
-        },
-      ],
+      content,
     };
   } catch (error) {
     logger.error(

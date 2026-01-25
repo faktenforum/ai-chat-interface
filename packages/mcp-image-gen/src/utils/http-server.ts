@@ -112,13 +112,31 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
     try {
       // transport.handleRequest automatically handles GET with Accept: text/event-stream
       // It will set appropriate SSE headers and stream responses
+      // The transport manages the SSE connection and will keep it open for server-to-client messages
       await transport.handleRequest(req, res, null);
     } catch (error) {
-      logger?.error(
-        { error: error instanceof Error ? error.message : String(error), sessionId },
-        'Error handling SSE stream request',
-      );
-      sendErrorResponse(res, 500, -32603, 'Internal server error');
+      // Only log errors if the connection is still open and headers haven't been sent
+      // Connection closure is normal and shouldn't be treated as an error
+      const isConnectionClosed = res.destroyed || res.closed;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isAbortError = errorMessage.includes('aborted') || 
+                          errorMessage.includes('terminated') ||
+                          errorMessage.includes('ECONNRESET') ||
+                          errorMessage.includes('EPIPE');
+      
+      if (!isConnectionClosed && !isAbortError && !res.headersSent) {
+        logger?.error(
+          { error: errorMessage, sessionId },
+          'Error handling SSE stream request',
+        );
+        sendErrorResponse(res, 500, -32603, 'Internal server error');
+      } else if (isAbortError || isConnectionClosed) {
+        // Connection was aborted/terminated - this is normal when client disconnects
+        logger?.debug?.(
+          { error: errorMessage, sessionId, connectionClosed: isConnectionClosed },
+          'SSE stream connection closed',
+        );
+      }
     }
   });
 
