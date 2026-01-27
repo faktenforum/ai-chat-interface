@@ -27,6 +27,10 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          # Use host Docker daemon so the base image built in the first step
+          # is visible when building librechat-with-agents (FROM librechat:base).
+          driver: docker
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
