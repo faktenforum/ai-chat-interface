@@ -318,8 +318,9 @@ Rating system for AI responses with thumbs up/down and detailed tags.
 - Auto-enabled if `balance.enabled: true`
 
 ### Speech (TTS/STT)
-- Text-to-Speech and Speech-to-Text integration
-- Requires: `TTS_API_KEY`, `STT_API_KEY`
+- **STT**: Via **Scaleway** ([Audio Transcriptions API](https://www.scaleway.com/en/docs/generative-apis/how-to/query-audio-models/), `whisper-large-v3`). Requires `SCALEWAY_PROJECT_ID` and `SCALEWAY_API_KEY`; init injects the transcriptions URL.
+- **TTS**: Browser (no key) or later OpenAI `TTS_API_KEY`. Scaleway TTS coming soon.
+- **Audio format**: Scaleway accepts `flac`, `mp3`, `mpeg`, `mpga`, `oga`, `ogg`, `wav`. Use a browser that records ogg/wav (e.g. Firefox) or upload mp3/wav.
 
 ### Turnstile (Cloudflare)
 - CAPTCHA for registration/login

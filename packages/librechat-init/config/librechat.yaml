@@ -446,19 +446,14 @@ registration:
 # transactions:
 #   enabled: false
 
-# Speech / Voice Features (disabled - TTS/STT)
-# speech:
-#   tts:
-#     openai:
-#       url: ''
-#       apiKey: '${TTS_API_KEY}'
-#       model: ''
-#       voices: ['']
-#   stt:
-#     openai:
-#       url: ''
-#       apiKey: '${STT_API_KEY}'
-#       model: ''
+# Speech: STT via Scaleway (requires SCALEWAY_PROJECT_ID + SCALEWAY_API_KEY; init injects URL)
+speech:
+  stt:
+    openai:
+      url: '$${SCALEWAY_STT_URL}'
+      apiKey: '${SCALEWAY_API_KEY}'
+      model: 'whisper-large-v3'
+  # tts: browser or later OpenAI TTS_API_KEY
 
 # Cloudflare Turnstile CAPTCHA (disabled)
 # turnstile:

@@ -29,12 +29,16 @@ function resolveConfigPlaceholders(content: string): string {
 function injectConstructedBaseURLs(content: string): string {
   let resolved = content;
   const scalewayProjectId = process.env.SCALEWAY_PROJECT_ID?.trim();
-  
+
   if (scalewayProjectId) {
     const constructedBaseURL = `https://api.scaleway.ai/${scalewayProjectId}/v1`;
     resolved = resolved.replace(
       /baseURL:\s*"\$\{SCALEWAY_BASE_URL\}"/g,
       `baseURL: "${constructedBaseURL}"`
+    );
+    resolved = resolved.replace(
+      /\$\{SCALEWAY_STT_URL\}/g,
+      `${constructedBaseURL}/audio/transcriptions`
     );
     process.env.SCALEWAY_BASE_URL = constructedBaseURL;
     console.log(`✓ Constructed Scaleway baseURL with project ID: ${constructedBaseURL.replace(scalewayProjectId, '***')}`);
