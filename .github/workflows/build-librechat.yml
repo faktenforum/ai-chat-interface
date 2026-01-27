@@ -27,10 +27,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          # Use host Docker daemon so the base image built in the first step
-          # is visible when building librechat-with-agents (FROM librechat:base).
-          driver: docker
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -55,12 +51,14 @@ jobs:
           context: ./dev/librechat
           file: ./dev/librechat/Dockerfile
           target: node
-          load: true
-          push: false
+          outputs: type=docker,dest=./librechat-base.tar
           tags: librechat:base
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+
+      - name: Load base image into Docker daemon
+        run: docker load -i ./librechat-base.tar
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -74,6 +72,12 @@ jobs:
           cd dev/agents
           npm ci
           npm run build
+
+      - name: Set up Docker Buildx (docker driver)
+        uses: docker/setup-buildx-action@v3
+        with:
+          # Switch to host daemon so FROM librechat:base resolves to the loaded image.
+          driver: docker
 
       - name: Build and push LibreChat image with agents
         uses: docker/build-push-action@v5
