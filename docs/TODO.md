@@ -107,7 +107,9 @@
 
 ## Upstream Contributions
 
-- [x] Improve support for OpenAI-compatible custom endpoints - [LibreChat PR #11499](https://github.com/danny-avila/LibreChat/pull/11499)
-- [x] Add vision capability flag to modelSpecs configuration - [LibreChat PR #11501](https://github.com/danny-avila/LibreChat/pull/11501)
-- [x] Add vision toggle for agents - [LibreChat PR #11504](https://github.com/danny-avila/LibreChat/pull/11504)
-- [x] Filter base64 image artifacts based on agent vision capability - [agents PR #48](https://github.com/danny-avila/agents/pull/48)
+### Vision (WIP / draft PRs, not merged)
+
+- [ ] Add vision capability flag to modelSpecs configuration (draft PR, WIP) – [LibreChat PR #11501](https://github.com/danny-avila/LibreChat/pull/11501)
+- [ ] Filter base64 image artifacts based on agent vision capability (draft PR, WIP) – [agents PR #48](https://github.com/danny-avila/agents/pull/48)
+
+Vision is re-enabled in `packages/librechat-init/config/librechat.yaml` as **experimental/WIP**. Requires `feat/vision` in `dev/librechat` and `dev/agents`. See [WIP Documentation](wip/README.md).

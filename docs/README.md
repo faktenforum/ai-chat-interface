@@ -30,7 +30,7 @@ Essential guides for the AI Chat Interface platform.
 
 ## WIP (Work in Progress)
 
-- **[WIP Documentation](wip/README.md)** - Vision architecture, vision design, debug status, agent token metadata (custom/Scaleway)
+- **[WIP Documentation](wip/README.md)** - Vision architecture, vision design, debug status, agent token metadata (custom/Scaleway). Vision re-enabled as **experimental/WIP**; branch `feat/vision` in `dev/librechat` and `dev/agents`; draft PRs [LibreChat #11501](https://github.com/danny-avila/LibreChat/pull/11501), [agents #48](https://github.com/danny-avila/agents/pull/48)
 
 ## Project
 

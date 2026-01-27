@@ -88,6 +88,7 @@ endpoints:
   # Agents configuration
   agents:
     disableBuilder: false
+    # Vision: WIP/experimental. Requires feat/vision in dev/librechat + dev/agents. Draft PRs: LibreChat #11501 (https://github.com/danny-avila/LibreChat/pull/11501), agents #48 (https://github.com/danny-avila/agents/pull/48). See docs/wip/README.md
     capabilities:
       - "execute_code"
       - "file_search"
@@ -98,7 +99,7 @@ endpoints:
       - "ocr"
       - "tools"
       - "web_search"
-      - "vision"
+      - "vision"   # WIP/experimental
 
   custom:
     - name: OpenRouter
@@ -325,7 +326,7 @@ modelSpecs:
         endpointType: "custom"
         model: "gpt-oss-120b"
     
-    # Chat & Vision Modelle
+    # Chat & Vision Modelle (vision: true = WIP/experimental, draft PRs LibreChat #11501 / agents #48)
     - name: "scaleway-mistral-small-3.2"
       label: "Mistral Small 3.2 24B"
       description: "Kosteneffektiv (3-6x günstiger als 70B Modelle). 128K Context, 8K Output. Unterstützt Chat und Vision. Apache-2.0 License. Empfohlen von Scaleway als Einstiegsmodell."
@@ -608,7 +609,7 @@ mcpServers:
     iconPath: /images/mcp-playwright-icon.svg
     initTimeout: 120000
     timeout: 150000
-    chatMenu: true
+    chatMenu: false
     startup: false
     serverInstructions: true
 
