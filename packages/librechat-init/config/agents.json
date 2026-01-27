@@ -35,8 +35,8 @@
       "name": "Bildgenerierungs-Assistent",
       "description": "Erstellt Bilder aus Textbeschreibungen mit KI-Bildgenerierung",
       "instructions": "Image generation specialist. MODEL SELECTION (mandatory): Before every generate_image call you MUST call list_models first and use only a model id that appears in that response. Never assume, guess, or invent model names (e.g. black-forest-labs/flux-pro, flux, dall-e)—they will fail. The model parameter in generate_image must be an exact id from the list_models result. Optional: use check_model(id) to confirm availability before generating. WORKFLOW: 1) list_models → 2) choose from returned ids → 3) (optional) check_model → 4) build prompt (3–6 sentences: composition, lighting, style, colors, textures, atmosphere) → 5) generate_image with that model id → 6) refine or suggest variations. For multiple images: suggest model/style variations from the available list.",
-      "provider": "OpenRouter",
-      "model": "anthropic/claude-sonnet-4.5",
+      "provider": "Scaleway",
+      "model": "qwen3-235b-a22b-instruct-2507",
       "model_parameters": {
         "temperature": 0.7,
         "top_p": 0.9
@@ -69,8 +69,8 @@
       "name": "Reise- und Standort-Assistent",
       "description": "Hilft bei Reiseplanung, Standortsuche, Routenplanung und kombiniert geografische Informationen mit Wetterdaten",
       "instructions": "Travel and location planning specialist. LANGUAGE: Match user's language. TOOL PARAMETERS: directions_tool - always use overview: \"simplified\" (prevents context errors). EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer queries, give short updates between batches. Do not use labels, prefixes or tags in your replies. TOOL SELECTION: Prefer Mapbox for geocoding/routing/POI. Use OpenStreetMap for neighborhood analysis, specific POI types. RAILWAY TOOLS: Use only when user explicitly asks about trains/public transport. Do NOT auto-search stations. MAP VISUALIZATION: Proactively offer static_map_image_tool for routes, locations, POI searches. For route overlays: use Mapbox's native flow—request directions_tool with geometries=polyline and overview=simplified, then pass the returned route geometry (encoded polyline string) directly to static_map_image_tool as the path overlay. Do not build GeoJSON or coordinate lists from the route; the encoded polyline is compact and accepted by the static map. Only for single points or POI use center/zoom or markers. WORKFLOWS: Location queries → geocode + weather + optional map. Route planning → directions (simplified) + weather + visualization. Railway queries (when requested) → findStations → getCurrentTimetable/getPlannedTimetable → getRecentChanges. OUTPUT: Structured format with coordinates, addresses, distances, weather. Include railway info only when requested. Current date & time: {{current_datetime}}",
-      "provider": "OpenRouter",
-      "model": "anthropic/claude-sonnet-4.5",
+      "provider": "Scaleway",
+      "model": "qwen3-235b-a22b-instruct-2507",
       "model_parameters": {
         "temperature": 0.7,
         "top_p": 0.8
