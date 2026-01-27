@@ -115,7 +115,8 @@ endpoints:
           "mistralai/mistral-large-2411",     # European premium option (French)
           "glm/glm-4.7"                       # Advanced reasoning model
         ]
-        fetch: true
+        # Controlled by LIBRECHAT_FETCH_MODELS: true = fetch all models from API; false = default list only
+        fetch: $${LIBRECHAT_FETCH_MODELS}
       titleConvo: true
       summarize: true
       headers:
@@ -140,7 +141,8 @@ endpoints:
           "qwen3-embedding-8b",               # Embeddings - Generally Available
           "bge-multilingual-gemma2"           # Embeddings - Generally Available
         ]
-        fetch: true
+        # Controlled by LIBRECHAT_FETCH_MODELS: true = fetch all models from API; false = default list only
+        fetch: $${LIBRECHAT_FETCH_MODELS}
       titleConvo: true
       summarize: true
       headers:

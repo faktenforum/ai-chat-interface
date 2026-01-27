@@ -10,6 +10,7 @@ Work-in-progress notes and design docs for vision handling, agent token metadata
 | **[Vision Design](VISION_DESIGN.md)** | Single rule and where images are filtered for non-vision models |
 | **[Vision Debug Status](VISION_DEBUG_STATUS.md)** | Vision artifact refactoring status and testing notes |
 | **[Agent Token Metadata](AGENTS_TOKEN_METADATA.md)** | Context and max_tokens for custom/Scaleway models |
+| **[Agent Context Limit](AGENTS_CONTEXT_LIMIT.md)** | Where the 400K context limit comes from, where pruning runs, and why image tokens cause "418191 tokens" errors |
 
 ## Navigation
 
