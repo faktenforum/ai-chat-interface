@@ -1,0 +1,48 @@
+# LibreChat test stack: MongoDB + Meilisearch only.
+# Used when running LibreChat unit/E2E tests from the host (dev/librechat).
+# Start: docker compose -p librechat-tests -f docker-compose.librechat-tests.yml --env-file .env.librechat-tests up -d
+# Stop:  docker compose -p librechat-tests -f docker-compose.librechat-tests.yml --env-file .env.librechat-tests down
+
+services:
+  mongodb:
+    container_name: librechat-tests-mongodb
+    image: mongo
+    restart: always
+    command: mongod --noauth
+    ports:
+      - "27018:27017"
+    volumes:
+      - librechat-tests-mongodata:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --quiet || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    networks:
+      - librechat-tests-net
+
+  meilisearch:
+    container_name: librechat-tests-meilisearch
+    image: getmeili/meilisearch:v1.12.3
+    restart: always
+    ports:
+      - "7701:7700"
+    env_file:
+      - .env.librechat-tests
+    environment:
+      MEILI_HOST: http://0.0.0.0:7700
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+    volumes:
+      - librechat-tests-meili:/meili_data
+    networks:
+      - librechat-tests-net
+
+networks:
+  librechat-tests-net:
+    driver: bridge
+
+volumes:
+  librechat-tests-mongodata:
+  librechat-tests-meili:

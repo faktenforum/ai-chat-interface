@@ -25,7 +25,13 @@
         "start:local-dev": "docker compose -f docker-compose.local-dev.yml --env-file .env.local up -d",
         "stop:local-dev": "docker compose -f docker-compose.local-dev.yml --env-file .env.local down",
         "restart:local-dev": "docker compose -f docker-compose.local-dev.yml --env-file .env.local restart",
-        "rebuild:local-dev": "docker compose -f docker-compose.local-dev.yml --env-file .env.local build --no-cache"
+        "rebuild:local-dev": "docker compose -f docker-compose.local-dev.yml --env-file .env.local build --no-cache",
+        "test:librechat:stack:up": "docker compose -p librechat-tests -f docker-compose.librechat-tests.yml --env-file .env.librechat-tests up -d",
+        "test:librechat:stack:down": "docker compose -p librechat-tests -f docker-compose.librechat-tests.yml --env-file .env.librechat-tests down",
+        "test:librechat:unit": "cd dev/librechat && npm run test:all",
+        "test:librechat:e2e": "cd dev/librechat && npm run e2e",
+        "test:librechat:link-agents": "(cd dev/agents && npm run build && npm link) && (cd dev/librechat && npm link @librechat/agents)",
+        "test:librechat:unlink-agents": "(cd dev/librechat && npm unlink @librechat/agents && npm install)"
     },
     "license": "MIT",
     "devDependencies": {

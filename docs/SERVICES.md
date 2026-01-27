@@ -174,3 +174,11 @@ This document provides an overview of all services in the AI Chat Interface stac
 - External services: `https://{service}.{DOMAIN}`
 - Internal services: Accessible only via service names on `app-net` or `firecrawl-network`
 - SearXNG: Only accessible internally (not exposed via Traefik)
+
+## Development Facilities
+
+### LibreChat Test Stack
+
+A dedicated Docker stack (MongoDB + Meilisearch only) for running LibreChat tests from the host. Required for E2E; API unit tests use in-memory MongoDB (MongoMemoryServer) and do not use this stack. Tests run via Node 20 in `dev/librechat`; the stack provides backing services on fixed ports (MongoDB 27018, Meilisearch 7701).
+
+See **[LibreChat Testing](LIBRECHAT_TESTING.md)** for setup and usage.
