@@ -73,22 +73,21 @@ jobs:
           npm ci
           npm run build
 
-      - name: Set up Docker Buildx (docker driver)
-        id: buildx-docker
-        uses: docker/setup-buildx-action@v3
-        with:
-          # Use host daemon so FROM librechat:base resolves to the loaded image.
-          driver: docker
-          name: librechat-docker
-
       - name: Build and push LibreChat image with agents
+        shell: bash
         env:
-          BUILDX_BUILDER: librechat-docker
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: .github/dockerfiles/librechat-with-agents.Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64
+          TAGS: ${{ steps.meta.outputs.tags }}
+          LABELS: ${{ steps.meta.outputs.labels }}
+        run: |
+          set -e
+          # Use host Docker daemon so FROM librechat:base uses the loaded image.
+          FIRST_TAG=$(echo "$TAGS" | head -1)
+          LABEL_ARGS=()
+          while IFS= read -r line; do
+            [ -n "$line" ] && LABEL_ARGS+=(--label "$line")
+          done <<< "$LABELS"
+          docker build -f .github/dockerfiles/librechat-with-agents.Dockerfile \
+            "${LABEL_ARGS[@]}" -t "$FIRST_TAG" .
+          while IFS= read -r t; do
+            [ -n "$t" ] && docker tag "$FIRST_TAG" "$t" && docker push "$t"
+          done <<< "$TAGS"
