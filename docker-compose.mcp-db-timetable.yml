@@ -1,0 +1,43 @@
+services:
+  mcp-db-timetable:
+    # Internal service only - not exposed via Traefik
+    # Build section defined in docker-compose.local-dev.yml and docker-compose.prod.yml
+    image: node:24-alpine
+    container_name: mcp-db-timetable
+    restart: always
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${MCP_DB_TIMETABLE_PORT:-3007}
+      HOST: ${MCP_DB_TIMETABLE_HOST:-0.0.0.0}
+      TRANSPORT_TYPE: ${MCP_DB_TIMETABLE_TRANSPORT_TYPE:-sse}
+      # Map MCP_ prefixed vars to DB_ vars expected by server
+      DB_TIMETABLE_CLIENT_ID: ${MCP_DB_TIMETABLE_CLIENT_ID}
+      DB_TIMETABLE_CLIENT_SECRET: ${MCP_DB_TIMETABLE_CLIENT_SECRET}
+      LOG_LEVEL: ${MCP_DB_TIMETABLE_LOG_LEVEL:-info}
+      SSE_ENDPOINT: ${MCP_DB_TIMETABLE_SSE_ENDPOINT:-/mcp}
+    expose:
+      - "3007"
+    networks:
+      - app-net
+    healthcheck:
+      # Socket connectivity check (no /health endpoint available)
+      test: ["CMD-SHELL", "node -e \"const net=require('net');const port=${MCP_DB_TIMETABLE_PORT:-3007};const s=net.createConnection(port,'localhost',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1));setTimeout(()=>{s.destroy();process.exit(1)},2000)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    read_only: false
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"

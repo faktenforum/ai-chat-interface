@@ -1,0 +1,56 @@
+# Upstream repository configuration for Faktenforum fork submodules
+#
+# Branch Strategy:
+#   - main: Production branch with Faktenforum-specific modifications
+#   - upstream: Local tracking branch for upstream state (auto-created)
+#
+# Used by: scripts/sync-fork-submodules.sh
+
+submodules:
+  - path: dev/librechat
+    fork_url: git@github.com:faktenforum/LibreChat.git
+    upstream_url: https://github.com/danny-avila/LibreChat.git
+    upstream_branch: main
+    fork_branch: main
+    upstream_tracking_branch: upstream
+    description: "Main LibreChat application fork"
+
+  - path: dev/librechat-doc
+    fork_url: git@github.com:faktenforum/librechat.ai.git
+    upstream_url: https://github.com/LibreChat-AI/librechat.ai.git
+    upstream_branch: main
+    fork_branch: main
+    upstream_tracking_branch: upstream
+    description: "LibreChat documentation fork"
+
+  - path: dev/open-streetmap-mcp
+    fork_url: git@github.com:faktenforum/open-streetmap-mcp.git
+    upstream_url: https://github.com/jagan-shanmugam/open-streetmap-mcp.git
+    upstream_branch: main
+    fork_branch: main
+    upstream_tracking_branch: upstream
+    description: "OpenStreetMap MCP server fork with HTTP transport support"
+
+  - path: dev/stackoverflow-mcp
+    fork_url: git@github.com:faktenforum/stackoverflow-mcp.git
+    upstream_url: https://github.com/gscalzo/stackoverflow-mcp.git
+    upstream_branch: main
+    fork_branch: main
+    upstream_tracking_branch: upstream
+    description: "Stack Overflow MCP server fork"
+
+  - path: dev/npm-search-mcp
+    fork_url: git@github.com:faktenforum/npm-search-mcp-server.git
+    upstream_url: https://github.com/btwiuse/npm-search-mcp-server.git
+    upstream_branch: main
+    fork_branch: main
+    upstream_tracking_branch: upstream
+    description: "npm Search MCP server fork with HTTP transport support"
+
+  - path: dev/db-timetable-mcp
+    fork_url: git@github.com:faktenforum/db-timetable-mcp.git
+    upstream_url: https://github.com/jorekai/db-timetable-mcp.git
+    upstream_branch: master
+    fork_branch: main
+    upstream_tracking_branch: upstream
+    description: "Deutsche Bahn Timetable MCP server fork"

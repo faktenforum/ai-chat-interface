@@ -34,7 +34,13 @@ export interface OpenRouterImageResponse {
           url: string;
         };
       }>;
-      content?: string;
+      content?: string | Array<{
+        type: string;
+        text?: string;
+        image_url?: {
+          url: string;
+        };
+      }>;
     };
   }>;
 }
@@ -83,10 +89,14 @@ export class OpenRouterClient {
       );
     }
 
+    // For Gemini models, use response_modalities to explicitly request image output
+    const isGeminiModel = model.toLowerCase().includes('gemini');
+    
     const requestBody: {
       model: string;
       messages: Array<{ role: string; content: string }>;
-      modalities: string[];
+      modalities?: string[];
+      response_modalities?: string[];
       image_config?: { aspect_ratio?: string; image_size?: string };
     } = {
       model,
@@ -96,8 +106,16 @@ export class OpenRouterClient {
           content: prompt,
         },
       ],
-      modalities: ['image', 'text'],
     };
+
+    // Set modalities based on model type
+    if (isGeminiModel) {
+      // For Gemini, explicitly request image in response
+      requestBody.response_modalities = ['image'];
+    } else {
+      // For other models, use modalities to indicate we want image output
+      requestBody.modalities = ['image', 'text'];
+    }
 
     if (supportsAspectRatio && (aspect_ratio || image_size)) {
       requestBody.image_config = {};
@@ -114,21 +132,54 @@ export class OpenRouterClient {
     try {
       const response = await this.client.post<OpenRouterImageResponse>('/chat/completions', requestBody);
       const message = response.data.choices?.[0]?.message;
-      const images = message?.images || [];
-
+      
+      // Log response structure for debugging (truncate large responses)
+      const responseStr = JSON.stringify(response.data);
       logger.debug({
+        fullResponse: responseStr.length > 2000 ? responseStr.substring(0, 2000) + '... (truncated)' : responseStr,
         hasMessage: !!message,
-        imagesCount: images.length,
-        hasImageUrl: images[0]?.image_url ? true : false
+        messageKeys: message ? Object.keys(message) : [],
+        messageContentType: typeof message?.content,
+        messageContentIsArray: Array.isArray(message?.content),
       }, 'OpenRouter API response received');
 
+      // Try to extract image from images array first
+      let images = message?.images || [];
+      
+      // If no images array, try to extract from content array (alternative response format)
+      if (images.length === 0 && Array.isArray(message?.content)) {
+        logger.debug('No images array found, checking content array');
+        const imageContent = message.content.find(
+          (item) => item.type === 'image_url' && item.image_url?.url
+        );
+        if (imageContent?.image_url?.url) {
+          images = [{
+            type: 'image_url',
+            image_url: {
+              url: imageContent.image_url.url,
+            },
+          }];
+          logger.debug('Found image in content array');
+        }
+      }
+
+      logger.debug({
+        imagesCount: images.length,
+        hasImageUrl: images[0]?.image_url ? true : false,
+        messageContent: typeof message?.content === 'string' ? message.content.substring(0, 200) : 'not a string',
+      }, 'Image extraction attempt');
+
       if (!images || images.length === 0 || !images[0]?.image_url) {
+        // Log full response for debugging
+        const fullResponseStr = JSON.stringify(response.data, null, 2);
         logger.error({
-          responseData: JSON.stringify(response.data).substring(0, 500),
-          message: message ? JSON.stringify(message).substring(0, 500) : 'no message'
+          responseData: fullResponseStr.substring(0, 2000),
+          message: message ? JSON.stringify(message, null, 2).substring(0, 2000) : 'no message',
+          messageType: typeof message?.content,
+          isContentArray: Array.isArray(message?.content),
         }, 'No image data in OpenRouter response');
         throw new OpenRouterAPIError(
-          'No image data returned from OpenRouter API. The model may not support image generation or the request may have failed.',
+          'No image data returned from OpenRouter API. The model may not support image generation or the request may have failed. Check the logs for the full response structure.',
         );
       }
 
@@ -182,13 +233,44 @@ export class OpenRouterClient {
   }
 
   /**
-   * Get image generation models (filtered by output_modalities)
+   * Get image generation models (filtered by output_modalities or known models)
    */
   async listImageModels(): Promise<OpenRouterModel[]> {
     const allModels = await this.listModels();
+    const knownModelIds = new Set(Object.keys(KNOWN_MODELS));
+    
     return allModels.filter(
-      (model) => model.architecture?.output_modalities?.includes('image'),
+      (model) => 
+        model.architecture?.output_modalities?.includes('image') ||
+        knownModelIds.has(model.id),
     );
+  }
+
+  /**
+   * Normalize model ID for matching (handles case-insensitive and namespace variations)
+   */
+  private normalizeModelId(modelId: string): string[] {
+    const normalized = modelId.toLowerCase().trim();
+    const variations: string[] = [modelId, normalized];
+    
+    // If ID doesn't have a namespace, try adding common namespaces
+    if (!normalized.includes('/')) {
+      // Try common prefixes for known models
+      if (normalized.includes('flux')) {
+        variations.push(`black-forest-labs/${normalized}`);
+        variations.push(`black-forest-labs/${modelId}`);
+      }
+      if (normalized.includes('gpt') || normalized.includes('image')) {
+        variations.push(`openai/${normalized}`);
+        variations.push(`openai/${modelId}`);
+      }
+      if (normalized.includes('gemini') || normalized.includes('nano')) {
+        variations.push(`google/${normalized}`);
+        variations.push(`google/${modelId}`);
+      }
+    }
+    
+    return variations;
   }
 
   /**
@@ -201,7 +283,58 @@ export class OpenRouterClient {
   }> {
     try {
       const models = await this.listModels();
-      const model = models.find((m) => m.id === modelId);
+      const normalizedVariations = this.normalizeModelId(modelId);
+      
+      // Try exact match first
+      let model = models.find((m) => m.id === modelId);
+      
+      // If not found, try case-insensitive match
+      if (!model) {
+        const normalizedModelId = modelId.toLowerCase();
+        model = models.find((m) => m.id.toLowerCase() === normalizedModelId);
+      }
+      
+      // If still not found, try all variations
+      if (!model) {
+        for (const variation of normalizedVariations) {
+          model = models.find((m) => 
+            m.id === variation || m.id.toLowerCase() === variation.toLowerCase()
+          );
+          if (model) break;
+        }
+      }
+      
+      // Check if model is in KNOWN_MODELS (case-insensitive and with variations)
+      let knownModelKey: string | undefined;
+      let knownModel: typeof KNOWN_MODELS[keyof typeof KNOWN_MODELS] | undefined;
+      
+      for (const variation of normalizedVariations) {
+        knownModelKey = Object.keys(KNOWN_MODELS).find(
+          (key) => key.toLowerCase() === variation.toLowerCase()
+        );
+        if (knownModelKey) {
+          knownModel = KNOWN_MODELS[knownModelKey as keyof typeof KNOWN_MODELS];
+          break;
+        }
+      }
+      
+      const isKnownModel = knownModel !== undefined;
+
+      // If model is in KNOWN_MODELS, it definitely supports image generation
+      // Even if not in API, we consider it as existing if it's in our known models
+      if (isKnownModel && knownModel && !model) {
+        // Model is known but not in API - return as existing with known model info
+        return {
+          exists: true,
+          supportsImageGeneration: true,
+          details: {
+            id: knownModel.id,
+            name: knownModel.name,
+            description: knownModel.description,
+            pricing: knownModel.pricing,
+          } as OpenRouterModel,
+        };
+      }
 
       if (!model) {
         return {
@@ -210,7 +343,10 @@ export class OpenRouterClient {
         };
       }
 
-      const supportsImageGeneration = model.architecture?.output_modalities?.includes('image') ?? false;
+      // Check if model supports image generation via output_modalities or if it's a known model
+      const supportsImageGeneration = 
+        (model.architecture?.output_modalities?.includes('image') ?? false) ||
+        isKnownModel;
 
       return {
         exists: true,

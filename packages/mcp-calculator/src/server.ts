@@ -1,37 +1,39 @@
 #!/usr/bin/env -S node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings
 
+/**
+ * Calculator MCP Server
+ *
+ * Provides mathematical operations (add, subtract, multiply, divide) via MCP protocol.
+ * Uses streamable-http transport for stateless HTTP-based communication.
+ */
+
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'url';
-import express, { type Request, type Response } from 'express';
+import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import * as z from 'zod';
 import { add, subtract, multiply, divide } from './tools/calculator.ts';
 import { logger } from './utils/logger.ts';
 import { CalculatorError } from './utils/errors.ts';
+import { setupMcpEndpoints, setupGracefulShutdown } from './utils/http-server.ts';
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
+const SERVER_NAME = 'calculator-mcp-server';
+const SERVER_VERSION = '1.0.0';
 
 // Session management
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
 /**
- * Extracts session ID from request headers (supports both lowercase and capitalized header names)
- */
-function getSessionId(headers: Request['headers']): string | undefined {
-  const header = headers['mcp-session-id'] || headers['Mcp-Session-Id'];
-  return typeof header === 'string' ? header : undefined;
-}
-
-/**
  * Creates and configures the MCP server with all handlers
  */
-function createServer() {
+function createMcpServer() {
   const server = new McpServer(
     {
-      name: 'calculator-mcp-server',
-      version: '1.0.0',
+      name: SERVER_NAME,
+      version: SERVER_VERSION,
     },
     {
       capabilities: {
@@ -48,78 +50,85 @@ Usage guidelines:
     },
   );
 
+  /**
+   * Wraps tool execution with consistent error handling
+   */
+  const withErrorHandler = (
+    toolName: string,
+    handler: (args: { a: number; b: number }) => Promise<{ content: Array<{ type: 'text'; text: string }> }>,
+  ) => {
+    return async (args: { a: number; b: number }) => {
+      try {
+        return await handler(args);
+      } catch (error) {
+        logger.error(
+          { tool: toolName, args, error: error instanceof Error ? error.message : String(error) },
+          'Tool execution failed',
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text:
+                error instanceof CalculatorError
+                  ? `Error: ${error.message}`
+                  : `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    };
+  };
+
   // Register tools
-  server.registerTool('add', {
-    description: 'Adds two numbers together',
-    inputSchema: {
-      a: z.number().describe('First number'),
-      b: z.number().describe('Second number'),
+  server.registerTool(
+    'add',
+    {
+      description: 'Adds two numbers together',
+      inputSchema: {
+        a: z.number().describe('First number'),
+        b: z.number().describe('Second number'),
+      },
     },
-  }, async (args: { a: number; b: number }) => {
-    try {
-      return await add(args);
-    } catch (error) {
-      logger.error({ tool: 'add', args, error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
-      return {
-        content: [{ type: 'text', text: error instanceof CalculatorError ? `Error: ${error.message}` : `Unexpected error: ${error instanceof Error ? error.message : String(error)}` }],
-        isError: true,
-      };
-    }
-  });
+    withErrorHandler('add', add),
+  );
 
-  server.registerTool('subtract', {
-    description: 'Subtracts the second number from the first number',
-    inputSchema: {
-      a: z.number().describe('First number (minuend)'),
-      b: z.number().describe('Second number (subtrahend)'),
+  server.registerTool(
+    'subtract',
+    {
+      description: 'Subtracts the second number from the first number',
+      inputSchema: {
+        a: z.number().describe('First number (minuend)'),
+        b: z.number().describe('Second number (subtrahend)'),
+      },
     },
-  }, async (args: { a: number; b: number }) => {
-    try {
-      return await subtract(args);
-    } catch (error) {
-      logger.error({ tool: 'subtract', args, error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
-      return {
-        content: [{ type: 'text', text: error instanceof CalculatorError ? `Error: ${error.message}` : `Unexpected error: ${error instanceof Error ? error.message : String(error)}` }],
-        isError: true,
-      };
-    }
-  });
+    withErrorHandler('subtract', subtract),
+  );
 
-  server.registerTool('multiply', {
-    description: 'Multiplies two numbers together',
-    inputSchema: {
-      a: z.number().describe('First number'),
-      b: z.number().describe('Second number'),
+  server.registerTool(
+    'multiply',
+    {
+      description: 'Multiplies two numbers together',
+      inputSchema: {
+        a: z.number().describe('First number'),
+        b: z.number().describe('Second number'),
+      },
     },
-  }, async (args: { a: number; b: number }) => {
-    try {
-      return await multiply(args);
-    } catch (error) {
-      logger.error({ tool: 'multiply', args, error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
-      return {
-        content: [{ type: 'text', text: error instanceof CalculatorError ? `Error: ${error.message}` : `Unexpected error: ${error instanceof Error ? error.message : String(error)}` }],
-        isError: true,
-      };
-    }
-  });
+    withErrorHandler('multiply', multiply),
+  );
 
-  server.registerTool('divide', {
-    description: 'Divides the first number by the second number. Returns an error if dividing by zero.',
-    inputSchema: {
-      a: z.number().describe('First number (dividend)'),
-      b: z.number().describe('Second number (divisor)'),
+  server.registerTool(
+    'divide',
+    {
+      description: 'Divides the first number by the second number. Returns an error if dividing by zero.',
+      inputSchema: {
+        a: z.number().describe('First number (dividend)'),
+        b: z.number().describe('Second number (divisor)'),
+      },
     },
-  }, async (args: { a: number; b: number }) => {
-    try {
-      return await divide(args);
-    } catch (error) {
-      logger.error({ tool: 'divide', args, error: error instanceof Error ? error.message : String(error) }, 'Tool execution failed');
-      return {
-        content: [{ type: 'text', text: error instanceof CalculatorError ? `Error: ${error.message}` : `Unexpected error: ${error instanceof Error ? error.message : String(error)}` }],
-        isError: true,
-      };
-    }
-  });
+    withErrorHandler('divide', divide),
+  );
 
   // Register resources
   server.registerResource('info', 'calculator://info', {
@@ -181,7 +190,7 @@ Always use these tools for calculations instead of computing manually.`,
  * Creates a new session for an initialize request
  */
 function createSession(): { server: McpServer; transport: StreamableHTTPServerTransport } {
-  const server = createServer();
+  const server = createMcpServer();
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
     enableJsonResponse: true,
@@ -203,116 +212,20 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
 }
 
 /**
- * Sends a JSON-RPC error response
- */
-function sendErrorResponse(res: Response, status: number, code: number, message: string, id: unknown = null): void {
-  if (res.headersSent) return;
-  res.status(status).json({
-    jsonrpc: '2.0',
-    error: { code, message },
-    id,
-  });
-}
-
-/**
  * Creates and configures the Express application
  */
 function createApp(): express.Application {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
+  app.disable('x-powered-by');
 
-  // Health check endpoint
-  app.get('/health', (_req: Request, res: Response) => {
-    res.json({
-      status: 'ok',
-      server: 'calculator-mcp-server',
-      version: '1.0.0',
-      activeSessions: transports.size,
-    });
-  });
-
-  // SSE stream endpoint (GET /mcp)
-  app.get('/mcp', async (req: Request, res: Response) => {
-    const sessionId = getSessionId(req.headers);
-
-    if (!sessionId) {
-      sendErrorResponse(res, 400, -32000, 'Bad Request: No session ID provided');
-      return;
-    }
-
-    const transport = transports.get(sessionId);
-    if (!transport) {
-      sendErrorResponse(res, 404, -32000, 'Session not found');
-      return;
-    }
-
-    try {
-      await transport.handleRequest(req, res);
-    } catch (error) {
-      logger.error({ sessionId, error: error instanceof Error ? error.message : String(error) }, 'Error in transport.handleRequest');
-      sendErrorResponse(res, 500, -32603, 'Internal server error');
-    }
-  });
-
-  // Session termination endpoint (DELETE /mcp)
-  app.delete('/mcp', async (req: Request, res: Response) => {
-    const sessionId = getSessionId(req.headers);
-
-    if (!sessionId) {
-      sendErrorResponse(res, 400, -32000, 'Bad Request: No session ID provided');
-      return;
-    }
-
-    const transport = transports.get(sessionId);
-    if (!transport) {
-      sendErrorResponse(res, 404, -32000, 'Session not found');
-      return;
-    }
-
-    try {
-      await transport.handleRequest(req, res, req.body);
-      transports.delete(sessionId);
-      logger.info({ sessionId, totalSessions: transports.size }, 'Session deleted');
-    } catch (error) {
-      logger.error({ error: error instanceof Error ? error.message : String(error), sessionId }, 'Error handling session termination');
-      sendErrorResponse(res, 500, -32603, 'Error handling session termination');
-    }
-  });
-
-  // Main MCP endpoint (POST /mcp)
-  app.post('/mcp', async (req: Request, res: Response) => {
-    try {
-      const sessionId = getSessionId(req.headers);
-      const requestId = typeof req.body === 'object' && req.body !== null && 'id' in req.body ? req.body.id : null;
-
-      // Handle existing session
-      if (sessionId) {
-        const transport = transports.get(sessionId);
-        if (transport) {
-          await transport.handleRequest(req, res, req.body);
-          return;
-        }
-        sendErrorResponse(res, 404, -32000, 'Session not found', requestId);
-        return;
-      }
-
-      // No session ID - only allow initialize requests to create new sessions
-      const isInitialize = typeof req.body === 'object' && req.body !== null && 'method' in req.body && req.body.method === 'initialize';
-      if (!isInitialize) {
-        sendErrorResponse(res, 400, -32000, 'Bad Request: No session ID provided', requestId);
-        return;
-      }
-
-      // Create new session for initialize request
-      const { server, transport } = createSession();
-      await server.connect(transport);
-      await transport.handleRequest(req, res, req.body);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error({ error: errorMessage }, 'Error handling MCP request');
-      const requestId = typeof req.body === 'object' && req.body !== null && 'id' in req.body ? req.body.id : null;
-      sendErrorResponse(res, 500, -32603, 'Internal server error', requestId);
-    }
+  setupMcpEndpoints(app, {
+    serverName: SERVER_NAME,
+    version: SERVER_VERSION,
+    port: PORT,
+    transports,
+    createServer: createSession,
+    logger,
   });
 
   return app;
@@ -324,29 +237,11 @@ function createApp(): express.Application {
 async function main(): Promise<void> {
   try {
     const app = createApp();
-    app.disable('x-powered-by');
-
     const server = app.listen(PORT, '0.0.0.0', () => {
-      logger.info({ port: PORT }, 'MCP Calculator Server started');
+      logger.info({ port: PORT, server: SERVER_NAME, version: SERVER_VERSION }, 'MCP Calculator Server started');
     });
 
-    // Graceful shutdown handler
-    const shutdown = async () => {
-      logger.info('Shutting down...');
-      for (const [sessionId, transport] of transports.entries()) {
-        try {
-          await transport.close();
-        } catch (error) {
-          logger.error({ error: error instanceof Error ? error.message : String(error), sessionId }, 'Error closing transport');
-        }
-      }
-      transports.clear();
-      await new Promise<void>((resolve) => server.close(() => resolve()));
-      process.exit(0);
-    };
-
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
+    setupGracefulShutdown(server, transports, logger);
   } catch (error) {
     logger.error({ error }, 'Failed to start server');
     process.exit(1);
@@ -360,4 +255,4 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   });
 }
 
-export { createApp, createServer };
+export { createApp, createMcpServer };

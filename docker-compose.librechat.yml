@@ -15,6 +15,7 @@ services:
       LIBRECHAT_CUSTOM_WELCOME: ${LIBRECHAT_CUSTOM_WELCOME:-}
       LIBRECHAT_PRIVACY_POLICY_URL: ${LIBRECHAT_PRIVACY_POLICY_URL:-}
       LIBRECHAT_TERMS_OF_SERVICE_URL: ${LIBRECHAT_TERMS_OF_SERVICE_URL:-}
+      LIBRECHAT_FETCH_MODELS: ${LIBRECHAT_FETCH_MODELS:-true}
       SCALEWAY_PROJECT_ID: ${SCALEWAY_PROJECT_ID:-}
       SCALEWAY_BASE_URL: ${SCALEWAY_BASE_URL:-https://api.scaleway.ai/v1}
     volumes:
@@ -31,11 +32,44 @@ services:
     networks:
       - app-net
 
+  librechat-post-init:
+    build:
+      context: ./packages/librechat-init
+      dockerfile: Dockerfile
+    image: librechat-init:latest
+    container_name: librechat-post-init
+    restart: "no"
+    user: root
+    environment:
+      MONGO_URI: ${LIBRECHAT_MONGO_URI}
+      LIBRECHAT_DEFAULT_ADMINS: ${LIBRECHAT_DEFAULT_ADMINS:-}
+      LIBRECHAT_API_URL: ${LIBRECHAT_API_URL:-http://api:3080}
+      LIBRECHAT_JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
+      JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
+    volumes:
+      - mongodata:/mongo_data
+      - mongoconfig:/mongo_configdb
+    depends_on:
+      api:
+        condition: service_started
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-net
+    command: ["node", "--experimental-strip-types", "--no-warnings", "src/init-agents-only.ts"]
+
   api:
     container_name: LibreChat
+    # Fallback image - overridden in extension files (local builds from submodule, prod uses registry)
     image: ghcr.io/danny-avila/librechat:v0.8.2-rc3
     restart: always
     user: "${UID:-1000}:${GID:-1000}"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
     environment:
       HOST: ${LIBRECHAT_HOST:-0.0.0.0}
       MONGO_URI: ${LIBRECHAT_MONGO_URI}
@@ -80,6 +114,8 @@ services:
       CONFIG_PATH: /app/config/librechat.yaml
       OCR_API_KEY: ${LIBRECHAT_OCR_API_KEY:-}
       OCR_BASEURL: ${LIBRECHAT_OCR_BASEURL:-https://api.mistral.ai/v1}
+      MCP_GITHUB_PAT: ${MCP_GITHUB_PAT:-}
+      MCP_MAPBOX_ACCESS_TOKEN: ${MCP_MAPBOX_ACCESS_TOKEN:-}
     volumes:
       - ./images:/app/client/public/images
       - ./uploads:/app/uploads
@@ -155,6 +191,7 @@ services:
 volumes:
   librechat-config:
   mongoconfig:
+  mongodata:
 
 networks:
   app-net:

@@ -1,10 +1,7 @@
 import mongoose from 'mongoose';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { connectToMongoDB, disconnectFromMongoDB, User } from './utils/mongodb.ts';
+import { loadConfigFile } from './utils/config.ts';
+import { ROLES_CONFIG_PATH, ROLES_CONFIG_FALLBACK, SYSTEM_ROLES } from './utils/constants.ts';
 
 interface RolePermissions {
   PROMPTS?: { SHARED_GLOBAL?: boolean; USE?: boolean; CREATE?: boolean };
@@ -27,29 +24,9 @@ interface RoleConfig {
   permissions: RolePermissions;
 }
 
-interface Config {
+interface RolesConfig {
   roles: RoleConfig[];
 }
-
-// Configuration
-// Read roles.json from /app/data/roles.json (copied during Docker build)
-// This location is not overwritten by the librechat-config volume mount
-const configPath = '/app/data/roles.json';
-let config: Config;
-try {
-  config = JSON.parse(readFileSync(configPath, 'utf-8'));
-} catch (error) {
-  // Fallback: try original location in case volume is not mounted
-  const fallbackPath = join(__dirname, '../config/roles.json');
-  try {
-    config = JSON.parse(readFileSync(fallbackPath, 'utf-8'));
-  } catch {
-    throw new Error(`Failed to read roles.json from ${configPath} or ${fallbackPath}: ${error}`);
-  }
-}
-
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://mongodb:27017/LibreChat';
-const DEFAULT_ADMINS = process.env.LIBRECHAT_DEFAULT_ADMINS || '';
 
 // Mongoose schemas
 const rolePermissionsSchema = new mongoose.Schema({
@@ -73,36 +50,16 @@ const roleSchema = new mongoose.Schema({
   permissions: { type: rolePermissionsSchema, default: {} }
 });
 
-const Role = mongoose.model('Role', roleSchema);
-interface IUser extends mongoose.Document {
-  _id: mongoose.Types.ObjectId;
-  email: string;
-  role: string;
-}
-const User = mongoose.model<IUser>('User', new mongoose.Schema({}, { strict: false }));
+const Role = mongoose.models.Role || mongoose.model('Role', roleSchema);
 
-async function waitForMongoDB(maxRetries = 30, delayMs = 2000): Promise<void> {
-  console.log('Waiting for MongoDB to be ready...');
-  
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      await mongoose.connect(MONGO_URI, {
-        serverSelectionTimeoutMS: 5000
-      });
-      console.log('✓ Connected to MongoDB');
-      return;
-    } catch (error) {
-      console.log(`  Attempt ${i + 1}/${maxRetries}...`);
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
-  }
-  
-  throw new Error('MongoDB not available after maximum retries');
+function isSystemRole(roleName: string): boolean {
+  return SYSTEM_ROLES.includes(roleName.toUpperCase() as typeof SYSTEM_ROLES[number]);
 }
 
 export async function initializeRoles(): Promise<void> {
   try {
-    await waitForMongoDB();
+    const config = loadConfigFile<RolesConfig>(ROLES_CONFIG_PATH, ROLES_CONFIG_FALLBACK);
+    await connectToMongoDB();
 
     console.log('Initializing custom roles...');
 
@@ -112,7 +69,7 @@ export async function initializeRoles(): Promise<void> {
       const roleName = roleConfig.name.toUpperCase();
       
       // Skip system roles
-      if (roleName === 'ADMIN' || roleName === 'USER') {
+      if (isSystemRole(roleName)) {
         console.log(`  ⚠ Skipping system role: ${roleName}`);
         continue;
       }
@@ -136,6 +93,7 @@ export async function initializeRoles(): Promise<void> {
     console.log(`✓ Processed ${rolesProcessed} custom role(s)`);
 
     // Assign admin role to default admins
+    const DEFAULT_ADMINS = process.env.LIBRECHAT_DEFAULT_ADMINS || '';
     if (DEFAULT_ADMINS) {
       console.log('Assigning admin roles...');
       const adminEmails = DEFAULT_ADMINS.split(',')
@@ -169,6 +127,6 @@ export async function initializeRoles(): Promise<void> {
     console.error('✗ Error during role initialization:', error);
     throw error;
   } finally {
-    await mongoose.disconnect();
+    await disconnectFromMongoDB();
   }
 }

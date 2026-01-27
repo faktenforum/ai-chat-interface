@@ -1,0 +1,229 @@
+---
+name: create-external-mcp
+description: Guide for integrating external/remote hosted MCP servers (no Docker setup required)
+---
+
+# External/Remote MCP Server Integration Guide
+
+> **Note:** This guide covers external/remote hosted MCP servers that don't require Docker setup. For self-written, Docker-based, or submodule MCP servers, see `@.cursor/rules/create-new-mcp.mdc`.
+
+## Overview
+
+External/remote MCP servers are hosted services accessible via HTTPS that don't require any Docker Compose setup, package structure, or build workflows. Examples: GitHub MCP (`api.githubcopilot.com`), Mapbox MCP (`mcp.mapbox.com`).
+
+**Key characteristics:**
+- **No Docker Compose**: External hosted service, no container needed
+- **No Package**: Not a self-written server
+- **No Workflow**: No build required
+- **HTTPS URL**: External domain, not Docker network
+- **Authentication**: Typically via Bearer token or API key in headers
+- **Domain Whitelist**: Must add external domain to `mcpSettings.allowedDomains` for SSRF protection
+
+## Integration Steps
+
+### 1. LibreChat Configuration
+
+Update `packages/librechat-init/config/librechat.yaml`:
+
+#### 1.1 Add to `mcpSettings.allowedDomains`
+
+Add the external domain to the allowed domains list (typically after line 502, with other external domains):
+
+```yaml
+mcpSettings:
+  allowedDomains:
+    - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
+    - 'mcp.mapbox.com'           # Mapbox MCP Server (remote hosted)
+    - 'mcp.{name}.com'           # {Name} MCP Server (remote hosted)
+```
+
+**Important:** Use the exact domain (e.g., `mcp.mapbox.com`), not a wildcard or protocol prefix. LibreChat validates against this list for SSRF protection.
+
+#### 1.2 Add to `mcpServers` Section
+
+Add server configuration after other external MCP servers (typically after GitHub/Mapbox, around line 615):
+
+```yaml
+mcpServers:
+  {name}:
+    type: streamable-http
+    url: https://mcp.{name}.com/mcp  # External HTTPS URL
+    title: {Display Name}  # Human-readable title shown in LibreChat UI
+    description: {Brief, user-friendly description}  # Keep short (truncated in UI), avoid technical terms
+    iconPath: /images/mcp-{name}-icon.svg  # Path relative to LibreChat's public images directory
+    headers:
+      Authorization: "Bearer ${API_TOKEN_VAR}"  # Bearer token authentication
+      # Optional: Additional headers (e.g., X-MCP-Readonly: "true" for GitHub)
+    initTimeout: 120000
+    chatMenu: false  # Show in chat dropdown (or true for user-accessible tools)
+    startup: true    # Auto-start with LibreChat
+    serverInstructions: true  # Include server instructions
+```
+
+**Configuration details:**
+- **`type`**: Always `streamable-http` for external servers
+- **`url`**: Full HTTPS URL to the MCP endpoint (typically `/mcp` or `/mcp/`)
+- **`title`**: Display name shown in LibreChat UI (e.g., "Mapbox", "GitHub")
+- **`description`**: Brief, user-friendly description (keep short, UI truncates). Avoid technical terms ("MCP Server", "API", "endpoint"), focus on what tool does. Example: "Geografische Suche, Routenplanung, Geocoding und Kartenvisualisierung" not "MCP Server für geografische Daten"
+- **`iconPath`**: Always `/images/mcp-{name}-icon.svg` (copied by `librechat-init`)
+- **`headers`**: Authentication headers (typically `Authorization: "Bearer ${ENV_VAR}"`). Use environment variable references (e.g., `${MAPBOX_ACCESS_TOKEN}`)
+- **`initTimeout`**: 120000 (120 seconds) - standard for external servers
+- **`chatMenu`**: `false` for agent-only tools, `true` for user-accessible tools
+- **`startup`**: `true` to auto-start with LibreChat
+- **`serverInstructions`**: `true` to include server instructions in context
+
+**Authentication patterns:**
+- **Bearer token** (most common): `Authorization: "Bearer ${API_TOKEN_VAR}"`
+- **API key**: `X-API-Key: ${API_KEY_VAR}` (if required by service)
+- **Multiple headers**: Some services require additional headers (e.g., GitHub: `X-MCP-Readonly: "true"`)
+
+### 2. Environment Variables
+
+Add API token/key configuration to all three environment example files:
+
+**`env.local.example` (after other MCP environment variables, typically around line 212):**
+
+```bash
+# {Name} MCP Server (Remote)
+# Get your access token from: https://account.{name}.com/access-tokens/
+# Required scopes: {LIST_REQUIRED_SCOPES}
+# Optional scopes: {LIST_OPTIONAL_SCOPES}
+{NAME}_ACCESS_TOKEN=pk.eyJ1IjoieW91cnVzZXJuYW1lIiwiYSI6ImNsc...
+```
+
+**`env.prod.example` (after other MCP environment variables, typically around line 133):**
+
+Same as above
+
+**`env.dev.example` (after other MCP environment variables, typically around line 140):**
+
+Same as above
+
+**Environment variable naming:**
+- Use descriptive name: `{NAME}_ACCESS_TOKEN`, `{NAME}_API_KEY`, `{NAME}_MCP_PAT` (Personal Access Token)
+- Match the variable name used in `librechat.yaml` headers (e.g., `${MAPBOX_ACCESS_TOKEN}`)
+- Include documentation comment with:
+  - Where to get the token/key
+  - Required scopes/permissions
+  - Optional scopes/permissions (if applicable)
+
+### 3. Icon Asset
+
+**Create `packages/librechat-init/assets/mcp-{name}-icon.svg`:**
+
+- **Size**: 24x24 SVG icon
+- **Format**: Lucide-compatible SVG format
+- **Naming**: Must match pattern `mcp-{name}-icon.svg` (e.g., `mcp-mapbox-icon.svg`, `mcp-github-icon.svg`)
+- **Style**: Follow existing icon style (see `mcp-github-icon.svg`, `mcp-mapbox-icon.svg` for reference)
+
+**Icon serving:**
+- Icons are automatically copied to `/images/` by `librechat-init` during initialization
+- No code changes needed: `librechat-init/src/init.ts` automatically copies all `mcp-*-icon.svg` files from `/app/assets/` to `/images/`
+- Icons are served via LibreChat's static route, accessible in browser UI
+- **After icon changes:** Rebuild `librechat-init` and restart stack:
+  - Local: `npm run build:local` (or `npm run build:local librechat-init`)
+  - Production/Portainer: Redeploy from Git (auto-rebuild) or manual rebuild
+
+## What's NOT Needed
+
+Unlike Docker-based MCP servers, external MCP servers require **none** of the following:
+
+- ❌ **Docker Compose files**: No `docker-compose.mcp-{name}.yml`
+- ❌ **Extension files**: No updates to `docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, `docker-compose.dev.yml`
+- ❌ **NPM package**: No `packages/mcp-{name}/` directory
+- ❌ **Dockerfile**: No container image needed
+- ❌ **GitHub Actions workflow**: No build workflow needed
+- ❌ **Git submodule**: No submodule setup needed
+- ❌ **Healthcheck**: No Docker healthcheck needed
+- ❌ **Port configuration**: No port exposure needed
+
+## Naming Conventions
+
+- **LibreChat server key**: `{name}` (camelCase or kebab-case, e.g., `mapbox`, `github`)
+- **Environment variable**: `MCP_{NAME}_{TYPE}` (UPPER_SNAKE_CASE, e.g., `MCP_MAPBOX_ACCESS_TOKEN`, `MCP_GITHUB_PAT`)
+- **Icon filename**: `mcp-{name}-icon.svg` (must match pattern for auto-copy)
+- **Domain in allowedDomains**: Exact domain as used in URL (e.g., `mcp.mapbox.com`)
+
+## Testing
+
+After implementation:
+
+1. **Set environment variable**: Add `MCP_{NAME}_{TYPE}` (e.g., `MCP_GITHUB_PAT`, `MCP_MAPBOX_ACCESS_TOKEN`) to `.env.local` (or production env file) with valid token
+2. **Rebuild librechat-init**: 
+   - Local: `npm run build:local` (or `npm run build:local librechat-init`)
+   - Production/Portainer: Redeploy from Git (auto-rebuild) or manual rebuild
+3. **Restart LibreChat stack**: Restart to load new configuration
+4. **Verify in UI**: Check that MCP server appears in LibreChat UI (agent configuration, chat menu if enabled)
+5. **Test tools**: Test MCP tools in an agent conversation to verify connectivity and authentication
+
+## Examples
+
+### Mapbox MCP Integration
+
+```yaml
+# librechat.yaml
+mcpSettings:
+  allowedDomains:
+    - 'mcp.mapbox.com'
+
+mcpServers:
+  mapbox:
+    type: streamable-http
+    url: https://mcp.mapbox.com/mcp
+    title: Mapbox
+    description: Geografische Suche, Routenplanung, Geocoding und Kartenvisualisierung
+    iconPath: /images/mcp-mapbox-icon.svg
+    headers:
+      Authorization: "Bearer ${MCP_MAPBOX_ACCESS_TOKEN}"
+    initTimeout: 120000
+    chatMenu: false
+    startup: true
+    serverInstructions: true
+```
+
+```bash
+# env.local.example, env.prod.example, env.dev.example
+# Mapbox MCP Server (Remote)
+# Get your access token from: https://account.mapbox.com/access-tokens/
+# Required scopes: MAP:READ (secret), STYLES:READ (public), STYLES:TILES (public)
+# Optional scopes: FONTS:READ, VISION:READ, DATASETS:READ
+MCP_MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoieW91cnVzZXJuYW1lIiwiYSI6ImNsc...
+```
+
+### GitHub MCP Integration
+
+```yaml
+# librechat.yaml
+mcpSettings:
+  allowedDomains:
+    - 'api.githubcopilot.com'
+
+mcpServers:
+  github:
+    type: streamable-http
+    url: https://api.githubcopilot.com/mcp/
+    title: GitHub
+    description: Repository-Verwaltung, Issues, Pull Requests und Code-Analyse
+    iconPath: /images/mcp-github-icon.svg
+    headers:
+      Authorization: "Bearer ${MCP_GITHUB_PAT}"
+      X-MCP-Readonly: "true"
+    initTimeout: 120000
+    chatMenu: false
+    startup: true
+    serverInstructions: true
+```
+
+## Key Differences from Docker-Based MCP Servers
+
+| Aspect | External/Remote MCP | Docker-Based MCP |
+|--------|---------------------|------------------|
+| **Docker Compose** | ❌ Not needed | ✅ Required |
+| **Package structure** | ❌ Not needed | ✅ Required (self-written) or ❌ (external image) |
+| **Build workflow** | ❌ Not needed | ✅ Required (self-written) or ❌ (external image) |
+| **URL** | HTTPS external domain | HTTP Docker network |
+| **Domain whitelist** | External domain (e.g., `mcp.mapbox.com`) | Docker service name (e.g., `mcp-calculator`) |
+| **Port configuration** | ❌ Not needed | ✅ Expose port (no publish) |
+| **Healthcheck** | ❌ Not needed | ✅ Required |
+| **Environment variables** | API tokens/keys only | Port, log level, API keys |
+| **Authentication** | Headers (Bearer token) | Headers (if needed) or none |

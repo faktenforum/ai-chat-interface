@@ -45,8 +45,9 @@
 
 ### Model Specs Improvements
 
-- [ ] Fix vision model detection for "Upload to AI Provider" option
+- [x] Fix vision model detection for "Upload to AI Provider" option
   - LibreChat discussion [#11333](https://github.com/danny-avila/LibreChat/discussions/11333)
+  - Fixed by: [LibreChat PR #11501](https://github.com/danny-avila/LibreChat/pull/11501) (vision capability flag to modelSpecs)
 - [ ] Add multilingual support for custom titles, labels, and descriptions
   - LibreChat discussion [#7666](https://github.com/danny-avila/LibreChat/discussions/7666) - multilingual support for user-defined content (model specs, MCP servers, interface config, agents)
   - Related: [#10183](https://github.com/danny-avila/LibreChat/issues/10183) (model fields)
@@ -63,12 +64,32 @@
 
 ### MCP Tools
 
-- [ ] Fix MCP image generation tools sending artifacts to non-vision models
+- [x] Fix MCP image generation tools sending artifacts to non-vision models
   - LibreChat issue [#11413](https://github.com/danny-avila/LibreChat/issues/11413)
+  - Fixed by: [LibreChat PR #11504](https://github.com/danny-avila/LibreChat/pull/11504) (vision toggle for agents) and [agents PR #48](https://github.com/danny-avila/agents/pull/48) (filter base64 image artifacts)
 - [ ] Fix negative max_tokens error with Scaleway/Mistral provider
   - LibreChat issue [#11435](https://github.com/danny-avila/LibreChat/issues/11435)
 - [ ] Reduce SSE stream disconnection error logs
-  - Investigate if this is expected LibreChat behavior or if server-side improvements can reduce connection churn
+  - Known issue: `streamable-http` MCP servers use stateless HTTP POST while LibreChat's `StreamableHTTPClientTransport` attempts SSE streams, causing "Bad Request" errors. Servers function correctly. Log rotation configured.
+  - Related: [LibreChat Discussion #11230](https://github.com/danny-avila/LibreChat/discussions/11230)
+- [ ] Re-enable Firecrawl MCP server after connection stability is fixed
+  - Status: Currently disabled due to unstable connection to MCP server
+  - The tool is very helpful for reading special URLs, but connection issues prevent reliable usage
+  - Waiting for fix before re-enabling in `librechat.yaml` and `agents.json`
+  - Related to SSE stream disconnection issue above
+- [ ] Update OpenStreetMap MCP server to use official version after PR merge
+  - Status: Currently using fork `faktenforum/open-streetmap-mcp` with merged `bump-fastmcp` branch
+  - Fork includes HTTP transport support and Dockerfile from PR [#10](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/10)
+  - Our improvements submitted as PR [#11](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/11): Docker port configuration and FastMCP 0.2.0+ compatibility
+  - Once PRs #10 and #11 are merged upstream, consider switching to official version
+- [x] Fix MCP tools returning malformed responses mixing text and JSON
+  - Issue: [LibreChat #11494](https://github.com/danny-avila/LibreChat/issues/11494) - MCP image responses with mixed text content are not displayed
+  - Fixed by: [LibreChat PR #11499](https://github.com/danny-avila/LibreChat/pull/11499) (automatic detection of OpenAI-compatible endpoints for MCP formatting)
+  - Affected tools:
+    - Mapbox MCP: [mapbox/mcp-server#103](https://github.com/mapbox/mcp-server/issues/103) - Tool responses mix text and JSON instead of using structured content arrays
+    - Playwright MCP: [microsoft/playwright-mcp#1324](https://github.com/microsoft/playwright-mcp/issues/1324) - Screenshot responses mix Markdown/JSON format
+  - Workaround: Using `--image-responses omit` for Playwright (removes images from responses)
+  - Root cause: Tools return responses that mix plain text with embedded JSON objects instead of using proper MCP specification format with structured content arrays
 
 ---
 
@@ -81,3 +102,14 @@
 ### Required Providers
 - [ ] Integrate ElevenLabs for TTS (Text-to-Speech)
 - [ ] Keep Jina reranker until replacement is ready (currently have free tokens for API key, not urgent)
+
+---
+
+## Upstream Contributions
+
+### Vision (WIP / draft PRs, not merged)
+
+- [ ] Add vision capability flag to modelSpecs configuration (draft PR, WIP) – [LibreChat PR #11501](https://github.com/danny-avila/LibreChat/pull/11501)
+- [ ] Filter base64 image artifacts based on agent vision capability (draft PR, WIP) – [agents PR #48](https://github.com/danny-avila/agents/pull/48)
+
+Vision is re-enabled in `packages/librechat-init/config/librechat.yaml` as **experimental/WIP**. Requires `feat/vision` in `dev/librechat` and `dev/agents`. See [WIP Documentation](wip/README.md).

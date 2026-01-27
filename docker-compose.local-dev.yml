@@ -37,7 +37,13 @@ services:
   librechat-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-init }
     env_file: .env.local
+
+  librechat-post-init:
+    extends: { file: docker-compose.librechat.yml, service: librechat-post-init }
+    env_file: .env.local
     volumes:
+      - mongodata:/mongo_data
+      - mongoconfig:/mongo_configdb
       - librechat-config:/app/config
       - ./logs:/logs
       - ./images:/images
@@ -52,6 +58,8 @@ services:
 
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
+    # Build from submodule Dockerfile (like rag_api)
+    # Use unique image name to prevent Docker layering built image on base image
     image: librechat:local
     build:
       context: ./dev/librechat
@@ -161,6 +169,64 @@ services:
   mcp-image-gen:
     extends: { file: docker-compose.mcp-image-gen.yml, service: mcp-image-gen }
     env_file: .env.local
+    # No Traefik labels - internal service only
+
+  mcp-firecrawl:
+    extends: { file: docker-compose.mcp-firecrawl.yml, service: mcp-firecrawl }
+    env_file: .env.local
+
+  mcp-openstreetmap:
+    extends: { file: docker-compose.mcp-openstreetmap.yml, service: mcp-openstreetmap }
+    env_file: .env.local
+    # Build from submodule Dockerfile (like rag_api)
+    # Use unique image name to avoid layering on top of base image (python:3.13-slim)
+    image: ghcr.io/faktenforum/mcp-openstreetmap:latest
+    build:
+      context: ./dev/open-streetmap-mcp
+      dockerfile: Dockerfile
+    # No Traefik labels - internal service only
+
+  mcp-weather:
+    extends: { file: docker-compose.mcp-weather.yml, service: mcp-weather }
+    env_file: .env.local
+    # No Traefik labels - internal service only
+
+  mcp-playwright:
+    extends: { file: docker-compose.mcp-playwright.yml, service: mcp-playwright }
+    env_file: .env.local
+    # No Traefik labels - internal service only
+
+  mcp-db-timetable:
+    extends: { file: docker-compose.mcp-db-timetable.yml, service: mcp-db-timetable }
+    env_file: .env.local
+    # Build from submodule Dockerfile
+    # Use unique image name to prevent Docker layering built image on base image
+    image: ghcr.io/faktenforum/mcp-db-timetable:latest
+    build:
+      context: ./dev/db-timetable-mcp
+      dockerfile: Dockerfile
+    # No Traefik labels - internal service only
+
+  mcp-stackoverflow:
+    extends: { file: docker-compose.mcp-stackoverflow.yml, service: mcp-stackoverflow }
+    env_file: .env.local
+    # Build from submodule Dockerfile
+    # Use unique image name to prevent Docker layering built image on base image
+    image: ghcr.io/faktenforum/mcp-stackoverflow:latest
+    build:
+      context: ./dev/stackoverflow-mcp
+      dockerfile: Dockerfile
+    # No Traefik labels - internal service only
+
+  mcp-npm-search:
+    extends: { file: docker-compose.mcp-npm-search.yml, service: mcp-npm-search }
+    env_file: .env.local
+    # Build from submodule Dockerfile
+    # Use unique image name to prevent Docker layering built image on base image
+    image: ghcr.io/faktenforum/mcp-npm-search:latest
+    build:
+      context: ./dev/npm-search-mcp
+      dockerfile: Dockerfile
     # No Traefik labels - internal service only
 
   # Additional Services

@@ -1,6 +1,6 @@
 [submodule "dev/librechat"]
 	path = dev/librechat
-	url = https://github.com/danny-avila/LibreChat.git
+	url = git@github.com:faktenforum/LibreChat.git
 	branch = main
 [submodule "dev/agents"]
 	path = dev/agents
@@ -17,9 +17,28 @@
 [submodule "dev/firecrawl"]
 	path = dev/firecrawl
 	url = git@github.com:firecrawl/firecrawl.git
+	branch = main
 [submodule "dev/searxng"]
 	path = dev/searxng
 	url = git@github.com:searxng/searxng.git
+	branch = master
 [submodule "dev/n8n"]
 	path = dev/n8n
 	url = git@github.com:n8n-io/n8n.git
+	branch = master
+[submodule "dev/open-streetmap-mcp"]
+	path = dev/open-streetmap-mcp
+	url = git@github.com:faktenforum/open-streetmap-mcp.git
+	branch = main
+[submodule "dev/db-timetable-mcp"]
+	path = dev/db-timetable-mcp
+	url = git@github.com:faktenforum/db-timetable-mcp.git
+	branch = main
+[submodule "dev/stackoverflow-mcp"]
+	path = dev/stackoverflow-mcp
+	url = git@github.com:faktenforum/stackoverflow-mcp.git
+	branch = main
+[submodule "dev/npm-search-mcp"]
+	path = dev/npm-search-mcp
+	url = git@github.com:faktenforum/npm-search-mcp-server.git
+	branch = main

@@ -124,6 +124,10 @@ const PROMPTS: Record<string, PromptConfig> = {
     'LIBRECHAT_JINA_API_KEY': { message: 'Jina API Key (optional, press enter to skip):', type: 'input' },
     'LIBRECHAT_OCR_API_KEY': { message: 'Mistral OCR API Key (optional, press enter to skip):', type: 'password' },
 
+    // DB Timetable MCP Server
+    'MCP_DB_TIMETABLE_CLIENT_ID': { message: 'DB Timetable API Client ID (optional, press enter to skip):', type: 'input' },
+    'MCP_DB_TIMETABLE_CLIENT_SECRET': { message: 'DB Timetable API Client Secret (optional, press enter to skip):', type: 'password' },
+
     // Mongo (using --noauth, so INITDB credentials not needed)
     'LIBRECHAT_MONGO_DATABASE': { message: 'Mongo Database Name:', type: 'input', defaultGen: () => 'librechat' },
 
@@ -273,7 +277,7 @@ function resolveVariableExpansions(envLines: string[]): string[] {
     for (const line of envLines) {
         const trimmed = line.trim();
 
-        // Keep comments and empty lines as-is
+        // Skip comments and empty lines
         if (!trimmed || trimmed.startsWith('#')) {
             continue;
         }
@@ -355,23 +359,19 @@ function resolveVariableExpansions(envLines: string[]): string[] {
     for (const line of envLines) {
         const trimmed = line.trim();
 
-        // Keep comments and empty lines as-is
+        // Skip comments and empty lines
         if (!trimmed || trimmed.startsWith('#')) {
-            resolvedLines.push(line);
             continue;
         }
 
         const [key, ...valueParts] = trimmed.split('=');
         if (!key || valueParts.length === 0) {
-            resolvedLines.push(line);
             continue;
         }
 
         const entry = lineMap.get(key);
         if (entry) {
             resolvedLines.push(`${key}=${entry.value}`);
-        } else {
-            resolvedLines.push(line);
         }
     }
 
@@ -399,9 +399,8 @@ async function processEnvExample(
     for (const line of exampleContent.split('\n')) {
         const trimmed = line.trim();
 
-        // Keep comments and empty lines as-is
+        // Skip comments and empty lines
         if (!trimmed || trimmed.startsWith('#')) {
-            finalEnvLines.push(line);
             continue;
         }
 
@@ -439,6 +438,18 @@ async function processEnvExample(
         finalEnvLines.push(`${key}=${currentValue !== undefined ? currentValue : defaultValue}`);
     }
 
+    // Preserve existing variables that weren't processed (e.g., optional/commented in example files)
+    // This ensures user-set values like API keys are retained even if not in example files
+    for (const [key, value] of Object.entries(existingEnv)) {
+        if (!processedKeys.has(key) && !AUTO_GENERATED[key] && !PROMPTS[key]) {
+            // Only preserve if it's not a migration target (old key to be replaced)
+            if (!Object.values(MIGRATIONS).includes(key)) {
+                finalEnvLines.push(`${key}=${value}`);
+                processedKeys.add(key);
+            }
+        }
+    }
+
     return finalEnvLines;
 }
 
@@ -452,26 +463,12 @@ function addProductionVariables(
     processedKeys: Set<string>
 ): string[] {
     const envLines: string[] = [];
-    let addedSection = false;
-    const sectionTitle = envContent.includes('Production-specific') 
-        ? 'Production-Only Configuration (from env.prod.example)'
-        : envContent.includes('Test environment-specific')
-        ? 'Test Environment Configuration (from env.dev.example)'
-        : 'Environment-Specific Configuration';
 
     for (const line of envContent.split('\n')) {
         const trimmed = line.trim();
 
-        // Keep comments and empty lines
+        // Skip comments and empty lines
         if (!trimmed || trimmed.startsWith('#')) {
-            if (!addedSection) {
-                envLines.push('');
-                envLines.push('# ═══════════════════════════════════════════════════════════════════════════');
-                envLines.push(`# ${sectionTitle}`);
-                envLines.push('# ═══════════════════════════════════════════════════════════════════════════');
-                addedSection = true;
-            }
-            envLines.push(line);
             continue;
         }
 
@@ -583,14 +580,20 @@ async function main() {
     // 7. Resolve variable expansions
     const resolvedEnvLines = resolveVariableExpansions(finalEnvLines);
 
-    // 8. Write final file
-    const finalContent = resolvedEnvLines.join('\n');
+    // 8. Filter out comments and empty lines
+    const filteredLines = resolvedEnvLines.filter(line => {
+        const trimmed = line.trim();
+        return trimmed && !trimmed.startsWith('#');
+    });
+
+    // 9. Write final file
+    const finalContent = filteredLines.join('\n');
     fs.writeFileSync(targetFile, finalContent);
 
-    // 9. Summary
+    // 10. Summary
     const processedKeys = new Set(
-        resolvedEnvLines
-            .filter(line => !line.trim().startsWith('#') && line.includes('='))
+        filteredLines
+            .filter(line => line.includes('='))
             .map(line => line.split('=')[0])
     );
     const newVarsCount = Array.from(processedKeys).filter(k => !existingEnv[k]).length;

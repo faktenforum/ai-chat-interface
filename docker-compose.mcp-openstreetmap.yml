@@ -1,0 +1,36 @@
+services:
+  mcp-openstreetmap:
+    # Internal service only - not exposed via Traefik
+    # Build section defined in docker-compose.local-dev.yml and docker-compose.prod.yml
+    image: python:3.13-slim
+    container_name: mcp-openstreetmap
+    restart: always
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${MCP_OPENSTREETMAP_PORT:-3004}
+    expose:
+      - "3004"
+    networks:
+      - app-net
+    healthcheck:
+      # Socket connectivity check (no /health endpoint available)
+      test: ["CMD-SHELL", "python -c 'import socket; s=socket.socket(); s.settimeout(1); result=s.connect_ex((\"localhost\", ${MCP_OPENSTREETMAP_PORT:-3004})); s.close(); exit(0 if result == 0 else 1)'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    read_only: false
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"

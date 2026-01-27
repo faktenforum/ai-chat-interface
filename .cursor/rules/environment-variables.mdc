@@ -5,31 +5,205 @@ description: Guidelines for creating and managing environment variables in the D
 
 # Environment Variables Guidelines
 
-## 1. Example Files
-Add variables to all three example files (`env.local.example`, `env.prod.example`, `env.dev.example`). Use `${VAR_NAME}` expansions in examples - `setup-env.ts` resolves them to final `.env` files.
+## 1. Example Files Structure
+The setup uses three example files that are merged during generation:
+- **`env.local.example`**: Base configuration for all environments (required)
+- **`env.prod.example`**: Production-specific overrides (merged with base for `--prod` mode)
+- **`env.dev.example`**: Development/test-specific overrides (merged with base for `--dev` mode)
+
+**File Processing**: 
+- Local mode: Only `env.local.example` is processed
+- Prod/Dev mode: `env.local.example` is merged with `env.prod.example`/`env.dev.example` (prod/dev values override base values)
+- Variables in example files can use `${VAR_NAME}` expansions - `setup-env.ts` resolves them iteratively
 
 ## 2. Naming Patterns
-Prefix: `{SERVICE}_` in UPPER_SNAKE_CASE (e.g., `N8N_`, `FIRECRAWL_`). Common patterns: `{SERVICE}_HOST`, `{SERVICE}_PORT`, `{SERVICE}_PROTOCOL`, `{SERVICE}_SECURE_COOKIE`, `{SERVICE}_BASIC_AUTH_*`, `{SERVICE}_POSTGRES_*`, `{SERVICE}_ENCRYPTION_KEY`, `{SERVICE}_SECRET_KEY`.
+**Prefix Convention**: `{SERVICE}_` in UPPER_SNAKE_CASE (e.g., `N8N_`, `FIRECRAWL_`, `LIBRECHAT_`)
+
+**Common Patterns**:
+- Connection: `{SERVICE}_HOST`, `{SERVICE}_PORT`, `{SERVICE}_PROTOCOL`, `{SERVICE}_URI`, `{SERVICE}_URL`
+- Security: `{SERVICE}_SECRET_KEY`, `{SERVICE}_ENCRYPTION_KEY`, `{SERVICE}_JWT_SECRET`, `{SERVICE}_PASSWORD`
+- Auth: `{SERVICE}_BASIC_AUTH_USER`, `{SERVICE}_BASIC_AUTH_PASSWORD`, `{SERVICE}_API_KEY`
+- Database: `{SERVICE}_POSTGRES_*`, `{SERVICE}_MONGO_*`
+- Cookies: `{SERVICE}_SECURE_COOKIE`
 
 ## 3. Environment-Specific Defaults
-**Local**: `http`, `localhost`, no auth, `SECURE_COOKIE=false`, placeholders for secrets. **Prod/Dev**: `https`, production/dev domains, auth enabled, `SECURE_COOKIE=true`, auto-generated secrets via `setup-env.ts` (leave empty or `change-me`).
+**Local Mode** (`--local` or default):
+- Protocol: `http`
+- Domain: `localhost`
+- Auth: Disabled or minimal
+- Cookies: `SECURE_COOKIE=false`
+- Secrets: Use `change-me` placeholders or leave empty for auto-generation
+
+**Production/Dev Mode** (`--prod` / `--dev`):
+- Protocol: `https`
+- Domain: Production/dev domain (e.g., `ai.faktenforum.org`)
+- Auth: Enabled with secure defaults
+- Cookies: `SECURE_COOKIE=true`
+- Secrets: Leave empty or `change-me` for auto-generation via `setup-env.ts`
 
 ## 4. Setup Script Integration (`scripts/setup-env.ts`)
-**Auto-Generated** (`AUTO_GENERATED`): Hex secrets `genSecret(n)`, base64 `genBase64Secret(n)`, usernames `genUsername('prefix')`, passwords `genPassword(n)`. **User Prompts** (`PROMPTS`): `type: 'password'` for secrets/API keys, `type: 'input'` for optional configs, `prodOnly: true` to skip in local mode. Script also resolves all `${VAR_NAME}` expansions from example files.
 
-## 5. Security
-Never hardcode credentials. Use `change-me` placeholders or leave empty for auto-generated secrets. Add to `AUTO_GENERATED` for automatic generation. Use `type: 'password'` in prompts. Mark prod-only with `prodOnly: true`. Defaults: HTTPS + secure cookies for prod/dev.
+### Command-Line Flags
+- `--prod`: Generate production environment (`.env.prod`)
+- `--dev`: Generate test/development environment (`.env.dev`)
+- `--yes` / `-y`: Skip all prompts, use defaults and existing values
+- Default (no flags): Generate local environment (`.env.local`)
 
-## 6. Variable Expansions
-**In `env.xxx.example` files**: Variable expansions using `${VAR_NAME}` syntax are **allowed and recommended**:
-- Example: `DOMAIN_CLIENT=${PROTOCOL}://chat.${DOMAIN}`, `RAG_JWT_SECRET=${LIBRECHAT_JWT_SECRET}`
-- `setup-env.ts` automatically resolves all expansions when generating final `.env` files
-- Ensure referenced variables are defined before use in the same file
+### Auto-Generated Variables (`AUTO_GENERATED`)
+Variables that are automatically generated if missing or set to `change-me`:
 
-**In final `.env` files**: Variable expansions are **NOT allowed** - all values must be fully resolved. The setup script handles this automatically.
+**Generator Functions**:
+- `genSecret(n)`: Random hex string (n = bytes, default: 32)
+- `genBase64Secret(n)`: Random base64 string (n = bytes, default: 32)
+- `genPassword(n)`: Secure password with uppercase, lowercase, numbers (n = length, default: 16)
+- `genUsername(prefix)`: Random username with prefix (e.g., `admin-{hex}`)
 
-## 7. Comments
-Explain purpose, format examples, optionality, auto-generation status, external docs. Example: `# Encryption key (auto-generated if empty via setup-env.ts)`
+**Auto-Generation Triggers**:
+- Variable is missing/undefined
+- Variable value is empty string
+- Variable value contains `change-me` (case-insensitive)
 
-## 8. Migration Support
-Add to `MIGRATIONS` in `setup-env.ts`: `'OLD_VAR_NAME': 'NEW_VAR_NAME'` to preserve existing configs after renames.
+**Adding New Auto-Generated Variables**:
+```typescript
+const AUTO_GENERATED: Record<string, () => string> = {
+    'NEW_SERVICE_SECRET': () => genSecret(32),
+    'NEW_SERVICE_PASSWORD': () => genPassword(16),
+    // ...
+};
+```
+
+### User Prompts (`PROMPTS`)
+Variables that prompt the user for input:
+
+**Prompt Configuration**:
+```typescript
+interface PromptConfig {
+    message: string;              // Prompt message shown to user
+    type: 'input' | 'password';  // Input type (password masks input)
+    defaultGen?: () => string;    // Optional function to generate default value
+    prodOnly?: boolean;           // If true, only prompt in --prod/--dev mode
+}
+```
+
+**Prompt Behavior**:
+- If `--yes`/`-y` flag is set: Skip prompts, use `defaultGen()` or existing value
+- If `prodOnly: true`: Skip prompt in local mode, use existing value or default
+- If existing value present: Show "(already set, enter to keep)" message
+- If `defaultGen` provided: Show "(default: {generated})" in message
+
+**Adding New Prompts**:
+```typescript
+const PROMPTS: Record<string, PromptConfig> = {
+    'NEW_SERVICE_API_KEY': { 
+        message: 'New Service API Key:', 
+        type: 'password' 
+    },
+    'NEW_SERVICE_OPTIONAL_CONFIG': { 
+        message: 'Optional config (press enter to skip):', 
+        type: 'input',
+        defaultGen: () => 'default-value'
+    },
+    'PROD_ONLY_VAR': {
+        message: 'Production-only setting:',
+        type: 'input',
+        prodOnly: true
+    },
+};
+```
+
+### Variable Expansions
+**Supported Syntax**: `${VAR_NAME}` (single or multiple per value)
+
+**Resolution Process**:
+1. Script builds initial map of all key-value pairs from example files
+2. Iteratively resolves expansions until no more changes occur (max 100 iterations)
+3. Handles dependencies: If `${VAR1}` references `${VAR2}`, both are resolved in order
+4. If referenced variable not found: Expansion is kept (may be resolved by docker-compose at runtime)
+5. Circular dependencies: Detected by max iteration limit (warning logged)
+
+**Examples**:
+```bash
+# Single expansion
+RAG_JWT_SECRET=${LIBRECHAT_JWT_SECRET}
+
+# Multiple expansions
+DOMAIN_CLIENT=${PROTOCOL}://chat.${DOMAIN}
+
+# Nested expansions (resolved iteratively)
+BASE_URL=${PROTOCOL}://${DOMAIN}
+FULL_URL=${BASE_URL}/api
+```
+
+**Best Practices**:
+- Define referenced variables before use (order matters for initial resolution)
+- Use expansions to avoid duplication (e.g., share secrets across services)
+- Keep expansions simple - complex nested chains may hit iteration limit
+
+### Variable Preservation
+The script preserves existing variables from `.env.local`, `.env.prod`, or `.env.dev` that:
+- Are not in example files (e.g., user-added API keys)
+- Are not auto-generated
+- Are not prompted
+- Are not migration targets (old keys being replaced)
+
+This ensures user-set values are retained even if not defined in example files.
+
+## 5. Security Guidelines
+- **Never hardcode credentials** in example files
+- **Use placeholders**: `change-me` or empty string for secrets that should be auto-generated
+- **Password prompts**: Use `type: 'password'` for sensitive values (masks input)
+- **Production-only secrets**: Use `prodOnly: true` to avoid prompting in local mode
+- **Auto-generation**: Add secrets to `AUTO_GENERATED` for automatic secure generation
+- **Defaults**: HTTPS + secure cookies for prod/dev, HTTP for local
+
+## 6. Migration Support
+Handle variable renames by adding to `MIGRATIONS` in `setup-env.ts`:
+
+```typescript
+const MIGRATIONS: Record<string, string> = {
+    'OLD_VAR_NAME': 'NEW_VAR_NAME',
+    // ...
+};
+```
+
+**Migration Behavior**:
+- If old key exists in existing env file and new key doesn't: Copy value to new key
+- Old key is not preserved in final output (only new key is written)
+- Applied before processing example files
+
+## 7. Comments in Example Files
+Add helpful comments explaining:
+- **Purpose**: What the variable controls
+- **Format**: Expected format/example values
+- **Optionality**: Whether it's required or optional
+- **Auto-generation**: If it's auto-generated by `setup-env.ts`
+- **External docs**: Links to relevant documentation
+
+**Example**:
+```bash
+# Encryption key for service (auto-generated if empty via setup-env.ts)
+# Format: 32-byte hex string
+# Required: Yes
+SERVICE_ENCRYPTION_KEY=change-me
+```
+
+## 8. Processing Flow
+1. Load existing environment file (`.env.local`, `.env.prod`, or `.env.dev`)
+2. Apply migrations (copy old keys to new keys)
+3. Parse base example file (`env.local.example`)
+4. Merge environment-specific example file (`env.prod.example` or `env.dev.example` if applicable)
+5. Process each variable:
+   - Auto-generated: Generate if missing/empty/`change-me`
+   - Prompted: Prompt user (or use default if `--yes` flag)
+   - Default: Use existing value or example file value
+6. Preserve existing variables not in example files
+7. Resolve all `${VAR_NAME}` expansions iteratively
+8. Write final `.env` file (filtered: no comments, no empty lines)
+
+## 9. Best Practices
+- **Consistency**: Add variables to all three example files (base + prod + dev)
+- **Defaults**: Use environment-appropriate defaults (localhost for local, domains for prod/dev)
+- **Expansions**: Use variable expansions to share values (e.g., secrets, domains)
+- **Comments**: Document purpose, format, and auto-generation status
+- **Testing**: Test with `--yes` flag to ensure defaults work correctly
+- **Migrations**: Always add migration entries when renaming variables

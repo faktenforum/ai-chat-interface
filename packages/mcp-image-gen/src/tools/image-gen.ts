@@ -70,48 +70,64 @@ export async function generateImage(
   }
 }
 
-export function listKnownModels(): { content: TextContent[] } {
-  const formatted = Object.values(KNOWN_MODELS)
-    .map(formatKnownModel)
-    .join('\n\n');
-
-  return {
-    content: [
-      {
-        type: 'text',
-        text: `# Known Image Generation Models\n\n${formatted}\n\nNote: You can also use any other OpenRouter-compatible image generation model. Use \`list_available_models\` to discover all available models, or \`check_model\` to verify if a specific model supports image generation.`,
-      },
-    ],
-  };
-}
-
-export async function listAvailableModels(
+/**
+ * Lists all available image generation models, combining static metadata from known models
+ * with dynamic metadata from the OpenRouter API.
+ */
+export async function listModels(
   openRouterClient: OpenRouterClient,
 ): Promise<{ content: TextContent[] }> {
   try {
     const apiModels = await openRouterClient.listImageModels();
-    const modelMap = new Map<string, { id: string; name: string; pricing?: { prompt?: string; completion?: string }; context_length?: number; description?: string }>();
+    // Create a Set of API model IDs for fast lookup
+    const apiModelIds = new Set(apiModels.map((model) => model.id));
 
-    // Add known models first
-    Object.values(KNOWN_MODELS).forEach((model) => {
-      modelMap.set(model.id, {
-        id: model.id,
-        name: model.name,
-        pricing: model.pricing,
-        description: model.description,
+    const modelMap = new Map<string, { 
+      id: string; 
+      name: string; 
+      pricing?: { prompt?: string; completion?: string }; 
+      context_length?: number; 
+      description?: string;
+      // Additional metadata from known models
+      strengths?: string[];
+      weaknesses?: string[];
+      recommendedUseCases?: string[];
+    }>();
+
+    // Start with all known models (always included, even if not in API response)
+    Object.values(KNOWN_MODELS).forEach((knownModel) => {
+      modelMap.set(knownModel.id, {
+        id: knownModel.id,
+        name: knownModel.name,
+        description: knownModel.description,
+        pricing: knownModel.pricing,
+        strengths: [...knownModel.strengths],
+        weaknesses: [...knownModel.weaknesses],
+        recommendedUseCases: [...knownModel.recommended_for],
       });
     });
 
-    // Merge API models
+    // Then merge in API models (adds new models and updates existing ones with API data)
     apiModels.forEach((model) => {
       const existing = modelMap.get(model.id);
-      modelMap.set(model.id, {
-        id: model.id,
-        name: model.name || existing?.name || model.id,
-        pricing: model.pricing || existing?.pricing,
-        context_length: model.context_length,
-        description: model.description || existing?.description,
-      });
+      if (existing) {
+        // Update existing known model with API data (prefer API data when available)
+        modelMap.set(model.id, {
+          ...existing,
+          pricing: model.pricing || existing.pricing,
+          context_length: model.context_length,
+          description: model.description || existing.description,
+        });
+      } else {
+        // Add new API-only model
+        modelMap.set(model.id, {
+          id: model.id,
+          name: model.name || model.id,
+          pricing: model.pricing,
+          context_length: model.context_length,
+          description: model.description,
+        });
+      }
     });
 
     const combinedModels = Array.from(modelMap.values());
@@ -127,19 +143,50 @@ export async function listAvailableModels(
       };
     }
 
-    const formatted = combinedModels.map(formatApiModel).join('\n\n');
+    // Format models: use detailed format for known models, simple format for others
+    const formatted = combinedModels.map((model) => {
+      const knownModel = KNOWN_MODELS[model.id as keyof typeof KNOWN_MODELS];
+      if (knownModel) {
+        // Use detailed formatting for known models
+        return formatKnownModel(knownModel);
+      } else {
+        // Use simple formatting for API-only models
+        return formatApiModel(model);
+      }
+    }).join('\n\n');
+
+    const knownCount = combinedModels.filter(m => KNOWN_MODELS[m.id as keyof typeof KNOWN_MODELS]).length;
+    const totalCount = combinedModels.length;
+
+    // Structure the response using proper Text Content format
+    // Split into logical sections for better readability
+    const headerText = `# Available Image Generation Models\n\nFound ${totalCount} model(s)${knownCount > 0 ? ` (${knownCount} with detailed metadata)` : ''}:`;
+    const modelsText = formatted;
+    const usageText = `## Usage\n\nTo generate an image, use the \`generate_image\` tool with the **exact Model ID** shown above. Example:\n\`\`\`json\n{\n  "model": "black-forest-labs/flux.2-pro",\n  "prompt": "A beautiful sunset over mountains"\n}\n\`\`\`\n\n**Important:** Use the Model ID exactly as shown (case-sensitive). Models with detailed metadata (strengths, weaknesses, use cases) are well-tested and recommended. Other models are available from OpenRouter but may have limited testing.\n\nUse \`check_model\` to verify a specific model ID before generating images.`;
+
+    const content: TextContent[] = [
+      {
+        type: 'text',
+        text: headerText,
+      },
+      {
+        type: 'text',
+        text: modelsText,
+      },
+      {
+        type: 'text',
+        text: usageText,
+      },
+    ];
+
+    logger.debug({ contentLength: content.length }, 'Returning list_models result with multiple text content blocks');
 
     return {
-      content: [
-        {
-          type: 'text',
-          text: `# Available Image Generation Models from OpenRouter\n\nFound ${combinedModels.length} model(s):\n\n${formatted}\n\nUse \`check_model\` to get detailed information about a specific model.`,
-        },
-      ],
+      content,
     };
   } catch (error) {
     logger.error(
-      { tool: 'list_available_models', error: error instanceof Error ? error.message : String(error) },
+      { tool: 'list_models', error: error instanceof Error ? error.message : String(error) },
       'Tool execution failed',
     );
     throw error;

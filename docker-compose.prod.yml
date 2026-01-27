@@ -12,6 +12,17 @@ services:
       - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
 
+  librechat-post-init:
+    extends: { file: docker-compose.librechat.yml, service: librechat-post-init }
+    container_name: ${STACK_NAME:-prod}-librechat-post-init
+    build:
+      context: ./packages/librechat-init
+      dockerfile: Dockerfile
+    pull_policy: build
+    volumes:
+      - mongodata:/mongo_data
+      - mongoconfig:/mongo_configdb
+
   mongodb-init:
     extends: { file: docker-compose.librechat.yml, service: mongodb-init }
     container_name: ${STACK_NAME:-prod}-mongodb-init
@@ -33,6 +44,8 @@ services:
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
     container_name: ${STACK_NAME:-prod}-librechat
+    # Use pre-built image from registry (built by GitHub Actions)
+    image: ghcr.io/faktenforum/librechat:latest
     networks:
       - traefik-net
       - app-net
@@ -155,6 +168,47 @@ services:
       context: ./packages/mcp-image-gen
       dockerfile: Dockerfile
     pull_policy: build
+    # No Traefik labels - internal service only
+
+  mcp-firecrawl:
+    extends: { file: docker-compose.mcp-firecrawl.yml, service: mcp-firecrawl }
+    container_name: ${STACK_NAME:-prod}-mcp-firecrawl
+
+  mcp-openstreetmap:
+    extends: { file: docker-compose.mcp-openstreetmap.yml, service: mcp-openstreetmap }
+    container_name: ${STACK_NAME:-prod}-mcp-openstreetmap
+    # Use pre-built image from registry (built by GitHub Actions)
+    image: ghcr.io/faktenforum/mcp-openstreetmap:latest
+    # No Traefik labels - internal service only
+
+  mcp-weather:
+    extends: { file: docker-compose.mcp-weather.yml, service: mcp-weather }
+    container_name: ${STACK_NAME:-prod}-mcp-weather
+    # No Traefik labels - internal service only
+
+  mcp-playwright:
+    extends: { file: docker-compose.mcp-playwright.yml, service: mcp-playwright }
+    container_name: ${STACK_NAME:-prod}-mcp-playwright
+    # No Traefik labels - internal service only
+
+  mcp-db-timetable:
+    extends: { file: docker-compose.mcp-db-timetable.yml, service: mcp-db-timetable }
+    container_name: ${STACK_NAME:-prod}-mcp-db-timetable
+    image: ghcr.io/faktenforum/mcp-db-timetable:latest
+    # No Traefik labels - internal service only
+
+  mcp-stackoverflow:
+    extends: { file: docker-compose.mcp-stackoverflow.yml, service: mcp-stackoverflow }
+    container_name: ${STACK_NAME:-prod}-mcp-stackoverflow
+    # Use pre-built image from registry (built by GitHub Actions)
+    image: ghcr.io/faktenforum/mcp-stackoverflow:latest
+    # No Traefik labels - internal service only
+
+  mcp-npm-search:
+    extends: { file: docker-compose.mcp-npm-search.yml, service: mcp-npm-search }
+    container_name: ${STACK_NAME:-prod}-mcp-npm-search
+    # Use pre-built image from registry (built by GitHub Actions)
+    image: ghcr.io/faktenforum/mcp-npm-search:latest
     # No Traefik labels - internal service only
 
 networks:

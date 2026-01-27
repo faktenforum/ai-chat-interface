@@ -2,15 +2,15 @@
 
 This guide explains how to work with local source builds and git submodules.
 
-## Local Source Builds
+## Local Development Builds
 
-**`docker-compose.local-source.yml`** builds images directly from git submodules in `/dev`. Use this for:
+**`docker-compose.local-dev.yml`** builds images directly from git submodules in `/dev`. Use this for:
 - Debugging services
 - Testing PRs for upstream projects
 - Contributing to upstream projects
 - Custom modifications to services
 
-**Note:** For standard local development with official images, use `docker-compose.local.yml` instead. For Portainer deployments, use `docker-compose.prod.yml`.
+**Note:** For standard local development with official images, use `docker-compose.local.yml` instead. For Portainer deployments, use `docker-compose.prod.yml` (production) or `docker-compose.dev.yml` (dev/test).
 
 ## Git Submodules
 
@@ -63,26 +63,26 @@ npm run setup        # Configure environment (.env.local)
 ```bash
 npm run prepare:dev  # Initialize submodules and build agents package
 npm run setup        # Configure environment (.env.local)
-npm run build:local-source  # Build Docker images from source
-npm run start:local-source  # Start services
+npm run build:local-dev  # Build Docker images from source
+npm run start:local-dev  # Start services
 ```
 
 **Subsequent starts (images already built):**
 ```bash
-npm run start:local-source
+npm run start:local-dev
 ```
 
 **Available npm scripts:**
-- `npm run build:local-source` - Build Docker images from source
-- `npm run rebuild:local-source` - Rebuild images without cache (use after code changes)
-- `npm run start:local-source` - Start services (preserves data)
-- `npm run stop:local-source` - Stop services (preserves data)
-- `npm run restart:local-source` - Restart services (preserves data)
+- `npm run build:local-dev` - Build Docker images from source
+- `npm run rebuild:local-dev` - Rebuild images without cache (use after code changes)
+- `npm run start:local-dev` - Start services (preserves data)
+- `npm run stop:local-dev` - Stop services (preserves data)
+- `npm run restart:local-dev` - Restart services (preserves data)
 
 **Manual commands:**
 ```bash
-docker compose -f docker-compose.local-source.yml --env-file .env.local build
-docker compose -f docker-compose.local-source.yml --env-file .env.local up -d
+docker compose -f docker-compose.local-dev.yml --env-file .env.local build
+docker compose -f docker-compose.local-dev.yml --env-file .env.local up -d
 ```
 
 This will:
@@ -102,20 +102,20 @@ cd dev/librechat
 git fetch origin pull/1234/head:pr-1234
 git checkout pr-1234
 cd ../..
-npm run build:local-source api  # Build only the api service
-npm run start:local-source api   # Start only the api service
+npm run build:local-dev api  # Build only the api service
+npm run start:local-dev api   # Start only the api service
 ```
 
 Or manually:
 ```bash
-docker compose -f docker-compose.local-source.yml --env-file .env.local build api
-docker compose -f docker-compose.local-source.yml --env-file .env.local up -d api
+docker compose -f docker-compose.local-dev.yml --env-file .env.local build api
+docker compose -f docker-compose.local-dev.yml --env-file .env.local up -d api
 ```
 
 **After making code changes:**
 ```bash
-npm run rebuild:local-source <service-name>  # Rebuild without cache
-npm run restart:local-source <service-name>   # Restart the service
+npm run rebuild:local-dev <service-name>  # Rebuild without cache
+npm run restart:local-dev <service-name>   # Restart the service
 ```
 
 ## Additional Resources

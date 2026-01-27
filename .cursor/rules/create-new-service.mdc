@@ -14,12 +14,18 @@ Create `docker-compose.{service}.yml`:
 - Add healthchecks: HTTP GET `/health` or service-specific check, interval 30s, timeout 10s, retries 3, start_period 40s
 - Resource limits: CPU (0.5-2.0), memory (256M-2G) based on service needs
 - Comment: "Traefik labels defined in docker-compose.prod.yml and docker-compose.local.yml"
+- **Image naming**: Base file uses fallback image (e.g., `node:24-alpine`, `python:3.13-slim`). Extension files with `build` sections MUST override with unique image name (e.g., `ghcr.io/faktenforum/{service}:latest`) to prevent Docker layering the built image on top of the base image, which causes layer limit issues.
 
 ## 2. Extension Files
 Add service to:
 - `docker-compose.local.yml`: Extend service, add `env_file: .env.local`, add Traefik labels (HTTP only), override with `build` section if needed
-- `docker-compose.local-source.yml`: Same as local.yml (if service supports source builds)
-- `docker-compose.prod.yml`: Extend service, add `container_name: ${STACK_NAME:-prod}-{service}`, add Traefik labels (HTTP + HTTPS), add volumes with `${STACK_NAME:-prod}-` prefix
+- `docker-compose.local-dev.yml`: Same as local.yml (if service supports source builds from submodules)
+- `docker-compose.prod.yml`: Extend service, add `container_name: ${STACK_NAME:-prod}-{service}`, add Traefik labels (HTTP + HTTPS), add volumes with `${STACK_NAME:-prod}-` prefix, use `:latest` image tags
+- `docker-compose.dev.yml`: Same as prod.yml but uses `:dev` image tags for feature branch testing
+- **Production image strategy**:
+  - **Services with GitHub Actions workflow** (Section 5): Use `image: ghcr.io/faktenforum/{service}:dev` only, no `build` section. Images are built and pushed by CI/CD.
+  - **Services with custom/modified Dockerfiles** (no workflow): Use `build` section with unique `image:` name (e.g., `ghcr.io/faktenforum/{service}:latest`). Never use the same name as base image (`FROM`), as Docker will layer builds recursively causing layer limit errors.
+  - **Official/unmodified images**: Use `image:` directly from official registry (e.g., `postgres:16`, `redis:7-alpine`). No `build` section needed.
 
 ## 3. Environment Variables
 See `.cursor/rules/environment-variables.mdc` for detailed guidelines on:
@@ -30,14 +36,18 @@ See `.cursor/rules/environment-variables.mdc` for detailed guidelines on:
 - Security best practices
 - Variable expansions and migrations
 
-## 5. GitHub Actions Workflow (Optional)
-For services requiring CI/CD builds, create `.github/workflows/build-{service}.yml`:
-- Trigger: Push to `packages/{service}/**` or workflow file changes
-- Build context: `./packages/{service}` or service-specific path
-- Image: `ghcr.io/faktenforum/{service}`
-- Tags: `latest` (default branch), `dev` (feature branches), branch name
-- Platform: `linux/amd64`
-- Cache: GitHub Actions cache for faster builds
+## 5. GitHub Actions Workflow (Required)
+**Mandatory** for services with custom/modified Dockerfiles in repo (direct or submodule). Create `.github/workflows/build-{service}.yml` following existing patterns (see `build-mcp-calculator.yml`, `build-mcp-db-timetable.yml`):
+- **Trigger**: Push to `{service-path}/**` and workflow file changes; include relevant branches (e.g., `main`, `feat/agents`)
+- **Checkout**: Add `submodules: true` if service is in `dev/` (submodule), omit for direct repo services
+- **Build context**: `./{service-path}` (e.g., `./packages/{service}`, `./dev/{service}`)
+- **Dockerfile**: `./{service-path}/Dockerfile`
+- **Image**: `ghcr.io/faktenforum/{service}` (lowercase, hyphens)
+- **Tags**: `latest` (default branch), `dev` (feature branches), branch name via `type=ref,event=branch`
+- **Platform**: `linux/amd64`
+- **Cache**: GitHub Actions cache (`cache-from: type=gha`, `cache-to: type=gha,mode=max`)
+- **Permissions**: `contents: read`, `packages: write`
+- **Production usage**: Services with workflows MUST use `image: ghcr.io/faktenforum/{service}:latest` in `docker-compose.prod.yml` and `image: ghcr.io/faktenforum/{service}:dev` in `docker-compose.dev.yml` (no `build` section). Official images without modifications don't need workflows.
 
 ## 6. Traefik Labels
 **Local** (`docker-compose.local.yml`):

@@ -1,31 +1,15 @@
-# LibreChat Init Service
+# LibreChat Init Services
 
-Unified initialization service for LibreChat that handles:
-1. LibreChat YAML configuration setup
-2. File permissions configuration
-3. MongoDB role initialization
+Initialization services for LibreChat configuration and agent setup.
 
-## Structure
+## Services
 
-```
-librechat-init/
-├── config/
-│   ├── librechat.yaml    # LibreChat configuration file
-│   └── roles.json        # Custom roles definition
-├── src/
-│   ├── init.ts           # Main orchestrator
-│   ├── setup-permissions.ts
-│   └── init-roles.ts
-├── package.json
-├── tsconfig.json
-└── Dockerfile
-```
+- **librechat-init**: Pre-API initialization (config, permissions, roles)
+- **librechat-post-init**: Post-API initialization (agents)
 
 ## Configuration
 
-### Custom Roles
-
-Edit `config/roles.json` to add or modify custom roles:
+### Roles (`config/roles.json`)
 
 ```json
 {
@@ -33,34 +17,48 @@ Edit `config/roles.json` to add or modify custom roles:
     {
       "name": "DEVELOPER",
       "permissions": {
-        "PROMPTS": { "SHARED_GLOBAL": true, "USE": true, "CREATE": true },
-        ...
+        "PROMPTS": { "SHARED_GLOBAL": true, "USE": true, "CREATE": true }
       }
     }
   ]
 }
 ```
 
-### Default Administrators
+### Agents
 
-Set `LIBRECHAT_DEFAULT_ADMINS` environment variable (comma-separated email addresses):
+**Files:** `config/agents.json` (public), `config/agents.private.json` (private)
+
+```json
+{
+  "agents": [
+    {
+      "name": "Research Assistant",
+      "provider": "Scaleway",
+      "model": "mistral-small-3.2-24b-instruct-2506",
+      "tools": ["web_search", "file_search"],
+      "mcpServers": ["firecrawl"],
+      "mcpTools": ["firecrawl_search_mcp_firecrawl"],
+      "permissions": { "public": true }
+    }
+  ]
+}
+```
+
+**MCP Configuration:**
+- `mcpServers`: Server names (all tools loaded if `mcpTools` omitted)
+- `mcpTools`: Explicit tool keys (`toolName_mcp_serverName`)
+
+**Permissions:**
+- `permissions.owner`: Email (defaults to system user)
+- `permissions.public`: Public VIEW access
+- `permissions.publicEdit`: Public EDIT (requires `isCollaborative: true`)
+
+**System User Priority:** `LIBRECHAT_DEFAULT_ADMINS` → first admin → first user
+
+### Environment Variables
 
 ```bash
 LIBRECHAT_DEFAULT_ADMINS=admin@example.com,admin2@example.com
+LIBRECHAT_API_URL=http://api:3080
+LIBRECHAT_JWT_SECRET=your-secret-key
 ```
-
-## Building
-
-```bash
-npm run build:docker
-```
-
-Or via Docker Compose:
-
-```bash
-docker compose -f docker-compose.librechat.yml build librechat-init
-```
-
-## Usage
-
-The service runs automatically as part of the Docker Compose stack. It executes before the LibreChat API service starts.
