@@ -571,6 +571,7 @@ mcpServers:
     description: Bilder aus Textbeschreibungen erstellen
     iconPath: /images/mcp-image-gen-icon.svg
     initTimeout: 180000
+    timeout: 150000  # 150 seconds for tool calls (image generation can take up to 120s)
     chatMenu: true
     startup: true
     serverInstructions: true
@@ -604,6 +605,7 @@ mcpServers:
     description: Webseiten durchsuchen, interagieren und automatisieren
     iconPath: /images/mcp-playwright-icon.svg
     initTimeout: 120000
+    timeout: 150000
     chatMenu: true
     startup: false
     serverInstructions: true
@@ -664,6 +666,7 @@ mcpServers:
     headers:
       Authorization: "Bearer ${MCP_MAPBOX_ACCESS_TOKEN}"
     initTimeout: 120000
+    timeout: 150000
     chatMenu: false
     startup: true
     serverInstructions: true

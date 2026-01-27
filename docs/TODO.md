@@ -45,8 +45,9 @@
 
 ### Model Specs Improvements
 
-- [ ] Fix vision model detection for "Upload to AI Provider" option
+- [x] Fix vision model detection for "Upload to AI Provider" option
   - LibreChat discussion [#11333](https://github.com/danny-avila/LibreChat/discussions/11333)
+  - Fixed by: [LibreChat PR #11501](https://github.com/danny-avila/LibreChat/pull/11501) (vision capability flag to modelSpecs)
 - [ ] Add multilingual support for custom titles, labels, and descriptions
   - LibreChat discussion [#7666](https://github.com/danny-avila/LibreChat/discussions/7666) - multilingual support for user-defined content (model specs, MCP servers, interface config, agents)
   - Related: [#10183](https://github.com/danny-avila/LibreChat/issues/10183) (model fields)
@@ -63,8 +64,9 @@
 
 ### MCP Tools
 
-- [ ] Fix MCP image generation tools sending artifacts to non-vision models
+- [x] Fix MCP image generation tools sending artifacts to non-vision models
   - LibreChat issue [#11413](https://github.com/danny-avila/LibreChat/issues/11413)
+  - Fixed by: [LibreChat PR #11504](https://github.com/danny-avila/LibreChat/pull/11504) (vision toggle for agents) and [agents PR #48](https://github.com/danny-avila/agents/pull/48) (filter base64 image artifacts)
 - [ ] Fix negative max_tokens error with Scaleway/Mistral provider
   - LibreChat issue [#11435](https://github.com/danny-avila/LibreChat/issues/11435)
 - [ ] Reduce SSE stream disconnection error logs
@@ -80,8 +82,9 @@
   - Fork includes HTTP transport support and Dockerfile from PR [#10](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/10)
   - Our improvements submitted as PR [#11](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/11): Docker port configuration and FastMCP 0.2.0+ compatibility
   - Once PRs #10 and #11 are merged upstream, consider switching to official version
-- [ ] Fix MCP tools returning malformed responses mixing text and JSON
+- [x] Fix MCP tools returning malformed responses mixing text and JSON
   - Issue: [LibreChat #11494](https://github.com/danny-avila/LibreChat/issues/11494) - MCP image responses with mixed text content are not displayed
+  - Fixed by: [LibreChat PR #11499](https://github.com/danny-avila/LibreChat/pull/11499) (automatic detection of OpenAI-compatible endpoints for MCP formatting)
   - Affected tools:
     - Mapbox MCP: [mapbox/mcp-server#103](https://github.com/mapbox/mcp-server/issues/103) - Tool responses mix text and JSON instead of using structured content arrays
     - Playwright MCP: [microsoft/playwright-mcp#1324](https://github.com/microsoft/playwright-mcp/issues/1324) - Screenshot responses mix Markdown/JSON format
@@ -105,3 +108,6 @@
 ## Upstream Contributions
 
 - [x] Improve support for OpenAI-compatible custom endpoints - [LibreChat PR #11499](https://github.com/danny-avila/LibreChat/pull/11499)
+- [x] Add vision capability flag to modelSpecs configuration - [LibreChat PR #11501](https://github.com/danny-avila/LibreChat/pull/11501)
+- [x] Add vision toggle for agents - [LibreChat PR #11504](https://github.com/danny-avila/LibreChat/pull/11504)
+- [x] Filter base64 image artifacts based on agent vision capability - [agents PR #48](https://github.com/danny-avila/agents/pull/48)
