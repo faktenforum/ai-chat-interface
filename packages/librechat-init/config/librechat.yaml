@@ -540,6 +540,7 @@ mcpSettings:
     - 'mcp-db-timetable'        # MCP DB Timetable service (Docker network)
     - 'mcp-stackoverflow'       # MCP StackOverflow service (Docker network)
     - 'mcp-npm-search'           # MCP npm Search service (Docker network)
+    - 'mcp-ytptube'             # MCP YTPTube (YTPTube + Scaleway STT)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     - 'mcp.mapbox.com'           # Mapbox MCP Server (remote hosted)
     # - '*.example.com'           # Wildcard subdomain
@@ -638,6 +639,18 @@ mcpServers:
     iconPath: /images/mcp-npm-search-icon.svg
     initTimeout: 120000
     chatMenu: false
+    startup: true
+    serverInstructions: true
+
+  ytptube:
+    type: streamable-http
+    url: http://mcp-ytptube:3010/mcp
+    title: YTPTube
+    description: Video URLs, transcripts (YTPTube + Scaleway STT). More YTPTube features can be added later.
+    iconPath: /images/mcp-ytptube-icon.svg
+    initTimeout: 120000
+    timeout: 300000   # 5 min — downloads + STT
+    chatMenu: true
     startup: true
     serverInstructions: true
 

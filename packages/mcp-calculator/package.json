@@ -7,10 +7,7 @@
   "scripts": {
     "start": "./src/server.ts",
     "dev": "node --watch --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
-    "lint": "eslint . --ext .ts",
-    "test": "echo \"Tests to be implemented\"",
-    "test:integration": "./test/integration.ts",
-    "test:http": "./test/http-test.ts"
+    "lint": "eslint . --ext .ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.3",

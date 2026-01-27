@@ -211,6 +211,21 @@ services:
     image: ghcr.io/faktenforum/mcp-npm-search:latest
     # No Traefik labels - internal service only
 
+  # YTPTube - internal only in prod (no Traefik/Web UI exposure)
+  ytptube:
+    extends: { file: docker-compose.ytptube.yml, service: ytptube }
+    container_name: ${STACK_NAME:-prod}-ytptube
+    # No Traefik labels - app-net only; volumes from base, names in volumes section below
+
+  mcp-ytptube:
+    extends: { file: docker-compose.mcp-ytptube.yml, service: mcp-ytptube }
+    container_name: ${STACK_NAME:-prod}-mcp-ytptube
+    image: ghcr.io/faktenforum/mcp-ytptube:latest
+    depends_on:
+      ytptube:
+        condition: service_started
+    # No Traefik labels - internal service only
+
 networks:
   traefik-net:
     external: true
@@ -239,3 +254,7 @@ volumes:
     name: ${STACK_NAME:-prod}-n8n-pgdata
   n8n_data:
     name: ${STACK_NAME:-prod}-n8n-data
+  ytptube_config:
+    name: ${STACK_NAME:-prod}-ytptube-config
+  ytptube_downloads:
+    name: ${STACK_NAME:-prod}-ytptube-downloads
