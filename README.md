@@ -2,6 +2,8 @@
 
 A complete, standalone open-source AI chat interface platform built with LibreChat and Firecrawl. This turnkey solution provides a fully functional AI chat interface with pre-configured services, ready for deployment.
 
+![LibreChat Image Generation Assistant showing a generated cat image](.github/assets/screenshot-02.png)
+
 ## Overview
 
 This project is a modular Docker Compose setup that combines multiple open-source AI tools into a cohesive platform:
@@ -11,6 +13,7 @@ This project is a modular Docker Compose setup that combines multiple open-sourc
 - **Traefik** - Reverse proxy and load balancer
 - **RAG API** - Retrieval-Augmented Generation for document search
 - **SearXNG** - Meta search engine for web search functionality
+- **MCP** - Pre-configured Model Context Protocol servers for extended tools and context
 
 ## Philosophy
 
