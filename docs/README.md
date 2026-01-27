@@ -22,6 +22,8 @@ Essential guides for the AI Chat Interface platform.
 ## Development
 
 - **[Development Guide](DEVELOPMENT.md)** - Git submodules and development stack
+- **[LibreChat Testing](LIBRECHAT_TESTING.md)** - Running LibreChat unit and E2E tests using the dedicated test stack
+- **[PR: LibreChat testing](PR-feat-librechat-testing.md)** - PR text draft for feat/librechat-testing
 - **[Submodule Sync Guide](SUBMODULE_SYNC.md)** - Syncing fork submodules with upstream
 - **[Cursor Rules](CURSOR_RULES.md)** - Integrating services and MCP servers
 - **[Cursor MongoDB MCP](CURSOR_MONGODB_MCP.md)** - Cursor MongoDB integration
