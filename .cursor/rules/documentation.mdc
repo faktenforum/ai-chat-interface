@@ -3,24 +3,23 @@ alwaysApply: true
 ---
 # Documentation Rules
 
+## Principles (LLM-optimised)
+- **Minimal**: Document only what matters—decisions, constraints, non-obvious behaviour, integration points. Omit restatements of code or generic advice.
+- **Scannable**: Use headings, lists, code blocks; avoid long prose. High signal-to-noise ratio so key facts are locatable quickly.
+- **Precise**: Prefer concrete facts (paths, env vars, commands, options) over vague descriptions. One source of truth per topic.
+
 ## Language & Format
-- Write all documentation in English (code, comments, descriptions)
-- Use Markdown format (.md files)
-- Place all documentation files in the `docs/` folder
+- English only (code, comments, descriptions). Markdown (.md) in `docs/`.
 
 ## Content Guidelines
-- Maximize information density: include essential facts, omit filler
-- Document important information concisely without unnecessary verbosity
-- Focus on actionable, technical details over narrative explanations
-- Include code examples, configuration snippets, and command-line instructions where relevant
+- Maximise information density: essential facts only, no filler, no “nice to have” padding.
+- Actionable > narrative: technical details, examples, and CLI/config snippets when they resolve ambiguity.
+- Do not inflate: if one sentence suffices, do not add paragraphs. Prefer tables/lists over prose for structured data.
 
 ## File Management
-- When creating new .md files, always update `docs/README.md` to include references/links
-- Maintain `docs/README.md` as the entry point and index for all documentation
-- Use descriptive filenames that clearly indicate content scope
+- New .md → add link in `docs/README.md`. Keep `docs/README.md` as the index.
+- Filenames: descriptive, scope-clearly indicated.
 
 ## Structure Standards
-- Use clear hierarchical headings (H1 for main title, H2 for major sections, H3 for subsections)
-- Include table of contents for documents longer than 3 sections
-- Add code blocks with appropriate language tags for syntax highlighting
-- Use lists for enumerations, requirements, or step-by-step instructions
+- Hierarchy: H1 title, H2 major sections, H3 subsections. ToC only if >3 sections.
+- Code blocks: language tags; lists for enumerations and steps.

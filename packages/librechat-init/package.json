@@ -17,6 +17,6 @@
   "scripts": {
     "start": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/init.ts",
     "build:docker": "docker build -t librechat-init:latest .",
-    "validate:code": "tsc --noEmit"
+    "validate": "tsc --noEmit"
   }
 }

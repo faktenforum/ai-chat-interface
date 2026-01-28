@@ -160,20 +160,40 @@ services:
       - "traefik.http.routers.n8n.entrypoints=web"
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
 
+  # YTPTube - video/audio download via yt-dlp (for MCP YTPTube)
+  ytptube:
+    extends: { file: docker-compose.ytptube.yml, service: ytptube }
+    env_file: .env.local
+    networks:
+      - traefik-net
+      - app-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
+      - "traefik.http.routers.ytptube.rule=Host(`ytptube.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.ytptube.entrypoints=web"
+      - "traefik.http.services.ytptube.loadbalancer.server.port=8081"
+
   # MCP Services
   mcp-calculator:
     extends: { file: docker-compose.mcp-calculator.yml, service: mcp-calculator }
     env_file: .env.local
+    ports:
+      - "127.0.0.1:3000:3000"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
   mcp-image-gen:
     extends: { file: docker-compose.mcp-image-gen.yml, service: mcp-image-gen }
     env_file: .env.local
+    ports:
+      - "127.0.0.1:3001:3001"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
   mcp-firecrawl:
     extends: { file: docker-compose.mcp-firecrawl.yml, service: mcp-firecrawl }
     env_file: .env.local
+    ports:
+      - "127.0.0.1:3003:3003"  # Cursor IDE – local only
 
   mcp-openstreetmap:
     extends: { file: docker-compose.mcp-openstreetmap.yml, service: mcp-openstreetmap }
@@ -184,16 +204,35 @@ services:
     build:
       context: ./dev/open-streetmap-mcp
       dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:3004:3004"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
   mcp-weather:
     extends: { file: docker-compose.mcp-weather.yml, service: mcp-weather }
     env_file: .env.local
+    ports:
+      - "127.0.0.1:3005:3005"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
   mcp-playwright:
     extends: { file: docker-compose.mcp-playwright.yml, service: mcp-playwright }
     env_file: .env.local
+    ports:
+      - "127.0.0.1:3006:3006"  # Cursor IDE – local only
+    # No Traefik labels - internal service only
+
+  mcp-ytptube:
+    extends: { file: docker-compose.mcp-ytptube.yml, service: mcp-ytptube }
+    env_file: .env.local
+    build:
+      context: ./packages/mcp-ytptube
+      dockerfile: Dockerfile
+    depends_on:
+      ytptube:
+        condition: service_started
+    ports:
+      - "127.0.0.1:3010:3010"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
   mcp-db-timetable:
@@ -205,6 +244,8 @@ services:
     build:
       context: ./dev/db-timetable-mcp
       dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:3007:3007"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
   mcp-stackoverflow:
@@ -216,6 +257,8 @@ services:
     build:
       context: ./dev/stackoverflow-mcp
       dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:3008:3008"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
   mcp-npm-search:
@@ -227,6 +270,8 @@ services:
     build:
       context: ./dev/npm-search-mcp
       dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:3009:3009"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
   # Additional Services
@@ -251,3 +296,5 @@ volumes:
   searxng-config:
   n8n_pgdata:
   n8n_data:
+  ytptube_config:
+  ytptube_downloads:

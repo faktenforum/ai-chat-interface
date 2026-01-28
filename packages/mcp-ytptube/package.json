@@ -1,0 +1,32 @@
+{
+  "name": "@ai-chat-interface/mcp-ytptube",
+  "version": "1.0.0",
+  "description": "MCP server for YTPTube: video URL → transcript (YTPTube + Scaleway STT); extendable for more YTPTube features",
+  "type": "module",
+  "main": "src/server.ts",
+  "scripts": {
+    "start": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
+    "dev": "node --watch --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
+    "start:local": "dotenv -e ../../.env.local -- node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
+    "dev:local": "dotenv -e ../../.env.local -- node --watch --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
+    "lint": "eslint . --ext .ts",
+    "validate": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "zod": "^4.3.6",
+    "express": "^5.2.1",
+    "pino": "^10.3.0",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.10",
+    "dotenv-cli": "^11.0.0",
+    "typescript": "^5.9.3",
+    "tsx": "^4.21.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
