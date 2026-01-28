@@ -3,7 +3,49 @@
  * Uses GET /api/download/{filename} for file retrieval (no shared volume).
  */
 
+import { logger } from '../utils/logger.ts';
+
 const DEFAULT_POLL_INTERVAL_MS = 3000;
+
+/** When true, log full API response bodies for debugging URL normalization and YTPTube behaviour. */
+const DEBUG_API =
+  process.env.MCP_YTPTUBE_DEBUG_API === '1' ||
+  process.env.MCP_YTPTUBE_DEBUG_API === 'true' ||
+  process.env.LOG_LEVEL === 'debug';
+
+function logApiResponse(method: string, path: string, response: unknown): void {
+  if (!DEBUG_API) return;
+  const payload =
+    typeof response === 'object' && response !== null && JSON.stringify(response).length > 2000
+      ? { _truncated: true, _length: JSON.stringify(response).length, _preview: JSON.stringify(response).slice(0, 500) }
+      : response;
+  logger.debug({ method, path, response: payload }, 'YTPTube API response');
+
+  // Log each item's top-level keys so we can see what YTPTube returns (e.g. video_id, extractor, id).
+  const items: unknown[] = Array.isArray(response)
+    ? response
+    : response != null && typeof response === 'object' && Array.isArray((response as { items?: unknown[] }).items)
+      ? (response as { items: unknown[] }).items
+      : response != null && typeof response === 'object' && Array.isArray((response as { queue?: unknown[] }).queue)
+        ? (response as { queue: unknown[] }).queue
+        : response != null && typeof response === 'object' && Array.isArray((response as { history?: unknown[] }).history)
+          ? (response as { history: unknown[] }).history
+          : [];
+  if (items.length > 0) {
+    for (let i = 0; i < Math.min(items.length, 5); i++) {
+      const item = items[i];
+      if (item != null && typeof item === 'object') {
+        const keys = Object.keys(item as object);
+        const sample = keys.reduce((acc, k) => {
+          const v = (item as Record<string, unknown>)[k];
+          acc[k] = typeof v === 'string' && v.length > 80 ? `${v.slice(0, 80)}…` : v;
+          return acc;
+        }, {} as Record<string, unknown>);
+        logger.debug({ method, path, itemIndex: i, keys, sample }, 'YTPTube API item (for video_id / extractor)');
+      }
+    }
+  }
+}
 const DEFAULT_MAX_WAIT_MS = 60 * 60 * 1000; // 1 hour
 
 export interface YTPTubeConfig {
@@ -22,6 +64,14 @@ export interface HistoryItem {
   folder?: string;
   template?: string;
   progress?: number;
+  /** Platform video ID from YTPTube/yt-dlp (e.g. YouTube video id). */
+  video_id?: string;
+  /** Extractor name from yt-dlp (e.g. "youtube", "instagram", "TikTok"). */
+  extractor?: string;
+  /** Extractor key: "extractor video_id" format used by YTPTube in logs. */
+  extractor_key?: string;
+  /** YTPTube archive id: "extractor video_id" (e.g. "youtube jNQXAC9IVRw", "instagram DTN7YIrDD5D"). */
+  archive_id?: string;
   [key: string]: unknown;
 }
 
@@ -93,9 +143,21 @@ export async function postHistory(
     throw new Error(`YTPTube POST /api/history failed (${res.status}): ${err}`);
   }
 
-  const data = (await res.json()) as HistoryItem[] | HistoryItem;
-  const arr = Array.isArray(data) ? data : [data];
-  return arr;
+  const data = (await res.json()) as unknown;
+  logApiResponse('POST', 'api/history', data);
+
+  // Normalize: YTPTube may return array, single item, or { items: [...] } / { queue: [...] }
+  if (Array.isArray(data)) return data as HistoryItem[];
+  if (data != null && typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
+    if (Array.isArray(obj.items)) return obj.items as HistoryItem[];
+    if (Array.isArray(obj.queue)) return obj.queue as HistoryItem[];
+    if (Array.isArray(obj.history)) return obj.history as HistoryItem[];
+    if (typeof obj.id !== 'undefined' || typeof (obj as { _id?: unknown })._id !== 'undefined') {
+      return [obj as HistoryItem];
+    }
+  }
+  return [];
 }
 
 /** Response shape of GET /api/history (legacy type=all or no type, or paginated type=queue/done). */
@@ -104,6 +166,58 @@ export interface GetHistoryResponse {
   history?: HistoryItem[];
   items?: HistoryItem[];
   pagination?: unknown;
+}
+
+/** Response item from POST /api/yt-dlp/archive_id/ – canonical archive_id for a URL (any platform). */
+export interface ArchiveIdResult {
+  index: number;
+  url: string;
+  id: string | null;
+  ie_key: string | null;
+  archive_id: string | null;
+  error: string | null;
+}
+
+/**
+ * POST /api/yt-dlp/archive_id/ – get archive_id (and ie_key, id) for URLs without adding to queue.
+ * Use when URL has no canonicalVideoKey or when URL-based match fails (e.g. Facebook, Vimeo).
+ */
+export async function getArchiveIdForUrls(
+  config: YTPTubeConfig,
+  urls: string[],
+): Promise<ArchiveIdResult[]> {
+  const base = ensureSlash(config.baseUrl);
+  const res = await fetch(`${base}api/yt-dlp/archive_id/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(config.apiKey),
+    },
+    body: JSON.stringify(urls),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    let err: string;
+    try {
+      const j = JSON.parse(text) as { error?: string };
+      err = j.error ?? text;
+    } catch {
+      err = text || res.statusText;
+    }
+    throw new Error(`YTPTube POST /api/yt-dlp/archive_id/ failed (${res.status}): ${err}`);
+  }
+
+  const data = (await res.json()) as ArchiveIdResult[];
+  logApiResponse('POST', 'api/yt-dlp/archive_id/', data);
+  return Array.isArray(data) ? data : [];
+}
+
+/** Normalize YTPTube archive_id (e.g. "Facebook 1678716196448181") to key format used by canonicalKeyFromItem. */
+export function normalizeArchiveIdToKey(archiveId: string | null | undefined): string | null {
+  if (typeof archiveId !== 'string' || !archiveId.trim()) return null;
+  const normalized = archiveId.trim().replace(/\s+/g, ':').toLowerCase();
+  return normalized.includes(':') ? normalized : null;
 }
 
 /**
@@ -128,7 +242,9 @@ export async function getHistory(config: YTPTubeConfig): Promise<GetHistoryRespo
     throw new Error(`YTPTube GET /api/history failed (${res.status}): ${err}`);
   }
 
-  return (await res.json()) as GetHistoryResponse;
+  const data = (await res.json()) as GetHistoryResponse;
+  logApiResponse('GET', 'api/history', data);
+  return data;
 }
 
 /**
@@ -153,6 +269,7 @@ export async function getHistoryQueue(config: YTPTubeConfig): Promise<HistoryIte
   }
 
   const data = (await res.json()) as { queue?: HistoryItem[]; history?: HistoryItem[]; items?: HistoryItem[] };
+  logApiResponse('GET', 'api/history?type=queue', data);
   if (Array.isArray(data.items)) return data.items;
   const queue = data.queue ?? [];
   return queue;
@@ -180,20 +297,155 @@ export async function getHistoryDone(config: YTPTubeConfig): Promise<HistoryItem
   }
 
   const data = (await res.json()) as { queue?: HistoryItem[]; history?: HistoryItem[]; items?: HistoryItem[] };
+  logApiResponse('GET', 'api/history?type=done', data);
   if (Array.isArray(data.items)) return data.items;
   const history = data.history ?? [];
   return history;
 }
 
-/** Find item by URL in queue, history, or items. Exact URL match only; no normalization. */
+/**
+ * Canonical key for a video URL: same key => same video.
+ * - YouTube: "youtube:" + video ID (shorts/watch/youtu.be)
+ * - Instagram: "instagram:" + media ID (reel/p path segment)
+ * - Others: normalized URL (origin + pathname, no query, trailing slash stripped)
+ */
+export function canonicalVideoKey(url: string): string | null {
+  const trimmed = (url ?? '').trim();
+  if (!trimmed) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    const hostname = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    const pathname = parsed.pathname.replace(/\/$/, '') || '/';
+
+    // YouTube: various forms → youtube:VIDEO_ID
+    if (hostname === 'youtube.com' || hostname === 'youtu.be') {
+      let videoId: string | null = null;
+      if (hostname === 'youtu.be') {
+        videoId = pathname.slice(1) || null;
+      } else if (pathname.startsWith('/shorts/')) {
+        videoId = pathname.slice(8) || null;
+      } else if (pathname === '/watch') {
+        videoId = parsed.searchParams.get('v');
+      }
+      if (videoId) return `youtube:${videoId}`;
+    }
+
+    // Instagram: /reel/ID, /p/ID, /tv/ID → instagram:ID (hostname already normalized, no www)
+    if (hostname === 'instagram.com') {
+      const m = pathname.match(/^\/(reel|p|tv)\/([^/]+)/);
+      if (m) return `instagram:${m[2]}`;
+    }
+
+    // TikTok: /@user/video/ID or /video/ID → tiktok:ID
+    if (hostname === 'tiktok.com' || hostname === 'vm.tiktok.com') {
+      const m = pathname.match(/\/video\/(\d+)/);
+      if (m) return `tiktok:${m[1]}`;
+    }
+
+    // Facebook: /reel/ID (facebook.com, fb.com, fb.watch) → facebook:ID
+    if (hostname === 'facebook.com' || hostname === 'fb.com' || hostname === 'fb.watch') {
+      const m = pathname.match(/\/reel\/(\d+)/);
+      if (m) return `facebook:${m[1]}`;
+    }
+
+    // Generic: normalized origin (no www) + pathname for stable comparison
+    const normalizedHost = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    const origin = `${parsed.protocol}//${normalizedHost}`;
+    return `${origin}${pathname}`.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Build a canonical video key from a YTPTube history item using YTPTube/yt-dlp fields.
+ * Prefer YTPTube's own identifiers (archive_id, extractor_key) so we don't rely on URL normalization.
+ * Returns e.g. "youtube:VIDEO_ID", "instagram:ID", "tiktok:ID", or null if no usable field.
+ */
+export function canonicalKeyFromItem(item: HistoryItem): string | null {
+  if (!item || typeof item !== 'object') return null;
+
+  // YTPTube returns archive_id: "extractor video_id" (e.g. "youtube jNQXAC9IVRw", "instagram DTN7YIrDD5D")
+  const archiveId = typeof (item as { archive_id?: string }).archive_id === 'string'
+    ? (item as { archive_id: string }).archive_id.trim()
+    : null;
+  if (archiveId) {
+    const normalized = archiveId.replace(/\s+/g, ':').toLowerCase();
+    if (normalized.includes(':')) return normalized;
+  }
+
+  // Fallback: extractor_key (same format as archive_id)
+  const extractorKey = typeof (item as { extractor_key?: string }).extractor_key === 'string'
+    ? (item as { extractor_key: string }).extractor_key.trim()
+    : null;
+  if (extractorKey) {
+    const normalized = extractorKey.replace(/\s+/g, ':').toLowerCase();
+    if (normalized.includes(':')) return normalized;
+  }
+
+  const extractor = typeof item.extractor === 'string' ? item.extractor.trim().toLowerCase() : null;
+  const videoId =
+    typeof item.video_id === 'string'
+      ? (item as { video_id: string }).video_id.trim()
+      : typeof item.id === 'string'
+        ? (item as { id: string }).id.trim()
+        : null;
+
+  if (extractor && videoId) return `${extractor}:${videoId}`;
+  if (videoId) return videoId;
+
+  return null;
+}
+
+/**
+ * Compare two URLs: same video if canonical keys match, or exact match, or both keys null and normalized URL match.
+ */
+function urlsMatch(url1: string, url2: string): boolean {
+  const u1 = (url1 ?? '').trim();
+  const u2 = (url2 ?? '').trim();
+  if (u1 === u2) return true;
+
+  const k1 = canonicalVideoKey(u1);
+  const k2 = canonicalVideoKey(u2);
+  if (k1 != null && k2 != null) return k1 === k2;
+
+  // Fallback: normalize by stripping query and compare origin+path
+  try {
+    const a = new URL(u1);
+    const b = new URL(u2);
+    const na = `${a.origin}${a.pathname}`.replace(/\/$/, '').toLowerCase();
+    const nb = `${b.origin}${b.pathname}`.replace(/\/$/, '').toLowerCase();
+    return na === nb;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Match a request URL to a history item: by URL or by YTPTube canonical key (video_id / extractor).
+ * URLs we don't normalize (unknown platforms) are matched by origin+path via urlsMatch; query params are ignored.
+ */
+function urlMatchesItem(videoUrl: string, item: HistoryItem): boolean {
+  const want = (videoUrl ?? '').trim();
+  const itemUrl = (item?.url ?? '').trim();
+  if (urlsMatch(want, itemUrl)) return true;
+
+  const urlKey = canonicalVideoKey(want);
+  const itemKey = canonicalKeyFromItem(item);
+  if (urlKey != null && itemKey != null) return urlKey === itemKey;
+
+  return false;
+}
+
+/** Find item by URL in queue, history, or items. Matches by URL or by YTPTube video_id/extractor when present. */
 export function findItemByUrl(data: GetHistoryResponse, videoUrl: string): { item: HistoryItem; id: string } | null {
   const queue = data.queue ?? [];
   const history = data.history ?? [];
   const items = data.items ?? [];
   const all = items.length > 0 ? items : [...queue, ...history];
-  const want = (videoUrl ?? '').trim();
   for (const it of all) {
-    if ((it?.url ?? '').trim() === want) {
+    if (urlMatchesItem(videoUrl, it)) {
       const id = it.id ?? (it as HistoryItem & { _id?: string })._id;
       if (id != null) return { item: it, id: String(id) };
     }
@@ -201,16 +453,111 @@ export function findItemByUrl(data: GetHistoryResponse, videoUrl: string): { ite
   return null;
 }
 
-/** Find item by URL in a list of items. Exact URL match only; no normalization. */
+/** Find item by URL in a list of items. Matches by URL or by YTPTube video_id/extractor when present. */
 export function findItemByUrlInItems(items: HistoryItem[], videoUrl: string): { item: HistoryItem; id: string } | null {
-  const want = (videoUrl ?? '').trim();
   for (const it of items) {
-    if ((it?.url ?? '').trim() === want) {
+    if (urlMatchesItem(videoUrl, it)) {
       const id = it.id ?? (it as HistoryItem & { _id?: string })._id;
       if (id != null) return { item: it, id: String(id) };
     }
   }
   return null;
+}
+
+/** Find item by normalized archive key in a list (from canonicalKeyFromItem or normalizeArchiveIdToKey). */
+function findItemByArchiveKeyInItems(
+  items: HistoryItem[],
+  key: string,
+): { item: HistoryItem; id: string } | null {
+  for (const it of items) {
+    const itemKey = canonicalKeyFromItem(it);
+    if (itemKey != null && itemKey === key) {
+      const id = it.id ?? (it as HistoryItem & { _id?: string })._id;
+      if (id != null) return { item: it, id: String(id) };
+    }
+  }
+  return null;
+}
+
+function getAllItems(data: GetHistoryResponse): HistoryItem[] {
+  const queue = data.queue ?? [];
+  const history = data.history ?? [];
+  const items = data.items ?? [];
+  return items.length > 0 ? items : [...queue, ...history];
+}
+
+/**
+ * Find item by video_url: first by URL/canonical key, then by YTPTube archive_id API (works for any platform).
+ */
+export async function findItemByUrlWithArchiveIdFallback(
+  config: YTPTubeConfig,
+  data: GetHistoryResponse,
+  videoUrl: string,
+): Promise<{ item: HistoryItem; id: string } | null> {
+  const byUrl = findItemByUrl(data, videoUrl);
+  if (byUrl) return byUrl;
+
+  try {
+    const results = await getArchiveIdForUrls(config, [videoUrl]);
+    const key = results[0] ? normalizeArchiveIdToKey(results[0].archive_id) : null;
+    if (key) return findItemByArchiveKeyInItems(getAllItems(data), key);
+  } catch (e) {
+    logger.debug({ err: e, video_url: videoUrl }, 'YTPTube archive_id fallback failed');
+  }
+  return null;
+}
+
+/**
+ * Find item by URL in a list; fallback to archive_id API when URL match fails (any platform).
+ */
+export async function findItemByUrlInItemsWithArchiveIdFallback(
+  config: YTPTubeConfig,
+  items: HistoryItem[],
+  videoUrl: string,
+): Promise<{ item: HistoryItem; id: string } | null> {
+  const byUrl = findItemByUrlInItems(items, videoUrl);
+  if (byUrl) return byUrl;
+
+  try {
+    const results = await getArchiveIdForUrls(config, [videoUrl]);
+    const key = results[0] ? normalizeArchiveIdToKey(results[0].archive_id) : null;
+    if (key) return findItemByArchiveKeyInItems(items, key);
+  } catch (e) {
+    logger.debug({ err: e, video_url: videoUrl }, 'YTPTube archive_id fallback failed');
+  }
+  return null;
+}
+
+/**
+ * Find item by video_url in data and optionally in queue/done. Uses archive_id API at most once.
+ * Use when you have data + queue + done and want a single lookup (e.g. get_transcript_status).
+ */
+export async function findItemByUrlInAll(
+  config: YTPTubeConfig,
+  data: GetHistoryResponse,
+  videoUrl: string,
+  options: { queue?: HistoryItem[]; done?: HistoryItem[] } = {},
+): Promise<{ item: HistoryItem; id: string } | null> {
+  let found = findItemByUrl(data, videoUrl);
+  if (found) return found;
+
+  const { queue = [], done = [] } = options;
+  found = findItemByUrlInItems(queue, videoUrl) ?? findItemByUrlInItems(done, videoUrl);
+  if (found) return found;
+
+  try {
+    const results = await getArchiveIdForUrls(config, [videoUrl]);
+    const key = results[0] ? normalizeArchiveIdToKey(results[0].archive_id) : null;
+    if (key) {
+      found =
+        findItemByArchiveKeyInItems(getAllItems(data), key) ??
+        findItemByArchiveKeyInItems(queue, key) ??
+        findItemByArchiveKeyInItems(done, key);
+    }
+  } catch (e) {
+    logger.debug({ err: e, video_url: videoUrl }, 'YTPTube archive_id fallback failed');
+  }
+  return found ?? null;
 }
 
 const ITEM_NOT_FOUND_MSG =
@@ -238,7 +585,9 @@ export async function getHistoryById(config: YTPTubeConfig, id: string): Promise
     throw new Error(`YTPTube GET /api/history/${id} failed (${res.status}): ${err}`);
   }
 
-  return (await res.json()) as HistoryItem;
+  const data = (await res.json()) as HistoryItem;
+  logApiResponse('GET', `api/history/${id}`, data);
+  return data;
 }
 
 /**

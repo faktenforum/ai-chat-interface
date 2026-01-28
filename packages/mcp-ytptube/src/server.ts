@@ -15,6 +15,7 @@ import { requestVideoTranscript, type RequestVideoTranscriptDeps } from './tools
 import { getTranscriptStatus } from './tools/get-transcript-status.ts';
 import { logger } from './utils/logger.ts';
 import { VideoTranscriptsError } from './utils/errors.ts';
+import { formatErrorResponse } from './utils/response-format.ts';
 import { setupMcpEndpoints, setupGracefulShutdown } from './utils/http-server.ts';
 
 const PORT = parseInt(
@@ -56,7 +57,7 @@ function createMcpServer(): McpServer {
     },
     {
       capabilities: { tools: {}, resources: {}, prompts: {} },
-      instructions: `Video transcripts: use request_video_transcript(video_url) to get a transcript or to start a download. If the result is DOWNLOAD_QUEUED or DOWNLOAD_IN_PROGRESS, tell the user the download has started or is in progress and they can ask for "status" or "progress". Use get_transcript_status(job_id, video_url) when the user asks how much is downloaded or if it's ready; if STATUS=finished, tell them they can now request the transcript. Always relay the "Tell the user" line from the tool result. Transcripts appear only when STATUS is finished and the user (or you) call request_video_transcript again; never invent transcript text.`,
+      instructions: `Video transcripts: request_video_transcript(video_url) → result=transcript (metadata + transcript in second block) or result=status (queued|downloading). get_transcript_status(video_url?, job_id?) → result=status. Relay the relay= line. For status use get_transcript_status(video_url=url or status_url from response)—do not use job_id (often platform video id, lookup fails). When status=finished, user can request transcript. Never invent transcript text.`,
     },
   );
 
@@ -79,7 +80,7 @@ function createMcpServer(): McpServer {
             ? error.message
             : `Unexpected error: ${error instanceof Error ? error.message : String(error)}`;
         return {
-          content: [{ type: 'text' as const, text: `ERROR\nTell the user: ${message}` }],
+          content: [{ type: 'text' as const, text: formatErrorResponse(message) }],
           isError: true,
         };
       }
@@ -100,7 +101,7 @@ function createMcpServer(): McpServer {
   server.registerTool(
     'request_video_transcript',
     {
-      description: 'Get transcript for a video URL. Returns transcript if download already finished; else returns DOWNLOAD_QUEUED or DOWNLOAD_IN_PROGRESS with job_id and progress. User can then ask for status and, when 100%, request transcript again.',
+      description: 'Transcript for video URL. Returns result=transcript (metadata + transcript block) when ready, or result=status (queued|downloading). Use get_transcript_status for progress; when finished, request transcript again.',
       inputSchema: requestVideoTranscriptSchema,
     },
     withErrorHandler('request_video_transcript', (a, d) => requestVideoTranscript(a, d)),
@@ -109,7 +110,7 @@ function createMcpServer(): McpServer {
   server.registerTool(
     'get_transcript_status',
     {
-      description: "Status of a video download/transcript by job_id and/or video_url. Returns progress %, STATUS (queued|downloading|finished|error), and a clear 'Tell the user' line. Use when user asks 'how much is downloaded' or 'is it ready'; if finished, tell them to request the transcript.",
+      description: 'Status by video_url (preferred) or job_id. Returns result=status, relay. Use video_url from prior response for reliable lookup; if status=finished, user can request transcript.',
       inputSchema: getTranscriptStatusSchema,
     },
     withErrorHandler('get_transcript_status', (a, d) => getTranscriptStatus(a, { ytptube: d.ytptube })),

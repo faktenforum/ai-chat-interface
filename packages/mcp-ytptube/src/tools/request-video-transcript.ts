@@ -8,10 +8,11 @@ import { CreateVideoTranscriptSchema, type CreateVideoTranscriptInput } from '..
 import type { YTPTubeConfig } from '../clients/ytptube.ts';
 import {
   getHistory,
-  findItemByUrl,
   getHistoryQueue,
   getHistoryDone,
   findItemByUrlInItems,
+  findItemByUrlWithArchiveIdFallback,
+  findItemByUrlInItemsWithArchiveIdFallback,
   getHistoryById,
   postHistory,
   getFileBrowser,
@@ -30,6 +31,7 @@ import {
   VideoTranscriptsError,
 } from '../utils/errors.ts';
 import { logger } from '../utils/logger.ts';
+import { formatTranscriptResponseAsBlocks, formatStatusResponse } from '../utils/response-format.ts';
 
 const AUDIO_FOLDER = 'transcripts';
 const AUDIO_CLI = '--extract-audio --audio-format mp3';
@@ -73,7 +75,7 @@ export async function requestVideoTranscript(
     throw new YTPTubeError(`Failed to check queue: ${err.message}`);
   }
 
-  const found = findItemByUrl(data, video_url);
+  const found = await findItemByUrlWithArchiveIdFallback(ytp, data, video_url);
 
   if (found) {
     const { item, id } = found;
@@ -104,11 +106,19 @@ export async function requestVideoTranscript(
         logger.warn({ err, id }, 'Scaleway transcription failed');
         throw new TranscriptionError(`Transcription failed: ${err.message}`);
       }
-      const out = `TRANSCRIPT_READY url=${video_url} job_id=${id}
-Tell the user: The transcript is below.
-
-${text || '(Empty transcript)'}`;
-      return { content: [{ type: 'text', text: out }] };
+      const storedUrl = typeof item.url === 'string' ? item.url : undefined;
+      const { metadata, transcript: transcriptText } = formatTranscriptResponseAsBlocks({
+        url: video_url,
+        job_id: id,
+        transcript: text ?? '',
+        status_url: storedUrl,
+      });
+      return {
+        content: [
+          { type: 'text', text: metadata },
+          { type: 'text', text: transcriptText },
+        ],
+      };
     }
 
     if (status === 'error') {
@@ -116,17 +126,41 @@ ${text || '(Empty transcript)'}`;
       throw new YTPTubeError(msg, 'error');
     }
 
+    const storedUrl = typeof item.url === 'string' ? item.url : undefined;
     const fresh = await getHistoryById(ytp, id).catch(() => item);
     const pct = formatProgress(fresh);
     const isQueued = status === 'queued' || status === 'pending' || pct === 0;
     if (isQueued) {
-      const out = `DOWNLOAD_QUEUED job_id=${id} url=${video_url}
-Tell the user: The download has started. They can ask for "status" or "progress" to see how much is downloaded; when complete they can ask for the transcript.`;
-      return { content: [{ type: 'text', text: out }] };
+      return {
+        content: [
+          {
+            type: 'text',
+            text: formatStatusResponse({
+              status: 'queued',
+              job_id: id,
+              url: video_url,
+              status_url: storedUrl,
+              relay: 'Download started. Ask for status or transcript when done.',
+            }),
+          },
+        ],
+      };
     }
-    const out = `DOWNLOAD_IN_PROGRESS job_id=${id} progress=${pct}% url=${video_url}
-Tell the user: The video is being downloaded (${pct}% complete). They can ask for "status" or "progress" to see updates; when 100% they can ask for the transcript again.`;
-    return { content: [{ type: 'text', text: out }] };
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'downloading',
+            job_id: id,
+            url: video_url,
+            status_url: storedUrl,
+            progress: pct,
+            relay: `Downloading (${pct}%). Ask for status; when 100% request transcript.`,
+          }),
+        },
+      ],
+    };
   }
 
   const body = {
@@ -136,12 +170,108 @@ Tell the user: The video is being downloaded (${pct}% complete). They can ask fo
     cli: AUDIO_CLI,
     auto_start: true as const,
   };
+  let postResult: HistoryItem[];
   try {
-    await postHistory(ytp, body);
+    postResult = await postHistory(ytp, body);
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));
     logger.warn({ err, video_url }, 'YTPTube POST /api/history failed');
     throw new YTPTubeError(`Failed to add URL to YTPTube: ${err.message}`);
+  }
+
+  // YTPTube may return the existing item when video is already downloaded (same URL in another form).
+  // If POST returns exactly one item, treat it as the one we just added (handles different URL normalization by YTPTube).
+  let postFound = findItemByUrlInItems(postResult, video_url);
+  if (!postFound) postFound = await findItemByUrlInItemsWithArchiveIdFallback(ytp, postResult, video_url);
+  if (!postFound && postResult.length === 1) {
+    const single = postResult[0];
+    const id = single?.id ?? (single as { _id?: string })?._id;
+    if (id != null) postFound = { item: single, id: String(id) };
+  }
+  if (postFound) {
+    const { item, id } = postFound;
+    const status = (item.status ?? '').toLowerCase();
+    const storedUrl = typeof item.url === 'string' ? item.url : undefined;
+    logger.debug({ video_url, ytptubeUrl: storedUrl, status, id }, 'Matched video from POST response (already in YTPTube)');
+
+    if (status === 'finished') {
+      const browser = await getFileBrowser(ytp, AUDIO_FOLDER);
+      const relativePath = resolveAudioPathFromBrowser(browser.contents ?? [], item);
+      if (!relativePath) {
+        throw new NotFoundError(
+          `Could not find audio file for finished item ${id} in folder ${AUDIO_FOLDER}. Check YTPTube file browser.`,
+        );
+      }
+      let audioBuffer: ArrayBuffer;
+      try {
+        audioBuffer = await downloadFile(ytp, relativePath);
+      } catch (e) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        logger.warn({ err, relativePath, id }, 'YTPTube GET /api/download failed');
+        throw new YTPTubeError(`Failed to download audio: ${err.message}`);
+      }
+      const filename = relativePath.includes('/') ? relativePath.split('/').pop() ?? 'audio.mp3' : relativePath;
+      let text: string;
+      try {
+        text = await transcribe(scw, audioBuffer, filename);
+      } catch (e) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        logger.warn({ err, id }, 'Scaleway transcription failed');
+        throw new TranscriptionError(`Transcription failed: ${err.message}`);
+      }
+      const { metadata, transcript: transcriptText } = formatTranscriptResponseAsBlocks({
+        url: video_url,
+        job_id: id,
+        transcript: text ?? '',
+        fromArchive: true,
+        status_url: storedUrl,
+      });
+      return {
+        content: [
+          { type: 'text', text: metadata },
+          { type: 'text', text: transcriptText },
+        ],
+      };
+    }
+
+    if (status === 'error') {
+      const msg = (item as HistoryItem & { error?: string }).error ?? 'YTPTube job ended with status error';
+      throw new YTPTubeError(msg, 'error');
+    }
+
+    const pct = formatProgress(await getHistoryById(ytp, id).catch(() => item));
+    const isQueued = status === 'queued' || status === 'pending' || pct === 0;
+    if (isQueued) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: formatStatusResponse({
+              status: 'queued',
+              job_id: id,
+              url: video_url,
+              status_url: storedUrl,
+              relay: 'Download started. Ask for status or transcript when done.',
+            }),
+          },
+        ],
+      };
+    }
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'downloading',
+            job_id: id,
+            url: video_url,
+            status_url: storedUrl,
+            progress: pct,
+            relay: `Downloading (${pct}%). Ask for status; when 100% request transcript.`,
+          }),
+        },
+      ],
+    };
   }
 
   await new Promise((r) => setTimeout(r, POST_TO_QUEUE_DELAY_MS));
@@ -155,26 +285,40 @@ Tell the user: The video is being downloaded (${pct}% complete). They can ask fo
     throw new YTPTubeError(`Download was queued but could not resolve job id: ${err.message}`);
   }
 
-  let afterFound = findItemByUrlInItems(queueItems, video_url);
+  let afterFound = findItemByUrlInItems(queueItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, video_url));
   if (!afterFound) {
     await new Promise((r) => setTimeout(r, POST_TO_QUEUE_DELAY_MS));
     try {
       queueItems = await getHistoryQueue(ytp);
-      afterFound = findItemByUrlInItems(queueItems, video_url);
+      afterFound = findItemByUrlInItems(queueItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, video_url));
     } catch {
       /* ignore retry errors, continue to check done */
     }
   }
   if (afterFound) {
-    const out = `DOWNLOAD_QUEUED job_id=${afterFound.id} url=${video_url}
-Tell the user: The download has started. They can ask for "status" or "progress" to see how much is downloaded; when complete they can ask for the transcript.`;
-    return { content: [{ type: 'text', text: out }] };
+    const storedUrl = typeof afterFound.item.url === 'string' ? afterFound.item.url : undefined;
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'queued',
+            job_id: afterFound.id,
+            url: video_url,
+            status_url: storedUrl,
+            relay: 'Download started. Ask for status or transcript when done.',
+          }),
+        },
+      ],
+    };
   }
 
   const doneItems = await getHistoryDone(ytp).catch(() => [] as HistoryItem[]);
-  const doneFound = findItemByUrlInItems(doneItems, video_url);
+  const doneFound =
+    findItemByUrlInItems(doneItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, doneItems, video_url));
   if (doneFound && (doneFound.item.status ?? '').toLowerCase() === 'finished') {
     const { item, id } = doneFound;
+    const storedUrl = typeof item.url === 'string' ? item.url : undefined;
     const browser = await getFileBrowser(ytp, AUDIO_FOLDER);
     const relativePath = resolveAudioPathFromBrowser(browser.contents ?? [], item);
     if (!relativePath) {
@@ -199,14 +343,33 @@ Tell the user: The download has started. They can ask for "status" or "progress"
       logger.warn({ err, id }, 'Scaleway transcription failed');
       throw new TranscriptionError(`Transcription failed: ${err.message}`);
     }
-    const out = `TRANSCRIPT_READY url=${video_url} job_id=${id}
-Tell the user: The transcript is below (video was already in YTPTube archive).
-
-${text || '(Empty transcript)'}`;
-    return { content: [{ type: 'text', text: out }] };
+    const { metadata, transcript: transcriptText } = formatTranscriptResponseAsBlocks({
+      url: video_url,
+      job_id: id,
+      transcript: text ?? '',
+      fromArchive: true,
+      status_url: storedUrl,
+    });
+    return {
+      content: [
+        { type: 'text', text: metadata },
+        { type: 'text', text: transcriptText },
+      ],
+    };
   }
 
-  throw new YTPTubeError(
-    'YTPTube did not return the new item in the queue. The user can ask for status by video URL once the download appears.',
-  );
+  // POST succeeded but item not found in queue yet (may appear later).
+  // Return status with video_url so user can check status later.
+  return {
+    content: [
+      {
+        type: 'text',
+        text: formatStatusResponse({
+          status: 'queued',
+          url: video_url,
+          relay: 'Download queued. Ask for status by video URL once it appears.',
+        }),
+      },
+    ],
+  };
 }

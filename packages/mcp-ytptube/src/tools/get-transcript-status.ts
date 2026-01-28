@@ -9,14 +9,14 @@ import type { YTPTubeConfig } from '../clients/ytptube.ts';
 import {
   getHistoryById,
   getHistory,
-  findItemByUrl,
   getHistoryQueue,
   getHistoryDone,
-  findItemByUrlInItems,
+  findItemByUrlInAll,
   type HistoryItem,
 } from '../clients/ytptube.ts';
-import { NotFoundError, VideoTranscriptsError } from '../utils/errors.ts';
+import { VideoTranscriptsError } from '../utils/errors.ts';
 import { logger } from '../utils/logger.ts';
+import { formatStatusResponse } from '../utils/response-format.ts';
 
 export interface GetTranscriptStatusDeps {
   ytptube: YTPTubeConfig;
@@ -55,31 +55,47 @@ export async function getTranscriptStatus(
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
       if (String(err.message).includes('not found')) {
-        const out = `STATUS=not_found
-Tell the user: No job found for that ID or URL. They can start a new download by asking to transcribe the video URL.`;
-        return { content: [{ type: 'text', text: out }] };
+        return {
+          content: [
+            {
+              type: 'text',
+              text: formatStatusResponse({
+                status: 'not_found',
+                relay: 'No job. Request transcript with video URL to start.',
+              }),
+            },
+          ],
+        };
       }
       logger.warn({ err, job_id }, 'YTPTube GET /api/history/{id} failed');
       throw new VideoTranscriptsError(`Failed to get status: ${err.message}`, 'YTPTUBE_ERROR');
     }
   } else if (video_url) {
-    const data = await getHistory(ytp).catch((e) => {
-      const err = e instanceof Error ? e : new Error(String(e));
-      logger.warn({ err, video_url }, 'YTPTube GET /api/history failed');
-      throw new VideoTranscriptsError(`Failed to look up by URL: ${err.message}`, 'YTPTUBE_ERROR');
+    const [data, queueItems, doneItems] = await Promise.all([
+      getHistory(ytp).catch((e) => {
+        const err = e instanceof Error ? e : new Error(String(e));
+        logger.warn({ err, video_url }, 'YTPTube GET /api/history failed');
+        throw new VideoTranscriptsError(`Failed to look up by URL: ${err.message}`, 'YTPTUBE_ERROR');
+      }),
+      getHistoryQueue(ytp).catch(() => [] as HistoryItem[]),
+      getHistoryDone(ytp).catch(() => [] as HistoryItem[]),
+    ]);
+    const found = await findItemByUrlInAll(ytp, data, video_url, {
+      queue: queueItems,
+      done: doneItems,
     });
-    let found = findItemByUrl(data, video_url);
     if (!found) {
-      const [queueItems, doneItems] = await Promise.all([
-        getHistoryQueue(ytp).catch(() => []),
-        getHistoryDone(ytp).catch(() => []),
-      ]);
-      found = findItemByUrlInItems(queueItems, video_url) ?? findItemByUrlInItems(doneItems, video_url);
-    }
-    if (!found) {
-      const out = `STATUS=not_found
-Tell the user: No job found for that ID or URL. They can start a new download by asking to transcribe the video URL.`;
-      return { content: [{ type: 'text', text: out }] };
+      return {
+        content: [
+          {
+            type: 'text',
+            text: formatStatusResponse({
+              status: 'not_found',
+              relay: 'No job. Request transcript with video URL to start.',
+            }),
+          },
+        ],
+      };
     }
     item = found.item;
     id = found.id;
@@ -92,25 +108,71 @@ Tell the user: No job found for that ID or URL. They can start a new download by
   const pct = formatProgress(item);
 
   if (status === 'finished') {
-    const out = `STATUS=finished job_id=${id}${url ? ` url=${url}` : ''}
-Tell the user: Download complete. They can now request the transcript (e.g. "transcribe this video" or "get the transcript for this URL").`;
-    return { content: [{ type: 'text', text: out }] };
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'finished',
+            job_id: id,
+            url,
+            status_url: url,
+            relay: 'Done. Request transcript for this URL to get text.',
+          }),
+        },
+      ],
+    };
   }
 
   if (status === 'error') {
     const reason = (item as { error?: string }).error ?? 'Unknown error';
-    const out = `STATUS=error job_id=${id}${url ? ` url=${url}` : ''} reason=${reason}
-Tell the user: The download failed (${reason}). They may try another URL or a different video.`;
-    return { content: [{ type: 'text', text: out }] };
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'error',
+            job_id: id,
+            url,
+            status_url: url,
+            reason,
+            relay: `Download failed (${reason}). Try another URL.`,
+          }),
+        },
+      ],
+    };
   }
 
   if (status === 'queued' || status === 'pending' || pct === 0) {
-    const out = `STATUS=queued job_id=${id}${url ? ` url=${url}` : ''}
-Tell the user: The video is queued; download has not started yet. They can ask again for status.`;
-    return { content: [{ type: 'text', text: out }] };
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'queued',
+            job_id: id,
+            url,
+            status_url: url,
+            relay: 'Queued. Ask again for status.',
+          }),
+        },
+      ],
+    };
   }
 
-  const out = `STATUS=downloading progress=${pct}% job_id=${id}${url ? ` url=${url}` : ''}
-Tell the user: Download is ${pct}% complete. Ask again for updated progress; when 100% they can request the transcript.`;
-  return { content: [{ type: 'text', text: out }] };
+  return {
+    content: [
+      {
+        type: 'text',
+        text: formatStatusResponse({
+          status: 'downloading',
+          job_id: id,
+          url,
+          status_url: url,
+          progress: pct,
+          relay: `${pct}% done. Ask for status; when 100% request transcript.`,
+        }),
+      },
+    ],
+  };
 }
