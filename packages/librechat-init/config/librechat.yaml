@@ -645,7 +645,7 @@ mcpServers:
   ytptube:
     type: streamable-http
     url: http://mcp-ytptube:3010/mcp
-    title: Video-Transkripte
+    title: Video Transkripte
     description: Transkripte von Videos anfordern und Status prüfen.
     iconPath: /images/mcp-ytptube-icon.svg
     initTimeout: 120000
