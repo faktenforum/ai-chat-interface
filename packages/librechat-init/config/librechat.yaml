@@ -645,8 +645,8 @@ mcpServers:
   ytptube:
     type: streamable-http
     url: http://mcp-ytptube:3010/mcp
-    title: YTPTube
-    description: Video URLs, transcripts (YTPTube + Scaleway STT). More YTPTube features can be added later.
+    title: Video-Transkripte
+    description: Transkripte von Videos anfordern und Status prüfen.
     iconPath: /images/mcp-ytptube-icon.svg
     initTimeout: 120000
     timeout: 300000   # 5 min — downloads + STT
