@@ -15,6 +15,7 @@ import {
   findItemByUrlInAll,
   getFileBrowser,
   resolveAudioPathFromBrowser,
+  resolveVideoPathFromBrowser,
   buildPublicDownloadUrl,
   type HistoryItem,
 } from '../clients/ytptube.ts';
@@ -106,23 +107,24 @@ export async function getVideoDownloadLink(
     );
   }
 
+  let relativePath: string | null;
   if (type === 'video') {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: formatErrorResponse('Video download path not implemented yet. Use type=audio for transcript audio.'),
-        },
-      ],
-    };
-  }
-
-  const browser = await getFileBrowser(ytp, AUDIO_FOLDER);
-  const relativePath = resolveAudioPathFromBrowser(browser.contents ?? [], item);
-  if (!relativePath) {
-    throw new NotFoundError(
-      `Could not find audio file for finished item ${id} in folder ${AUDIO_FOLDER}. Check YTPTube file browser.`,
-    );
+    const videoFolder = typeof item.folder === 'string' && item.folder.trim() ? item.folder.trim() : '.';
+    const browser = await getFileBrowser(ytp, videoFolder);
+    relativePath = resolveVideoPathFromBrowser(browser.contents ?? [], item);
+    if (!relativePath) {
+      throw new NotFoundError(
+        `Could not find video file for finished item ${id} in folder ${videoFolder}. Check YTPTube file browser or use type=audio for transcript audio.`,
+      );
+    }
+  } else {
+    const browser = await getFileBrowser(ytp, AUDIO_FOLDER);
+    relativePath = resolveAudioPathFromBrowser(browser.contents ?? [], item);
+    if (!relativePath) {
+      throw new NotFoundError(
+        `Could not find audio file for finished item ${id} in folder ${AUDIO_FOLDER}. Check YTPTube file browser.`,
+      );
+    }
   }
 
   const downloadUrl = buildPublicDownloadUrl(relativePath, publicBaseUrl, ytp.apiKey);

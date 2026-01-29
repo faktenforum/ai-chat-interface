@@ -110,9 +110,11 @@ function getAuthHeaders(apiKey?: string): Record<string, string> {
 }
 
 /**
- * Build a public download URL with optional apikey query param (base64url-safe for query string).
- * YTPTube accepts ?apikey=<base64_urlsafe(username:password)>.
- * Path: encode each segment so slashes remain literal (YTPTube expects e.g. transcripts/filename.mp3).
+ * Build a public download URL for direct file access.
+ * YTPTube does not expose an endpoint that returns a download URL; the only way is to construct
+ * the URL per API spec: GET /api/download/{filename} with relative path (URL-encoded segments).
+ * Auth: ?apikey=<base64_urlsafe(username:password)> per API.md.
+ * Path: encode each segment so slashes remain literal (e.g. transcripts/filename.mp3).
  */
 export function buildPublicDownloadUrl(
   relativePath: string,
@@ -727,6 +729,41 @@ export function resolveAudioPathFromBrowser(
   const candidates = (contents ?? []).filter(
     (e) => (e.is_file && e.name?.toLowerCase().endsWith('.mp3')) || e.content_type === 'audio',
   );
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) {
+    const p = candidates[0]!.path ?? candidates[0]!.name;
+    return p ? String(p).replace(/^\//, '') : null;
+  }
+  const slug = title.replace(/[^\w\s-]/g, '').replace(/\s+/g, ' ');
+  for (const c of candidates) {
+    const name = (c.name ?? '').toLowerCase();
+    if (slug && name.includes(slug.toLowerCase().slice(0, 20))) {
+      const p = c.path ?? c.name;
+      return p ? String(p).replace(/^\//, '') : null;
+    }
+  }
+  const first = candidates[0]!;
+  const p = first.path ?? first.name;
+  return p ? String(p).replace(/^\//, '') : null;
+}
+
+const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mkv', '.avi', '.mov', '.m4v', '.flv'];
+
+/**
+ * Resolve the relative path of the video file for a finished history item.
+ * Uses folder from item (or root) and finds a file with video content_type or common video extension.
+ */
+export function resolveVideoPathFromBrowser(
+  contents: FileBrowserEntry[],
+  item: HistoryItem,
+): string | null {
+  const title = (item.title ?? '').trim();
+  const candidates = (contents ?? []).filter((e) => {
+    if (!e.is_file) return false;
+    if (e.content_type === 'video') return true;
+    const name = (e.name ?? '').toLowerCase();
+    return VIDEO_EXTENSIONS.some((ext) => name.endsWith(ext));
+  });
   if (candidates.length === 0) return null;
   if (candidates.length === 1) {
     const p = candidates[0]!.path ?? candidates[0]!.name;
