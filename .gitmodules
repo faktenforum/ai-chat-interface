@@ -42,3 +42,6 @@
 	path = dev/npm-search-mcp
 	url = git@github.com:faktenforum/npm-search-mcp-server.git
 	branch = main
+[submodule "dev/ytptube"]
+	path = dev/ytptube
+	url = https://github.com/arabcoders/ytptube
