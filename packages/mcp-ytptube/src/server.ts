@@ -13,6 +13,10 @@ import type { YTPTubeConfig } from './clients/ytptube.ts';
 import type { ScalewayConfig } from './clients/scaleway.ts';
 import { requestVideoTranscript, type RequestVideoTranscriptDeps } from './tools/request-video-transcript.ts';
 import { getTranscriptStatus } from './tools/get-transcript-status.ts';
+import { getVideoDownloadLink } from './tools/get-video-download-link.ts';
+import { listRecentDownloads } from './tools/list-recent-downloads.ts';
+import { getVideoInfo } from './tools/get-video-info.ts';
+import { getThumbnailUrl } from './tools/get-thumbnail-url.ts';
 import { logger } from './utils/logger.ts';
 import { VideoTranscriptsError } from './utils/errors.ts';
 import { formatErrorResponse } from './utils/response-format.ts';
@@ -114,6 +118,58 @@ function createMcpServer(): McpServer {
       inputSchema: getTranscriptStatusSchema,
     },
     withErrorHandler('get_transcript_status', (a, d) => getTranscriptStatus(a, { ytptube: d.ytptube })),
+  );
+
+  const publicDownloadBaseUrl = process.env.YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL?.trim() || undefined;
+  const getVideoDownloadLinkSchema = {
+    video_url: z.string().url().optional().describe('Video URL to look up'),
+    job_id: z.string().optional().describe('YTPTube history item ID'),
+    type: z.enum(['audio', 'video']).optional().default('audio').describe('Download type: audio (default) or video'),
+  };
+  server.registerTool(
+    'get_video_download_link',
+    {
+      description: 'Direct download link (audio or video) for a finished YTPTube item. Requires status=finished. Returns download_url with credentials when YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL is set.',
+      inputSchema: getVideoDownloadLinkSchema,
+    },
+    withErrorHandler('get_video_download_link', (a) =>
+      getVideoDownloadLink(a, { ytptube, publicDownloadBaseUrl }),
+    ),
+  );
+
+  const listRecentDownloadsSchema = {
+    limit: z.coerce.number().int().min(1).max(100).optional().default(10).describe('Max number of items to return'),
+    status_filter: z.enum(['all', 'finished', 'queue']).optional().default('all').describe('Filter: all, finished, or queue only'),
+  };
+  server.registerTool(
+    'list_recent_downloads',
+    {
+      description: 'Last N history items (queue/done) with title, status, optional download_url when finished. Use status_filter to limit to queue or finished.',
+      inputSchema: listRecentDownloadsSchema,
+    },
+    withErrorHandler('list_recent_downloads', (a) =>
+      listRecentDownloads(a, { ytptube, publicDownloadBaseUrl }),
+    ),
+  );
+
+  const getVideoInfoSchema = { video_url: z.string().url().describe('Video URL to fetch metadata for') };
+  server.registerTool(
+    'get_video_info',
+    {
+      description: 'Metadata (title, duration, extractor) for a URL without downloading – preview before download.',
+      inputSchema: getVideoInfoSchema,
+    },
+    withErrorHandler('get_video_info', (a) => getVideoInfo(a, { ytptube })),
+  );
+
+  const getThumbnailUrlSchema = { video_url: z.string().url().describe('Video URL to get thumbnail for') };
+  server.registerTool(
+    'get_thumbnail_url',
+    {
+      description: 'Link to the video thumbnail (from yt-dlp info; for preview/UI).',
+      inputSchema: getThumbnailUrlSchema,
+    },
+    withErrorHandler('get_thumbnail_url', (a) => getThumbnailUrl(a, { ytptube })),
   );
 
   return server;

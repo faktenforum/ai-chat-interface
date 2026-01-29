@@ -163,11 +163,13 @@ export async function requestVideoTranscript(
     };
   }
 
+  const proxy = process.env.YTPTUBE_PROXY?.trim();
+  const cli = proxy ? `${AUDIO_CLI} --proxy ${proxy}` : AUDIO_CLI;
   const body = {
     url: video_url,
     preset,
     folder: AUDIO_FOLDER,
-    cli: AUDIO_CLI,
+    cli,
     auto_start: true as const,
   };
   let postResult: HistoryItem[];

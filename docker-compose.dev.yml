@@ -215,11 +215,22 @@ services:
     image: ghcr.io/faktenforum/mcp-npm-search:dev
     # No Traefik labels - internal service only
 
-  # YTPTube - internal only in dev (no Traefik/Web UI exposure)
+  # YTPTube - download-only exposed via Traefik (only /api/download); Web UI and rest of API internal
   ytptube:
     extends: { file: docker-compose.ytptube.yml, service: ytptube }
     container_name: ${STACK_NAME:-prod}-ytptube
-    # No Traefik labels - app-net only; volumes from base, names in volumes section below
+    networks:
+      - app-net
+      - traefik-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=loadbalancer-net"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.rule=Host(`ytptube.${DOMAIN:-localhost}`) && PathPrefix(`/api/download`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.service=${STACK_NAME:-prod}-ytptube"
+      - "traefik.http.services.${STACK_NAME:-prod}-ytptube.loadbalancer.server.port=8081"
 
   mcp-ytptube:
     extends: { file: docker-compose.mcp-ytptube.yml, service: mcp-ytptube }

@@ -187,8 +187,8 @@
     {
       "id": "shared-agent-005",
       "name": "Video-Transkripte",
-      "description": "Transkripte von Videos anfordern und Status prüfen – für Vorträge, Erklärvideos und andere Video-URLs",
-      "instructions": "Video transcript specialist. Tools: request_video_transcript(video_url) and get_transcript_status(video_url). LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found. Do not use labels, prefixes or tags in your replies. WORKFLOW: 1) Start with request_video_transcript(video_url). If result=transcript → show metadata and transcript. If result=status (queued|downloading) → inform the user that the download has started (if the video was not already available) and that they should check status to see when it is ready; tell them to ask for status or ask again later. 2) For status checks always use get_transcript_status(video_url=<url>) with the URL from the prior tool response: use status_url from the response when present, otherwise url – do not use job_id (lookup often fails). 3) When status=finished, tell the user they can request the transcript (e.g. ask again for the transcript) to get the text. Always relay the relay= line from tool results to the user. Never invent transcript text. Current date & time: {{current_datetime}}",
+      "description": "Transkripte, Metadaten, Thumbnails und Download-Links für Video-URLs (YouTube, Instagram, TikTok u. a.).",
+      "instructions": "Video specialist. Available tools: request_video_transcript(video_url); get_transcript_status(video_url); get_video_download_link(video_url|job_id, type?); list_recent_downloads(limit?, status_filter?); get_video_info(video_url); get_thumbnail_url(video_url). LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found. Do not use labels, prefixes or tags in your replies. TRANSCRIPT WORKFLOW: 1) request_video_transcript(video_url). If result=transcript → show metadata and transcript. If result=status (queued|downloading) → inform the user the download has started and they should check status; tell them to ask for status or ask again later. 2) For status use get_transcript_status(video_url=<url>) with status_url or url from the prior response – do not use job_id (lookup often fails). 3) When status=finished, user can request transcript again or use get_video_download_link for an audio download link. OTHER TOOLS: get_video_info(video_url) for metadata (title, duration, extractor) without downloading. get_thumbnail_url(video_url) for thumbnail link. list_recent_downloads(limit, status_filter?) for recent queue/done items with optional download_url when finished. get_video_download_link only for finished items; returns download_url when configured. Always relay the relay= line from tool results. Never invent transcript text. Current date & time: {{current_datetime}}",
       "provider": "Scaleway",
       "model": "qwen3-235b-a22b-instruct-2507",
       "model_parameters": {
@@ -201,19 +201,24 @@
       ],
       "mcpTools": [
         "request_video_transcript_mcp_ytptube",
-        "get_transcript_status_mcp_ytptube"
+        "get_transcript_status_mcp_ytptube",
+        "get_video_download_link_mcp_ytptube",
+        "list_recent_downloads_mcp_ytptube",
+        "get_video_info_mcp_ytptube",
+        "get_thumbnail_url_mcp_ytptube"
       ],
       "category": "general",
       "conversation_starters": [
-        "Transkribiere dieses Video für mich",
-        "Wie ist der Status meiner Transkript-Anfrage?",
-        "Erstelle eine Abschrift von dieser Video-URL",
-        "Kann ich den Text dieses Vortrags bekommen?"
+        "Transkribiere dieses Video: https://www.youtube.com/watch?v=jNQXAC9IVRw",
+        "Zeig mir die letzten Downloads",
+        "Video-Infos zu https://www.dailymotion.com/video/xczg00",
+        "Thumbnail zu https://vimeo.com/76979871",
+        "Status zu diesem Video: https://www.pbs.org/video/how-fantasy-reflects-our-world-picecq/"
       ],
       "recursion_limit": 40,
       "isCollaborative": false,
       "permissions": {
-        "public": true,
+        "public": false,
         "publicEdit": false
       }
     }

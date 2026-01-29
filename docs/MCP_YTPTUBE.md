@@ -1,13 +1,17 @@
 # MCP YTPTube
 
-YTPTube-backed MCP server. Video URL → transcript (YTPTube fetches audio; Scaleway transcribes). Internal only (no Traefik). Focus is on transcripts for now; more YTPTube-specific features can be added later.
+YTPTube-backed MCP server. Video URL → transcript (YTPTube fetches audio; Scaleway transcribes). Prod/dev: Traefik exposes only `/api/download` for YTPTube; MCP is internal.
 
 ## Tools
 
 | Tool | Args | Behavior |
 |------|------|----------|
-| `request_video_transcript` | video_url, preset?, language_hint? | Resolve by URL. If finished → result=transcript (metadata + transcript block). If not → result=status (queued\|downloading). If not found → POST to YTPTube, return queued. |
+| `request_video_transcript` | video_url, preset?, language_hint? | Resolve by URL. If finished → result=transcript (metadata + transcript block). If not → result=status (queued\|downloading). If not found → POST to YTPTube, return queued. Optional: `YTPTUBE_PROXY` appends `--proxy` to yt-dlp. |
 | `get_transcript_status` | video_url?, job_id? (one required) | Look up by video_url (preferred) or job_id. Returns result=status, relay. Use video_url from prior response for reliable lookup. |
+| `get_video_download_link` | video_url?, job_id?, type? (default audio) | Direct download link for a **finished** item. Requires `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL`. Returns `download_url=` with `?apikey=` when YTPTube uses auth. |
+| `list_recent_downloads` | limit? (default 10), status_filter? (all\|finished\|queue) | Last N history items (queue/done) with title, status, optional `download_url` when finished. |
+| `get_video_info` | video_url | Metadata (title, duration, extractor) for a URL without downloading – preview before download. |
+| `get_thumbnail_url` | video_url | Link to the video thumbnail (from yt-dlp info; for preview/UI). |
 
 ## Response format
 
@@ -19,7 +23,7 @@ Key=value header lines; high information density:
 
 ## Dependencies
 
-- **YTPTube** – queues URLs, serves audio via HTTP (no shared volume). Local: Web UI at `http://ytptube.{DOMAIN}`; prod/dev: internal only. [GitHub](https://github.com/ArabCoders/ytptube)
+- **YTPTube** – queues URLs, serves audio via HTTP (no shared volume). Local: Web UI at `http://ytptube.{DOMAIN}`; prod/dev: only `https://ytptube.{DOMAIN}/api/download/*` exposed via Traefik (download-only router). Set `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL=https://ytptube.${DOMAIN}` in Portainer so `get_video_download_link` returns valid links. [GitHub](https://github.com/ArabCoders/ytptube)
 - **Scaleway** – `SCALEWAY_BASE_URL` + `SCALEWAY_API_KEY`, OpenAI-compatible `/audio/transcriptions` (e.g. whisper-large-v3).
 
 ## Env (MCP + Compose)
@@ -27,7 +31,9 @@ Key=value header lines; high information density:
 | Var | Description |
 |-----|-------------|
 | `YTPTUBE_URL` | Base URL (default `http://ytptube:8081`). |
-| `YTPTUBE_API_KEY` | Optional; Base64(username:password) when YTPTube uses auth. |
+| `YTPTUBE_API_KEY` | Optional; Base64(username:password) when YTPTube uses auth. Required for download links when YTPTube has auth. |
+| `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` | Optional. Public base URL for download links (e.g. `https://ytptube.${DOMAIN}`). Set in prod/dev so `get_video_download_link` returns working links. |
+| `YTPTUBE_PROXY` | Optional. Proxy URL for yt-dlp (e.g. for Hetzner IP blocking). Appended as `--proxy <value>` to POST /api/history cli. Store in env only. |
 | `SCALEWAY_BASE_URL`, `SCALEWAY_API_KEY` | Required for transcription. |
 | `MCP_YTPTUBE_PORT` / `PORT` | HTTP port (default 3010). |
 | `MCP_YTPTUBE_LOG_LEVEL` / `LOG_LEVEL` | Log level (default `info`). |

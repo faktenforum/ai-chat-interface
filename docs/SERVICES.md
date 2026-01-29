@@ -23,7 +23,7 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 | **VectorDB** | RAG vector database (PostgreSQL + pgvector) | ❌ | ❌ | ✅ Internal only |
 | **RAG API** | Retrieval-Augmented Generation API | ❌ | ❌ | ✅ Internal only |
 | **n8n PostgreSQL** | n8n database | ❌ | ❌ | ✅ Internal only |
-| **YTPTube** | Web UI for yt-dlp (audio/video downloads); used by MCP YTPTube | ✅ Local: `http://ytptube.{DOMAIN}` | ❌ | ✅ Internal only in prod |
+| **YTPTube** | Web UI for yt-dlp (audio/video downloads); used by MCP YTPTube | ✅ Local: `http://ytptube.{DOMAIN}` | ✅ Prod/dev: only `https://ytptube.{DOMAIN}/api/download/*` (download-only router) | ✅ Web UI and rest of API internal in prod/dev |
 | **Firecrawl Services** | Internal Firecrawl dependencies | ❌ | ❌ | ✅ Internal only |
 | - playwright-service | Browser automation | ❌ | ❌ | ✅ Internal only |
 | - redis | Firecrawl cache/queue | ❌ | ❌ | ✅ Internal only |
@@ -84,7 +84,7 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 
 **n8n-init** — Init container that creates n8n owner account via API. Network: `app-net`. Waits for n8n readiness, then calls `/rest/owner/setup` if credentials are provided.
 
-**YTPTube** — yt-dlp Web UI; queues downloads. MCP YTPTube uses it for audio/transcripts. Network: `app-net` (prod/dev); local/local-dev adds `traefik-net` → `http://ytptube.{DOMAIN}`. Image: `ghcr.io/arabcoders/ytptube:latest`
+**YTPTube** — yt-dlp Web UI; queues downloads. MCP YTPTube uses it for audio/transcripts. Network: `app-net` + `traefik-net` (prod/dev: download-only router `PathPrefix(/api/download)` at `https://ytptube.{DOMAIN}/api/download/*`); local/local-dev: full host `http://ytptube.{DOMAIN}`. Image: `ghcr.io/arabcoders/ytptube:latest`
 
 **Firecrawl Internal Services** — playwright-service (browser automation), redis (cache/queue), nuq-postgres (database), rabbitmq (message queue). Network: `firecrawl-network` only (firecrawl-api also has `traefik-net` and `app-net`).
 
@@ -129,7 +129,7 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 
 **npm Search** — npm package search. Network: `app-net`. URL: `http://mcp-npm-search:3009/mcp`.
 
-**YTPTube** — Video URL → transcript (YTPTube audio + Scaleway STT). Tools: `request_video_transcript`, `get_transcript_status`. Extensible for more YTPTube features. Network: `app-net`. URL: `http://mcp-ytptube:3010/mcp`. Details: [MCP YTPTube](MCP_YTPTUBE.md)
+**YTPTube** — Video URL → transcript (YTPTube audio + Scaleway STT). Tools: `request_video_transcript`, `get_transcript_status`, `get_video_download_link`. Extensible for more YTPTube features. Network: `app-net`. URL: `http://mcp-ytptube:3010/mcp`. Details: [MCP YTPTube](MCP_YTPTUBE.md)
 
 **GitHub** — Repository management, issues, pull requests, code search. Remote; requires `MCP_GITHUB_PAT`. URL: `https://api.githubcopilot.com/mcp/`
 

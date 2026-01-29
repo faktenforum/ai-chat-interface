@@ -109,6 +109,26 @@ function getAuthHeaders(apiKey?: string): Record<string, string> {
   return { Authorization: `Basic ${apiKey}` };
 }
 
+/**
+ * Build a public download URL with optional apikey query param (base64url-safe for query string).
+ * YTPTube accepts ?apikey=<base64_urlsafe(username:password)>.
+ * Path: encode each segment so slashes remain literal (YTPTube expects e.g. transcripts/filename.mp3).
+ */
+export function buildPublicDownloadUrl(
+  relativePath: string,
+  publicBaseUrl: string,
+  apiKey?: string,
+): string {
+  const base = (publicBaseUrl ?? '').replace(/\/+$/, '');
+  const segments = relativePath.replace(/^\//, '').split('/').filter(Boolean);
+  const pathEnc = segments.map((s) => encodeURIComponent(s)).join('/');
+  const url = `${base}/api/download/${pathEnc}`;
+  if (!apiKey) return url;
+  const raw = apiKey.includes(':') ? Buffer.from(apiKey, 'utf8').toString('base64') : apiKey;
+  const base64url = raw.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `${url}?apikey=${encodeURIComponent(base64url)}`;
+}
+
 function ensureSlash(url: string): string {
   return url.endsWith('/') ? url : `${url}/`;
 }
@@ -218,6 +238,42 @@ export function normalizeArchiveIdToKey(archiveId: string | null | undefined): s
   if (typeof archiveId !== 'string' || !archiveId.trim()) return null;
   const normalized = archiveId.trim().replace(/\s+/g, ':').toLowerCase();
   return normalized.includes(':') ? normalized : null;
+}
+
+/**
+ * GET /api/yt-dlp/url/info – metadata for a URL without adding to queue.
+ * Returns title, duration, extractor, thumbnail, etc. (yt-dlp info dict).
+ */
+export interface UrlInfoResponse {
+  title?: string;
+  duration?: number;
+  extractor?: string;
+  thumbnail?: string;
+  [key: string]: unknown;
+}
+
+export async function getUrlInfo(config: YTPTubeConfig, videoUrl: string): Promise<UrlInfoResponse> {
+  const base = ensureSlash(config.baseUrl);
+  const enc = encodeURIComponent(videoUrl);
+  const res = await fetch(`${base}api/yt-dlp/url/info?url=${enc}`, {
+    headers: getAuthHeaders(config.apiKey),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    let err: string;
+    try {
+      const j = JSON.parse(text) as { error?: string };
+      err = j.error ?? text;
+    } catch {
+      err = text || res.statusText;
+    }
+    throw new Error(`YTPTube GET /api/yt-dlp/url/info failed (${res.status}): ${err}`);
+  }
+
+  const data = (await res.json()) as UrlInfoResponse;
+  logApiResponse('GET', 'api/yt-dlp/url/info', data);
+  return data;
 }
 
 /**

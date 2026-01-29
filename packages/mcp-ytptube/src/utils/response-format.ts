@@ -69,3 +69,52 @@ export function formatStatusResponse(params: StatusResponseParams): string {
 export function formatErrorResponse(message: string): string {
   return `result=error\nrelay=${message}`;
 }
+
+export interface DownloadLinkResponseParams {
+  download_url: string;
+  relay: string;
+}
+
+/** Key=value block for download link tool (download_url, relay). */
+export function formatDownloadLinkResponse(params: DownloadLinkResponseParams): string {
+  return `download_url=${params.download_url}\nrelay=${params.relay}`;
+}
+
+/** Single line for one item in list_recent_downloads (title, status, url, optional download_url). */
+export function formatListRecentDownloadsItem(params: {
+  title: string;
+  status: string;
+  url?: string;
+  job_id?: string;
+  download_url?: string;
+}): string {
+  const parts = [
+    `title=${params.title}`,
+    `status=${params.status}`,
+  ];
+  if (params.url != null) parts.push(`url=${params.url}`);
+  if (params.job_id != null) parts.push(`job_id=${params.job_id}`);
+  if (params.download_url != null) parts.push(`download_url=${params.download_url}`);
+  return parts.join('\t');
+}
+
+/** Key=value block for get_video_info (title, duration, extractor, relay). */
+export function formatVideoInfoResponse(params: {
+  title?: string;
+  duration?: number;
+  extractor?: string;
+  relay: string;
+  [key: string]: string | number | undefined;
+}): string {
+  const lines: string[] = ['result=video_info'];
+  if (params.title != null) lines.push(`title=${params.title}`);
+  if (params.duration != null) lines.push(`duration=${params.duration}`);
+  if (params.extractor != null) lines.push(`extractor=${params.extractor}`);
+  lines.push(`relay=${params.relay}`);
+  return lines.join('\n');
+}
+
+/** Key=value block for get_thumbnail_url (thumbnail_url, relay). */
+export function formatThumbnailUrlResponse(params: { thumbnail_url: string; relay: string }): string {
+  return `thumbnail_url=${params.thumbnail_url}\nrelay=${params.relay}`;
+}

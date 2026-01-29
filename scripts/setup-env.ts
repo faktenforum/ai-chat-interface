@@ -128,6 +128,10 @@ const PROMPTS: Record<string, PromptConfig> = {
     'MCP_DB_TIMETABLE_CLIENT_ID': { message: 'DB Timetable API Client ID (optional, press enter to skip):', type: 'input' },
     'MCP_DB_TIMETABLE_CLIENT_SECRET': { message: 'DB Timetable API Client Secret (optional, press enter to skip):', type: 'password' },
 
+    // YTPTube MCP
+    'YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL': { message: 'YTPTube public download base URL (optional; e.g. https://ytptube.<DOMAIN>):', type: 'input' },
+    'YTPTUBE_PROXY': { message: 'YTPTube proxy URL (optional; press enter to skip):', type: 'password' },
+
     // Mongo (using --noauth, so INITDB credentials not needed)
     'LIBRECHAT_MONGO_DATABASE': { message: 'Mongo Database Name:', type: 'input', defaultGen: () => 'librechat' },
 
