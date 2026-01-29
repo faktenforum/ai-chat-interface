@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Sync Faktenforum fork submodules with upstream repositories
-#
-# Branch Strategy:
-#   - main: Production branch with Faktenforum-specific modifications
-#   - upstream: Local tracking branch for upstream state
-#
-# Usage: See docs/SUBMODULE_SYNC.md
+# Brings all submodules up to date.
+# (1) git submodule update --init --remote for all (non-forks stay current).
+# (2) For entries with upstream_url: upstream remote, tracking branch; for forks: merge into main.
+# Usage: docs/SUBMODULE_SYNC.md
 
 set -euo pipefail
 
@@ -108,21 +105,21 @@ show_help() {
     cat << EOF
 Usage: $0 [OPTIONS]
 
-Sync Faktenforum fork submodules with their upstream repositories.
+Update all submodules: pull non-forks to latest; for forks, update upstream and merge into main.
 
 OPTIONS:
     --dry-run           Preview changes without applying them
     --force             Skip safety checks (use with caution)
-    --status            Show current sync status of all forks
-    --submodule PATH    Sync only the specified submodule
+    --status            Show sync status (fork/upstream-only submodules)
+    --submodule PATH    Update only the specified submodule
     --branch BRANCH     Sync only the specified branch
     -h, --help          Show this help message
 
 EXAMPLES:
-    $0                  Sync all fork submodules
-    $0 --status         Show sync status
-    $0 --submodule dev/librechat  Sync only LibreChat
-    $0 --dry-run        Preview sync without applying
+    $0                  Update all submodules
+    $0 --status         Show fork/upstream status
+    $0 --submodule dev/librechat  Update only LibreChat
+    $0 --dry-run        Preview without applying
 EOF
 }
 
@@ -287,9 +284,9 @@ get_sync_status() {
     echo "${ahead}:${behind}"
 }
 
-# Show sync status for all submodules
+# Show sync status for fork/upstream-only submodules
 show_status() {
-    log_step "Sync Status for Faktenforum Fork Submodules"
+    log_step "Sync status (fork/upstream-only; non-forks updated by Step 1)"
     
     local config_json
     if [ "$YAML_PARSER" = "python3" ]; then
@@ -326,6 +323,11 @@ show_status() {
             continue
         fi
         
+        # Skip entries without upstream (no status to show)
+        if [ -z "$upstream_url" ]; then
+            continue
+        fi
+        
         echo ""
         log_submodule "${path}"
         if [ -n "$description" ]; then
@@ -352,15 +354,16 @@ show_status() {
             upstream_tracking_branch=$(echo "$line" | yq eval '.upstream_tracking_branch // "upstream"' -)
         fi
         
-        # Get status for main branch (Faktenforum modifications)
-        # Check local branch vs upstream (more accurate than remote comparison)
+        # Get status for main branch (fork: "Faktenforum"; upstream-only: just "Main branch")
+        local main_label="Main branch"
+        [ -n "$fork_url" ] && main_label="Main branch (Faktenforum)"
         cd "${PROJECT_ROOT}/${path}"
         git fetch upstream --quiet 2>/dev/null || true
         
         if ! git rev-parse --verify "$fork_branch" >/dev/null 2>&1; then
-            log_warning "  Main branch (Faktenforum): Branch does not exist locally"
+            log_warning "  ${main_label}: Branch does not exist locally"
         elif ! git rev-parse --verify "upstream/${upstream_branch}" >/dev/null 2>&1; then
-            log_warning "  Main branch (Faktenforum): Cannot determine status (upstream branch missing)"
+            log_warning "  ${main_label}: Cannot determine status (upstream branch missing)"
         else
             local local_ahead=$(git rev-list --count "upstream/${upstream_branch}..${fork_branch}" 2>/dev/null || echo "0")
             local local_behind=$(git rev-list --count "${fork_branch}..upstream/${upstream_branch}" 2>/dev/null || echo "0")
@@ -372,15 +375,15 @@ show_status() {
             fi
             
             if [ "$local_behind" -gt 0 ]; then
-                log_warning "  Main branch (Faktenforum): ${local_behind} commit(s) behind upstream"
+                log_warning "  ${main_label}: ${local_behind} commit(s) behind upstream"
             elif [ "$local_ahead" -gt 0 ]; then
                 if [ "$origin_ahead" -gt 0 ]; then
-                    log_info "  Main branch (Faktenforum): ${local_ahead} commit(s) ahead of upstream (${origin_ahead} unpushed)"
+                    log_info "  ${main_label}: ${local_ahead} commit(s) ahead of upstream (${origin_ahead} unpushed)"
                 else
-                    log_info "  Main branch (Faktenforum): ${local_ahead} commit(s) ahead of upstream"
+                    log_info "  ${main_label}: ${local_ahead} commit(s) ahead of upstream"
                 fi
             else
-                log_success "  Main branch (Faktenforum): Up to date with upstream"
+                log_success "  ${main_label}: Up to date with upstream"
             fi
         fi
         
@@ -538,6 +541,11 @@ sync_submodule() {
         return 0
     fi
     
+    # Skip entries without upstream (e.g. external dev submodules with only post_init)
+    if [ -z "$upstream_url" ]; then
+        return 0
+    fi
+    
     log_step "Syncing ${path}"
     if [ -n "$description" ]; then
         log_info "Description: $description"
@@ -560,43 +568,58 @@ sync_submodule() {
         fi
     fi
     
-    # Setup upstream remote
+    # For non-forks: step 1 already pulled; only add upstream remote for reference (optional). Skip branch logic.
+    if [ -z "$fork_url" ]; then
+        setup_upstream_remote "$path" "$upstream_url"
+        fetch_upstream "$path" || true
+        log_success "Completed (non-fork; already updated in step 1)"
+        return 0
+    fi
+
+    # Fork: setup upstream remote, tracking branch, then merge into main
     setup_upstream_remote "$path" "$upstream_url"
-    
-    # Fetch from upstream
     if ! fetch_upstream "$path"; then
         return 1
     fi
-    
-    # Sync upstream tracking branch first (creates baseline)
+
+    # Sync upstream tracking branch (fork only)
     if [ -z "$SELECTED_BRANCH" ] || [ "$SELECTED_BRANCH" = "$upstream_tracking_branch" ]; then
         sync_upstream_tracking_branch "$path" "$upstream_tracking_branch" "$upstream_branch"
     fi
-    
-    # Then sync main branch (merge upstream into Faktenforum main)
+
     if [ -z "$SELECTED_BRANCH" ] || [ "$SELECTED_BRANCH" = "$fork_branch" ]; then
         sync_main_branch "$path" "$fork_branch" "$upstream_branch"
     fi
-    
+
     log_success "Completed sync for ${path}"
 }
 
-# Main sync function
+# Main update function: (1) pull all submodules, (2) for forks/upstream-only: upstream + merge
 sync_all_submodules() {
-    log_step "Syncing Faktenforum Fork Submodules"
-    
+    log_step "Step 1: Updating all submodules (git submodule update --init --remote)"
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would run: git submodule update --init --remote"
+    else
+        if git submodule update --init --remote; then
+            log_success "All submodules updated"
+        else
+            log_error "Failed to update submodules"
+            exit 1
+        fi
+    fi
+
+    log_step "Step 2: Fork/upstream-only submodules (upstream remote, tracking branch; forks: merge into main)"
     local config_json failed_syncs=0
-    
     config_json=$([ "$YAML_PARSER" = "python3" ] && parse_yaml_python || parse_yaml_yq)
-    
+
     while IFS= read -r line || [ -n "$line" ]; do
         [ -z "$line" ] && continue
         sync_submodule "$line" || ((failed_syncs++))
     done < <(echo "$config_json")
-    
+
     echo ""
     if [ $failed_syncs -eq 0 ]; then
-        log_success "All submodules synced successfully!"
+        log_success "All submodules up to date!"
     else
         log_error "${failed_syncs} submodule(s) failed to sync"
         exit 1
@@ -609,8 +632,8 @@ main() {
     
     echo -e "${BLUE}"
     echo "╔══════════════════════════════════════════════════════════╗"
-    echo "║  Sync Faktenforum Fork Submodules                        ║"
-    echo "║  AI Chat Interface - Fork Sync Tool                     ║"
+    echo "║  Update Submodules                                        ║"
+    echo "║  All submodules up to date; forks: upstream + merge       ║"
     echo "╚══════════════════════════════════════════════════════════╝"
     echo -e "${NC}\n"
     

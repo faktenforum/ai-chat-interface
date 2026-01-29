@@ -93,7 +93,7 @@ isProject: false
 - **Tool:** New module e.g. [packages/mcp-ytptube/src/tools/get-video-download-link.ts](packages/mcp-ytptube/src/tools/get-video-download-link.ts) – resolve item, get path (audio/video), build public URL, response format (key=value + relay).
 - **Schema:** Zod schema for `video_url` / optional `job_id`, optional `type`.
 - **Server:** Register tool in [packages/mcp-ytptube/src/server.ts](packages/mcp-ytptube/src/server.ts); read env `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL`.
-- **Compose/Env:** Document `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` in [docker-compose.mcp-ytptube.yml](docker-compose.mcp-ytptube.yml) and [env.*.example](env.local.example).
+- **Compose/Env:** Document `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` and `YTPTUBE_PROXY` in [docker-compose.mcp-ytptube.yml](docker-compose.mcp-ytptube.yml) and in all three env example files. **Setup script:** In [scripts/setup-env.ts](scripts/setup-env.ts) add `PROMPTS` for both new vars (optional, same pattern as other optional vars); no `AUTO_GENERATED` (see Section 6).
 - **Traefik (download-only router):** In [docker-compose.prod.yml](docker-compose.prod.yml) and [docker-compose.dev.yml](docker-compose.dev.yml) attach YTPTube to traefik-net and add one router with `Host(ytptube.${DOMAIN}) && PathPrefix(/api/download)` (Section 2). No Traefik change locally (stay fully exposed).
 
 ---
@@ -123,3 +123,17 @@ The following three tools are **explicit deliverables** of this plan (not “opt
 - **YTPTube API:** Check whether YTPTube/yt-dlp returns thumbnail URL in info response (`GET /api/yt-dlp/url/info`) or a dedicated endpoint; if served via YTPTube, same protection as download links (only reachable via Traefik path or public URL with apikey).
 - **Output:** `thumbnail_url=...` (direct URL to image); if not available, clear error message; plus relay text for the user.
 
+---
+
+## 6. Proxy Support (optional – e.g. Webshare for Hetzner IP blocking)
+
+**Problem:** YouTube and others may block Hetzner IPs; YTPTube (yt-dlp) downloads can fail. A proxy (e.g. Webshare) can be used to route traffic through another IP.
+
+**Behaviour (optional proxy):**
+
+- **If `YTPTUBE_PROXY` is not set or empty:** Do not add any `--proxy` to the cli; yt-dlp uses direct connection (no proxy).
+- **If `YTPTUBE_PROXY` is set:** Append  `--proxy <value>` to the cli so yt-dlp uses the given proxy for downloads.
+
+**Implementation:** New env `YTPTUBE_PROXY` (optional). When calling POST `/api/history`, build `cli` as existing cli (e.g. `--extract-audio --audio-format mp3`) + only when `YTPTUBE_PROXY` is set and non-empty: `' --proxy ' + YTPTUBE_PROXY`. Add to env example files with comments (purpose, format, optional); pass in docker-compose.mcp-ytptube.yml via `environment:`. Document in docs/MCP_YTPTUBE.md. Proxy URL may contain credentials; store only in env, never commit.
+
+**Setup script ([scripts/setup-env.ts](scripts/setup-env.ts)):** Treat new env vars like other optional/comparable vars. **YTPTUBE_PROXY:** Add to `PROMPTS` (optional, `type: 'password'`, message e.g. "YTPTube proxy URL (optional; press enter to skip):") – same pattern as `MCP_DB_TIMETABLE_CLIENT_SECRET`, `LIBRECHAT_JINA_API_KEY`. **YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL:** Add to `PROMPTS` (optional, `type: 'input'`, message e.g. "YTPTube public download base URL (optional; e.g. [https://ytptube.${DOMAIN}](https://ytptube.${DOMAIN})):") so user can set or skip; or leave to example-file default only (setup still processes from example). Do **not** add to `AUTO_GENERATED` (user-supplied / expansion-based). No `MIGRATIONS` unless renaming an existing key.
