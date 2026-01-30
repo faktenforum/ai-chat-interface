@@ -45,3 +45,6 @@
 [submodule "dev/ytptube"]
 	path = dev/ytptube
 	url = https://github.com/arabcoders/ytptube
+[submodule "dev/mcp-youtube-transcript"]
+	path = dev/mcp-youtube-transcript
+	url = git@github.com:jkawamoto/mcp-youtube-transcript.git
