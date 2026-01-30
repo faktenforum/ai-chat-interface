@@ -235,6 +235,18 @@ services:
       - "127.0.0.1:3010:3010"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
+  mcp-youtube-transcript:
+    extends: { file: docker-compose.mcp-youtube-transcript.yml, service: mcp-youtube-transcript }
+    env_file: .env.local
+    # Build from submodule Dockerfile (like mcp-db-timetable)
+    image: ghcr.io/faktenforum/mcp-youtube-transcript:latest
+    build:
+      context: ./dev/mcp-youtube-transcript
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:3011:3011"  # Cursor IDE – local only
+    # No Traefik labels - internal service only
+
   mcp-db-timetable:
     extends: { file: docker-compose.mcp-db-timetable.yml, service: mcp-db-timetable }
     env_file: .env.local

@@ -22,6 +22,7 @@ The project includes several git submodules in the `/dev` directory:
 - `dev/librechat-doc` - LibreChat documentation
 - `dev/firecrawl` - Firecrawl web scraping service
 - `dev/searxng` - SearXNG metasearch engine
+- `dev/mcp-youtube-transcript` - YouTube Transcript MCP server
 
 ### Initializing Submodules
 

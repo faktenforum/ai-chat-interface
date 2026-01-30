@@ -241,6 +241,12 @@ services:
         condition: service_started
     # No Traefik labels - internal service only
 
+  mcp-youtube-transcript:
+    extends: { file: docker-compose.mcp-youtube-transcript.yml, service: mcp-youtube-transcript }
+    container_name: ${STACK_NAME:-prod}-mcp-youtube-transcript
+    image: ghcr.io/faktenforum/mcp-youtube-transcript:dev
+    # No Traefik labels - internal service only
+
 networks:
   traefik-net:
     external: true

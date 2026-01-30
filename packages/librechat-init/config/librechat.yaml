@@ -541,6 +541,7 @@ mcpSettings:
     - 'mcp-stackoverflow'       # MCP StackOverflow service (Docker network)
     - 'mcp-npm-search'           # MCP npm Search service (Docker network)
     - 'mcp-ytptube'             # MCP YTPTube (YTPTube + Scaleway STT)
+    - 'mcp-youtube-transcript'  # MCP YouTube Transcript (youtube-transcript-api)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     - 'mcp.mapbox.com'           # Mapbox MCP Server (remote hosted)
     # - '*.example.com'           # Wildcard subdomain
@@ -650,6 +651,17 @@ mcpServers:
     iconPath: /images/mcp-ytptube-icon.svg
     initTimeout: 120000
     timeout: 300000   # 5 min — downloads + STT
+    chatMenu: true
+    startup: true
+    serverInstructions: true
+
+  youtube-transcript:
+    type: streamable-http
+    url: http://mcp-youtube-transcript:3011/mcp
+    title: YouTube Transkript
+    description: Transkripte von YouTube-Videos abrufen
+    iconPath: /images/mcp-youtube-transcript-icon.svg
+    initTimeout: 120000
     chatMenu: true
     startup: true
     serverInstructions: true

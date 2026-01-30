@@ -163,7 +163,16 @@ export async function requestVideoTranscript(
     };
   }
 
-  const proxy = process.env.YTPTUBE_PROXY?.trim();
+  const proxy =
+    process.env.YTPTUBE_PROXY?.trim() ||
+    (process.env.WEBSHARE_PROXY_USERNAME && process.env.WEBSHARE_PROXY_PASSWORD
+      ? (() => {
+          const user = encodeURIComponent(process.env.WEBSHARE_PROXY_USERNAME);
+          const pass = encodeURIComponent(process.env.WEBSHARE_PROXY_PASSWORD);
+          const port = process.env.WEBSHARE_PROXY_PORT?.trim() || '80';
+          return `http://${user}:${pass}@p.webshare.io:${port}`;
+        })()
+      : undefined);
   const cli = proxy ? `${AUDIO_CLI} --proxy ${proxy}` : AUDIO_CLI;
   const body = {
     url: video_url,

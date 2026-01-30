@@ -28,16 +28,24 @@ Key=value header lines; high information density:
 
 ## Env (MCP + Compose)
 
+**YTPTube service** (docker-compose.ytptube.yml): `YTP_OUTPUT_TEMPLATE` and `YTP_OUTPUT_TEMPLATE_CHAPTER` are set to bounded values (`%(id)s.%(ext)s`, `%(id)s - %(section_number)s.%(ext)s`) so temp and final filenames stay short and avoid "File name too long" (e.g. Facebook long titles). Override in compose if you need title-based filenames.
+
 | Var | Description |
 |-----|-------------|
 | `YTPTUBE_URL` | Base URL (default `http://ytptube:8081`). |
 | `YTPTUBE_API_KEY` | Optional; Base64(username:password) when YTPTube uses auth. Required for download links when YTPTube has auth. |
 | `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` | Optional. Public base URL for download links (e.g. `https://ytptube.${DOMAIN}`). Set in prod/dev so `get_video_download_link` returns working links. |
-| `YTPTUBE_PROXY` | Optional. Proxy URL for yt-dlp (e.g. for Hetzner IP blocking). Appended as `--proxy <value>` to POST /api/history cli. Store in env only. |
+| `YTPTUBE_PROXY` | Optional. Proxy URL for yt-dlp (e.g. for Hetzner IP blocking). Appended as `--proxy <value>` to POST /api/history cli. Precedence over Webshare env. |
+| `WEBSHARE_PROXY_USERNAME`, `WEBSHARE_PROXY_PASSWORD` | Optional. Webshare fixed proxy (Rotating/Backbone). Used when `YTPTUBE_PROXY` unset; same vars used by mcp-youtube-transcript. |
+| `WEBSHARE_PROXY_PORT` | Optional; default 80. Port for `p.webshare.io` (80, 1080, 3128, or 9999–29999). |
 | `SCALEWAY_BASE_URL`, `SCALEWAY_API_KEY` | Required for transcription. |
 | `MCP_YTPTUBE_PORT` / `PORT` | HTTP port (default 3010). |
 | `MCP_YTPTUBE_LOG_LEVEL` / `LOG_LEVEL` | Log level (default `info`). |
 | `MCP_YTPTUBE_DEBUG_API` | Set to `1` or `true` to log full YTPTube API responses and **each item's keys/sample**. Set **`MCP_YTPTUBE_LOG_LEVEL=debug`** (or `LOG_LEVEL=debug`) so those logs appear. Use to see which fields YTPTube returns (e.g. `archive_id`, `id`, `url`). |
+
+## Webshare proxy (fixed URL)
+
+Use **Rotating Proxy Endpoint** or **Backbone** in [Webshare Proxy List](https://dashboard.webshare.io/proxy/list) (Connection Method dropdown). Set `WEBSHARE_PROXY_USERNAME` and `WEBSHARE_PROXY_PASSWORD` (and optionally `WEBSHARE_PROXY_PORT`, default 80). Same vars used by mcp-youtube-transcript. See [docs/WEBSHARE_PROXY.md](WEBSHARE_PROXY.md) for setup.
 
 ## URL matching
 
