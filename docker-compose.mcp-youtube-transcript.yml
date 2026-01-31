@@ -1,0 +1,60 @@
+# MCP YouTube Transcript – youtube-transcript-api. Internal only (no Traefik).
+# Image: extension files build from dev/mcp-youtube-transcript or pull from registry. Do not use this file alone.
+services:
+  mcp-youtube-transcript:
+    image: ghcr.io/faktenforum/mcp-youtube-transcript:latest
+    container_name: mcp-youtube-transcript
+    entrypoint: []
+    restart: always
+    environment:
+      PORT: ${MCP_YOUTUBE_TRANSCRIPT_PORT:-3011}
+      MCP_YOUTUBE_TRANSCRIPT_PORT: ${MCP_YOUTUBE_TRANSCRIPT_PORT:-3011}
+      WEBSHARE_PROXY_USERNAME: ${WEBSHARE_PROXY_USERNAME:-}
+      WEBSHARE_PROXY_PASSWORD: ${WEBSHARE_PROXY_PASSWORD:-}
+      WEBSHARE_PROXY_PORT: ${WEBSHARE_PROXY_PORT:-80}
+    command:
+      - sh
+      - -c
+      - |
+        exec python -c "
+        import os
+        from mcp.server.transport_security import TransportSecuritySettings
+        from mcp_youtube_transcript import server
+        s = server(
+            response_limit=50000,
+            webshare_proxy_username=os.environ.get('WEBSHARE_PROXY_USERNAME') or None,
+            webshare_proxy_password=os.environ.get('WEBSHARE_PROXY_PASSWORD') or None,
+            http_proxy=os.environ.get('HTTP_PROXY') or None,
+            https_proxy=os.environ.get('HTTPS_PROXY') or None,
+        )
+        s.settings.host = '0.0.0.0'
+        s.settings.port = int(os.environ.get('PORT', '3011'))
+        s.settings.transport_security = TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=['127.0.0.1:*', 'localhost:*', '[::1]:*', 'mcp-youtube-transcript:*'],
+            allowed_origins=['http://127.0.0.1:*', 'http://localhost:*', 'http://[::1]:*', 'http://mcp-youtube-transcript:*'],
+        )
+        s.run(transport='streamable-http')
+        "
+    working_dir: /app
+    expose:
+      - "3011"
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.socket(); s.settimeout(2); r=s.connect_ex(('localhost', 3011)); s.close(); exit(0 if r==0 else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"

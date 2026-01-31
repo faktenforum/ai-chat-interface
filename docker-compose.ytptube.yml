@@ -1,0 +1,39 @@
+# YTPTube – yt-dlp Web UI. Local: Traefik labels in docker-compose.local.yml; prod/dev: app-net only, no auth.
+# Bounded output templates avoid "File name too long" (e.g. Facebook long titles) in temp and final paths.
+services:
+  ytptube:
+    image: ghcr.io/arabcoders/ytptube:latest
+    user: "${UID:-1000}:${GID:-1000}"
+    restart: unless-stopped
+    environment:
+      YTP_OUTPUT_TEMPLATE: "%(id)s.%(ext)s"
+      YTP_OUTPUT_TEMPLATE_CHAPTER: "%(id)s - %(section_number)s.%(ext)s"
+    expose:
+      - "8081"
+    volumes:
+      - ytptube_config:/config:rw
+      - ytptube_downloads:/downloads:rw
+    tmpfs:
+      - /tmp
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8081/api/ping', timeout=5); exit(0 if b'pong' in r.read() else 1)\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M

@@ -215,6 +215,40 @@ services:
     image: ghcr.io/faktenforum/mcp-npm-search:dev
     # No Traefik labels - internal service only
 
+  # YTPTube - download-only exposed via Traefik (only /api/download); Web UI and rest of API internal
+  ytptube:
+    extends: { file: docker-compose.ytptube.yml, service: ytptube }
+    container_name: ${STACK_NAME:-prod}-ytptube
+    networks:
+      - app-net
+      - traefik-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=loadbalancer-net"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.rule=Host(`ytptube.${DOMAIN:-localhost}`) && PathPrefix(`/api/download`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.service=${STACK_NAME:-prod}-ytptube"
+      - "traefik.http.services.${STACK_NAME:-prod}-ytptube.loadbalancer.server.port=8081"
+
+  mcp-ytptube:
+    extends: { file: docker-compose.mcp-ytptube.yml, service: mcp-ytptube }
+    container_name: ${STACK_NAME:-prod}-mcp-ytptube
+    # Use pre-built image from registry (built by GitHub Actions)
+    image: ghcr.io/faktenforum/mcp-ytptube:dev
+    depends_on:
+      ytptube:
+        condition: service_started
+    # No Traefik labels - internal service only
+
+  mcp-youtube-transcript:
+    extends: { file: docker-compose.mcp-youtube-transcript.yml, service: mcp-youtube-transcript }
+    container_name: ${STACK_NAME:-prod}-mcp-youtube-transcript
+    # Use pre-built image from registry (built by GitHub Actions)
+    image: ghcr.io/faktenforum/mcp-youtube-transcript:dev
+    # No Traefik labels - internal service only
+
 networks:
   traefik-net:
     external: true
@@ -243,3 +277,7 @@ volumes:
     name: ${STACK_NAME:-prod}-n8n-pgdata
   n8n_data:
     name: ${STACK_NAME:-prod}-n8n-data
+  ytptube_config:
+    name: ${STACK_NAME:-prod}-ytptube-config
+  ytptube_downloads:
+    name: ${STACK_NAME:-prod}-ytptube-downloads

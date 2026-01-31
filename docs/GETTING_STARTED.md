@@ -14,7 +14,7 @@ This guide will help you set up and deploy the AI Chat Interface platform.
    - Domain settings
    - Database credentials (MongoDB, PostgreSQL)
    - API keys (OpenRouter, Jina)
-   - RabbitMQ credentials (for Firecrawl stability)
+   - RabbitMQ credentials (for Firecrawl)
    - Registration settings (enabled by default for local development)
    - Email verification (enabled by default, uses MailDev for local testing)
 

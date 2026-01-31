@@ -4,10 +4,11 @@ This project uses [Cursor Rules](https://docs.cursor.com/features/rules) to enab
 
 ## Overview
 
-Cursor Rules are workspace-level instructions that guide AI agents through complex integration tasks. Two specialized rules are available:
+Cursor Rules are workspace-level instructions that guide AI agents through complex integration tasks. Specialized rules include:
 
 - **`create-new-service`** - Integration guide for new Docker services
 - **`create-new-mcp`** - Integration guide for new MCP (Model Context Protocol) servers
+- **`debug-test-internal-mcp`** - Debug and test internal (self-hosted) MCP servers; IDE as test client, Docker logs, reload after changes (applies when editing `packages/mcp-*/**`)
 
 ## Usage
 
@@ -22,6 +23,7 @@ Cursor Rules are workspace-level instructions that guide AI agents through compl
 
 - `.cursor/rules/create-new-service.mdc` - Service integration checklist
 - `.cursor/rules/create-new-mcp.mdc` - MCP server integration checklist
+- `.cursor/rules/debug-test-internal-mcp.mdc` - Debug and test internal MCP servers
 
 ## What Gets Created
 

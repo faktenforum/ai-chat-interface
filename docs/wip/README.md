@@ -17,7 +17,7 @@ Vision is **re-enabled as experimental/WIP**. Implementation lives on `feat/visi
 - Agents capability: `- "vision"` (around line 102) with comment `# WIP/experimental`
 - Model specs: `vision: true` on vision-capable models (Scaleway Pixtral/Mistral Small, OpenRouter Claude/GPT/Gemini). Section header references draft PRs.
 
-To bring submodule `main` in line with upstream while keeping vision on `feat/vision`, use **[Submodule Sync Guide](../SUBMODULE_SYNC.md)** (`npm run sync:forks:status`, `npm run sync:forks`, `npm run sync:forks:dry-run`).
+To bring submodule `main` in line with upstream while keeping vision on `feat/vision`, use **[Submodule Sync Guide](../SUBMODULE_SYNC.md)** (`npm run update:submodules:status`, `npm run update:submodules`, `npm run update:submodules:dry-run`).
 
 ## Contents
 

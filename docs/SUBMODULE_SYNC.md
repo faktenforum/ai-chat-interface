@@ -1,18 +1,18 @@
 # Submodule Sync Guide
 
-Synchronize Faktenforum fork submodules with their upstream repositories.
+**update-submodules** brings all submodules up to date: (1) pull all (non-forks stay current), (2) for fork/upstream-only: upstream remote, tracking branch; forks: merge into main. To also build submodules needed for local/local-dev, run **`npm run build:dev`** (or **`npm run prepare:dev`** = update + build).
 
 ## Quick Start
 
 ```bash
-# Check sync status
-npm run sync:forks:status
+# Check fork/upstream status
+npm run update:submodules:status
 
-# Sync all forks
-npm run sync:forks
+# Update all submodules (pull all + fork merge)
+npm run update:submodules
 
-# Preview changes (dry-run)
-npm run sync:forks:dry-run
+# Preview (dry-run)
+npm run update:submodules:dry-run
 ```
 
 ## Branch Strategy
@@ -22,31 +22,27 @@ npm run sync:forks:dry-run
 
 ## Configuration
 
-Upstream repositories are defined in `scripts/submodules-upstream.yaml`. Each entry specifies:
-- `path`: Submodule path
-- `fork_url`: Faktenforum fork repository
-- `upstream_url`: Original upstream repository
-- `upstream_branch`: Upstream branch name (usually `main` or `master`)
-- `fork_branch`: Fork branch name (always `main`)
-- `upstream_tracking_branch`: Local branch name (always `upstream`)
+Config: `scripts/submodules-upstream.yaml` (shared with build-dev-submodules and create-faktenforum-branches). **Only entries with `upstream_url`** get step 2 (upstream remote, tracking branch, merge). All submodules are updated in step 1 (`git submodule update --init --remote`).
+
+Sync-relevant entries: `path`, `upstream_url`, `upstream_branch`, `fork_branch`, `upstream_tracking_branch`; `fork_url` only for Faktenforum forks.
 
 ## Usage
 
 ### Check Status
 
 ```bash
-npm run sync:forks:status
+npm run update:submodules:status
 ```
 
-Shows sync status for all fork submodules:
+Shows sync status for fork/upstream-only submodules:
 - Commits ahead/behind upstream
 - Unpushed commits
 - Upstream tracking branch status
 
-### Sync All Forks
+### Update All Submodules
 
 ```bash
-npm run sync:forks
+npm run update:submodules
 ```
 
 Automatically:
@@ -55,16 +51,16 @@ Automatically:
 3. Merges upstream changes into `main` branches
 4. Handles conflicts interactively
 
-### Sync Specific Submodule
+### Update Specific Submodule
 
 ```bash
-./scripts/sync-fork-submodules.sh --submodule dev/librechat
+./scripts/update-submodules.sh --submodule dev/librechat
 ```
 
 ### Dry Run
 
 ```bash
-npm run sync:forks:dry-run
+npm run update:submodules:dry-run
 ```
 
 Preview changes without applying them.
@@ -84,14 +80,11 @@ When merge conflicts occur:
 
 1. Add entry to `scripts/submodules-upstream.yaml`
 2. Add submodule to `.gitmodules` with `branch = main`
-3. Run `npm run sync:forks:status` to verify
+3. Run `npm run update:submodules:status` to verify
 
 ## Troubleshooting
 
-**Submodule not initialized**
-```bash
-git submodule update --init --remote
-```
+**Submodule not initialized** — Run `npm run update:submodules` to update all submodules (or `git submodule update --init --remote`).
 
 **Uncommitted changes**
 ```bash
@@ -111,10 +104,10 @@ pip3 install pyyaml
 
 ## Workflow Examples
 
-### Regular Sync
+### Regular update
 ```bash
-npm run sync:forks:status  # Check status
-npm run sync:forks         # Sync all
+npm run update:submodules:status  # Check status
+npm run update:submodules         # Update all
 ```
 
 ### Fixing Bugs
@@ -141,7 +134,7 @@ git push origin main
 
 ### After Upstream Accepts PR
 ```bash
-npm run sync:forks  # Automatically merges changes into main
+npm run update:submodules  # Step 1 updates all; step 2 merges upstream into main for forks
 ```
 
 ## Related Documentation
