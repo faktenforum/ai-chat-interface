@@ -235,6 +235,7 @@ services:
   mcp-ytptube:
     extends: { file: docker-compose.mcp-ytptube.yml, service: mcp-ytptube }
     container_name: ${STACK_NAME:-prod}-mcp-ytptube
+    # Use pre-built image from registry (built by GitHub Actions)
     image: ghcr.io/faktenforum/mcp-ytptube:dev
     depends_on:
       ytptube:
@@ -244,6 +245,7 @@ services:
   mcp-youtube-transcript:
     extends: { file: docker-compose.mcp-youtube-transcript.yml, service: mcp-youtube-transcript }
     container_name: ${STACK_NAME:-prod}-mcp-youtube-transcript
+    # Use pre-built image from registry (built by GitHub Actions)
     image: ghcr.io/faktenforum/mcp-youtube-transcript:dev
     # No Traefik labels - internal service only
 
