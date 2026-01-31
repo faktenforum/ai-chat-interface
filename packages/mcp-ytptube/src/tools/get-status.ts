@@ -12,6 +12,7 @@ import {
   getHistoryQueue,
   getHistoryDone,
   findItemByUrlInAll,
+  canonicalKeyForDisplay,
   type HistoryItem,
 } from '../clients/ytptube.ts';
 import { VideoTranscriptsError } from '../utils/errors.ts';
@@ -106,6 +107,7 @@ export async function getStatus(
   const status = (item.status ?? 'unknown').toLowerCase();
   const url = typeof item.url === 'string' ? item.url : undefined;
   const pct = formatProgress(item);
+  const canonical_key = canonicalKeyForDisplay(item, url);
 
   if (status === 'finished') {
     return {
@@ -117,6 +119,7 @@ export async function getStatus(
             job_id: id,
             url,
             status_url: url,
+            canonical_key,
             relay: 'Done. Call request_video_transcript or request_download_link again for transcript or link.',
           }),
         },
@@ -139,6 +142,7 @@ export async function getStatus(
             job_id: id,
             url,
             status_url: url,
+            canonical_key,
             reason,
             relay,
           }),
@@ -157,6 +161,7 @@ export async function getStatus(
             job_id: id,
             url,
             status_url: url,
+            canonical_key,
             relay: 'Queued. Use get_status to check; when finished call request_video_transcript or request_download_link again.',
           }),
         },
@@ -173,6 +178,7 @@ export async function getStatus(
           job_id: id,
           url,
           status_url: url,
+          canonical_key,
           progress: pct,
           relay: `${pct}% done. Ask for status; when 100% call request_video_transcript or request_download_link again.`,
         }),

@@ -21,6 +21,8 @@ import {
   buildPublicDownloadUrl,
   relativePathFromItem,
   postHistory,
+  canonicalKeyForDisplay,
+  canonicalVideoKey,
   MCP_DOWNLOAD_FOLDER,
   type HistoryItem,
 } from '../clients/ytptube.ts';
@@ -28,6 +30,7 @@ import { VideoTranscriptsError, NotFoundError, InvalidCookiesError } from '../ut
 import { isValidNetscapeCookieFormat, INVALID_COOKIES_MESSAGE } from '../utils/netscape-cookies.ts';
 import { logger } from '../utils/logger.ts';
 import { formatDownloadLinkResponse, formatStatusResponse, formatErrorResponse } from '../utils/response-format.ts';
+import { getProxyUrl } from '../utils/env.ts';
 
 const POST_TO_QUEUE_DELAY_MS = 500;
 
@@ -172,7 +175,15 @@ export async function requestDownloadLink(
       if (result.ok) {
         return {
           content: [
-            { type: 'text', text: formatDownloadLinkResponse({ download_url: result.downloadUrl, relay: DOWNLOAD_RELAY }) },
+            {
+              type: 'text',
+              text: formatDownloadLinkResponse({
+                download_url: result.downloadUrl,
+                url: storedUrl ?? video_url,
+                canonical_key: canonicalKeyForDisplay(item, video_url),
+                relay: DOWNLOAD_RELAY,
+              }),
+            },
           ],
         };
       }
@@ -200,6 +211,7 @@ export async function requestDownloadLink(
             job_id: id,
             url: video_url,
             status_url: storedUrl,
+            canonical_key: canonicalKeyForDisplay(item, video_url),
             progress: isQueued ? undefined : pct,
             relay,
           }),
@@ -209,16 +221,7 @@ export async function requestDownloadLink(
   }
 
   // Not found: trigger POST
-  const proxy =
-    process.env.YTPTUBE_PROXY?.trim() ||
-    (process.env.WEBSHARE_PROXY_USERNAME && process.env.WEBSHARE_PROXY_PASSWORD
-      ? (() => {
-          const user = encodeURIComponent(process.env.WEBSHARE_PROXY_USERNAME);
-          const pass = encodeURIComponent(process.env.WEBSHARE_PROXY_PASSWORD);
-          const port = process.env.WEBSHARE_PROXY_PORT?.trim() || '80';
-          return `http://${user}:${pass}@p.webshare.io:${port}`;
-        })()
-      : undefined);
+  const proxy = getProxyUrl();
   const cliBase = type === 'audio' ? '--extract-audio --audio-format mp3' : '';
   const cli = proxy ? (cliBase ? `${cliBase} --proxy ${proxy}` : `--proxy ${proxy}`) : cliBase;
   const body = {
@@ -258,7 +261,15 @@ export async function requestDownloadLink(
       if (result.ok) {
         return {
           content: [
-            { type: 'text', text: formatDownloadLinkResponse({ download_url: result.downloadUrl, relay: DOWNLOAD_RELAY }) },
+            {
+              type: 'text',
+              text: formatDownloadLinkResponse({
+                download_url: result.downloadUrl,
+                url: storedUrl ?? video_url,
+                canonical_key: canonicalKeyForDisplay(item, video_url),
+                relay: DOWNLOAD_RELAY,
+              }),
+            },
           ],
         };
       }
@@ -284,6 +295,7 @@ export async function requestDownloadLink(
             job_id: id,
             url: video_url,
             status_url: storedUrl,
+            canonical_key: canonicalKeyForDisplay(item, video_url),
             progress: isQueued ? undefined : pct,
             relay: 'Use get_status to check; when finished, call request_download_link again for link.',
           }),
@@ -324,6 +336,7 @@ export async function requestDownloadLink(
             job_id: afterFound.id,
             url: video_url,
             status_url: storedUrl,
+            canonical_key: canonicalKeyForDisplay(afterFound.item, video_url),
             relay: 'Use get_status to check; when finished, call request_download_link again for link.',
           }),
         },
@@ -337,10 +350,19 @@ export async function requestDownloadLink(
   if (doneFound && (doneFound.item.status ?? '').toLowerCase() === 'finished') {
     const { item, id } = doneFound;
     const result = await resolveDownloadUrl(ytp, publicBaseUrl, item, id, type);
+    const storedUrl = typeof item.url === 'string' ? item.url : undefined;
     if (result.ok) {
       return {
         content: [
-          { type: 'text', text: formatDownloadLinkResponse({ download_url: result.downloadUrl, relay: DOWNLOAD_RELAY }) },
+          {
+            type: 'text',
+            text: formatDownloadLinkResponse({
+              download_url: result.downloadUrl,
+              url: storedUrl ?? video_url,
+              canonical_key: canonicalKeyForDisplay(item, video_url),
+              relay: DOWNLOAD_RELAY,
+            }),
+          },
         ],
       };
     }
@@ -357,6 +379,7 @@ export async function requestDownloadLink(
         text: formatStatusResponse({
           status: 'queued',
           url: video_url,
+          canonical_key: canonicalVideoKey(video_url) ?? undefined,
           relay: 'Download queued. Use get_status with video_url to check; when finished call request_download_link again for link.',
         }),
       },

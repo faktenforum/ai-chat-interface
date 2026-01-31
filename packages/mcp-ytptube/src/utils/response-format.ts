@@ -19,6 +19,8 @@ export interface TranscriptResponseParams {
   language_used?: string;
   /** When language unknown: instruct LLM to ask user and re-call with language_hint. */
   language_instruction?: string;
+  /** Canonical key for this video (same key = same video); for deduplication and debugging. */
+  canonical_key?: string;
 }
 
 export interface TranscriptResponseBlocks {
@@ -28,7 +30,7 @@ export interface TranscriptResponseBlocks {
 
 /** Two blocks for transcript: metadata (result, url, job_id, transcript_source, language_used?, language_instruction?, relay) and transcript text. */
 export function formatTranscriptResponseAsBlocks(params: TranscriptResponseParams): TranscriptResponseBlocks {
-  const { url, job_id, transcript, fromArchive, status_url, transcript_source, language_used, language_instruction } = params;
+  const { url, job_id, transcript, fromArchive, status_url, transcript_source, language_used, language_instruction, canonical_key } = params;
   const relay = fromArchive
     ? 'Transcript below (from archive).'
     : 'Transcript below.';
@@ -39,6 +41,7 @@ export function formatTranscriptResponseAsBlocks(params: TranscriptResponseParam
     `relay=${relay}`,
   ];
   if (status_url != null && status_url !== url) lines.push(`status_url=${status_url}`);
+  if (canonical_key != null) lines.push(`canonical_key=${canonical_key}`);
   if (transcript_source != null) lines.push(`transcript_source=${transcript_source}`);
   if (language_used != null) lines.push(`language=${language_used}`);
   if (language_instruction != null) lines.push(`language_instruction=${language_instruction}`);
@@ -69,6 +72,8 @@ export interface StatusResponseParams {
   language?: string;
   /** When language unknown: instruct LLM to ask user and re-call with language_hint. */
   language_instruction?: string;
+  /** Canonical key for this video (same key = same video); for deduplication and debugging. */
+  canonical_key?: string;
 }
 
 /** Single key=value block for status (no transcript). */
@@ -77,6 +82,7 @@ export function formatStatusResponse(params: StatusResponseParams): string {
   if (params.job_id != null) parts.push(`job_id=${params.job_id}`);
   if (params.url != null) parts.push(`url=${params.url}`);
   if (params.status_url != null && params.status_url !== params.url) parts.push(`status_url=${params.status_url}`);
+  if (params.canonical_key != null) parts.push(`canonical_key=${params.canonical_key}`);
   if (params.progress != null) parts.push(`progress=${params.progress}%`);
   if (params.reason != null) parts.push(`reason=${params.reason}`);
   if (params.language != null) parts.push(`language=${params.language}`);
@@ -93,20 +99,30 @@ export function formatErrorResponse(message: string): string {
 export interface DownloadLinkResponseParams {
   download_url: string;
   relay: string;
+  /** Video URL this link belongs to; for context. */
+  url?: string;
+  /** Canonical key for this video (same key = same video); for deduplication and debugging. */
+  canonical_key?: string;
 }
 
 /** Key=value block for download link tool (download_url, relay). */
 export function formatDownloadLinkResponse(params: DownloadLinkResponseParams): string {
-  return `download_url=${params.download_url}\nrelay=${params.relay}`;
+  const lines = [`download_url=${params.download_url}`];
+  if (params.url != null) lines.push(`url=${params.url}`);
+  if (params.canonical_key != null) lines.push(`canonical_key=${params.canonical_key}`);
+  lines.push(`relay=${params.relay}`);
+  return lines.join('\n');
 }
 
-/** Single line for one item in list_recent_downloads (title, status, url, optional download_url). */
+/** Single line for one item in list_recent_downloads (title, status, url, optional download_url, canonical_key). */
 export function formatListRecentDownloadsItem(params: {
   title: string;
   status: string;
   url?: string;
   job_id?: string;
   download_url?: string;
+  /** Canonical key for this video (same key = same video); for deduplication and debugging. */
+  canonical_key?: string;
 }): string {
   const parts = [
     `title=${params.title}`,
@@ -115,6 +131,7 @@ export function formatListRecentDownloadsItem(params: {
   if (params.url != null) parts.push(`url=${params.url}`);
   if (params.job_id != null) parts.push(`job_id=${params.job_id}`);
   if (params.download_url != null) parts.push(`download_url=${params.download_url}`);
+  if (params.canonical_key != null) parts.push(`canonical_key=${params.canonical_key}`);
   return parts.join('\t');
 }
 

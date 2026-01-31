@@ -8,7 +8,6 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import * as z from 'zod';
 import type { YTPTubeConfig } from './clients/ytptube.ts';
 import type { ScalewayConfig } from './clients/scaleway.ts';
 import { requestVideoTranscript, type RequestVideoTranscriptDeps } from './tools/request-video-transcript.ts';
@@ -17,6 +16,12 @@ import { requestDownloadLink } from './tools/request-download-link.ts';
 import { listRecentDownloads } from './tools/list-recent-downloads.ts';
 import { getVideoInfo } from './tools/get-video-info.ts';
 import { getThumbnailUrl } from './tools/get-thumbnail-url.ts';
+import { CreateVideoTranscriptSchema } from './schemas/create-video-transcript.schema.ts';
+import { GetStatusSchema } from './schemas/get-status.schema.ts';
+import { RequestDownloadLinkSchema } from './schemas/request-download-link.schema.ts';
+import { ListRecentDownloadsSchema } from './schemas/list-recent-downloads.schema.ts';
+import { GetVideoInfoSchema } from './schemas/get-video-info.schema.ts';
+import { GetThumbnailUrlSchema } from './schemas/get-thumbnail-url.schema.ts';
 import { logger } from './utils/logger.ts';
 import { VideoTranscriptsError } from './utils/errors.ts';
 import { formatErrorResponse } from './utils/response-format.ts';
@@ -113,32 +118,12 @@ Never invent or hallucinate transcript text. Use get_video_info for metadata wit
     };
   };
 
-  const cookiesParamDescription =
-    'Optional. Netscape HTTP Cookie format; for age-restricted, login-required, or 403. User can export from browser (yt-dlp FAQ or extension) and paste in chat or upload file – if file uploaded, use its content here.';
-
-  const requestVideoTranscriptSchema = {
-    video_url: z.string().url().describe('URL of the video to transcribe'),
-    preset: z.string().optional().describe('YTPTube preset name (e.g. for audio-only)'),
-    language_hint: z
-      .string()
-      .optional()
-      .describe(
-        'Force/override transcription language (ISO-639-1, e.g. "de", "en"). Omit → language=unknown; if wrong, ask user and re-call with language_hint.',
-      ),
-    cookies: z.string().optional().describe(cookiesParamDescription),
-  };
-
-  const getStatusSchema = {
-    job_id: z.string().optional().describe('YTPTube item ID to check'),
-    video_url: z.string().url().optional().describe('Video URL to look up (any item)'),
-  };
-
   server.registerTool(
     'request_video_transcript',
     {
       description:
         'Get transcript for a video URL. If exists → transcript; else starts job and returns status. Poll get_status; when finished call again for transcript. Video-only items start a transcript job automatically. language_hint (e.g. "de") forces language; omit → language=unknown + instruction to ask user and re-call if wrong. Optional cookies (Netscape format) for age-restricted or login-required videos; user can paste content or upload file – see server instructions.',
-      inputSchema: requestVideoTranscriptSchema,
+      inputSchema: CreateVideoTranscriptSchema,
     },
     withErrorHandler('request_video_transcript', (a, d) => requestVideoTranscript(a, d)),
   );
@@ -148,63 +133,51 @@ Never invent or hallucinate transcript text. Use get_video_info for metadata wit
     {
       description:
         'Poll status of a YTPTube item (transcript or download). Use video_url (the URL you requested) or job_id (the UUID from a prior response; not the platform video id). When status=finished, call request_video_transcript or request_download_link again to get transcript or link.',
-      inputSchema: getStatusSchema,
+      inputSchema: GetStatusSchema,
     },
     withErrorHandler('get_status', (a, d) => getStatus(a, { ytptube: d.ytptube })),
   );
 
   const publicDownloadBaseUrl = process.env.YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL?.trim() || undefined;
-  const requestDownloadLinkSchema = {
-    video_url: z.string().url().describe('Video URL to request download for'),
-    type: z.enum(['audio', 'video']).optional().default('video').describe('Download type: video (default) or audio'),
-    preset: z.string().optional().describe('YTPTube preset name'),
-    cookies: z.string().optional().describe(cookiesParamDescription),
-  };
   server.registerTool(
     'request_download_link',
     {
       description:
         'Get download link (video or audio) for a video URL. If the file exists, returns download_url; otherwise starts download and returns status=queued. Poll with get_status; when finished call this tool again for the link. Use type=video for video file, type=audio for audio-only (e.g. when only transcript/audio exists). Optional cookies (Netscape format) for age-restricted or login-required videos; user can paste content or upload file – see server instructions.',
-      inputSchema: requestDownloadLinkSchema,
+      inputSchema: RequestDownloadLinkSchema,
     },
     withErrorHandler('request_download_link', (a) =>
       requestDownloadLink(a, { ytptube, publicDownloadBaseUrl }),
     ),
   );
 
-  const listRecentDownloadsSchema = {
-    limit: z.coerce.number().int().min(1).max(100).optional().default(10).describe('Max number of items to return'),
-    status_filter: z.enum(['all', 'finished', 'queue']).optional().default('all').describe('Filter: all, finished, or queue only'),
-  };
   server.registerTool(
     'list_recent_downloads',
     {
       description:
         'List last N YTPTube history items (queue and/or finished). Each item has title, status, url, job_id (UUID; use with get_status), and download_url when finished. Use status_filter: all, finished, or queue.',
-      inputSchema: listRecentDownloadsSchema,
+      inputSchema: ListRecentDownloadsSchema,
     },
     withErrorHandler('list_recent_downloads', (a) =>
       listRecentDownloads(a, { ytptube, publicDownloadBaseUrl }),
     ),
   );
 
-  const getVideoInfoSchema = { video_url: z.string().url().describe('Video URL to fetch metadata for') };
   server.registerTool(
     'get_video_info',
     {
       description:
         'Fetch metadata (title, duration, extractor) for a video URL without downloading. Use to preview or check support before requesting transcript or download.',
-      inputSchema: getVideoInfoSchema,
+      inputSchema: GetVideoInfoSchema,
     },
     withErrorHandler('get_video_info', (a) => getVideoInfo(a, { ytptube })),
   );
 
-  const getThumbnailUrlSchema = { video_url: z.string().url().describe('Video URL to get thumbnail for') };
   server.registerTool(
     'get_thumbnail_url',
     {
       description: 'Get the thumbnail image URL for a video (from yt-dlp). Use for preview or UI.',
-      inputSchema: getThumbnailUrlSchema,
+      inputSchema: GetThumbnailUrlSchema,
     },
     withErrorHandler('get_thumbnail_url', (a) => getThumbnailUrl(a, { ytptube })),
   );

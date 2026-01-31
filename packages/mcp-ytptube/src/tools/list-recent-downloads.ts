@@ -14,6 +14,7 @@ import {
   resolveVideoPathFromBrowser,
   buildPublicDownloadUrl,
   relativePathFromItem,
+  canonicalKeyForDisplay,
   MCP_DOWNLOAD_FOLDER,
   type HistoryItem,
 } from '../clients/ytptube.ts';
@@ -108,7 +109,8 @@ export async function listRecentDownloads(
     if (status === 'finished' && publicBaseUrl) {
       download_url = await getDownloadUrlForItem(ytp, item, publicBaseUrl);
     }
-    lines.push(formatListRecentDownloadsItem({ title, status, url, job_id: id != null ? String(id) : undefined, download_url }));
+    const canonical_key = canonicalKeyForDisplay(item, url);
+    lines.push(formatListRecentDownloadsItem({ title, status, url, job_id: id != null ? String(id) : undefined, download_url, canonical_key }));
   }
 
   const relay = `Listed ${lines.length} item(s). Use request_download_link for a direct link when status=finished.`;
