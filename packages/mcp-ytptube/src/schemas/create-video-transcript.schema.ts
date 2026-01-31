@@ -9,6 +9,12 @@ export const CreateVideoTranscriptSchema = z.object({
     .describe(
       'Force/override transcription language (ISO-639-1, e.g. "de", "en"). Omit → language=unknown; if wrong, ask user and re-call with language_hint.',
     ),
+  cookies: z
+    .string()
+    .optional()
+    .describe(
+      'Optional. Netscape HTTP Cookie format; for age-restricted, login-required, or 403. User can export from browser (yt-dlp FAQ or extension) and paste in chat or upload file – if file uploaded, use its content here.',
+    ),
 });
 
 export type CreateVideoTranscriptInput = z.infer<typeof CreateVideoTranscriptSchema>;

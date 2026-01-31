@@ -17,6 +17,13 @@ export class InvalidUrlError extends VideoTranscriptsError {
   }
 }
 
+export class InvalidCookiesError extends VideoTranscriptsError {
+  constructor(message: string) {
+    super(message, 'INVALID_COOKIES', true);
+    this.name = 'InvalidCookiesError';
+  }
+}
+
 export class YTPTubeError extends VideoTranscriptsError {
   constructor(message: string, public readonly status?: string) {
     super(message, 'YTPTUBE_ERROR', true);

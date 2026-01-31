@@ -8,8 +8,8 @@ YTPTube-backed MCP server. Video URL → transcript (YTPTube fetches audio; Scal
 
 | Tool | Args | Behavior |
 |------|------|----------|
-| `request_video_transcript` | video_url, preset?, language_hint? | **Transcript.** Resolve by URL; if finished → transcript; else status or POST + queued. **language_hint** (ISO-639-1) forces language; omit → `language=unknown` + `language_instruction` (ask user, re-call if wrong). Prefer platform subtitles; fallback: audio + Scaleway. Optional: `YTPTUBE_PROXY`, `YTPTUBE_SUB_LANGS`. |
-| `request_download_link` | video_url, type? (default video), preset? | For **download link** (video or audio). Resolve by URL. If finished → download_url. If not → result=status. If not found → POST (video or audio per type), return queued. Requires `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL`. |
+| `request_video_transcript` | video_url, preset?, language_hint?, cookies? | **Transcript.** Resolve by URL; if finished → transcript; else status or POST + queued. **language_hint** (ISO-639-1) forces language; omit → `language=unknown` + `language_instruction` (ask user, re-call if wrong). **cookies?** (Netscape format) for age-restricted/login/403. Prefer platform subtitles; fallback: audio + Scaleway. Optional: `YTPTUBE_PROXY`, `YTPTUBE_SUB_LANGS`. |
+| `request_download_link` | video_url, type? (default video), preset?, cookies? | For **download link** (video or audio). Resolve by URL. If finished → download_url. If not → result=status. If not found → POST (video or audio per type), return queued. **cookies?** (Netscape format) for age-restricted/login/403. Requires `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL`. |
 | `get_status` | video_url?, job_id? (one required) | **Unified status** for any YTPTube item (transcript or download). Use **job_id** (internal UUID from prior response) or **video_url** for lookup. When finished, call the same request tool again for transcript or link. |
 | `list_recent_downloads` | limit? (default 10), status_filter? (all\|finished\|queue) | Last N history items (queue/done) with title, status, optional `download_url` when finished. Use `request_download_link` for a direct link when status=finished. |
 | `get_video_info` | video_url | Metadata (title, duration, extractor) for a URL without downloading – preview before download. |
@@ -27,6 +27,14 @@ Key=value header lines; high information density:
 
 - **Without `language_hint`:** No language sent to Scaleway; responses include `language=unknown` and `language_instruction`. LLM tells user language was unspecified and may be wrong; if wrong, ask for correct language and re-call with `language_hint` (e.g. `"de"`).
 - **With `language_hint`:** Sent as `language` to API; improves accuracy when user already indicated video language.
+
+## Cookies
+
+Optional **cookies** (Netscape HTTP Cookie format) for 403, age-restricted, login-only, or geo-blocked videos. First line of the file must be `# HTTP Cookie File` or `# Netscape HTTP Cookie File`. **Cookies are not stored server-side;** for multiple videos in the same conversation, the LLM reuses the cookie content the user provided and passes it again in each request.
+
+- **Export:** Browser extension (e.g. "Get cookies.txt LOCALLY" for Chrome, "cookies.txt" for Firefox) or yt-dlp: `yt-dlp --cookies-from-browser chrome --cookies cookies.txt`. See [yt-dlp FAQ – How do I pass cookies to yt-dlp](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp).
+- **In chat:** User pastes cookie content or uploads the file; LLM passes the content as the `cookies` parameter to `request_video_transcript` or `request_download_link`. In LibreChat, a cookies file exported via the browser extension can be uploaded as **Upload as Text**. Cookie content is sensitive; advise sharing only in trusted chats.
+- **MCP:** Cookie usage is described in server **instructions** and in the **prompt** `cookies_usage` (title: "How to use cookies with YTPTube"); clients can list prompts and invoke it when the user asks about cookies.
 
 ## LibreChat and status polling
 

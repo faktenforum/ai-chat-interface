@@ -73,6 +73,8 @@ Video-only: If the item was only downloaded as video, request_video_transcript s
 
 Transcript language: Without language_hint, responses include language=unknown and language_instruction. Tell the user the language was unspecified and may be wrong; if wrong, ask for the correct language and re-call with language_hint (e.g. "de"). Pass language_hint proactively when the user already indicated the video language.
 
+Cookies: Optional cookies (Netscape HTTP Cookie format) help with 403, age-restricted, login-only, or geo-blocked videos. First line of the file must be "# HTTP Cookie File" or "# Netscape HTTP Cookie File" (see yt-dlp FAQ). User can export from browser (e.g. extension "Get cookies.txt LOCALLY" / "cookies.txt" for Firefox, or yt-dlp --cookies-from-browser … --cookies file.txt) then paste the content in chat or upload the file. In LibreChat, a cookies file exported via the browser extension can be uploaded as "Upload as Text". If the user uploads a file, read its content and pass it as the cookies parameter to request_video_transcript or request_download_link. Cookies are not stored server-side; for multiple videos in the same conversation, reuse the cookie content the user provided and pass it again in each request. When the user asks about cookies or reports 403/age-restriction, explain these steps and use the provided cookie content on the next request. Cookie content is sensitive; advise sharing only in trusted chats.
+
 Never invent or hallucinate transcript text. Use get_video_info for metadata without downloading; use list_recent_downloads to see queue/history (job_id there is UUID).`,
     },
   );
@@ -111,6 +113,9 @@ Never invent or hallucinate transcript text. Use get_video_info for metadata wit
     };
   };
 
+  const cookiesParamDescription =
+    'Optional. Netscape HTTP Cookie format; for age-restricted, login-required, or 403. User can export from browser (yt-dlp FAQ or extension) and paste in chat or upload file – if file uploaded, use its content here.';
+
   const requestVideoTranscriptSchema = {
     video_url: z.string().url().describe('URL of the video to transcribe'),
     preset: z.string().optional().describe('YTPTube preset name (e.g. for audio-only)'),
@@ -120,6 +125,7 @@ Never invent or hallucinate transcript text. Use get_video_info for metadata wit
       .describe(
         'Force/override transcription language (ISO-639-1, e.g. "de", "en"). Omit → language=unknown; if wrong, ask user and re-call with language_hint.',
       ),
+    cookies: z.string().optional().describe(cookiesParamDescription),
   };
 
   const getStatusSchema = {
@@ -131,7 +137,7 @@ Never invent or hallucinate transcript text. Use get_video_info for metadata wit
     'request_video_transcript',
     {
       description:
-        'Get transcript for a video URL. If exists → transcript; else starts job and returns status. Poll get_status; when finished call again for transcript. Video-only items start a transcript job automatically. language_hint (e.g. "de") forces language; omit → language=unknown + instruction to ask user and re-call if wrong.',
+        'Get transcript for a video URL. If exists → transcript; else starts job and returns status. Poll get_status; when finished call again for transcript. Video-only items start a transcript job automatically. language_hint (e.g. "de") forces language; omit → language=unknown + instruction to ask user and re-call if wrong. Optional cookies (Netscape format) for age-restricted or login-required videos; user can paste content or upload file – see server instructions.',
       inputSchema: requestVideoTranscriptSchema,
     },
     withErrorHandler('request_video_transcript', (a, d) => requestVideoTranscript(a, d)),
@@ -152,12 +158,13 @@ Never invent or hallucinate transcript text. Use get_video_info for metadata wit
     video_url: z.string().url().describe('Video URL to request download for'),
     type: z.enum(['audio', 'video']).optional().default('video').describe('Download type: video (default) or audio'),
     preset: z.string().optional().describe('YTPTube preset name'),
+    cookies: z.string().optional().describe(cookiesParamDescription),
   };
   server.registerTool(
     'request_download_link',
     {
       description:
-        'Get download link (video or audio) for a video URL. If the file exists, returns download_url; otherwise starts download and returns status=queued. Poll with get_status; when finished call this tool again for the link. Use type=video for video file, type=audio for audio-only (e.g. when only transcript/audio exists).',
+        'Get download link (video or audio) for a video URL. If the file exists, returns download_url; otherwise starts download and returns status=queued. Poll with get_status; when finished call this tool again for the link. Use type=video for video file, type=audio for audio-only (e.g. when only transcript/audio exists). Optional cookies (Netscape format) for age-restricted or login-required videos; user can paste content or upload file – see server instructions.',
       inputSchema: requestDownloadLinkSchema,
     },
     withErrorHandler('request_download_link', (a) =>
@@ -200,6 +207,26 @@ Never invent or hallucinate transcript text. Use get_video_info for metadata wit
       inputSchema: getThumbnailUrlSchema,
     },
     withErrorHandler('get_thumbnail_url', (a) => getThumbnailUrl(a, { ytptube })),
+  );
+
+  const cookiesUsagePromptText = [
+    'Use cookies (Netscape HTTP Cookie format) with request_video_transcript or request_download_link when the user hits 403, age-restriction, or login-only.',
+    'Format: first line "# HTTP Cookie File" or "# Netscape HTTP Cookie File"; data lines tab-separated (domain, flag, path, secure, expires, name, value).',
+    'User can export from browser (extension "Get cookies.txt LOCALLY" / "cookies.txt" for Firefox, or yt-dlp --cookies-from-browser … --cookies file.txt), then paste in chat or upload the file. In LibreChat, a cookies file exported via the browser extension can be uploaded as "Upload as Text".',
+    'Read file content and pass it as the cookies parameter. Cookies are not stored server-side; for multiple videos in the same conversation, reuse the cookie content the user provided and pass it again in each request.',
+    'Advise sharing cookies only in trusted chats. See https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp',
+  ].join(' ');
+
+  server.registerPrompt(
+    'cookies_usage',
+    {
+      title: 'How to use cookies with YTPTube',
+      description:
+        'Instructions for using Netscape-format cookies with request_video_transcript and request_download_link (403, age-restricted, login-only). Cookies are not stored; reuse from conversation for multiple videos.',
+    },
+    () => ({
+      messages: [{ role: 'user', content: { type: 'text', text: cookiesUsagePromptText } }],
+    }),
   );
 
   return server;

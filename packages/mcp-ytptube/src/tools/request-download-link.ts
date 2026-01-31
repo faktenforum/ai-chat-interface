@@ -24,7 +24,8 @@ import {
   MCP_DOWNLOAD_FOLDER,
   type HistoryItem,
 } from '../clients/ytptube.ts';
-import { VideoTranscriptsError, NotFoundError } from '../utils/errors.ts';
+import { VideoTranscriptsError, NotFoundError, InvalidCookiesError } from '../utils/errors.ts';
+import { isValidNetscapeCookieFormat, INVALID_COOKIES_MESSAGE } from '../utils/netscape-cookies.ts';
 import { logger } from '../utils/logger.ts';
 import { formatDownloadLinkResponse, formatStatusResponse, formatErrorResponse } from '../utils/response-format.ts';
 
@@ -141,7 +142,10 @@ export async function requestDownloadLink(
     throw new VideoTranscriptsError(msg, 'VALIDATION_ERROR');
   }
 
-  const { video_url, type, preset } = parsed.data as RequestDownloadLinkInput;
+  const { video_url, type, preset, cookies } = parsed.data as RequestDownloadLinkInput;
+  if (cookies?.trim() && !isValidNetscapeCookieFormat(cookies)) {
+    throw new InvalidCookiesError(INVALID_COOKIES_MESSAGE);
+  }
   const ytp = deps.ytptube;
   const publicBaseUrl = deps.publicDownloadBaseUrl;
 
@@ -223,6 +227,7 @@ export async function requestDownloadLink(
     folder: MCP_DOWNLOAD_FOLDER,
     cli: cli || undefined,
     auto_start: true as const,
+    ...(cookies?.trim() && { cookies: cookies.trim() }),
   };
 
   let postResult: HistoryItem[];

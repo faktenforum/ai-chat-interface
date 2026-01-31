@@ -30,11 +30,13 @@ import type { ScalewayConfig } from '../clients/scaleway.ts';
 import { transcribe } from '../clients/scaleway.ts';
 import {
   InvalidUrlError,
+  InvalidCookiesError,
   YTPTubeError,
   TranscriptionError,
   NotFoundError,
   VideoTranscriptsError,
 } from '../utils/errors.ts';
+import { isValidNetscapeCookieFormat, INVALID_COOKIES_MESSAGE } from '../utils/netscape-cookies.ts';
 import { logger } from '../utils/logger.ts';
 import { formatTranscriptResponseAsBlocks, formatStatusResponse } from '../utils/response-format.ts';
 import { vttToPlainText } from '../utils/vtt-to-text.ts';
@@ -92,7 +94,7 @@ async function startTranscriptJobAndReturnQueued(
   video_url: string,
   preset: string | undefined,
   lang: string | undefined,
-  options: { relay?: string; language?: string; language_instruction?: string } = {},
+  options: { relay?: string; language?: string; language_instruction?: string; cookies?: string } = {},
 ): Promise<{ content: TextContent[] }> {
   const { ytptube: ytp } = deps;
   const relay = options.relay ?? DEFAULT_QUEUED_RELAY;
@@ -129,6 +131,7 @@ async function startTranscriptJobAndReturnQueued(
     folder: MCP_DOWNLOAD_FOLDER,
     cli,
     auto_start: true as const,
+    ...(options.cookies?.trim() && { cookies: options.cookies.trim() }),
   };
 
   let postResult: HistoryItem[];
@@ -198,7 +201,10 @@ export async function requestVideoTranscript(
     throw new InvalidUrlError(msg);
   }
 
-  const { video_url, preset, language_hint } = parsed.data as CreateVideoTranscriptInput;
+  const { video_url, preset, language_hint, cookies } = parsed.data as CreateVideoTranscriptInput;
+  if (cookies?.trim() && !isValidNetscapeCookieFormat(cookies)) {
+    throw new InvalidCookiesError(INVALID_COOKIES_MESSAGE);
+  }
   const lang = language_hint?.trim() ? language_hint.trim().slice(0, 2).toLowerCase() : undefined;
   const ytp = deps.ytptube;
   const scw = deps.scaleway;
@@ -265,6 +271,7 @@ export async function requestVideoTranscript(
         if (pathFromItem && isVideoPath(pathFromItem)) {
           return startTranscriptJobAndReturnQueued(deps, video_url, preset, lang, {
             relay: VIDEO_ONLY_QUEUED_RELAY,
+            ...(cookies?.trim() && { cookies: cookies.trim() }),
           });
         }
         if (contents.length === 0) {
@@ -275,6 +282,7 @@ export async function requestVideoTranscript(
         if (videoPath) {
           return startTranscriptJobAndReturnQueued(deps, video_url, preset, lang, {
             relay: VIDEO_ONLY_QUEUED_RELAY,
+            ...(cookies?.trim() && { cookies: cookies.trim() }),
           });
         }
         throw new NotFoundError(
@@ -389,6 +397,7 @@ export async function requestVideoTranscript(
     folder: MCP_DOWNLOAD_FOLDER,
     cli,
     auto_start: true as const,
+    ...(cookies?.trim() && { cookies: cookies.trim() }),
   };
   let postResult: HistoryItem[];
   try {
