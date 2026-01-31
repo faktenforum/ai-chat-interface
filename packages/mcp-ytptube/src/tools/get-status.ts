@@ -157,7 +157,7 @@ export async function getStatus(
             job_id: id,
             url,
             status_url: url,
-            relay: 'Queued. Ask again for status.',
+            relay: 'Queued. Use get_status to check; when finished call request_video_transcript or request_download_link again.',
           }),
         },
       ],

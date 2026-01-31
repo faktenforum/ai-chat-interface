@@ -108,6 +108,7 @@ async function resolveDownloadUrl(
     if (type === 'video' && isAudioExtension(relativePath)) return { ok: false, error: 'no_video' };
     return { ok: true, downloadUrl: buildPublicDownloadUrl(relativePath, publicBaseUrl, ytp.apiKey) };
   }
+  // Defensive fallback for type safety (unreachable in normal flow).
   return {
     ok: false,
     error: 'not_found',
