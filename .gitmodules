@@ -48,3 +48,6 @@
 [submodule "dev/mcp-youtube-transcript"]
 	path = dev/mcp-youtube-transcript
 	url = git@github.com:jkawamoto/mcp-youtube-transcript.git
+[submodule "dev/yt-dlp"]
+	path = dev/yt-dlp
+	url = git@github.com:yt-dlp/yt-dlp.git
