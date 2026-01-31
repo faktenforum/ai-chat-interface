@@ -15,6 +15,10 @@ export interface TranscriptResponseParams {
   status_url?: string;
   /** How the transcript was obtained: platform_subtitles = from video subtitles/captions; transcription = generated from audio (e.g. Scaleway). */
   transcript_source?: TranscriptSource;
+  /** ISO-639-1 or "unknown" when no language_hint; used for transcript metadata. */
+  language_used?: string;
+  /** When language unknown: instruct LLM to ask user and re-call with language_hint. */
+  language_instruction?: string;
 }
 
 export interface TranscriptResponseBlocks {
@@ -22,9 +26,9 @@ export interface TranscriptResponseBlocks {
   transcript: string;
 }
 
-/** Two blocks for transcript: metadata (result, url, job_id, transcript_source, relay) and transcript text. */
+/** Two blocks for transcript: metadata (result, url, job_id, transcript_source, language_used?, language_instruction?, relay) and transcript text. */
 export function formatTranscriptResponseAsBlocks(params: TranscriptResponseParams): TranscriptResponseBlocks {
-  const { url, job_id, transcript, fromArchive, status_url, transcript_source } = params;
+  const { url, job_id, transcript, fromArchive, status_url, transcript_source, language_used, language_instruction } = params;
   const relay = fromArchive
     ? 'Transcript below (from archive).'
     : 'Transcript below.';
@@ -36,6 +40,8 @@ export function formatTranscriptResponseAsBlocks(params: TranscriptResponseParam
   ];
   if (status_url != null && status_url !== url) lines.push(`status_url=${status_url}`);
   if (transcript_source != null) lines.push(`transcript_source=${transcript_source}`);
+  if (language_used != null) lines.push(`language=${language_used}`);
+  if (language_instruction != null) lines.push(`language_instruction=${language_instruction}`);
   const metadata = lines.join('\n');
   const transcriptText =
     (transcript_source != null ? `[transcript_source=${transcript_source}]\n` : '') +
@@ -59,6 +65,10 @@ export interface StatusResponseParams {
   progress?: number;
   reason?: string;
   relay: string;
+  /** For transcript jobs: ISO-639-1 or "unknown"; same semantics as transcript language_used. */
+  language?: string;
+  /** When language unknown: instruct LLM to ask user and re-call with language_hint. */
+  language_instruction?: string;
 }
 
 /** Single key=value block for status (no transcript). */
@@ -69,6 +79,8 @@ export function formatStatusResponse(params: StatusResponseParams): string {
   if (params.status_url != null && params.status_url !== params.url) parts.push(`status_url=${params.status_url}`);
   if (params.progress != null) parts.push(`progress=${params.progress}%`);
   if (params.reason != null) parts.push(`reason=${params.reason}`);
+  if (params.language != null) parts.push(`language=${params.language}`);
+  if (params.language_instruction != null) parts.push(`language_instruction=${params.language_instruction}`);
   parts.push(`relay=${params.relay}`);
   return parts.join('\n');
 }

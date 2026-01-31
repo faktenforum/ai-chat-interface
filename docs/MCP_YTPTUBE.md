@@ -8,7 +8,7 @@ YTPTube-backed MCP server. Video URL → transcript (YTPTube fetches audio; Scal
 
 | Tool | Args | Behavior |
 |------|------|----------|
-| `request_video_transcript` | video_url, preset?, language_hint? | For **transcript**. Resolve by URL. If finished → result=transcript (metadata + transcript block). If not → result=status. If not found → POST (subs only if platform has subtitles, else audio); return queued. Prefer platform subtitles (no audio download); fallback: audio + Scaleway. Optional: `YTPTUBE_PROXY`, `YTPTUBE_SUB_LANGS`. |
+| `request_video_transcript` | video_url, preset?, language_hint? | **Transcript.** Resolve by URL; if finished → transcript; else status or POST + queued. **language_hint** (ISO-639-1) forces language; omit → `language=unknown` + `language_instruction` (ask user, re-call if wrong). Prefer platform subtitles; fallback: audio + Scaleway. Optional: `YTPTUBE_PROXY`, `YTPTUBE_SUB_LANGS`. |
 | `request_download_link` | video_url, type? (default video), preset? | For **download link** (video or audio). Resolve by URL. If finished → download_url. If not → result=status. If not found → POST (video or audio per type), return queued. Requires `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL`. |
 | `get_status` | video_url?, job_id? (one required) | **Unified status** for any YTPTube item (transcript or download). Use **job_id** (internal UUID from prior response) or **video_url** for lookup. When finished, call the same request tool again for transcript or link. |
 | `list_recent_downloads` | limit? (default 10), status_filter? (all\|finished\|queue) | Last N history items (queue/done) with title, status, optional `download_url` when finished. Use `request_download_link` for a direct link when status=finished. |
@@ -19,15 +19,24 @@ YTPTube-backed MCP server. Video URL → transcript (YTPTube fetches audio; Scal
 
 Key=value header lines; high information density:
 
-- **Transcript:** Two content blocks: (1) metadata `result=transcript`, `url`, `job_id`, `status_url?`, `transcript_source`, `relay`; (2) transcript text. `transcript_source` is either `platform_subtitles` (from video subtitles/captions) or `transcription` (generated from audio via STT). For single-block clients, the first line of the transcript block may repeat `[transcript_source=…]` so the source is visible.
-- **Status:** `result=status`, `status=queued|downloading|finished|error|not_found`, `job_id?`, `url?`, `status_url?`, `progress?`, `reason?`, `relay`. **job_id** is the internal item ID (UUID); use it with `get_status(job_id=…)` for polling. **url** or **status_url** can also be used as `video_url` in `get_status`.
+- **Transcript:** (1) metadata: `result=transcript`, `url`, `job_id`, `status_url?`, `transcript_source`, `language?` (ISO-639-1 or `unknown`), `language_instruction?`, `relay`; (2) transcript text. `transcript_source`: `platform_subtitles` or `transcription`. Single-block clients may repeat `[transcript_source=…]` on first line.
+- **Status:** `result=status`, `status=…`, `job_id?`, `url?`, `status_url?`, `progress?`, `reason?`, `language?`, `language_instruction?`, `relay`. Use `job_id` or `url`/`status_url` with `get_status`.
 - **Error:** `result=error`, `relay=`.
+
+## Transcript language
+
+- **Without `language_hint`:** No language sent to Scaleway; responses include `language=unknown` and `language_instruction`. LLM tells user language was unspecified and may be wrong; if wrong, ask for correct language and re-call with `language_hint` (e.g. `"de"`).
+- **With `language_hint`:** Sent as `language` to API; improves accuracy when user already indicated video language.
+
+## LibreChat and status polling
+
+No automatic MCP polling. LLM instructs user to ask for status (e.g. "What is the status?"); then calls `get_status` and replies. Do not promise to monitor or check back automatically.
 
 ## Dependencies
 
 - **YTPTube** – queues URLs, serves audio via HTTP (no shared volume). Local: Web UI at `http://ytptube.{DOMAIN}`; prod/dev: only `https://ytptube.{DOMAIN}/api/download/*` exposed via Traefik (download-only router). Set `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL=https://ytptube.${DOMAIN}` in Portainer so `request_download_link` returns valid links. [GitHub](https://github.com/ArabCoders/ytptube)
 - **yt-dlp** – YTPTube uses yt-dlp for metadata and downloads. We keep the submodule at `dev/yt-dlp` as **reference only** (we do not build from it; YTPTube uses its own yt-dlp dependency). The **full list of supported sites** is in [dev/yt-dlp/supportedsites.md](dev/yt-dlp/supportedsites.md). Theoretically YTPTube supports all sites listed there; in practice some extractors may be broken, geo-restricted, or require cookies/netrc.
-- **Scaleway** – `SCALEWAY_BASE_URL` + `SCALEWAY_API_KEY`, OpenAI-compatible `/audio/transcriptions` (e.g. whisper-large-v3). Language is auto-detected when not passed; when `language_hint` is provided, it is sent as `language` to the API for better accuracy.
+- **Scaleway** – `SCALEWAY_BASE_URL` + `SCALEWAY_API_KEY`, OpenAI-compatible `/audio/transcriptions` (e.g. whisper-large-v3). Omit `language_hint` → no language sent; responses include `language=unknown` and `language_instruction`. With `language_hint` → sent as `language` to API.
 
 ## Platform support (yt-dlp)
 
@@ -81,10 +90,15 @@ For **finished** items, the YTPTube History API may return `filename` (and `fold
 Items are matched by URL, by YTPTube identifiers on the item, or by **archive_id** from the YTPTube API so that **all platforms** (including those without MCP canonical key rules) work:
 
 - **From item (queue/history):** `archive_id` (e.g. `"youtube jNQXAC9IVRw"`, `"Facebook 1678716196448181"`) → normalized to `extractor:video_id`. Fallbacks: `extractor_key`, then `extractor` + `video_id`/`id`.
-- **From request URL:** Canonical key for known platforms (YouTube, Instagram, TikTok, Facebook); otherwise normalized origin+pathname (www stripped).
+- **From request URL:** Canonical key for known platforms (YouTube, Instagram, TikTok, Facebook); otherwise normalized origin+pathname (www stripped). **Facebook:** both `www.facebook.com/reel/ID` and `m.facebook.com/watch/?v=ID` (as stored by YTPTube/yt-dlp) normalize to `facebook:ID` so `get_status(video_url)` finds the job.
 - **Fallback for any URL:** If URL/item match fails, MCP calls **POST /api/yt-dlp/archive_id/** with the video URL. YTPTube returns the canonical `archive_id` for that URL (any platform). MCP normalizes it and matches items by that key. No platform-specific rules needed; works for Facebook, Vimeo, etc.
 
 POST /api/history may return the existing item when the video is already in YTPTube; MCP uses that (and single-item fallback) to return transcript or status without failing.
+
+**Debugging:** `get_status(video_url)` returns `not_found` → check URL normalization (e.g. Facebook www vs m) or API timing.
+
+- **MCP tools:** **list_recent_downloads** to see stored URLs; **get_status(video_url=...)** to reproduce. See [MCP YTPTube Verification](MCP_YTPTUBE_VERIFICATION.md).
+- **Docker:** `docker logs mcp-ytptube`, `docker logs <ytptube-container>`. Set `MCP_YTPTUBE_DEBUG_API=1` and `MCP_YTPTUBE_LOG_LEVEL=debug` for full API/item keys.
 
 ## Example videos for manual testing
 

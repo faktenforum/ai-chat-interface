@@ -423,10 +423,22 @@ export function canonicalVideoKey(url: string): string | null {
       if (m) return `tiktok:${m[1]}`;
     }
 
-    // Facebook: /reel/ID (facebook.com, fb.com, fb.watch) → facebook:ID
-    if (hostname === 'facebook.com' || hostname === 'fb.com' || hostname === 'fb.watch') {
-      const m = pathname.match(/\/reel\/(\d+)/);
-      if (m) return `facebook:${m[1]}`;
+    // Facebook: /reel/ID, /watch?v=ID, or /videos/ID (www/m/facebook.com, fb.com, fb.watch) → facebook:ID
+    // YTPTube/yt-dlp often store reel URLs as m.facebook.com/watch/?v=ID; we must match that for get_status(video_url).
+    const fbHost =
+      hostname === 'facebook.com' ||
+      hostname === 'm.facebook.com' ||
+      hostname === 'fb.com' ||
+      hostname === 'fb.watch';
+    if (fbHost) {
+      const reelMatch = pathname.match(/\/reel\/(\d+)/);
+      if (reelMatch) return `facebook:${reelMatch[1]}`;
+      if (pathname === '/watch' || pathname === '/watch/') {
+        const v = parsed.searchParams.get('v');
+        if (v && /^\d+$/.test(v)) return `facebook:${v}`;
+      }
+      const videosMatch = pathname.match(/\/videos\/(\d+)/);
+      if (videosMatch) return `facebook:${videosMatch[1]}`;
     }
 
     // Generic: normalized origin (no www) + pathname for stable comparison

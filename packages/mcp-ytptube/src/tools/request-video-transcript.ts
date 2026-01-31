@@ -65,6 +65,24 @@ const DEFAULT_QUEUED_RELAY = 'Download started. Use get_status; when finished re
 const VIDEO_ONLY_QUEUED_RELAY =
   'Item was video-only; started transcript job. Use get_status; when finished request transcript again.';
 
+/** Shown when no language_hint: LLM should ask user for correct language and re-call with language_hint. */
+const LANGUAGE_UNKNOWN_INSTRUCTION =
+  'If the transcript language is wrong, ask the user for the correct language and call request_video_transcript again with language_hint set to that language (e.g. language_hint: "de" for German).';
+
+function transcriptLanguageParams(lang: string | undefined): { language_used: string; language_instruction?: string } {
+  return {
+    language_used: lang ?? 'unknown',
+    language_instruction: lang == null ? LANGUAGE_UNKNOWN_INSTRUCTION : undefined,
+  };
+}
+
+function statusLanguageParams(lang: string | undefined): { language: string; language_instruction?: string } {
+  return {
+    language: lang ?? 'unknown',
+    language_instruction: lang == null ? LANGUAGE_UNKNOWN_INSTRUCTION : undefined,
+  };
+}
+
 /**
  * Build transcript CLI (subs or audio), POST to YTPTube, find the new item in the response, and return a queued status.
  * Used when URL is not in history and when a finished item is video-only (no audio/subtitle in folder).
@@ -74,10 +92,12 @@ async function startTranscriptJobAndReturnQueued(
   video_url: string,
   preset: string | undefined,
   lang: string | undefined,
-  options: { relay?: string } = {},
+  options: { relay?: string; language?: string; language_instruction?: string } = {},
 ): Promise<{ content: TextContent[] }> {
   const { ytptube: ytp } = deps;
   const relay = options.relay ?? DEFAULT_QUEUED_RELAY;
+  const language = options.language ?? (lang ?? 'unknown');
+  const language_instruction = options.language_instruction ?? (lang == null ? LANGUAGE_UNKNOWN_INSTRUCTION : undefined);
 
   let cliBase = AUDIO_CLI;
   try {
@@ -140,6 +160,8 @@ async function startTranscriptJobAndReturnQueued(
             url: video_url,
             status_url: storedUrl,
             relay,
+            language,
+            language_instruction,
           }),
         },
       ],
@@ -154,6 +176,8 @@ async function startTranscriptJobAndReturnQueued(
           status: 'queued',
           url: video_url,
           relay: 'Download queued. Use get_status with video_url to check; when finished request transcript again.',
+          language,
+          language_instruction,
         }),
       },
     ],
@@ -228,6 +252,7 @@ export async function requestVideoTranscript(
           transcript: text ?? '',
           status_url: storedUrl,
           transcript_source: 'platform_subtitles',
+          ...transcriptLanguageParams(lang),
         });
         return {
           content: [
@@ -280,6 +305,7 @@ export async function requestVideoTranscript(
         transcript: text ?? '',
         status_url: storedUrl,
         transcript_source: 'transcription',
+        ...transcriptLanguageParams(lang),
       });
       return {
         content: [
@@ -309,6 +335,7 @@ export async function requestVideoTranscript(
               url: video_url,
               status_url: storedUrl,
               relay: 'Download started. Use get_status; when finished request transcript again.',
+              ...statusLanguageParams(lang),
             }),
           },
         ],
@@ -325,6 +352,7 @@ export async function requestVideoTranscript(
             status_url: storedUrl,
             progress: pct,
             relay: `Downloading (${pct}%). Use get_status; when 100% request transcript again.`,
+            ...statusLanguageParams(lang),
           }),
         },
       ],
@@ -413,185 +441,6 @@ export async function requestVideoTranscript(
           throw new YTPTubeError(`Failed to download subtitle: ${err.message}`);
         }
         const text = vttToPlainText(buffer);
-        const { metadata, transcript: transcriptText } = formatTranscriptResponseAsBlocks({
-          url: video_url,
-          job_id: id,
-          transcript: text ?? '',
-          fromArchive: true,
-          status_url: storedUrl,
-          transcript_source: 'platform_subtitles',
-        });
-        return {
-          content: [
-            { type: 'text', text: metadata },
-            { type: 'text', text: transcriptText },
-          ],
-        };
-      }
-      if (!relativePath) {
-        if (pathFromItem && isVideoPath(pathFromItem)) {
-          return startTranscriptJobAndReturnQueued(deps, video_url, preset, lang, {
-            relay: VIDEO_ONLY_QUEUED_RELAY,
-          });
-        }
-        if (contents.length === 0) {
-          const browser = await getFileBrowser(ytp, folder);
-          contents = browser.contents ?? [];
-        }
-        const videoPath = resolveVideoPathFromBrowser(contents, item);
-        if (videoPath) {
-          return startTranscriptJobAndReturnQueued(deps, video_url, preset, lang, {
-            relay: VIDEO_ONLY_QUEUED_RELAY,
-          });
-        }
-        throw new NotFoundError(
-          `Could not find audio or subtitle for finished item ${id} in folder ${folder}. Check YTPTube file browser.`,
-        );
-      }
-      let audioBuffer: ArrayBuffer;
-      try {
-        audioBuffer = await downloadFile(ytp, relativePath);
-      } catch (e) {
-        const err = e instanceof Error ? e : new Error(String(e));
-        logger.warn({ err, relativePath, id }, 'YTPTube GET /api/download failed');
-        throw new YTPTubeError(`Failed to download audio: ${err.message}`);
-      }
-      const filename = relativePath.includes('/') ? relativePath.split('/').pop() ?? 'audio.mp3' : relativePath;
-      let text: string;
-      try {
-        text = await transcribe(scw, audioBuffer, filename, lang);
-      } catch (e) {
-        const err = e instanceof Error ? e : new Error(String(e));
-        logger.warn({ err, id }, 'Scaleway transcription failed');
-        throw new TranscriptionError(`Transcription failed: ${err.message}`);
-      }
-      const { metadata, transcript: transcriptText } = formatTranscriptResponseAsBlocks({
-        url: video_url,
-        job_id: id,
-        transcript: text ?? '',
-        fromArchive: true,
-        status_url: storedUrl,
-        transcript_source: 'transcription',
-      });
-      return {
-        content: [
-          { type: 'text', text: metadata },
-          { type: 'text', text: transcriptText },
-        ],
-      };
-    }
-
-    if (status === 'error') {
-      const msg = (item as HistoryItem & { error?: string }).error ?? 'YTPTube job ended with status error';
-      throw new YTPTubeError(msg, 'error');
-    }
-
-    const pct = formatProgress(await getHistoryById(ytp, id).catch(() => item));
-    const isQueued = status === 'queued' || status === 'pending' || pct === 0;
-    if (isQueued) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: formatStatusResponse({
-              status: 'queued',
-              job_id: id,
-              url: video_url,
-              status_url: storedUrl,
-              relay: 'Download started. Use get_status; when finished request transcript again.',
-            }),
-          },
-        ],
-      };
-    }
-    return {
-      content: [
-        {
-          type: 'text',
-          text: formatStatusResponse({
-            status: 'downloading',
-            job_id: id,
-            url: video_url,
-            status_url: storedUrl,
-            progress: pct,
-            relay: `Downloading (${pct}%). Use get_status; when 100% request transcript again.`,
-          }),
-        },
-      ],
-    };
-  }
-
-  await new Promise((r) => setTimeout(r, POST_TO_QUEUE_DELAY_MS));
-
-  let queueItems: HistoryItem[];
-  try {
-    queueItems = await getHistoryQueue(ytp);
-  } catch (e) {
-    const err = e instanceof Error ? e : new Error(String(e));
-    logger.warn({ err, video_url }, 'YTPTube GET /api/history?type=queue after POST failed');
-    throw new YTPTubeError(`Download was queued but could not resolve job id: ${err.message}`);
-  }
-
-  let afterFound = findItemByUrlInItems(queueItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, video_url));
-  if (!afterFound) {
-    await new Promise((r) => setTimeout(r, POST_TO_QUEUE_DELAY_MS));
-    try {
-      queueItems = await getHistoryQueue(ytp);
-      afterFound = findItemByUrlInItems(queueItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, video_url));
-    } catch {
-      /* ignore retry errors, continue to check done */
-    }
-  }
-  if (afterFound) {
-    const storedUrl = typeof afterFound.item.url === 'string' ? afterFound.item.url : undefined;
-    return {
-      content: [
-        {
-          type: 'text',
-          text: formatStatusResponse({
-            status: 'queued',
-            job_id: afterFound.id,
-            url: video_url,
-            status_url: storedUrl,
-            relay: 'Download started. Use get_status; when finished request transcript again.',
-          }),
-        },
-      ],
-    };
-  }
-
-  const doneItems = await getHistoryDone(ytp).catch(() => [] as HistoryItem[]);
-  const doneFound =
-    findItemByUrlInItems(doneItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, doneItems, video_url));
-  if (doneFound && (doneFound.item.status ?? '').toLowerCase() === 'finished') {
-    const { item, id } = doneFound;
-    const storedUrl = typeof item.url === 'string' ? item.url : undefined;
-    const folder = (item.folder ?? '').trim() || MCP_DOWNLOAD_FOLDER;
-    let subtitlePath: string | null = null;
-    let relativePath: string | null = null;
-    let contents: Awaited<ReturnType<typeof getFileBrowser>>['contents'] = [];
-    const pathFromItem = relativePathFromItem(item);
-    if (pathFromItem) {
-      const lower = pathFromItem.toLowerCase();
-      if (lower.endsWith('.vtt')) subtitlePath = pathFromItem;
-      else if (lower.endsWith('.mp3')) relativePath = pathFromItem;
-    }
-    if (!subtitlePath || !relativePath) {
-      const browser = await getFileBrowser(ytp, folder);
-      contents = browser.contents ?? [];
-      if (!subtitlePath) subtitlePath = resolveSubtitlePathFromBrowser(contents, item);
-      if (!relativePath) relativePath = resolveAudioPathFromBrowser(contents, item);
-    }
-    if (subtitlePath) {
-      let buffer: ArrayBuffer;
-      try {
-        buffer = await downloadFile(ytp, subtitlePath);
-      } catch (e) {
-        const err = e instanceof Error ? e : new Error(String(e));
-        logger.warn({ err, subtitlePath, id }, 'YTPTube GET /api/download failed for subtitle');
-        throw new YTPTubeError(`Failed to download subtitle: ${err.message}`);
-      }
-      const text = vttToPlainText(buffer);
       const { metadata, transcript: transcriptText } = formatTranscriptResponseAsBlocks({
         url: video_url,
         job_id: id,
@@ -599,6 +448,7 @@ export async function requestVideoTranscript(
         fromArchive: true,
         status_url: storedUrl,
         transcript_source: 'platform_subtitles',
+        ...transcriptLanguageParams(lang),
       });
       return {
         content: [
@@ -651,6 +501,191 @@ export async function requestVideoTranscript(
       fromArchive: true,
       status_url: storedUrl,
       transcript_source: 'transcription',
+      ...transcriptLanguageParams(lang),
+    });
+    return {
+      content: [
+        { type: 'text', text: metadata },
+        { type: 'text', text: transcriptText },
+      ],
+    };
+  }
+
+    if (status === 'error') {
+      const msg = (item as HistoryItem & { error?: string }).error ?? 'YTPTube job ended with status error';
+      throw new YTPTubeError(msg, 'error');
+    }
+
+    const pct = formatProgress(await getHistoryById(ytp, id).catch(() => item));
+    const isQueued = status === 'queued' || status === 'pending' || pct === 0;
+    if (isQueued) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: formatStatusResponse({
+              status: 'queued',
+              job_id: id,
+              url: video_url,
+              status_url: storedUrl,
+              relay: 'Download started. Use get_status; when finished request transcript again.',
+              ...statusLanguageParams(lang),
+            }),
+          },
+        ],
+      };
+    }
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'downloading',
+            job_id: id,
+            url: video_url,
+            status_url: storedUrl,
+            progress: pct,
+            relay: `Downloading (${pct}%). Use get_status; when 100% request transcript again.`,
+            ...statusLanguageParams(lang),
+          }),
+        },
+      ],
+    };
+  }
+
+  await new Promise((r) => setTimeout(r, POST_TO_QUEUE_DELAY_MS));
+
+  let queueItems: HistoryItem[];
+  try {
+    queueItems = await getHistoryQueue(ytp);
+  } catch (e) {
+    const err = e instanceof Error ? e : new Error(String(e));
+    logger.warn({ err, video_url }, 'YTPTube GET /api/history?type=queue after POST failed');
+    throw new YTPTubeError(`Download was queued but could not resolve job id: ${err.message}`);
+  }
+
+  let afterFound = findItemByUrlInItems(queueItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, video_url));
+  if (!afterFound) {
+    await new Promise((r) => setTimeout(r, POST_TO_QUEUE_DELAY_MS));
+    try {
+      queueItems = await getHistoryQueue(ytp);
+      afterFound = findItemByUrlInItems(queueItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, video_url));
+    } catch {
+      /* ignore retry errors, continue to check done */
+    }
+  }
+  if (afterFound) {
+    const storedUrl = typeof afterFound.item.url === 'string' ? afterFound.item.url : undefined;
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'queued',
+            job_id: afterFound.id,
+            url: video_url,
+            status_url: storedUrl,
+            relay: 'Download started. Use get_status; when finished request transcript again.',
+            ...statusLanguageParams(lang),
+          }),
+        },
+      ],
+    };
+  }
+
+  const doneItems = await getHistoryDone(ytp).catch(() => [] as HistoryItem[]);
+  const doneFound =
+    findItemByUrlInItems(doneItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, doneItems, video_url));
+  if (doneFound && (doneFound.item.status ?? '').toLowerCase() === 'finished') {
+    const { item, id } = doneFound;
+    const storedUrl = typeof item.url === 'string' ? item.url : undefined;
+    const folder = (item.folder ?? '').trim() || MCP_DOWNLOAD_FOLDER;
+    let subtitlePath: string | null = null;
+    let relativePath: string | null = null;
+    let contents: Awaited<ReturnType<typeof getFileBrowser>>['contents'] = [];
+    const pathFromItem = relativePathFromItem(item);
+    if (pathFromItem) {
+      const lower = pathFromItem.toLowerCase();
+      if (lower.endsWith('.vtt')) subtitlePath = pathFromItem;
+      else if (lower.endsWith('.mp3')) relativePath = pathFromItem;
+    }
+    if (!subtitlePath || !relativePath) {
+      const browser = await getFileBrowser(ytp, folder);
+      contents = browser.contents ?? [];
+      if (!subtitlePath) subtitlePath = resolveSubtitlePathFromBrowser(contents, item);
+      if (!relativePath) relativePath = resolveAudioPathFromBrowser(contents, item);
+    }
+    if (subtitlePath) {
+      let buffer: ArrayBuffer;
+      try {
+        buffer = await downloadFile(ytp, subtitlePath);
+      } catch (e) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        logger.warn({ err, subtitlePath, id }, 'YTPTube GET /api/download failed for subtitle');
+        throw new YTPTubeError(`Failed to download subtitle: ${err.message}`);
+      }
+      const text = vttToPlainText(buffer);
+      const { metadata, transcript: transcriptText } = formatTranscriptResponseAsBlocks({
+        url: video_url,
+        job_id: id,
+        transcript: text ?? '',
+        fromArchive: true,
+        status_url: storedUrl,
+        transcript_source: 'platform_subtitles',
+        ...transcriptLanguageParams(lang),
+      });
+      return {
+        content: [
+          { type: 'text', text: metadata },
+          { type: 'text', text: transcriptText },
+        ],
+      };
+    }
+    if (!relativePath) {
+      if (pathFromItem && isVideoPath(pathFromItem)) {
+        return startTranscriptJobAndReturnQueued(deps, video_url, preset, lang, {
+          relay: VIDEO_ONLY_QUEUED_RELAY,
+        });
+      }
+      if (contents.length === 0) {
+        const browser = await getFileBrowser(ytp, folder);
+        contents = browser.contents ?? [];
+      }
+      const videoPath = resolveVideoPathFromBrowser(contents, item);
+      if (videoPath) {
+        return startTranscriptJobAndReturnQueued(deps, video_url, preset, lang, {
+          relay: VIDEO_ONLY_QUEUED_RELAY,
+        });
+      }
+      throw new NotFoundError(
+        `Could not find audio or subtitle for finished item ${id} in folder ${folder}. Check YTPTube file browser.`,
+      );
+    }
+    let audioBuffer: ArrayBuffer;
+    try {
+      audioBuffer = await downloadFile(ytp, relativePath);
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      logger.warn({ err, relativePath, id }, 'YTPTube GET /api/download failed');
+      throw new YTPTubeError(`Failed to download audio: ${err.message}`);
+    }
+    const filename = relativePath.includes('/') ? relativePath.split('/').pop() ?? 'audio.mp3' : relativePath;
+    let text: string;
+    try {
+      text = await transcribe(scw, audioBuffer, filename, lang);
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      logger.warn({ err, id }, 'Scaleway transcription failed');
+      throw new TranscriptionError(`Transcription failed: ${err.message}`);
+    }
+    const { metadata, transcript: transcriptText } = formatTranscriptResponseAsBlocks({
+      url: video_url,
+      job_id: id,
+      transcript: text ?? '',
+      fromArchive: true,
+      status_url: storedUrl,
+      transcript_source: 'transcription',
+      ...transcriptLanguageParams(lang),
     });
     return {
       content: [
@@ -670,6 +705,7 @@ export async function requestVideoTranscript(
           status: 'queued',
           url: video_url,
           relay: 'Download queued. Use get_status with video_url to check; when finished request transcript again.',
+          ...statusLanguageParams(lang),
         }),
       },
     ],

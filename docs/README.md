@@ -12,7 +12,7 @@ Essential guides for the AI Chat Interface platform.
 - **[Services](SERVICES.md)** - Services and MCP services overview, network architecture
 - **[Administration](ADMINISTRATION.md)** - User management and administration
 - **[LibreChat Features](LIBRECHAT_FEATURES.md)** - LibreChat configuration and features
-- **[MCP YTPTube](MCP_YTPTUBE.md)** - YTPTube MCP (video URL → transcript via Scaleway STT; extensible)
+- **[MCP YTPTube](MCP_YTPTUBE.md)** - YTPTube MCP (video URL → transcript via Scaleway STT; extensible). [Verification (debug)](MCP_YTPTUBE_VERIFICATION.md) - URL normalization and Docker logs check.
 - **[YTPTube Cleanup](YTPTUBE_CLEANUP.md)** - Where archive and downloads live; how to clean for fresh tests
 - **[MCP YouTube Transcript](MCP_YOUTUBE_TRANSCRIPT.md)** - YouTube Transcript MCP (video URL → transcript via youtube-transcript-api)
 - **[Webshare Proxy](WEBSHARE_PROXY.md)** - Fixed proxy URL setup (Rotating/Backbone) for mcp-ytptube and mcp-youtube-transcript

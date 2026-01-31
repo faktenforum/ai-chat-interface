@@ -65,9 +65,13 @@ function createMcpServer(): McpServer {
 
 Request flow: (1) request_video_transcript for transcript only; (2) request_download_link for download link (video or audio) only. Both tools check if the result exists; if yes return it; if not they start the job and return status. Poll with get_status(video_url=...) or get_status(job_id=<UUID>). When status=finished, call the same request tool again to get transcript or link.
 
-Important: job_id in responses is the internal UUID (36-char with hyphens). Use it with get_status(job_id=...) for polling; do not use the platform video id (e.g. YouTube v=...). Prefer video_url or status_url from the response when polling. Always relay the relay= line to the user.
+LibreChat: No automatic MCP polling. Tell the user to ask for status (e.g. "What is the status?"); then call get_status and reply. Do not promise to monitor or check back automatically.
 
-Video-only items: If the URL was only downloaded as video (no transcript yet), request_video_transcript starts a new transcript job and returns status=queued; poll with get_status then call request_video_transcript again when finished.
+Important: job_id is the internal UUID (36-char). Use get_status(job_id=...) or get_status(video_url=...); not the platform video id. Relay the relay= line to the user.
+
+Video-only: If the item was only downloaded as video, request_video_transcript starts a transcript job and returns queued; poll get_status then call request_video_transcript again when finished.
+
+Transcript language: Without language_hint, responses include language=unknown and language_instruction. Tell the user the language was unspecified and may be wrong; if wrong, ask for the correct language and re-call with language_hint (e.g. "de"). Pass language_hint proactively when the user already indicated the video language.
 
 Never invent or hallucinate transcript text. Use get_video_info for metadata without downloading; use list_recent_downloads to see queue/history (job_id there is UUID).`,
     },
@@ -110,7 +114,12 @@ Never invent or hallucinate transcript text. Use get_video_info for metadata wit
   const requestVideoTranscriptSchema = {
     video_url: z.string().url().describe('URL of the video to transcribe'),
     preset: z.string().optional().describe('YTPTube preset name (e.g. for audio-only)'),
-    language_hint: z.string().optional().describe('Optional language hint for transcription'),
+    language_hint: z
+      .string()
+      .optional()
+      .describe(
+        'Force/override transcription language (ISO-639-1, e.g. "de", "en"). Omit → language=unknown; if wrong, ask user and re-call with language_hint.',
+      ),
   };
 
   const getStatusSchema = {
@@ -122,7 +131,7 @@ Never invent or hallucinate transcript text. Use get_video_info for metadata wit
     'request_video_transcript',
     {
       description:
-        'Get transcript for a video URL. If transcript exists, returns it; otherwise starts a transcript job (subs or audio) and returns status=queued. Poll with get_status(video_url=...) or get_status(job_id=<UUID>); when status=finished, call this tool again for the transcript. If the item was only downloaded as video, a new transcript job is started automatically (no error).',
+        'Get transcript for a video URL. If exists → transcript; else starts job and returns status. Poll get_status; when finished call again for transcript. Video-only items start a transcript job automatically. language_hint (e.g. "de") forces language; omit → language=unknown + instruction to ask user and re-call if wrong.',
       inputSchema: requestVideoTranscriptSchema,
     },
     withErrorHandler('request_video_transcript', (a, d) => requestVideoTranscript(a, d)),
