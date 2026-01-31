@@ -1,6 +1,6 @@
 #!/usr/bin/env -S node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings
 
-/** MCP YTPTube: YTPTube-backed MCP (video URL → transcript via Scaleway STT; extensible for more YTPTube features). Streamable-http. */
+/** MCP YTPTube: YTPTube-backed MCP (video URL → transcript via Scaleway STT; extensible). Streamable HTTP transport. */
 
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
@@ -12,8 +12,8 @@ import * as z from 'zod';
 import type { YTPTubeConfig } from './clients/ytptube.ts';
 import type { ScalewayConfig } from './clients/scaleway.ts';
 import { requestVideoTranscript, type RequestVideoTranscriptDeps } from './tools/request-video-transcript.ts';
-import { getTranscriptStatus } from './tools/get-transcript-status.ts';
-import { getVideoDownloadLink } from './tools/get-video-download-link.ts';
+import { getStatus } from './tools/get-status.ts';
+import { requestDownloadLink } from './tools/request-download-link.ts';
 import { listRecentDownloads } from './tools/list-recent-downloads.ts';
 import { getVideoInfo } from './tools/get-video-info.ts';
 import { getThumbnailUrl } from './tools/get-thumbnail-url.ts';
@@ -61,13 +61,29 @@ function createMcpServer(): McpServer {
     },
     {
       capabilities: { tools: {}, resources: {}, prompts: {} },
-      instructions: `Video transcripts: request_video_transcript(video_url) → result=transcript (metadata + transcript in second block) or result=status (queued|downloading). get_transcript_status(video_url?, job_id?) → result=status. Relay the relay= line. For status use get_transcript_status(video_url=url or status_url from response)—do not use job_id (often platform video id, lookup fails). When status=finished, user can request transcript. Never invent transcript text.`,
+      instructions: `YTPTube MCP: video URL to transcript or download link.
+
+Request flow: (1) request_video_transcript for transcript only; (2) request_download_link for download link (video or audio) only. Both tools check if the result exists; if yes return it; if not they start the job and return status. Poll with get_status(video_url=...) or get_status(job_id=<UUID>). When status=finished, call the same request tool again to get transcript or link.
+
+Important: job_id in responses is the internal UUID (36-char with hyphens). Use it with get_status(job_id=...) for polling; do not use the platform video id (e.g. YouTube v=...). Prefer video_url or status_url from the response when polling. Always relay the relay= line to the user.
+
+Video-only items: If the URL was only downloaded as video (no transcript yet), request_video_transcript starts a new transcript job and returns status=queued; poll with get_status then call request_video_transcript again when finished.
+
+Never invent or hallucinate transcript text. Use get_video_info for metadata without downloading; use list_recent_downloads to see queue/history (job_id there is UUID).`,
     },
   );
 
   type ToolHandler = (args: unknown, deps: RequestVideoTranscriptDeps) => Promise<{ content: Array<{ type: 'text'; text: string }> }>;
   const withErrorHandler = (toolName: string, handler: ToolHandler) => {
     return async (args: unknown) => {
+      const safe =
+        args != null && typeof args === 'object'
+          ? {
+              video_url: (args as { video_url?: string }).video_url,
+              job_id: (args as { job_id?: string }).job_id,
+            }
+          : {};
+      logger.debug({ tool: toolName, ...safe }, 'Tool invoked');
       try {
         return await handler(args, deps);
       } catch (error) {
@@ -97,43 +113,46 @@ function createMcpServer(): McpServer {
     language_hint: z.string().optional().describe('Optional language hint for transcription'),
   };
 
-  const getTranscriptStatusSchema = {
-    job_id: z.string().optional().describe('YTPTube history item ID to check'),
-    video_url: z.string().url().optional().describe('Video URL to look up by URL'),
+  const getStatusSchema = {
+    job_id: z.string().optional().describe('YTPTube item ID to check'),
+    video_url: z.string().url().optional().describe('Video URL to look up (any item)'),
   };
 
   server.registerTool(
     'request_video_transcript',
     {
-      description: 'Transcript for video URL. Returns result=transcript (metadata + transcript block) when ready, or result=status (queued|downloading). Use get_transcript_status for progress; when finished, request transcript again.',
+      description:
+        'Get transcript for a video URL. If transcript exists, returns it; otherwise starts a transcript job (subs or audio) and returns status=queued. Poll with get_status(video_url=...) or get_status(job_id=<UUID>); when status=finished, call this tool again for the transcript. If the item was only downloaded as video, a new transcript job is started automatically (no error).',
       inputSchema: requestVideoTranscriptSchema,
     },
     withErrorHandler('request_video_transcript', (a, d) => requestVideoTranscript(a, d)),
   );
 
   server.registerTool(
-    'get_transcript_status',
+    'get_status',
     {
-      description: 'Status by video_url (preferred) or job_id. Returns result=status, relay. Use video_url from prior response for reliable lookup; if status=finished, user can request transcript.',
-      inputSchema: getTranscriptStatusSchema,
+      description:
+        'Poll status of a YTPTube item (transcript or download). Use video_url (the URL you requested) or job_id (the UUID from a prior response; not the platform video id). When status=finished, call request_video_transcript or request_download_link again to get transcript or link.',
+      inputSchema: getStatusSchema,
     },
-    withErrorHandler('get_transcript_status', (a, d) => getTranscriptStatus(a, { ytptube: d.ytptube })),
+    withErrorHandler('get_status', (a, d) => getStatus(a, { ytptube: d.ytptube })),
   );
 
   const publicDownloadBaseUrl = process.env.YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL?.trim() || undefined;
-  const getVideoDownloadLinkSchema = {
-    video_url: z.string().url().optional().describe('Video URL to look up'),
-    job_id: z.string().optional().describe('YTPTube history item ID'),
-    type: z.enum(['audio', 'video']).optional().default('audio').describe('Download type: audio (default) or video'),
+  const requestDownloadLinkSchema = {
+    video_url: z.string().url().describe('Video URL to request download for'),
+    type: z.enum(['audio', 'video']).optional().default('video').describe('Download type: video (default) or audio'),
+    preset: z.string().optional().describe('YTPTube preset name'),
   };
   server.registerTool(
-    'get_video_download_link',
+    'request_download_link',
     {
-      description: 'Direct download link (audio or video) for a finished YTPTube item. Requires status=finished. Returns download_url with credentials when YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL is set.',
-      inputSchema: getVideoDownloadLinkSchema,
+      description:
+        'Get download link (video or audio) for a video URL. If the file exists, returns download_url; otherwise starts download and returns status=queued. Poll with get_status; when finished call this tool again for the link. Use type=video for video file, type=audio for audio-only (e.g. when only transcript/audio exists).',
+      inputSchema: requestDownloadLinkSchema,
     },
-    withErrorHandler('get_video_download_link', (a) =>
-      getVideoDownloadLink(a, { ytptube, publicDownloadBaseUrl }),
+    withErrorHandler('request_download_link', (a) =>
+      requestDownloadLink(a, { ytptube, publicDownloadBaseUrl }),
     ),
   );
 
@@ -144,7 +163,8 @@ function createMcpServer(): McpServer {
   server.registerTool(
     'list_recent_downloads',
     {
-      description: 'Last N history items (queue/done) with title, status, optional download_url when finished. Use status_filter to limit to queue or finished.',
+      description:
+        'List last N YTPTube history items (queue and/or finished). Each item has title, status, url, job_id (UUID; use with get_status), and download_url when finished. Use status_filter: all, finished, or queue.',
       inputSchema: listRecentDownloadsSchema,
     },
     withErrorHandler('list_recent_downloads', (a) =>
@@ -156,7 +176,8 @@ function createMcpServer(): McpServer {
   server.registerTool(
     'get_video_info',
     {
-      description: 'Metadata (title, duration, extractor) for a URL without downloading – preview before download.',
+      description:
+        'Fetch metadata (title, duration, extractor) for a video URL without downloading. Use to preview or check support before requesting transcript or download.',
       inputSchema: getVideoInfoSchema,
     },
     withErrorHandler('get_video_info', (a) => getVideoInfo(a, { ytptube })),
@@ -166,7 +187,7 @@ function createMcpServer(): McpServer {
   server.registerTool(
     'get_thumbnail_url',
     {
-      description: 'Link to the video thumbnail (from yt-dlp info; for preview/UI).',
+      description: 'Get the thumbnail image URL for a video (from yt-dlp). Use for preview or UI.',
       inputSchema: getThumbnailUrlSchema,
     },
     withErrorHandler('get_thumbnail_url', (a) => getThumbnailUrl(a, { ytptube })),

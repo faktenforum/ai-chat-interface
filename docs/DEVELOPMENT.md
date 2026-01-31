@@ -23,6 +23,7 @@ The project includes several git submodules in the `/dev` directory:
 - `dev/firecrawl` - Firecrawl web scraping service
 - `dev/searxng` - SearXNG metasearch engine
 - `dev/mcp-youtube-transcript` - YouTube Transcript MCP server
+- `dev/yt-dlp` - yt-dlp (reference only; used indirectly via YTPTube; we do not build from sources)
 
 ### Initializing Submodules
 

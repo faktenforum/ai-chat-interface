@@ -18,6 +18,7 @@ This project includes the following git submodules:
 - **dev/stackoverflow-mcp** - Stack Overflow MCP server
 - **dev/npm-search-mcp** - npm Search MCP server (fork with HTTP transport support)
 - **dev/mcp-youtube-transcript** - YouTube Transcript MCP server (video URL → transcript)
+- **dev/yt-dlp** - yt-dlp (reference only; used indirectly via YTPTube; we do not build from sources)
 
 ## Documentation
 

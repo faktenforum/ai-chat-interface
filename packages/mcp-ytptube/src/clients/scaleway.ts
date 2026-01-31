@@ -20,12 +20,14 @@ function normalizeBaseUrl(url: string): string {
  * Transcribe audio via Scaleway OpenAI-compatible transcriptions endpoint.
  * @param audioBuffer - Raw audio bytes (e.g. mp3)
  * @param filename - Optional filename for the multipart part (e.g. "audio.mp3")
+ * @param language - Optional ISO-639-1 language code (e.g. "de", "en"); omit for auto-detect
  * @returns Transcript text
  */
 export async function transcribe(
   config: ScalewayConfig,
   audioBuffer: ArrayBuffer,
   filename: string = 'audio.mp3',
+  language?: string,
 ): Promise<string> {
   const base = normalizeBaseUrl(config.baseUrl);
   const url = `${base}/audio/transcriptions`;
@@ -34,6 +36,9 @@ export async function transcribe(
   const form = new FormData();
   form.append('model', model);
   form.append('file', new Blob([audioBuffer], { type: 'audio/mpeg' }), filename);
+  if (language != null && language.trim() !== '') {
+    form.append('language', language.trim().slice(0, 2));
+  }
 
   const res = await fetch(url, {
     method: 'POST',

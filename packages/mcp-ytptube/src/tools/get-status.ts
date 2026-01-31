@@ -1,10 +1,10 @@
 /**
- * Tool: get_transcript_status
- * Status of a video download/transcript by job_id and/or video_url. Returns progress %, STATUS, and "Tell the user" line.
+ * Tool: get_status
+ * Status of a YTPTube item (transcript or download) by job_id and/or video_url. Returns progress %, STATUS, and relay line.
  */
 
 import type { TextContent } from '@modelcontextprotocol/sdk/types.js';
-import { GetTranscriptStatusSchema, type GetTranscriptStatusInput } from '../schemas/get-transcript-status.schema.ts';
+import { GetStatusSchema, type GetStatusInput } from '../schemas/get-status.schema.ts';
 import type { YTPTubeConfig } from '../clients/ytptube.ts';
 import {
   getHistoryById,
@@ -18,7 +18,7 @@ import { VideoTranscriptsError } from '../utils/errors.ts';
 import { logger } from '../utils/logger.ts';
 import { formatStatusResponse } from '../utils/response-format.ts';
 
-export interface GetTranscriptStatusDeps {
+export interface GetStatusDeps {
   ytptube: YTPTubeConfig;
 }
 
@@ -29,20 +29,20 @@ function formatProgress(item: HistoryItem): number {
 }
 
 /**
- * get_transcript_status(job_id?, video_url?)
- * Resolve by job_id or video_url; return STATUS, progress %, and "Tell the user" line.
+ * get_status(job_id?, video_url?)
+ * Resolve by job_id or video_url; return STATUS, progress %, and relay line.
  */
-export async function getTranscriptStatus(
+export async function getStatus(
   input: unknown,
-  deps: GetTranscriptStatusDeps,
+  deps: GetStatusDeps,
 ): Promise<{ content: TextContent[] }> {
-  const parsed = GetTranscriptStatusSchema.safeParse(input);
+  const parsed = GetStatusSchema.safeParse(input);
   if (!parsed.success) {
     const msg = parsed.error.flatten().formErrors.join('; ') || 'Invalid input';
     throw new VideoTranscriptsError(msg, 'VALIDATION_ERROR');
   }
 
-  const { job_id, video_url } = parsed.data as GetTranscriptStatusInput;
+  const { job_id, video_url } = parsed.data as GetStatusInput;
   const ytp = deps.ytptube;
 
   let item: HistoryItem;
@@ -61,7 +61,7 @@ export async function getTranscriptStatus(
               type: 'text',
               text: formatStatusResponse({
                 status: 'not_found',
-                relay: 'No job. Request transcript with video URL to start.',
+                relay: 'No job. Request transcript or download with video URL to start.',
               }),
             },
           ],
@@ -91,7 +91,7 @@ export async function getTranscriptStatus(
             type: 'text',
             text: formatStatusResponse({
               status: 'not_found',
-              relay: 'No job. Request transcript with video URL to start.',
+              relay: 'No job. Request transcript or download with video URL to start.',
             }),
           },
         ],
@@ -117,7 +117,7 @@ export async function getTranscriptStatus(
             job_id: id,
             url,
             status_url: url,
-            relay: 'Done. Request transcript for this URL to get text.',
+            relay: 'Done. Call request_video_transcript or request_download_link again for transcript or link.',
           }),
         },
       ],
@@ -126,6 +126,10 @@ export async function getTranscriptStatus(
 
   if (status === 'error') {
     const reason = (item as { error?: string }).error ?? 'Unknown error';
+    const relay =
+      typeof reason === 'string' && reason.includes('No formats')
+        ? 'Download failed (No formats). The URL may be geo-restricted, private, or unsupported; try another source or URL.'
+        : `Download failed (${reason}). Try another URL.`;
     return {
       content: [
         {
@@ -136,7 +140,7 @@ export async function getTranscriptStatus(
             url,
             status_url: url,
             reason,
-            relay: `Download failed (${reason}). Try another URL.`,
+            relay,
           }),
         },
       ],
@@ -170,7 +174,7 @@ export async function getTranscriptStatus(
           url,
           status_url: url,
           progress: pct,
-          relay: `${pct}% done. Ask for status; when 100% request transcript.`,
+          relay: `${pct}% done. Ask for status; when 100% call request_video_transcript or request_download_link again.`,
         }),
       },
     ],

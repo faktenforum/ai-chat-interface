@@ -48,6 +48,9 @@ function logApiResponse(method: string, path: string, response: unknown): void {
 }
 const DEFAULT_MAX_WAIT_MS = 60 * 60 * 1000; // 1 hour
 
+/** Folder used by MCP tools for transcript and download jobs (single folder for all). */
+export const MCP_DOWNLOAD_FOLDER = 'downloads';
+
 export interface YTPTubeConfig {
   baseUrl: string;
   apiKey?: string;
@@ -62,6 +65,8 @@ export interface HistoryItem {
   title?: string;
   status?: string;
   folder?: string;
+  /** Filename of the downloaded file when status=finished (YTPTube History API). */
+  filename?: string;
   template?: string;
   progress?: number;
   /** Platform video ID from YTPTube/yt-dlp (e.g. YouTube video id). */
@@ -133,6 +138,19 @@ export function buildPublicDownloadUrl(
 
 function ensureSlash(url: string): string {
   return url.endsWith('/') ? url : `${url}/`;
+}
+
+/**
+ * Build relative path from item.folder and item.filename when both are set (YTPTube finished items).
+ * Returns e.g. "downloads/video.mp4" or "video.mp4"; leading slash stripped. Otherwise null.
+ */
+export function relativePathFromItem(item: HistoryItem): string | null {
+  if (!item || typeof item !== 'object') return null;
+  const fn = typeof (item as { filename?: string }).filename === 'string' ? (item as { filename: string }).filename.trim() : '';
+  if (!fn) return null;
+  const folder = typeof item.folder === 'string' ? item.folder.trim() : '';
+  const path = folder ? `${folder}/${fn}` : fn;
+  return path.replace(/^\/+/, '');
 }
 
 /**
@@ -251,6 +269,10 @@ export interface UrlInfoResponse {
   duration?: number;
   extractor?: string;
   thumbnail?: string;
+  /** Available subtitles (lang code -> format list) from yt-dlp info. */
+  subtitles?: Record<string, unknown>;
+  /** Automatic captions (lang code -> format list) from yt-dlp info. */
+  automatic_captions?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -504,7 +526,7 @@ export function findItemByUrl(data: GetHistoryResponse, videoUrl: string): { ite
   const all = items.length > 0 ? items : [...queue, ...history];
   for (const it of all) {
     if (urlMatchesItem(videoUrl, it)) {
-      const id = it.id ?? (it as HistoryItem & { _id?: string })._id;
+      const id = (it as HistoryItem & { _id?: string })._id ?? it.id;
       if (id != null) return { item: it, id: String(id) };
     }
   }
@@ -515,7 +537,7 @@ export function findItemByUrl(data: GetHistoryResponse, videoUrl: string): { ite
 export function findItemByUrlInItems(items: HistoryItem[], videoUrl: string): { item: HistoryItem; id: string } | null {
   for (const it of items) {
     if (urlMatchesItem(videoUrl, it)) {
-      const id = it.id ?? (it as HistoryItem & { _id?: string })._id;
+      const id = (it as HistoryItem & { _id?: string })._id ?? it.id;
       if (id != null) return { item: it, id: String(id) };
     }
   }
@@ -530,7 +552,7 @@ function findItemByArchiveKeyInItems(
   for (const it of items) {
     const itemKey = canonicalKeyFromItem(it);
     if (itemKey != null && itemKey === key) {
-      const id = it.id ?? (it as HistoryItem & { _id?: string })._id;
+      const id = (it as HistoryItem & { _id?: string })._id ?? it.id;
       if (id != null) return { item: it, id: String(id) };
     }
   }
@@ -588,7 +610,7 @@ export async function findItemByUrlInItemsWithArchiveIdFallback(
 
 /**
  * Find item by video_url in data and optionally in queue/done. Uses archive_id API at most once.
- * Use when you have data + queue + done and want a single lookup (e.g. get_transcript_status).
+ * Use when you have data + queue + done and want a single lookup (e.g. get_status).
  */
 export async function findItemByUrlInAll(
   config: YTPTubeConfig,
@@ -717,23 +739,19 @@ export async function getFileBrowser(
 }
 
 /**
- * Resolve the relative path of the audio file for a finished history item.
- * Plan: use folder "transcripts" and find file in GET /api/file/browser/transcripts
- * matching the item (e.g. by title + ".mp3" or newest .mp3).
+ * Pick relative path from candidates: single candidate → path; multiple → match by item title slug, else null.
+ * Used by resolveAudioPathFromBrowser, resolveVideoPathFromBrowser, resolveSubtitlePathFromBrowser.
  */
-export function resolveAudioPathFromBrowser(
-  contents: FileBrowserEntry[],
+function pickPathFromCandidates(
+  candidates: FileBrowserEntry[],
   item: HistoryItem,
 ): string | null {
-  const title = (item.title ?? '').trim();
-  const candidates = (contents ?? []).filter(
-    (e) => (e.is_file && e.name?.toLowerCase().endsWith('.mp3')) || e.content_type === 'audio',
-  );
   if (candidates.length === 0) return null;
   if (candidates.length === 1) {
     const p = candidates[0]!.path ?? candidates[0]!.name;
     return p ? String(p).replace(/^\//, '') : null;
   }
+  const title = (item.title ?? '').trim();
   const slug = title.replace(/[^\w\s-]/g, '').replace(/\s+/g, ' ');
   for (const c of candidates) {
     const name = (c.name ?? '').toLowerCase();
@@ -742,9 +760,22 @@ export function resolveAudioPathFromBrowser(
       return p ? String(p).replace(/^\//, '') : null;
     }
   }
-  const first = candidates[0]!;
-  const p = first.path ?? first.name;
-  return p ? String(p).replace(/^\//, '') : null;
+  return null;
+}
+
+/**
+ * Resolve the relative path of the audio file for a finished history item.
+ * Plan: use folder "transcripts" and find file in GET /api/file/browser/transcripts
+ * matching the item (e.g. by title + ".mp3" or newest .mp3).
+ */
+export function resolveAudioPathFromBrowser(
+  contents: FileBrowserEntry[],
+  item: HistoryItem,
+): string | null {
+  const candidates = (contents ?? []).filter(
+    (e) => (e.is_file && e.name?.toLowerCase().endsWith('.mp3')) || e.content_type === 'audio',
+  );
+  return pickPathFromCandidates(candidates, item);
 }
 
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mkv', '.avi', '.mov', '.m4v', '.flv'];
@@ -757,29 +788,29 @@ export function resolveVideoPathFromBrowser(
   contents: FileBrowserEntry[],
   item: HistoryItem,
 ): string | null {
-  const title = (item.title ?? '').trim();
   const candidates = (contents ?? []).filter((e) => {
     if (!e.is_file) return false;
     if (e.content_type === 'video') return true;
     const name = (e.name ?? '').toLowerCase();
     return VIDEO_EXTENSIONS.some((ext) => name.endsWith(ext));
   });
-  if (candidates.length === 0) return null;
-  if (candidates.length === 1) {
-    const p = candidates[0]!.path ?? candidates[0]!.name;
-    return p ? String(p).replace(/^\//, '') : null;
-  }
-  const slug = title.replace(/[^\w\s-]/g, '').replace(/\s+/g, ' ');
-  for (const c of candidates) {
-    const name = (c.name ?? '').toLowerCase();
-    if (slug && name.includes(slug.toLowerCase().slice(0, 20))) {
-      const p = c.path ?? c.name;
-      return p ? String(p).replace(/^\//, '') : null;
-    }
-  }
-  const first = candidates[0]!;
-  const p = first.path ?? first.name;
-  return p ? String(p).replace(/^\//, '') : null;
+  return pickPathFromCandidates(candidates, item);
+}
+
+/**
+ * Resolve the relative path of a subtitle file (.vtt) for a finished history item.
+ * Uses content_type === 'subtitle' or .vtt extension; matches by item title when multiple candidates.
+ */
+export function resolveSubtitlePathFromBrowser(
+  contents: FileBrowserEntry[],
+  item: HistoryItem,
+): string | null {
+  const candidates = (contents ?? []).filter(
+    (e) =>
+      e.is_file &&
+      (e.content_type === 'subtitle' || (e.name ?? '').toLowerCase().endsWith('.vtt')),
+  );
+  return pickPathFromCandidates(candidates, item);
 }
 
 /**

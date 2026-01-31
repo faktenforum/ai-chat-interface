@@ -11,18 +11,27 @@ import {
   getHistoryDone,
   getFileBrowser,
   resolveAudioPathFromBrowser,
+  resolveVideoPathFromBrowser,
   buildPublicDownloadUrl,
+  relativePathFromItem,
+  MCP_DOWNLOAD_FOLDER,
   type HistoryItem,
 } from '../clients/ytptube.ts';
 import { VideoTranscriptsError } from '../utils/errors.ts';
 import { logger } from '../utils/logger.ts';
 import { formatListRecentDownloadsItem } from '../utils/response-format.ts';
 
-const AUDIO_FOLDER = 'transcripts';
-
 export interface ListRecentDownloadsDeps {
   ytptube: YTPTubeConfig;
   publicDownloadBaseUrl: string | undefined;
+}
+
+/** Normalise YTPTube status to a stable set: queued, downloading, finished, error, unknown. */
+function normaliseStatus(raw: string | undefined): string {
+  const s = (raw ?? '').trim().toLowerCase();
+  if (s === 'finished' || s === 'error' || s === 'downloading') return s;
+  if (s === 'pending' || s === 'queued') return 'queued';
+  return s || 'unknown';
 }
 
 async function getDownloadUrlForItem(
@@ -32,8 +41,15 @@ async function getDownloadUrlForItem(
 ): Promise<string | undefined> {
   if (!publicBaseUrl?.trim() || (item.status ?? '').toLowerCase() !== 'finished') return undefined;
   try {
-    const browser = await getFileBrowser(ytp, AUDIO_FOLDER);
-    const relativePath = resolveAudioPathFromBrowser(browser.contents ?? [], item);
+    const pathFromItem = relativePathFromItem(item);
+    if (pathFromItem) {
+      return buildPublicDownloadUrl(pathFromItem, publicBaseUrl, ytp.apiKey);
+    }
+    const folder = (item.folder ?? '').trim() || MCP_DOWNLOAD_FOLDER;
+    const browser = await getFileBrowser(ytp, folder);
+    const contents = browser.contents ?? [];
+    let relativePath = resolveVideoPathFromBrowser(contents, item);
+    if (!relativePath) relativePath = resolveAudioPathFromBrowser(contents, item);
     if (!relativePath) return undefined;
     return buildPublicDownloadUrl(relativePath, publicBaseUrl, ytp.apiKey);
   } catch {
@@ -84,9 +100,9 @@ export async function listRecentDownloads(
   const lines: string[] = [];
   for (let i = 0; i < slice.length; i++) {
     const item = slice[i]!;
-    const id = item.id ?? (item as HistoryItem & { _id?: string })._id;
+    const id = (item as HistoryItem & { _id?: string })._id ?? item.id;
     const title = (item.title ?? 'Untitled').trim();
-    const status = (item.status ?? 'unknown').toLowerCase();
+    const status = normaliseStatus(item.status);
     const url = typeof item.url === 'string' ? item.url : undefined;
     let download_url: string | undefined;
     if (status === 'finished' && publicBaseUrl) {
@@ -95,8 +111,8 @@ export async function listRecentDownloads(
     lines.push(formatListRecentDownloadsItem({ title, status, url, job_id: id != null ? String(id) : undefined, download_url }));
   }
 
-  const relay = `Listed ${lines.length} item(s). Use get_video_download_link for a direct link when status=finished.`;
-  const text = lines.length > 0 ? lines.join('\n') + `\nrelay=${relay}` : `relay=No items. Request transcript with a video URL to start.`;
+  const relay = `Listed ${lines.length} item(s). Use request_download_link for a direct link when status=finished.`;
+  const text = lines.length > 0 ? lines.join('\n') + `\nrelay=${relay}` : `relay=No items. Request transcript or download with a video URL to start.`;
   return {
     content: [{ type: 'text', text }],
   };

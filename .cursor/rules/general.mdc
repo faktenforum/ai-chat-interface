@@ -17,5 +17,6 @@ This project uses git submodules in `/dev` for local development and PR testing:
 - `dev/searxng` - SearXNG metasearch engine
 - `dev/n8n` - n8n workflow automation platform
 - `dev/mcp-youtube-transcript` - YouTube Transcript MCP server
+- `dev/yt-dlp` - yt-dlp (reference only; used indirectly via YTPTube)
 
 Use `docker-compose.local-dev.yml` to build images from submodule sources locally. Use `docker-compose.prod.yml` for production (published `:latest` images) or `docker-compose.dev.yml` for dev/test (published `:dev` images). See `dev/README.md` for details.
