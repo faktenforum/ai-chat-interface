@@ -68,11 +68,15 @@ function createMcpServer(): McpServer {
       capabilities: { tools: {}, resources: {}, prompts: {} },
       instructions: `YTPTube MCP: video URL to transcript or download link.
 
+Supported links: Any URL that yt-dlp supports, including YouTube, Reddit (posts with embedded video), Instagram, TikTok, Vimeo, Twitter/X, Facebook, and hundreds of other sites. Page URLs that embed a video (e.g. a Reddit post URL) are valid—use get_video_info to check support and metadata, or request_video_transcript/request_download_link directly. Do not refuse a link because it "looks like a text page"; try the tool first.
+
 Request flow: (1) request_video_transcript for transcript only; (2) request_download_link for download link (video or audio) only. Both tools check if the result exists; if yes return it; if not they start the job and return status. Poll with get_status(video_url=...) or get_status(job_id=<UUID>). When status=finished, call the same request tool again to get transcript or link.
 
 LibreChat: No automatic MCP polling. Tell the user to ask for status (e.g. "What is the status?"); then call get_status and reply. Do not promise to monitor or check back automatically.
 
 Important: job_id is the internal UUID (36-char). Use get_status(job_id=...) or get_status(video_url=...); not the platform video id. Relay the relay= line to the user.
+
+Status=skipped: When the URL is already in the download archive, YTPTube skips the job and returns status=skipped (reason mentions archive). Tell the user the video was already downloaded; they can call request_video_transcript or request_download_link again with the same URL to get transcript or link from the existing file.
 
 Video-only: If the item was only downloaded as video, request_video_transcript starts a transcript job and returns queued; poll get_status then call request_video_transcript again when finished.
 

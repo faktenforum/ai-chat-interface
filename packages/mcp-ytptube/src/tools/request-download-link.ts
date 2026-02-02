@@ -198,6 +198,27 @@ export async function requestDownloadLink(
       throw new VideoTranscriptsError(msg, 'error');
     }
 
+    if (status === 'skip' || status === 'cancelled') {
+      const reason = (item as { msg?: string }).msg ?? 'URL already in download archive; job was skipped.';
+      return {
+        content: [
+          {
+            type: 'text',
+            text: formatStatusResponse({
+              status: 'skipped',
+              job_id: id,
+              url: video_url,
+              status_url: storedUrl,
+              canonical_key: canonicalKeyForDisplay(item, video_url),
+              reason,
+              relay:
+                'Video was skipped (already in archive). Call request_download_link again with the same URL to try getting the link from the existing download.',
+            }),
+          },
+        ],
+      };
+    }
+
     const fresh = await getHistoryById(ytp, id).catch(() => item);
     const pct = formatProgress(fresh);
     const isQueued = status === 'queued' || status === 'pending' || pct === 0;
@@ -347,29 +368,53 @@ export async function requestDownloadLink(
   const doneItems = await getHistoryDone(ytp).catch(() => [] as HistoryItem[]);
   const doneFound =
     findItemByUrlInItems(doneItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, doneItems, video_url));
-  if (doneFound && (doneFound.item.status ?? '').toLowerCase() === 'finished') {
-    const { item, id } = doneFound;
-    const result = await resolveDownloadUrl(ytp, publicBaseUrl, item, id, type);
-    const storedUrl = typeof item.url === 'string' ? item.url : undefined;
-    if (result.ok) {
+  if (doneFound) {
+    const doneStatus = (doneFound.item.status ?? '').toLowerCase();
+    if (doneStatus === 'finished') {
+      const { item, id } = doneFound;
+      const result = await resolveDownloadUrl(ytp, publicBaseUrl, item, id, type);
+      const storedUrl = typeof item.url === 'string' ? item.url : undefined;
+      if (result.ok) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: formatDownloadLinkResponse({
+                download_url: result.downloadUrl,
+                url: storedUrl ?? video_url,
+                canonical_key: canonicalKeyForDisplay(item, video_url),
+                relay: DOWNLOAD_RELAY,
+              }),
+            },
+          ],
+        };
+      }
+      if (result.error === 'no_video') {
+        return { content: [{ type: 'text', text: formatErrorResponse(NO_VIDEO_USE_AUDIO_MSG) }] };
+      }
+      throw new NotFoundError(result.message);
+    }
+    if (doneStatus === 'skip' || doneStatus === 'cancelled') {
+      const { item, id } = doneFound;
+      const reason = (item as { msg?: string }).msg ?? 'URL already in download archive; job was skipped.';
       return {
         content: [
           {
             type: 'text',
-            text: formatDownloadLinkResponse({
-              download_url: result.downloadUrl,
-              url: storedUrl ?? video_url,
+            text: formatStatusResponse({
+              status: 'skipped',
+              job_id: id,
+              url: video_url,
+              status_url: typeof item.url === 'string' ? item.url : undefined,
               canonical_key: canonicalKeyForDisplay(item, video_url),
-              relay: DOWNLOAD_RELAY,
+              reason,
+              relay:
+                'Video was skipped (already in archive). Call request_download_link again with the same URL to try getting the link from the existing download.',
             }),
           },
         ],
       };
     }
-    if (result.error === 'no_video') {
-      return { content: [{ type: 'text', text: formatErrorResponse(NO_VIDEO_USE_AUDIO_MSG) }] };
-    }
-    throw new NotFoundError(result.message);
   }
 
   return {

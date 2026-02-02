@@ -329,6 +329,28 @@ export async function requestVideoTranscript(
       throw new YTPTubeError(msg, 'error');
     }
 
+    if (status === 'skip' || status === 'cancelled') {
+      const reason = (item as { msg?: string }).msg ?? 'URL already in download archive; job was skipped.';
+      return {
+        content: [
+          {
+            type: 'text',
+            text: formatStatusResponse({
+              status: 'skipped',
+              job_id: id,
+              url: video_url,
+              status_url: typeof item.url === 'string' ? item.url : undefined,
+              canonical_key: canonicalKeyForDisplay(item, video_url),
+              reason,
+              relay:
+                'Video was skipped (already in archive). Call request_video_transcript again with the same URL to try getting transcript from the existing download.',
+              ...statusLanguageParams(lang),
+            }),
+          },
+        ],
+      };
+    }
+
     const storedUrl = typeof item.url === 'string' ? item.url : undefined;
     const fresh = await getHistoryById(ytp, id).catch(() => item);
     const pct = formatProgress(fresh);
@@ -511,11 +533,36 @@ export async function requestVideoTranscript(
   const doneItems = await getHistoryDone(ytp).catch(() => [] as HistoryItem[]);
   const doneFound =
     findItemByUrlInItems(doneItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, doneItems, video_url));
-  if (doneFound && (doneFound.item.status ?? '').toLowerCase() === 'finished') {
-    const { item, id } = doneFound;
-    const result = await buildTranscriptForFinishedItem(deps, video_url, item, id, lang, { fromArchive: true });
-    if (result) return result;
-    return startTranscriptJobAndReturnQueued(deps, video_url, preset, lang, { relay: VIDEO_ONLY_QUEUED_RELAY });
+  if (doneFound) {
+    const doneStatus = (doneFound.item.status ?? '').toLowerCase();
+    if (doneStatus === 'finished') {
+      const { item, id } = doneFound;
+      const result = await buildTranscriptForFinishedItem(deps, video_url, item, id, lang, { fromArchive: true });
+      if (result) return result;
+      return startTranscriptJobAndReturnQueued(deps, video_url, preset, lang, { relay: VIDEO_ONLY_QUEUED_RELAY });
+    }
+    if (doneStatus === 'skip' || doneStatus === 'cancelled') {
+      const { item, id } = doneFound;
+      const reason = (item as { msg?: string }).msg ?? 'URL already in download archive; job was skipped.';
+      return {
+        content: [
+          {
+            type: 'text',
+            text: formatStatusResponse({
+              status: 'skipped',
+              job_id: id,
+              url: video_url,
+              status_url: typeof item.url === 'string' ? item.url : undefined,
+              canonical_key: canonicalKeyForDisplay(item, video_url),
+              reason,
+              relay:
+                'Video was skipped (already in archive). Call request_video_transcript again with the same URL to try getting transcript from the existing download.',
+              ...statusLanguageParams(lang),
+            }),
+          },
+        ],
+      };
+    }
   }
 
   // POST succeeded but item not found in queue yet (may appear later).

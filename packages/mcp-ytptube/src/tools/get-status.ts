@@ -151,6 +151,27 @@ export async function getStatus(
     };
   }
 
+  if (status === 'skip' || status === 'cancelled') {
+    const reason = (item as { msg?: string }).msg ?? 'URL already in download archive; job was skipped.';
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'skipped',
+            job_id: id,
+            url,
+            status_url: url,
+            canonical_key,
+            reason,
+            relay:
+              'Video was skipped (already in archive). If you need the transcript or download link, call request_video_transcript or request_download_link again with the same URL; the file may exist from a previous download.',
+          }),
+        },
+      ],
+    };
+  }
+
   if (status === 'queued' || status === 'pending' || pct === 0) {
     return {
       content: [

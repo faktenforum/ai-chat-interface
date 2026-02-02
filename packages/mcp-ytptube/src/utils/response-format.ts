@@ -58,7 +58,7 @@ export function formatTranscriptResponse(params: TranscriptResponseParams): stri
   return `${metadata}${DELIM}${TRANSCRIPT_LABEL}\n${transcript}`;
 }
 
-export type StatusKind = 'queued' | 'downloading' | 'finished' | 'error' | 'not_found';
+export type StatusKind = 'queued' | 'downloading' | 'finished' | 'error' | 'skipped' | 'not_found';
 
 export interface StatusResponseParams {
   status: StatusKind;
