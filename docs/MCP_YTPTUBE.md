@@ -45,18 +45,44 @@ No automatic MCP polling. LLM asks user to request status; then calls `get_statu
 | `YTPTUBE_API_KEY` | Optional; for YTPTube auth and download links. |
 | `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` | Public base for download links (e.g. `https://ytptube.${DOMAIN}`). |
 | `YTPTUBE_SUB_LANGS` | Optional. Subtitle langs for platform subs (e.g. `en,en-US`). |
+| `YTPTUBE_PRESET_TRANSCRIPT` | Preset for transcript jobs (default `mcp_audio`). See "Video after transcript" below. |
+| `YTPTUBE_PRESET_VIDEO` | Preset for video download jobs (default `default`). |
 | `YTPTUBE_PROXY` | Optional. Proxy for yt-dlp (overrides Webshare). |
 | `WEBSHARE_PROXY_USERNAME`, `WEBSHARE_PROXY_PASSWORD` | Optional. Webshare fixed proxy when `YTPTUBE_PROXY` unset. Same as mcp-youtube-transcript. [WEBSHARE_PROXY.md](WEBSHARE_PROXY.md) |
 | `SCALEWAY_BASE_URL`, `SCALEWAY_API_KEY` | Required for transcription. |
 | `MCP_YTPTUBE_PORT` / `PORT` | HTTP port (default 3010). |
 | `MCP_YTPTUBE_LOG_LEVEL` / `LOG_LEVEL` | Log level (default `info`). |
 | `MCP_YTPTUBE_DEBUG_API` | `1` or `true` to log full YTPTube API responses; use with `LOG_LEVEL=debug`. |
+| `YTPTUBE_SKIP_PRESET_SYNC` | `1` or `true` to skip creating/updating the transcript preset on startup (e.g. when presets are managed elsewhere). |
+| `YTPTUBE_STARTUP_MAX_WAIT_MS` | Max ms to wait for YTPTube at startup (default `300000` = 5 min). |
 
 YTPTube compose: `YTP_OUTPUT_TEMPLATE`/`YTP_OUTPUT_TEMPLATE_CHAPTER` set to short values to avoid "File name too long".
+
+## Startup
+
+On start, the server waits for YTPTube (GET api/ping/), then creates or updates the transcript preset to match the canonical definition. Timeout: `YTPTUBE_STARTUP_MAX_WAIT_MS`. Set `YTPTUBE_SKIP_PRESET_SYNC=1` to skip when you manage presets yourself.
 
 ## Path resolution and video-only
 
 Finished items: MCP uses `item.filename`/`folder` when present; else file-browser. **Video-only:** If URL was only downloaded as video, `request_video_transcript` starts a transcript job and returns `status=queued`; poll `get_status`, then call again for transcript.
+
+## Video after transcript
+
+Transcript jobs download only audio (saves bandwidth). To allow requesting the **video** later for the same URL, transcript jobs must use a preset that writes to a **separate archive** (e.g. `archive_audio.log`). The upstream default preset `audio_only` uses the main `archive.log` and is **not** suitable: the URL would be in the main archive and a later video request (preset `default`) would be skipped.
+
+The MCP server ensures the preset (default `mcp_audio`) exists and is up to date on startup. To create or change it manually (e.g. `YTPTUBE_SKIP_PRESET_SYNC=1`), use **POST /api/presets** with YTPTube API auth. Body example (Ogg Vorbis for Scaleway STT):
+
+```json
+{
+  "name": "mcp_audio",
+  "description": "Audio-only for MCP transcript jobs. Uses archive_audio.log so the same URL can later be downloaded as video.",
+  "folder": "",
+  "template": "",
+  "cookies": "",
+  "cli": "--socket-timeout 30 --download-archive %(config_path)s/archive_audio.log\n--extract-audio --audio-format vorbis --add-chapters --embed-metadata --embed-thumbnail --format 'bestaudio/best'",
+  "priority": 0
+}
+```
 
 ## URL matching
 
@@ -68,6 +94,7 @@ Match by URL, item identifiers, or **POST /api/yt-dlp/archive_id/** (any platfor
 - **Item not found:** URL format, item not in queue yet, or wrong YTPTube URL.
 - **job_id:** Use internal UUID from responses, not platform video id.
 - **status=error, No formats:** Geo-restricted, private, or unsupported; try cookies or another URL.
+- **Transcription fetch failed / EAI_AGAIN:** Scaleway API calls are retried up to 3 times with a short delay; if it still fails, check DNS and network from the MCP container to `api.scaleway.ai`.
 
 ## Example test URLs
 

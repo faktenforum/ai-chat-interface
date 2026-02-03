@@ -24,3 +24,10 @@ export const CLI_AUDIO = '--extract-audio --audio-format mp3';
 
 /** CLI fragment for subtitles only (no download). */
 export const CLI_SUBS = '--skip-download --write-subs';
+
+/** Preset name for transcript jobs (audio-only; separate archive so video can be requested later). */
+export const PRESET_TRANSCRIPT =
+  process.env.YTPTUBE_PRESET_TRANSCRIPT?.trim() || 'mcp_audio';
+
+/** Preset name for video download jobs (main archive). */
+export const PRESET_VIDEO = process.env.YTPTUBE_PRESET_VIDEO?.trim() || 'default';

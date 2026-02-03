@@ -11,8 +11,8 @@
         "MDB_MCP_CONNECTION_STRING": "mongodb://localhost:27017/LibreChat"
       }
     },
-    "calculator": { "url": "http://localhost:3000/mcp" },
-    "image-gen": { "url": "http://localhost:3001/mcp" },
+    "calculator": { "url": "http://localhost:3012/mcp" },
+    "image-gen": { "url": "http://localhost:3013/mcp" },
     "firecrawl": { "url": "http://localhost:3003/mcp" },
     "openstreetmap": { "url": "http://localhost:3004/mcp" },
     "weather": { "url": "http://localhost:3005/mcp" },

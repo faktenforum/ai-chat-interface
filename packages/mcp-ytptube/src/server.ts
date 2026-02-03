@@ -22,6 +22,7 @@ import { RequestDownloadLinkSchema } from './schemas/request-download-link.schem
 import { ListRecentDownloadsSchema } from './schemas/list-recent-downloads.schema.ts';
 import { GetVideoInfoSchema } from './schemas/get-video-info.schema.ts';
 import { GetThumbnailUrlSchema } from './schemas/get-thumbnail-url.schema.ts';
+import { waitForYTPTube, ensureMcpPreset } from './clients/ytptube-presets.ts';
 import { logger } from './utils/logger.ts';
 import { VideoTranscriptsError } from './utils/errors.ts';
 import { formatErrorResponse } from './utils/response-format.ts';
@@ -79,6 +80,8 @@ Important: job_id is the internal UUID (36-char). Use get_status(job_id=...) or 
 Status=skipped: When the URL is already in the download archive, YTPTube skips the job and returns status=skipped (reason mentions archive). Tell the user the video was already downloaded; they can call request_video_transcript or request_download_link again with the same URL to get transcript or link from the existing file.
 
 Video-only: If the item was only downloaded as video, request_video_transcript starts a transcript job and returns queued; poll get_status then call request_video_transcript again when finished.
+
+Video after transcript: Transcript jobs download only audio (saves bandwidth). The user can still request the video later: call request_download_link with type=video and the same URL; the tool will queue the video download and return status=queued. Poll get_status then call request_download_link again for the video link.
 
 Transcript language: Without language_hint, responses include language=unknown and language_instruction. Tell the user the language was unspecified and may be wrong; if wrong, ask for the correct language and re-call with language_hint (e.g. "de"). Pass language_hint proactively when the user already indicated the video language.
 
@@ -254,6 +257,31 @@ async function main(): Promise<void> {
   } catch (e) {
     logger.error({ error: e }, 'SCALEWAY_BASE_URL / SCALEWAY_API_KEY not set');
     process.exit(1);
+  }
+
+  const ytptube = getYTPTubeConfig();
+  const startupMaxWaitMs = parseInt(
+    process.env.YTPTUBE_STARTUP_MAX_WAIT_MS ?? String(5 * 60 * 1000),
+    10,
+  );
+
+  try {
+    await waitForYTPTube(ytptube, { maxWaitMs: startupMaxWaitMs });
+  } catch (e) {
+    logger.error({ error: e }, 'YTPTube not reachable at startup');
+    process.exit(1);
+  }
+
+  const skipPresetSync = process.env.YTPTUBE_SKIP_PRESET_SYNC === '1' || process.env.YTPTUBE_SKIP_PRESET_SYNC === 'true';
+  if (!skipPresetSync) {
+    try {
+      await ensureMcpPreset(ytptube);
+    } catch (e) {
+      logger.error({ error: e }, 'Failed to ensure transcript preset');
+      process.exit(1);
+    }
+  } else {
+    logger.info('YTPTUBE_SKIP_PRESET_SYNC set; skipping preset sync');
   }
 
   try {

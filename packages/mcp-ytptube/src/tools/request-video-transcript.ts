@@ -17,6 +17,7 @@ import {
   postHistory,
   getFileBrowser,
   getUrlInfo,
+  getArchiveIdForUrls,
   resolveAudioPathFromBrowser,
   resolveSubtitlePathFromBrowser,
   resolveVideoPathFromBrowser,
@@ -29,7 +30,7 @@ import {
   type HistoryItem,
 } from '../clients/ytptube.ts';
 import type { ScalewayConfig } from '../clients/scaleway.ts';
-import { transcribe } from '../clients/scaleway.ts';
+import { transcribe, filenameForScaleway } from '../clients/scaleway.ts';
 import {
   InvalidUrlError,
   InvalidCookiesError,
@@ -42,11 +43,13 @@ import { isValidNetscapeCookieFormat, INVALID_COOKIES_MESSAGE } from '../utils/n
 import { logger } from '../utils/logger.ts';
 import { formatTranscriptResponseAsBlocks, formatStatusResponse } from '../utils/response-format.ts';
 import { vttToPlainText } from '../utils/vtt-to-text.ts';
-import { getProxyUrl, CLI_AUDIO, CLI_SUBS } from '../utils/env.ts';
+import { getProxyUrl, CLI_AUDIO, CLI_SUBS, PRESET_TRANSCRIPT } from '../utils/env.ts';
 
 const POST_TO_QUEUE_DELAY_MS = 500;
 
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mkv', '.avi', '.mov', '.m4v', '.flv'];
+/** Audio extensions for path-from-item (yt-dlp may output m4a, webm, opus, etc.). */
+const AUDIO_EXTENSIONS = ['.mp3', '.m4a', '.webm', '.opus', '.aac', '.ogg', '.wav'];
 
 function isVideoPath(path: string): boolean {
   const lower = (path ?? '').toLowerCase();
@@ -101,24 +104,53 @@ async function buildTranscriptForFinishedItem(
   options: { fromArchive?: boolean },
 ): Promise<{ content: TextContent[] } | null> {
   const { ytptube: ytp, scaleway: scw } = deps;
-  const folder = (item.folder ?? '').trim() || MCP_DOWNLOAD_FOLDER;
+  let resolvedItem = item;
+  const pathFromResolved = relativePathFromItem(item);
+  if (!pathFromResolved) {
+    const fresh = await getHistoryById(ytp, id).catch(() => null);
+    if (fresh && relativePathFromItem(fresh)) resolvedItem = fresh;
+  }
+  const folder = (resolvedItem.folder ?? '').trim() || MCP_DOWNLOAD_FOLDER;
   let subtitlePath: string | null = null;
   let relativePath: string | null = null;
   let contents: FileBrowserContents = [];
-  const pathFromItem = relativePathFromItem(item);
+  const pathFromItem = relativePathFromItem(resolvedItem);
   if (pathFromItem) {
     const lower = pathFromItem.toLowerCase();
     if (lower.endsWith('.vtt')) subtitlePath = pathFromItem;
-    else if (lower.endsWith('.mp3')) relativePath = pathFromItem;
+    else if (AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext))) relativePath = pathFromItem;
   }
   if (!subtitlePath || !relativePath) {
     const browser = await getFileBrowser(ytp, folder);
     contents = browser.contents ?? [];
-    if (!subtitlePath) subtitlePath = resolveSubtitlePathFromBrowser(contents, item);
-    if (!relativePath) relativePath = resolveAudioPathFromBrowser(contents, item);
+    if (!subtitlePath) subtitlePath = resolveSubtitlePathFromBrowser(contents, resolvedItem);
+    if (!relativePath) relativePath = resolveAudioPathFromBrowser(contents, resolvedItem);
+    if (!relativePath) {
+      try {
+        const results = await getArchiveIdForUrls(ytp, [videoUrl]);
+        const archiveId = results[0]?.archive_id?.trim();
+        const idFromUrl = archiveId ? archiveId.split(/\s+/).pop() ?? null : null;
+        if (idFromUrl) {
+          const idLower = idFromUrl.toLowerCase();
+          const audioExts = ['.mp3', '.m4a', '.webm', '.opus', '.aac', '.ogg', '.wav'];
+          for (const e of contents) {
+            if (!e.is_file || !e.name) continue;
+            const name = (e.name ?? '').toLowerCase();
+            const stem = name.replace(/\.[^.]+$/, '');
+            if (stem === idLower && audioExts.some((ext) => name.endsWith(ext))) {
+              const p = (e.path ?? e.name) as string;
+              relativePath = p ? String(p).replace(/^\//, '') : null;
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        logger.debug({ err: e, videoUrl }, 'getArchiveIdForUrls fallback failed');
+      }
+    }
   }
 
-  const storedUrl = typeof item.url === 'string' ? item.url : undefined;
+  const storedUrl = typeof resolvedItem.url === 'string' ? resolvedItem.url : undefined;
   const langParams = transcriptLanguageParams(lang);
 
   if (subtitlePath) {
@@ -138,7 +170,7 @@ async function buildTranscriptForFinishedItem(
       fromArchive: options.fromArchive,
       status_url: storedUrl,
       transcript_source: 'platform_subtitles',
-      canonical_key: canonicalKeyForDisplay(item, videoUrl),
+      canonical_key: canonicalKeyForDisplay(resolvedItem, videoUrl),
       ...langParams,
     });
     return { content: [{ type: 'text', text: metadata }, { type: 'text', text: transcriptText }] };
@@ -146,8 +178,23 @@ async function buildTranscriptForFinishedItem(
 
   if (!relativePath) {
     if (pathFromItem && isVideoPath(pathFromItem)) return null;
-    const videoPath = resolveVideoPathFromBrowser(contents, item);
+    const videoPath = resolveVideoPathFromBrowser(contents, resolvedItem);
     if (videoPath) return null;
+    logger.warn(
+      {
+        id,
+        folder,
+        itemMeta: {
+          filename: resolvedItem.filename ?? null,
+          video_id: resolvedItem.video_id ?? null,
+          archive_id: resolvedItem.archive_id ?? null,
+          title: typeof resolvedItem.title === 'string' ? resolvedItem.title.slice(0, 60) : null,
+        },
+        fileCount: contents.length,
+        fileNames: contents.filter((e) => e.is_file && e.name).map((e) => e.name),
+      },
+      'No audio/subtitle path for finished item (check file browser)',
+    );
     throw new NotFoundError(
       `Could not find audio or subtitle for finished item ${id} in folder ${folder}. Check YTPTube file browser.`,
     );
@@ -161,7 +208,7 @@ async function buildTranscriptForFinishedItem(
     logger.warn({ err, relativePath, id }, 'YTPTube GET /api/download failed');
     throw new YTPTubeError(`Failed to download audio: ${err.message}`);
   }
-  const filename = relativePath.includes('/') ? relativePath.split('/').pop() ?? 'audio.mp3' : relativePath;
+  const filename = filenameForScaleway(relativePath);
   let text: string;
   try {
     text = await transcribe(scw, audioBuffer, filename, lang);
@@ -177,7 +224,7 @@ async function buildTranscriptForFinishedItem(
     fromArchive: options.fromArchive,
     status_url: storedUrl,
     transcript_source: 'transcription',
-    canonical_key: canonicalKeyForDisplay(item, videoUrl),
+    canonical_key: canonicalKeyForDisplay(resolvedItem, videoUrl),
     ...langParams,
   });
   return { content: [{ type: 'text', text: metadata }, { type: 'text', text: transcriptText }] };
@@ -216,7 +263,7 @@ async function startTranscriptJobAndReturnQueued(
   const cli = proxy ? `${cliBase} --proxy ${proxy}` : cliBase;
   const body = {
     url: video_url,
-    preset,
+    preset: preset ?? PRESET_TRANSCRIPT,
     folder: MCP_DOWNLOAD_FOLDER,
     cli,
     auto_start: true as const,
@@ -330,6 +377,11 @@ export async function requestVideoTranscript(
     }
 
     if (status === 'skip' || status === 'cancelled') {
+      const result = await buildTranscriptForFinishedItem(deps, video_url, item, id, lang, { fromArchive: true }).catch((e) => {
+        logger.warn({ err: e, video_url, id }, 'buildTranscriptForFinishedItem failed (skip path), returning skipped');
+        return null;
+      });
+      if (result) return result;
       const reason = (item as { msg?: string }).msg ?? 'URL already in download archive; job was skipped.';
       return {
         content: [
@@ -409,7 +461,7 @@ export async function requestVideoTranscript(
   const cli = proxy ? `${cliBase} --proxy ${proxy}` : cliBase;
   const body = {
     url: video_url,
-    preset,
+    preset: preset ?? PRESET_TRANSCRIPT,
     folder: MCP_DOWNLOAD_FOLDER,
     cli,
     auto_start: true as const,
@@ -448,6 +500,33 @@ export async function requestVideoTranscript(
     if (status === 'error') {
       const msg = (item as HistoryItem & { error?: string }).error ?? 'YTPTube job ended with status error';
       throw new YTPTubeError(msg, 'error');
+    }
+
+    if (status === 'skip' || status === 'cancelled') {
+      const result = await buildTranscriptForFinishedItem(deps, video_url, item, id, lang, { fromArchive: true }).catch((e) => {
+        logger.warn({ err: e, video_url, id }, 'buildTranscriptForFinishedItem failed (postFound skip path), returning skipped');
+        return null;
+      });
+      if (result) return result;
+      const reason = (item as { msg?: string }).msg ?? 'URL already in download archive; job was skipped.';
+      return {
+        content: [
+          {
+            type: 'text',
+            text: formatStatusResponse({
+              status: 'skipped',
+              job_id: id,
+              url: video_url,
+              status_url: storedUrl,
+              canonical_key: canonicalKeyForDisplay(item, video_url),
+              reason,
+              relay:
+                'Video was skipped (already in archive). Call request_video_transcript again with the same URL to try getting transcript from the existing download.',
+              ...statusLanguageParams(lang),
+            }),
+          },
+        ],
+      };
     }
 
     const pct = formatProgress(await getHistoryById(ytp, id).catch(() => item));
@@ -543,6 +622,11 @@ export async function requestVideoTranscript(
     }
     if (doneStatus === 'skip' || doneStatus === 'cancelled') {
       const { item, id } = doneFound;
+      const result = await buildTranscriptForFinishedItem(deps, video_url, item, id, lang, { fromArchive: true }).catch((e) => {
+        logger.warn({ err: e, video_url, id }, 'buildTranscriptForFinishedItem failed (doneFound skip path), returning skipped');
+        return null;
+      });
+      if (result) return result;
       const reason = (item as { msg?: string }).msg ?? 'URL already in download archive; job was skipped.';
       return {
         content: [

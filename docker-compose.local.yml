@@ -182,7 +182,7 @@ services:
       context: ./packages/mcp-calculator
       dockerfile: Dockerfile
     ports:
-      - "127.0.0.1:3000:3000"  # Cursor IDE – local only
+      - "127.0.0.1:${MCP_CALCULATOR_PORT:-3012}:${MCP_CALCULATOR_PORT:-3012}"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
   mcp-image-gen:
@@ -193,7 +193,7 @@ services:
       context: ./packages/mcp-image-gen
       dockerfile: Dockerfile
     ports:
-      - "127.0.0.1:3001:3001"  # Cursor IDE – local only
+      - "127.0.0.1:${MCP_IMAGE_GEN_PORT:-3013}:${MCP_IMAGE_GEN_PORT:-3013}"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
   mcp-firecrawl:

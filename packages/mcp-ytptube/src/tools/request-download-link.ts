@@ -11,10 +11,9 @@ import {
   getHistoryById,
   getHistoryQueue,
   getHistoryDone,
-  findItemByUrlWithArchiveIdFallback,
   findItemByUrlInItems,
   findItemByUrlInItemsWithArchiveIdFallback,
-  findItemByUrlInAll,
+  findItemByUrlAndType,
   getFileBrowser,
   resolveAudioPathFromBrowser,
   resolveVideoPathFromBrowser,
@@ -30,7 +29,7 @@ import { VideoTranscriptsError, NotFoundError, InvalidCookiesError } from '../ut
 import { isValidNetscapeCookieFormat, INVALID_COOKIES_MESSAGE } from '../utils/netscape-cookies.ts';
 import { logger } from '../utils/logger.ts';
 import { formatDownloadLinkResponse, formatStatusResponse, formatErrorResponse } from '../utils/response-format.ts';
-import { getProxyUrl } from '../utils/env.ts';
+import { getProxyUrl, PRESET_VIDEO } from '../utils/env.ts';
 
 const POST_TO_QUEUE_DELAY_MS = 500;
 
@@ -54,6 +53,90 @@ const NO_VIDEO_USE_AUDIO_MSG =
   'No video file for this item; only audio from transcript. Use type=audio for download link.';
 
 const DOWNLOAD_RELAY = 'Use this link to download the file (e.g. in browser or wget).';
+
+const VIDEO_QUEUED_RELAY =
+  'Video download queued. Use get_status to check; when finished call request_download_link again for the video link.';
+
+/**
+ * Queue a video download for the same URL (preset uses main archive so URL is not skipped).
+ * Used when type=video but only audio exists (e.g. from transcript). Returns queued status or null on POST failure.
+ */
+async function queueVideoDownloadAndReturnQueued(
+  ytp: YTPTubeConfig,
+  video_url: string,
+  presetForVideo: string,
+  cookies: string | undefined,
+): Promise<{ content: TextContent[] } | null> {
+  const proxy = getProxyUrl();
+  const cli = proxy ? `--proxy ${proxy}` : '';
+  const body = {
+    url: video_url,
+    preset: presetForVideo,
+    folder: MCP_DOWNLOAD_FOLDER,
+    cli: cli || undefined,
+    auto_start: true as const,
+    ...(cookies?.trim() && { cookies: cookies.trim() }),
+  };
+  try {
+    await postHistory(ytp, body);
+  } catch (e) {
+    logger.warn({ err: e, video_url }, 'YTPTube POST /api/history (video) failed');
+    return null;
+  }
+  await new Promise((r) => setTimeout(r, POST_TO_QUEUE_DELAY_MS));
+  let queueItems: HistoryItem[];
+  try {
+    queueItems = await getHistoryQueue(ytp);
+  } catch {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'queued',
+            url: video_url,
+            canonical_key: canonicalVideoKey(video_url) ?? undefined,
+            relay: VIDEO_QUEUED_RELAY,
+          }),
+        },
+      ],
+    };
+  }
+  const afterFound =
+    findItemByUrlInItems(queueItems, video_url) ??
+    (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, video_url));
+  if (afterFound) {
+    const storedUrl = typeof afterFound.item.url === 'string' ? afterFound.item.url : undefined;
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'queued',
+            job_id: afterFound.id,
+            url: video_url,
+            status_url: storedUrl,
+            canonical_key: canonicalKeyForDisplay(afterFound.item, video_url),
+            relay: VIDEO_QUEUED_RELAY,
+          }),
+        },
+      ],
+    };
+  }
+  return {
+    content: [
+      {
+        type: 'text',
+        text: formatStatusResponse({
+          status: 'queued',
+          url: video_url,
+          canonical_key: canonicalVideoKey(video_url) ?? undefined,
+          relay: VIDEO_QUEUED_RELAY,
+        }),
+      },
+    ],
+  };
+}
 
 export interface RequestDownloadLinkDeps {
   ytptube: YTPTubeConfig;
@@ -120,19 +203,21 @@ async function resolveDownloadUrl(
   };
 }
 
-/** Resolve item by video_url only (no job_id). Same logic as get_status. */
+/** Resolve item by video_url and prefer item whose file matches type (video vs audio) when multiple exist. */
 async function resolveItem(
   ytp: YTPTubeConfig,
   videoUrl: string,
+  type: 'audio' | 'video',
 ): Promise<{ item: HistoryItem; id: string } | null> {
-  const data = await getHistory(ytp);
-  const found = await findItemByUrlWithArchiveIdFallback(ytp, data, videoUrl);
-  if (found) return found;
-  const [queueItems, doneItems] = await Promise.all([
+  const [data, queueItems, doneItems] = await Promise.all([
+    getHistory(ytp),
     getHistoryQueue(ytp).catch(() => [] as HistoryItem[]),
     getHistoryDone(ytp).catch(() => [] as HistoryItem[]),
   ]);
-  return findItemByUrlInAll(ytp, data, videoUrl, { queue: queueItems, done: doneItems });
+  return findItemByUrlAndType(ytp, data, videoUrl, type, {
+    queue: queueItems,
+    done: doneItems,
+  });
 }
 
 export async function requestDownloadLink(
@@ -163,7 +248,7 @@ export async function requestDownloadLink(
     };
   }
 
-  const resolved = await resolveItem(ytp, video_url);
+  const resolved = await resolveItem(ytp, video_url, type);
 
   if (resolved) {
     const { item, id } = resolved;
@@ -188,6 +273,13 @@ export async function requestDownloadLink(
         };
       }
       if (result.error === 'no_video') {
+        const queueVideoResult = await queueVideoDownloadAndReturnQueued(
+          ytp,
+          video_url,
+          preset ?? PRESET_VIDEO,
+          cookies,
+        );
+        if (queueVideoResult) return queueVideoResult;
         return { content: [{ type: 'text', text: formatErrorResponse(NO_VIDEO_USE_AUDIO_MSG) }] };
       }
       throw new NotFoundError(result.message);
@@ -247,7 +339,7 @@ export async function requestDownloadLink(
   const cli = proxy ? (cliBase ? `${cliBase} --proxy ${proxy}` : `--proxy ${proxy}`) : cliBase;
   const body = {
     url: video_url,
-    preset,
+    preset: preset ?? (type === 'video' ? PRESET_VIDEO : undefined),
     folder: MCP_DOWNLOAD_FOLDER,
     cli: cli || undefined,
     auto_start: true as const,
@@ -295,6 +387,13 @@ export async function requestDownloadLink(
         };
       }
       if (result.error === 'no_video') {
+        const queueVideoResult = await queueVideoDownloadAndReturnQueued(
+          ytp,
+          video_url,
+          preset ?? PRESET_VIDEO,
+          cookies,
+        );
+        if (queueVideoResult) return queueVideoResult;
         return { content: [{ type: 'text', text: formatErrorResponse(NO_VIDEO_USE_AUDIO_MSG) }] };
       }
       throw new NotFoundError(result.message);
@@ -390,6 +489,13 @@ export async function requestDownloadLink(
         };
       }
       if (result.error === 'no_video') {
+        const queueVideoResult = await queueVideoDownloadAndReturnQueued(
+          ytp,
+          video_url,
+          preset ?? PRESET_VIDEO,
+          cookies,
+        );
+        if (queueVideoResult) return queueVideoResult;
         return { content: [{ type: 'text', text: formatErrorResponse(NO_VIDEO_USE_AUDIO_MSG) }] };
       }
       throw new NotFoundError(result.message);

@@ -105,7 +105,7 @@ export interface FileBrowserResponse {
   contents?: FileBrowserEntry[];
 }
 
-function getAuthHeaders(apiKey?: string): Record<string, string> {
+export function getAuthHeaders(apiKey?: string): Record<string, string> {
   if (!apiKey) return {};
   if (apiKey.includes(':')) {
     const b64 = Buffer.from(apiKey, 'utf8').toString('base64');
@@ -136,7 +136,7 @@ export function buildPublicDownloadUrl(
   return `${url}?apikey=${encodeURIComponent(base64url)}`;
 }
 
-function ensureSlash(url: string): string {
+export function ensureSlash(url: string): string {
   return url.endsWith('/') ? url : `${url}/`;
 }
 
@@ -151,6 +151,18 @@ export function relativePathFromItem(item: HistoryItem): string | null {
   const folder = typeof item.folder === 'string' ? item.folder.trim() : '';
   const path = folder ? `${folder}/${fn}` : fn;
   return path.replace(/^\/+/, '');
+}
+
+/** Audio file extensions (yt-dlp may output m4a, webm, opus, etc. besides mp3). */
+const MEDIA_AUDIO_EXTENSIONS = ['.mp3', '.m4a', '.webm', '.opus', '.aac', '.ogg', '.wav'];
+const MEDIA_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mkv', '.avi', '.mov', '.m4v', '.flv'];
+
+/** Derive media type from file path (extension). Used to prefer video vs audio item when multiple exist for same URL. */
+export function getMediaTypeFromPath(path: string | null): 'audio' | 'video' | null {
+  const lower = (path ?? '').toLowerCase();
+  if (MEDIA_AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'audio';
+  if (MEDIA_VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext))) return 'video';
+  return null;
 }
 
 /**
@@ -1254,6 +1266,57 @@ export async function findItemByUrlInAll(
   return found ?? null;
 }
 
+/**
+ * Collect all items matching videoUrl from data, queue, and done (by URL or archive_id).
+ */
+function collectAllItemsByUrl(
+  allItems: HistoryItem[],
+  videoUrl: string,
+  key: string | null,
+): Array<{ item: HistoryItem; id: string }> {
+  const candidates: Array<{ item: HistoryItem; id: string }> = [];
+  for (const it of allItems) {
+    const match = urlMatchesItem(videoUrl, it) || (key != null && canonicalKeyFromItem(it) === key);
+    if (match) {
+      const id = (it as HistoryItem & { _id?: string })._id ?? it.id;
+      if (id != null) candidates.push({ item: it, id: String(id) });
+    }
+  }
+  return candidates;
+}
+
+/**
+ * Find item by video_url and prefer the one whose file matches the requested media type (video vs audio).
+ * Use when multiple items can exist for the same URL (e.g. one audio from transcript, one video).
+ */
+export async function findItemByUrlAndType(
+  config: YTPTubeConfig,
+  data: GetHistoryResponse,
+  videoUrl: string,
+  type: 'audio' | 'video',
+  options: { queue?: HistoryItem[]; done?: HistoryItem[] } = {},
+): Promise<{ item: HistoryItem; id: string } | null> {
+  const { queue = [], done = [] } = options;
+  const allItems = [...getAllItems(data), ...queue, ...done];
+  let key: string | null = null;
+  try {
+    const results = await getArchiveIdForUrls(config, [videoUrl]);
+    key = results[0] ? normalizeArchiveIdToKey(results[0].archive_id) : null;
+  } catch (e) {
+    logger.debug({ err: e, video_url: videoUrl }, 'YTPTube archive_id fallback failed');
+  }
+  const candidates = collectAllItemsByUrl(allItems, videoUrl, key);
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0]!;
+  const pathType = (item: HistoryItem) => getMediaTypeFromPath(relativePathFromItem(item));
+  const matching = candidates.find((c) => pathType(c.item) === type);
+  if (matching) return matching;
+  const status = (item: HistoryItem) => (item.status ?? '').toLowerCase();
+  const finished = candidates.find((c) => status(c.item) === 'finished');
+  if (finished) return finished;
+  return candidates[0]!; // Prefer finished over skip so caller can queue video when only audio exists
+}
+
 const ITEM_NOT_FOUND_MSG =
   'YTPTube item not found. Check that the URL is supported (e.g. some Shorts/forms) and that the job was added successfully.';
 
@@ -1353,7 +1416,33 @@ export async function getFileBrowser(
 }
 
 /**
- * Pick relative path from candidates: single candidate → path; multiple → match by item title slug, else null.
+ * Get a short identifier from item for matching filenames (e.g. "8exiepcm47hg1" for Reddit).
+ * Uses video_id, or the second part of archive_id / extractor_key ("extractor id" → id).
+ */
+function getItemIdForFilename(item: HistoryItem): string | null {
+  const videoId = typeof item.video_id === 'string' ? (item.video_id as string).trim() : null;
+  if (videoId) return videoId;
+  const archiveId = typeof (item as { archive_id?: string }).archive_id === 'string'
+    ? (item as { archive_id: string }).archive_id.trim()
+    : null;
+  if (archiveId) {
+    const parts = archiveId.split(/\s+/);
+    if (parts.length >= 2) return parts[1]!.trim();
+    if (parts[0]) return parts[0].trim();
+  }
+  const extractorKey = typeof (item as { extractor_key?: string }).extractor_key === 'string'
+    ? (item as { extractor_key: string }).extractor_key.trim()
+    : null;
+  if (extractorKey) {
+    const parts = extractorKey.split(/\s+/);
+    if (parts.length >= 2) return parts[1]!.trim();
+    if (parts[0]) return parts[0].trim();
+  }
+  return null;
+}
+
+/**
+ * Pick relative path from candidates: single candidate → path; multiple → match by item title slug or video_id/archive_id, else null.
  * Used by resolveAudioPathFromBrowser, resolveVideoPathFromBrowser, resolveSubtitlePathFromBrowser.
  */
 function pickPathFromCandidates(
@@ -1374,6 +1463,18 @@ function pickPathFromCandidates(
       return p ? String(p).replace(/^\//, '') : null;
     }
   }
+  const itemId = getItemIdForFilename(item);
+  if (itemId) {
+    const idLower = itemId.toLowerCase();
+    for (const c of candidates) {
+      const name = (c.name ?? '').toLowerCase();
+      const stem = name.replace(/\.[^.]+$/, '');
+      if (stem === idLower || name.startsWith(idLower) || name.includes(idLower)) {
+        const p = c.path ?? c.name;
+        return p ? String(p).replace(/^\//, '') : null;
+      }
+    }
+  }
   return null;
 }
 
@@ -1386,9 +1487,12 @@ export function resolveAudioPathFromBrowser(
   contents: FileBrowserEntry[],
   item: HistoryItem,
 ): string | null {
-  const candidates = (contents ?? []).filter(
-    (e) => (e.is_file && e.name?.toLowerCase().endsWith('.mp3')) || e.content_type === 'audio',
-  );
+  const candidates = (contents ?? []).filter((e) => {
+    if (!e.is_file) return false;
+    if (e.content_type === 'audio') return true;
+    const name = (e.name ?? '').toLowerCase();
+    return MEDIA_AUDIO_EXTENSIONS.some((ext) => name.endsWith(ext));
+  });
   return pickPathFromCandidates(candidates, item);
 }
 

@@ -113,9 +113,9 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 
 ### MCP Server Details
 
-**Calculator** — Calculator tools for LibreChat agents. Network: `app-net`. URL: `http://mcp-calculator:3000/mcp`.
+**Calculator** — Calculator tools for LibreChat agents. Network: `app-net`. URL: `http://mcp-calculator:3012/mcp`.
 
-**Image Generation** — Image generation via OpenRouter API. Tools: `generate_image`, `list_known_models`, `list_available_models`, `check_model`. Network: `app-net`. URL: `http://mcp-image-gen:3001/mcp`.
+**Image Generation** — Image generation via OpenRouter API. Tools: `generate_image`, `list_known_models`, `list_available_models`, `check_model`. Network: `app-net`. URL: `http://mcp-image-gen:3013/mcp`.
 
 **OpenStreetMap** — Geo search, routing, location information. Network: `app-net`. URL: `http://mcp-openstreetmap:3004/mcp`.
 
@@ -139,7 +139,7 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 
 ### Testing internal MCPs from Cursor IDE
 
-When using the **local** stack (`docker-compose -f docker-compose.local.yml …` or `-f docker-compose.local-dev.yml`), internal MCP servers are bound to `127.0.0.1:PORT` and are **not** exposed in production or Portainer. To test them from the Cursor code assistant:
+When using the **local** stack (`docker-compose -f docker-compose.local.yml …` or `-f docker-compose.local-dev.yml`), internal MCP servers are bound to `127.0.0.1:PORT` and are **not** exposed in production or Portainer. Calculator and image-gen use the same port internally and on the host: **3012** and **3013** by default (`MCP_CALCULATOR_PORT`, `MCP_IMAGE_GEN_PORT`) so they don’t clash with other projects using 3000–3002; `.cursor/mcp.json` uses these ports. To test them from the Cursor code assistant:
 
 1. **Start the MCP servers** so something is listening on the ports used in `.cursor/mcp.json`:
    - Full stack: `docker compose -f docker-compose.local.yml up -d` (or `docker-compose.local-dev.yml`).

@@ -555,7 +555,7 @@ mcpSettings:
 mcpServers:
   calculator:
     type: streamable-http
-    url: http://mcp-calculator:3000/mcp
+    url: http://mcp-calculator:3012/mcp
     title: Rechner
     description: Mathematische Berechnungen und Rechenoperationen
     iconPath: /images/mcp-calculator-icon.svg
@@ -566,7 +566,7 @@ mcpServers:
 
   image-gen:
     type: streamable-http
-    url: http://mcp-image-gen:3001/mcp
+    url: http://mcp-image-gen:3013/mcp
     title: Bildgenerierung
     description: Bilder aus Textbeschreibungen erstellen
     iconPath: /images/mcp-image-gen-icon.svg

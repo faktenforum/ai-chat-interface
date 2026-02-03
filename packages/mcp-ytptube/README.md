@@ -36,9 +36,17 @@ npm install && npm run dev
 | `YTPTUBE_URL` | YTPTube base URL (required) |
 | `SCALEWAY_BASE_URL`, `SCALEWAY_API_KEY` | Transcription (required) |
 | `YTPTUBE_API_KEY` | Optional Basic auth |
+| `YTPTUBE_PRESET_TRANSCRIPT` | Preset for transcript jobs (default `mcp_audio`; see below) |
+| `YTPTUBE_PRESET_VIDEO` | Preset for video download jobs (default `default`) |
+| `YTPTUBE_SKIP_PRESET_SYNC` | `1` or `true` to skip preset sync on startup |
+| `YTPTUBE_STARTUP_MAX_WAIT_MS` | Max ms to wait for YTPTube at startup (default 5 min) |
 | `PORT` / `MCP_YTPTUBE_PORT` | HTTP port (default `3010`) |
 
 Full config, Docker, cookies, troubleshooting: **[docs/MCP_YTPTUBE.md](../../docs/MCP_YTPTUBE.md)**.
+
+**Startup:** Waits for YTPTube, then syncs the transcript preset. `YTPTUBE_SKIP_PRESET_SYNC=1` to skip.
+
+**Video after transcript:** Transcript jobs use a separate archive (`archive_audio.log`) so the same URL can later be requested as video. Preset JSON (Ogg Vorbis for Scaleway): see [docs/MCP_YTPTUBE.md](../../docs/MCP_YTPTUBE.md#video-after-transcript).
 
 ---
 
