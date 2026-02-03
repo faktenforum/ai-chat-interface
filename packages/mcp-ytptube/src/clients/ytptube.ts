@@ -165,6 +165,13 @@ export function getMediaTypeFromPath(path: string | null): 'audio' | 'video' | n
   return null;
 }
 
+/** Progress 0–100 from YTPTube history item. */
+export function formatProgress(item: HistoryItem): number {
+  const p = item.progress;
+  if (typeof p === 'number' && p >= 0 && p <= 100) return Math.round(p);
+  return 0;
+}
+
 /**
  * POST /api/history – add one or more URLs. Returns array of { id?, status }.
  * We use single-item body and take the first returned id.

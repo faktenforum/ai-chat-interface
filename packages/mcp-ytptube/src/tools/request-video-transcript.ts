@@ -4,7 +4,7 @@
  */
 
 import type { TextContent } from '@modelcontextprotocol/sdk/types.js';
-import { CreateVideoTranscriptSchema, type CreateVideoTranscriptInput } from '../schemas/create-video-transcript.schema.ts';
+import { RequestVideoTranscriptSchema, type RequestVideoTranscriptInput } from '../schemas/request-video-transcript.schema.ts';
 import type { YTPTubeConfig } from '../clients/ytptube.ts';
 import {
   getHistory,
@@ -25,6 +25,7 @@ import {
   downloadFile,
   canonicalKeyForDisplay,
   canonicalVideoKey,
+  formatProgress,
   MCP_DOWNLOAD_FOLDER,
   type GetHistoryResponse,
   type HistoryItem,
@@ -61,12 +62,6 @@ export interface RequestVideoTranscriptDeps {
   scaleway: ScalewayConfig;
 }
 
-function formatProgress(item: HistoryItem): number {
-  const p = item.progress;
-  if (typeof p === 'number' && p >= 0 && p <= 100) return Math.round(p);
-  return 0;
-}
-
 const DEFAULT_QUEUED_RELAY = 'Download started. Use get_status; when finished request transcript again.';
 const VIDEO_ONLY_QUEUED_RELAY =
   'Item was video-only; started transcript job. Use get_status; when finished request transcript again.';
@@ -87,6 +82,25 @@ function statusLanguageParams(lang: string | undefined): { language: string; lan
     language: lang ?? 'unknown',
     language_instruction: lang == null ? LANGUAGE_UNKNOWN_INSTRUCTION : undefined,
   };
+}
+
+/** Build yt-dlp CLI for transcript job: subs-only if available, else audio; optional proxy. */
+async function buildTranscriptCli(ytp: YTPTubeConfig, videoUrl: string): Promise<string> {
+  let cliBase = CLI_AUDIO;
+  try {
+    const info = await getUrlInfo(ytp, videoUrl);
+    const hasSubs =
+      (info.subtitles != null && Object.keys(info.subtitles).length > 0) ||
+      (info.automatic_captions != null && Object.keys(info.automatic_captions).length > 0);
+    if (hasSubs) {
+      const subLangs = process.env.YTPTUBE_SUB_LANGS?.trim();
+      cliBase = subLangs ? `${CLI_SUBS} --sub-langs "${subLangs}"` : CLI_SUBS;
+    }
+  } catch (e) {
+    logger.debug({ err: e, videoUrl }, 'getUrlInfo failed, using audio CLI');
+  }
+  const proxy = getProxyUrl();
+  return proxy ? `${cliBase} --proxy ${proxy}` : cliBase;
 }
 
 type FileBrowserContents = Awaited<ReturnType<typeof getFileBrowser>>['contents'];
@@ -258,21 +272,7 @@ async function startTranscriptJobAndReturnQueued(
   const language = options.language ?? (lang ?? 'unknown');
   const language_instruction = options.language_instruction ?? (lang == null ? LANGUAGE_UNKNOWN_INSTRUCTION : undefined);
 
-  let cliBase = CLI_AUDIO;
-  try {
-    const info = await getUrlInfo(ytp, video_url);
-    const hasSubs =
-      (info.subtitles != null && Object.keys(info.subtitles).length > 0) ||
-      (info.automatic_captions != null && Object.keys(info.automatic_captions).length > 0);
-    if (hasSubs) {
-      const subLangs = process.env.YTPTUBE_SUB_LANGS?.trim();
-      cliBase = subLangs ? `${CLI_SUBS} --sub-langs "${subLangs}"` : CLI_SUBS;
-    }
-  } catch (e) {
-    logger.debug({ err: e, video_url }, 'getUrlInfo failed, using audio CLI');
-  }
-  const proxy = getProxyUrl();
-  const cli = proxy ? `${cliBase} --proxy ${proxy}` : cliBase;
+  const cli = await buildTranscriptCli(ytp, video_url);
   const body = {
     url: video_url,
     preset: preset ?? PRESET_TRANSCRIPT,
@@ -345,13 +345,13 @@ export async function requestVideoTranscript(
   input: unknown,
   deps: RequestVideoTranscriptDeps,
 ): Promise<{ content: TextContent[] }> {
-  const parsed = CreateVideoTranscriptSchema.safeParse(input);
+  const parsed = RequestVideoTranscriptSchema.safeParse(input);
   if (!parsed.success) {
     const msg = parsed.error.flatten().formErrors.join('; ') || 'Invalid input';
     throw new InvalidUrlError(msg);
   }
 
-  const { video_url, preset, language_hint, cookies } = parsed.data as CreateVideoTranscriptInput;
+  const { video_url, preset, language_hint, cookies } = parsed.data as RequestVideoTranscriptInput;
   if (cookies?.trim() && !isValidNetscapeCookieFormat(cookies)) {
     throw new InvalidCookiesError(INVALID_COOKIES_MESSAGE);
   }
@@ -456,21 +456,7 @@ export async function requestVideoTranscript(
     };
   }
 
-  let cliBase = CLI_AUDIO;
-  try {
-    const info = await getUrlInfo(ytp, video_url);
-    const hasSubs =
-      (info.subtitles != null && Object.keys(info.subtitles).length > 0) ||
-      (info.automatic_captions != null && Object.keys(info.automatic_captions).length > 0);
-    if (hasSubs) {
-      const subLangs = process.env.YTPTUBE_SUB_LANGS?.trim();
-      cliBase = subLangs ? `${CLI_SUBS} --sub-langs "${subLangs}"` : CLI_SUBS;
-    }
-  } catch (e) {
-    logger.debug({ err: e, video_url }, 'getUrlInfo failed, using audio CLI');
-  }
-  const proxy = getProxyUrl();
-  const cli = proxy ? `${cliBase} --proxy ${proxy}` : cliBase;
+  const cli = await buildTranscriptCli(ytp, video_url);
   const body = {
     url: video_url,
     preset: preset ?? PRESET_TRANSCRIPT,

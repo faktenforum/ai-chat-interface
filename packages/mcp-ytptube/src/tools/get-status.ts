@@ -13,6 +13,7 @@ import {
   getHistoryDone,
   findItemByUrlInAll,
   canonicalKeyForDisplay,
+  formatProgress,
   type HistoryItem,
 } from '../clients/ytptube.ts';
 import { VideoTranscriptsError } from '../utils/errors.ts';
@@ -21,12 +22,6 @@ import { formatStatusResponse } from '../utils/response-format.ts';
 
 export interface GetStatusDeps {
   ytptube: YTPTubeConfig;
-}
-
-function formatProgress(item: HistoryItem): number {
-  const p = item.progress;
-  if (typeof p === 'number' && p >= 0 && p <= 100) return Math.round(p);
-  return 0;
 }
 
 /**

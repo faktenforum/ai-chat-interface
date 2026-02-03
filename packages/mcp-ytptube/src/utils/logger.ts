@@ -1,3 +1,4 @@
+/** Pino logger; level from LOG_LEVEL or MCP_YTPTUBE_LOG_LEVEL (default info). */
 import pino from 'pino';
 
 const logLevel = process.env.LOG_LEVEL || process.env.MCP_YTPTUBE_LOG_LEVEL || 'info';

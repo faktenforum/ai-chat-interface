@@ -1,7 +1,7 @@
 /**
- * Parse WebVTT (and SRT) and produce plain text with timestamps preserved.
- * Uses @plussub/srt-vtt-parser for robust parsing (handles dot/comma, SRT/VTT).
- * Output: optional Language header, then [HH:MM:SS.mmm --> HH:MM:SS.mmm] + cue text per block.
+ * Parse WebVTT (and SRT) into plain text with timestamps preserved.
+ * Uses @plussub/srt-vtt-parser (handles dot/comma, SRT/VTT). Output: optional Language header,
+ * then per cue "[HH:MM:SS.mmm --> HH:MM:SS.mmm]" + cue text.
  */
 
 import { parse } from '@plussub/srt-vtt-parser';
@@ -27,9 +27,9 @@ export function vttToPlainText(buffer: ArrayBuffer): string {
   const raw = UTF8_DECODER.decode(buffer);
   const language = extractLanguageHeader(raw);
 
-  let result: { entries: Array<{ from: number; to: number; text: string }> };
+  let parsed: ReturnType<typeof parse>;
   try {
-    result = parse(raw);
+    parsed = parse(raw);
   } catch {
     return '';
   }
@@ -39,7 +39,7 @@ export function vttToPlainText(buffer: ArrayBuffer): string {
     out.push(`Language: ${language}`, '', '');
   }
 
-  for (const entry of result.entries ?? []) {
+  for (const entry of parsed.entries ?? []) {
     const text = (entry.text ?? '').trim();
     if (!text) continue;
     const start = msToVttTime(entry.from);

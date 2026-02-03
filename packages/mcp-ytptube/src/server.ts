@@ -16,7 +16,7 @@ import { requestDownloadLink } from './tools/request-download-link.ts';
 import { listRecentDownloads } from './tools/list-recent-downloads.ts';
 import { getVideoInfo } from './tools/get-video-info.ts';
 import { getThumbnailUrl } from './tools/get-thumbnail-url.ts';
-import { CreateVideoTranscriptSchema } from './schemas/create-video-transcript.schema.ts';
+import { RequestVideoTranscriptSchema } from './schemas/request-video-transcript.schema.ts';
 import { GetStatusSchema } from './schemas/get-status.schema.ts';
 import { RequestDownloadLinkSchema } from './schemas/request-download-link.schema.ts';
 import { ListRecentDownloadsSchema } from './schemas/list-recent-downloads.schema.ts';
@@ -27,6 +27,7 @@ import { logger } from './utils/logger.ts';
 import { VideoTranscriptsError } from './utils/errors.ts';
 import { formatErrorResponse } from './utils/response-format.ts';
 import { setupMcpEndpoints, setupGracefulShutdown } from './utils/http-server.ts';
+import { MCP_INSTRUCTIONS, COOKIES_USAGE_PROMPT_TEXT } from './instructions.ts';
 
 const PORT = parseInt(
   process.env.MCP_YTPTUBE_PORT ?? process.env.PORT ?? '3010',
@@ -67,27 +68,7 @@ function createMcpServer(): McpServer {
     },
     {
       capabilities: { tools: {}, resources: {}, prompts: {} },
-      instructions: `YTPTube MCP: video URL to transcript or download link.
-
-Supported links: Any URL that yt-dlp supports, including YouTube, Reddit (posts with embedded video), Instagram, TikTok, Vimeo, Twitter/X, Facebook, and hundreds of other sites. Page URLs that embed a video (e.g. a Reddit post URL) are valid—use get_video_info to check support and metadata, or request_video_transcript/request_download_link directly. Do not refuse a link because it "looks like a text page"; try the tool first.
-
-Request flow: (1) request_video_transcript for transcript only; (2) request_download_link for download link (video or audio) only. Both tools check if the result exists; if yes return it; if not they start the job and return status. Poll with get_status(video_url=...) or get_status(job_id=<UUID>). When status=finished, call the same request tool again to get transcript or link.
-
-LibreChat: No automatic MCP polling. Tell the user to ask for status (e.g. "What is the status?"); then call get_status and reply. Do not promise to monitor or check back automatically.
-
-Important: job_id is the internal UUID (36-char). Use get_status(job_id=...) or get_status(video_url=...); not the platform video id. Relay the relay= line to the user.
-
-Status=skipped: When the URL is already in the download archive, YTPTube skips the job and returns status=skipped (reason mentions archive). Tell the user the video was already downloaded; they can call request_video_transcript or request_download_link again with the same URL to get transcript or link from the existing file.
-
-Video-only: If the item was only downloaded as video, request_video_transcript starts a transcript job and returns queued; poll get_status then call request_video_transcript again when finished.
-
-Video after transcript: Transcript jobs download only audio (saves bandwidth). The user can still request the video later: call request_download_link with type=video and the same URL; the tool will queue the video download and return status=queued. Poll get_status then call request_download_link again for the video link.
-
-Transcript language: Without language_hint, responses include language=unknown and language_instruction. Tell the user the language was unspecified and may be wrong; if wrong, ask for the correct language and re-call with language_hint (e.g. "de"). Pass language_hint proactively when the user already indicated the video language.
-
-Cookies: Optional cookies (Netscape HTTP Cookie format) help with 403, age-restricted, login-only, or geo-blocked videos. First line of the file must be "# HTTP Cookie File" or "# Netscape HTTP Cookie File" (see yt-dlp FAQ). User can export from browser (e.g. extension "Get cookies.txt LOCALLY" / "cookies.txt" for Firefox, or yt-dlp --cookies-from-browser … --cookies file.txt) then paste the content in chat or upload the file. In LibreChat, a cookies file exported via the browser extension can be uploaded as "Upload as Text". If the user uploads a file, read its content and pass it as the cookies parameter to request_video_transcript or request_download_link. Cookies are not stored server-side; for multiple videos in the same conversation, reuse the cookie content the user provided and pass it again in each request. When the user asks about cookies or reports 403/age-restriction, explain these steps and use the provided cookie content on the next request. Cookie content is sensitive; advise sharing only in trusted chats.
-
-Never invent or hallucinate transcript text. Use get_video_info for metadata without downloading; use list_recent_downloads to see queue/history (job_id there is UUID).`,
+      instructions: MCP_INSTRUCTIONS,
     },
   );
 
@@ -130,7 +111,7 @@ Never invent or hallucinate transcript text. Use get_video_info for metadata wit
     {
       description:
         'Get transcript for a video URL. If exists → transcript; else starts job and returns status. Poll get_status; when finished call again for transcript. Video-only items start a transcript job automatically. language_hint (e.g. "de") forces language; omit → language=unknown + instruction to ask user and re-call if wrong. Optional cookies (Netscape format) for age-restricted or login-required videos; user can paste content or upload file – see server instructions.',
-      inputSchema: CreateVideoTranscriptSchema,
+      inputSchema: RequestVideoTranscriptSchema,
     },
     withErrorHandler('request_video_transcript', (a, d) => requestVideoTranscript(a, d)),
   );
@@ -189,14 +170,6 @@ Never invent or hallucinate transcript text. Use get_video_info for metadata wit
     withErrorHandler('get_thumbnail_url', (a) => getThumbnailUrl(a, { ytptube })),
   );
 
-  const cookiesUsagePromptText = [
-    'Use cookies (Netscape HTTP Cookie format) with request_video_transcript or request_download_link when the user hits 403, age-restriction, or login-only.',
-    'Format: first line "# HTTP Cookie File" or "# Netscape HTTP Cookie File"; data lines tab-separated (domain, flag, path, secure, expires, name, value).',
-    'User can export from browser (extension "Get cookies.txt LOCALLY" / "cookies.txt" for Firefox, or yt-dlp --cookies-from-browser … --cookies file.txt), then paste in chat or upload the file. In LibreChat, a cookies file exported via the browser extension can be uploaded as "Upload as Text".',
-    'Read file content and pass it as the cookies parameter. Cookies are not stored server-side; for multiple videos in the same conversation, reuse the cookie content the user provided and pass it again in each request.',
-    'Advise sharing cookies only in trusted chats. See https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp',
-  ].join(' ');
-
   server.registerPrompt(
     'cookies_usage',
     {
@@ -205,7 +178,7 @@ Never invent or hallucinate transcript text. Use get_video_info for metadata wit
         'Instructions for using Netscape-format cookies with request_video_transcript and request_download_link (403, age-restricted, login-only). Cookies are not stored; reuse from conversation for multiple videos.',
     },
     () => ({
-      messages: [{ role: 'user', content: { type: 'text', text: cookiesUsagePromptText } }],
+      messages: [{ role: 'user', content: { type: 'text', text: COOKIES_USAGE_PROMPT_TEXT } }],
     }),
   );
 

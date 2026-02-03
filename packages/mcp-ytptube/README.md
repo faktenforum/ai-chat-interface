@@ -1,6 +1,6 @@
 # MCP YTPTube
 
-**Video URL → transcript or download link.** MCP server that uses [YTPTube](https://github.com/ArabCoders/ytptube) and [Scaleway](https://www.scaleway.com/) STT; works with any site [yt-dlp](https://github.com/yt-dlp/yt-dlp) supports (YouTube, Vimeo, TikTok, …).
+**Video URL → transcript or download link.** MCP server that uses [YTPTube](https://github.com/ArabCoders/ytptube) and [Scaleway](https://www.scaleway.com/) STT; works with any site [yt-dlp](https://github.com/yt-dlp/yt-dlp) supports (YouTube, Vimeo, TikTok, …). Code layout: `server.ts` wires tools and HTTP; `instructions.ts` holds LLM-facing copy; `schemas/` and `tools/` align with tool names (e.g. `request-video-transcript.schema.ts` ↔ `request_video_transcript`).
 
 - **Transcripts** — Platform subtitles or Scaleway Whisper; optional `language_hint` and cookies.
 - **Download links** — Video or audio URL; same request–poll–retrieve flow.

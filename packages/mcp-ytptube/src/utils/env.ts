@@ -22,8 +22,8 @@ export function getProxyUrl(): string | undefined {
 /** CLI fragment for extracting audio (mp3) for transcription. */
 export const CLI_AUDIO = '--extract-audio --audio-format mp3';
 
-/** CLI fragment for subtitles only (no download). */
-export const CLI_SUBS = '--skip-download --write-subs';
+/** CLI fragment for subtitles/captions only (no download). Includes auto-generated captions (e.g. YouTube Shorts). */
+export const CLI_SUBS = '--skip-download --write-subs --write-auto-subs';
 
 /** Preset name for transcript jobs (audio-only; separate archive so video can be requested later). */
 export const PRESET_TRANSCRIPT =

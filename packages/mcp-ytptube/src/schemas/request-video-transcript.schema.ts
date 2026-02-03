@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-export const CreateVideoTranscriptSchema = z.object({
+/** Input for request_video_transcript tool. */
+export const RequestVideoTranscriptSchema = z.object({
   video_url: z.string().url().describe('URL of the video to transcribe (e.g. YouTube, Vimeo)'),
   preset: z.string().optional().describe('YTPTube preset name (e.g. for audio-only). Omit to use default or inline cli.'),
   language_hint: z
@@ -17,4 +18,4 @@ export const CreateVideoTranscriptSchema = z.object({
     ),
 });
 
-export type CreateVideoTranscriptInput = z.infer<typeof CreateVideoTranscriptSchema>;
+export type RequestVideoTranscriptInput = z.infer<typeof RequestVideoTranscriptSchema>;

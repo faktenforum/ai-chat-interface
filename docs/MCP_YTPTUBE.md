@@ -64,7 +64,7 @@ On start, the server waits for YTPTube (GET api/ping/), then creates or updates 
 
 ## Transcript: subtitles vs audio
 
-**Preferred:** Platform subtitles (VTT). When starting a transcript job, the MCP calls YTPTube/yt-dlp `url/info`; if `subtitles` or `automatic_captions` are present, it uses `--skip-download --write-subs` so only subtitle files are downloaded. No audio needed.
+**Preferred:** Platform subtitles (VTT). When starting a transcript job, the MCP calls YTPTube/yt-dlp `url/info`; if `subtitles` or `automatic_captions` are present, it uses `--skip-download --write-subs --write-auto-subs` so manual and auto-generated captions (e.g. YouTube Shorts) are downloaded. No audio needed.
 
 **Fallback:** If no subtitles are reported (e.g. LinkedIn often doesn’t expose them in yt-dlp info), the job uses the transcript preset (audio-only). After download, the MCP looks for a `.vtt` file first; if none or VTT is empty, it uses the audio file and Scaleway STT (`transcript_source=transcription`). If a VTT file is found but yields empty text (e.g. placeholder or wrong match), the MCP falls back to audio + Scaleway.
 
