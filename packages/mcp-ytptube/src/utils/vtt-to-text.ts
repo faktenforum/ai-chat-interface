@@ -1,73 +1,50 @@
 /**
- * Parse WebVTT and produce plain text with timestamps preserved.
- * Keeps cue time ranges as [HH:MM:SS.mmm --> HH:MM:SS.mmm] before each cue text;
- * optional Language from header is output at the start when present.
+ * Parse WebVTT (and SRT) and produce plain text with timestamps preserved.
+ * Uses @plussub/srt-vtt-parser for robust parsing (handles dot/comma, SRT/VTT).
+ * Output: optional Language header, then [HH:MM:SS.mmm --> HH:MM:SS.mmm] + cue text per block.
  */
+
+import { parse } from '@plussub/srt-vtt-parser';
 
 const UTF8_DECODER = new TextDecoder('utf-8');
 
-/** Time line pattern: 00:00:00.000 --> 00:00:02.500 */
-const TIME_LINE_RE = /^(\d{2}:\d{2}:\d{2}\.\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}\.\d{3})/;
+function msToVttTime(ms: number): string {
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  const s = Math.floor((ms % 60_000) / 1_000);
+  const f = ms % 1_000;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${f.toString().padStart(3, '0')}`;
+}
+
+/** Extract optional "Language: xx" from VTT header (first ~500 chars). */
+function extractLanguageHeader(raw: string): string | null {
+  const head = raw.slice(0, 500);
+  const match = head.match(/^Language:\s*(\S+)/im);
+  return match ? match[1]!.trim() : null;
+}
 
 export function vttToPlainText(buffer: ArrayBuffer): string {
-  const text = UTF8_DECODER.decode(buffer);
-  const lines = text.split(/\r?\n/);
+  const raw = UTF8_DECODER.decode(buffer);
+  const language = extractLanguageHeader(raw);
+
+  let result: { entries: Array<{ from: number; to: number; text: string }> };
+  try {
+    result = parse(raw);
+  } catch {
+    return '';
+  }
+
   const out: string[] = [];
-  let i = 0;
-  let headerLanguage: string | null = null;
-
-  // Skip optional BOM and "WEBVTT" line
-  while (i < lines.length) {
-    const line = lines[i] ?? '';
-    const trimmed = line.trim();
-    if (trimmed.startsWith('WEBVTT')) {
-      i++;
-      break;
-    }
-    if (trimmed) break;
-    i++;
+  if (language) {
+    out.push(`Language: ${language}`, '', '');
   }
 
-  // Header: lines until first blank; optionally capture "Language: xx"
-  while (i < lines.length) {
-    const line = lines[i] ?? '';
-    if (line.trim() === '') break;
-    const langMatch = line.match(/^Language:\s*(\S+)/i);
-    if (langMatch) headerLanguage = langMatch[1]!.trim();
-    i++;
-  }
-
-  if (headerLanguage) {
-    out.push(`Language: ${headerLanguage}`, '', '');
-  }
-
-  // Cue blocks: time line then cue text until blank or next time line
-  while (i < lines.length) {
-    const line = lines[i] ?? '';
-    if (line.trim() === '') {
-      i++;
-      continue;
-    }
-    const timeMatch = line.match(TIME_LINE_RE);
-    if (timeMatch) {
-      const timeStamp = `[${timeMatch[1]} --> ${timeMatch[2]}]`;
-      out.push(timeStamp);
-      i++;
-      const cueLines: string[] = [];
-      while (i < lines.length) {
-        const next = lines[i] ?? '';
-        if (next.trim() === '') break;
-        if (TIME_LINE_RE.test(next.trim())) break;
-        cueLines.push(next);
-        i++;
-      }
-      if (cueLines.length > 0) {
-        out.push(cueLines.join('\n'));
-      }
-      out.push('');
-    } else {
-      i++;
-    }
+  for (const entry of result.entries ?? []) {
+    const text = (entry.text ?? '').trim();
+    if (!text) continue;
+    const start = msToVttTime(entry.from);
+    const end = msToVttTime(entry.to);
+    out.push(`[${start} --> ${end}]`, text, '');
   }
 
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();

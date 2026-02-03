@@ -62,6 +62,14 @@ YTPTube compose: `YTP_OUTPUT_TEMPLATE`/`YTP_OUTPUT_TEMPLATE_CHAPTER` set to shor
 
 On start, the server waits for YTPTube (GET api/ping/), then creates or updates the transcript preset to match the canonical definition. Timeout: `YTPTUBE_STARTUP_MAX_WAIT_MS`. Set `YTPTUBE_SKIP_PRESET_SYNC=1` to skip when you manage presets yourself.
 
+## Transcript: subtitles vs audio
+
+**Preferred:** Platform subtitles (VTT). When starting a transcript job, the MCP calls YTPTube/yt-dlp `url/info`; if `subtitles` or `automatic_captions` are present, it uses `--skip-download --write-subs` so only subtitle files are downloaded. No audio needed.
+
+**Fallback:** If no subtitles are reported (e.g. LinkedIn often doesn’t expose them in yt-dlp info), the job uses the transcript preset (audio-only). After download, the MCP looks for a `.vtt` file first; if none or VTT is empty, it uses the audio file and Scaleway STT (`transcript_source=transcription`). If a VTT file is found but yields empty text (e.g. placeholder or wrong match), the MCP falls back to audio + Scaleway.
+
+**Path resolution:** Finished items: `item.filename`/`folder` when present; else file-browser. Subtitle/audio paths are resolved from the same folder; multiple candidates are matched by item (title slug, video_id, archive_id).
+
 ## Path resolution and video-only
 
 Finished items: MCP uses `item.filename`/`folder` when present; else file-browser. **Video-only:** If URL was only downloaded as video, `request_video_transcript` starts a transcript job and returns `status=queued`; poll `get_status`, then call again for transcript.

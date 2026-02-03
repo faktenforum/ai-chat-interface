@@ -162,18 +162,30 @@ async function buildTranscriptForFinishedItem(
       logger.warn({ err, subtitlePath, id }, 'YTPTube GET /api/download failed for subtitle');
       throw new YTPTubeError(`Failed to download subtitle: ${err.message}`);
     }
-    const text = vttToPlainText(buffer);
-    const { metadata, transcript: transcriptText } = formatTranscriptResponseAsBlocks({
-      url: videoUrl,
-      job_id: id,
-      transcript: text ?? '',
-      fromArchive: options.fromArchive,
-      status_url: storedUrl,
-      transcript_source: 'platform_subtitles',
-      canonical_key: canonicalKeyForDisplay(resolvedItem, videoUrl),
-      ...langParams,
-    });
-    return { content: [{ type: 'text', text: metadata }, { type: 'text', text: transcriptText }] };
+    const subtitleText = (vttToPlainText(buffer) ?? '').trim();
+    if (subtitleText.length > 0) {
+      const { metadata, transcript: transcriptText } = formatTranscriptResponseAsBlocks({
+        url: videoUrl,
+        job_id: id,
+        transcript: subtitleText,
+        fromArchive: options.fromArchive,
+        status_url: storedUrl,
+        transcript_source: 'platform_subtitles',
+        canonical_key: canonicalKeyForDisplay(resolvedItem, videoUrl),
+        ...langParams,
+      });
+      return { content: [{ type: 'text', text: metadata }, { type: 'text', text: transcriptText }] };
+    }
+    const rawLength = new TextDecoder('utf-8').decode(buffer).length;
+    const minContentForParsingError = 150;
+    if (rawLength >= minContentForParsingError) {
+      logger.warn(
+        { id, subtitlePath, rawLength },
+        'VTT had substantial content but parser returned no text; possible format mismatch (e.g. comma in timestamps). Falling back to audio.',
+      );
+    } else {
+      logger.debug({ id, subtitlePath }, 'Subtitle VTT empty or no cues; falling back to audio transcription');
+    }
   }
 
   if (!relativePath) {
