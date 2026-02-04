@@ -3,100 +3,84 @@
 /**
  * Image Generation MCP Server
  *
- * Provides image generation capabilities via OpenRouter API for LibreChat agents.
- * Supports multiple models including FLUX.2 Pro, FLUX.2 Flex, and Gemini models.
- * Uses streamable-http transport for stateless HTTP-based communication.
+ * Exposes image generation via OpenRouter (list_models, check_model, generate_image).
+ * Uses streamable-http transport for stateless HTTP communication.
  */
 
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { generateImage, listModels, checkModel } from './tools/image-gen.ts';
+
+import {
+  PORT,
+  SERVER_NAME,
+  SERVER_VERSION,
+  OPENROUTER_API_KEY,
+  OPENROUTER_BASE_URL,
+  SERVER_INSTRUCTIONS,
+} from './config.ts';
+import { GenerateImageSchema, CheckModelSchema } from './schemas/image-gen.schema.ts';
 import { OpenRouterClient } from './services/openrouter.ts';
+import { generateImage, listModels, checkModel } from './tools/image-gen.ts';
+import { setupMcpEndpoints, setupGracefulShutdown } from './utils/http-server.ts';
 import { logger } from './utils/logger.ts';
 import { withToolErrorHandler } from './utils/tool-handler.ts';
-import { GenerateImageSchema, CheckModelSchema } from './schemas/image-gen.schema.ts';
-import { setupMcpEndpoints, setupGracefulShutdown } from './utils/http-server.ts';
-
-const PORT = parseInt(process.env.PORT || '3001', 10);
-const SERVER_NAME = 'image-generation-mcp-server';
-const SERVER_VERSION = '1.0.0';
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY || '';
-const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
 
 if (!OPENROUTER_API_KEY) {
   logger.error('OPENROUTER_API_KEY or OPENROUTER_KEY environment variable is required');
   process.exit(1);
 }
 
-// Session management
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
-function createMcpServer() {
-  const openRouterClient = new OpenRouterClient(OPENROUTER_API_KEY, OPENROUTER_BASE_URL);
+function createMcpServer(): McpServer {
+  const openRouter = new OpenRouterClient(OPENROUTER_API_KEY, OPENROUTER_BASE_URL);
 
   const server = new McpServer(
+    { name: SERVER_NAME, version: SERVER_VERSION },
     {
-      name: SERVER_NAME,
-      version: SERVER_VERSION,
-    },
-    {
-      capabilities: {
-        tools: {},
-        resources: {},
-        prompts: {},
-      },
-      instructions: `You have access to image generation tools via OpenRouter.
-
-Usage:
-- Use generate_image to create images from text descriptions
-- Enhance prompts with details: lighting, composition, mood, style, colors (3-6 sentences minimum)
-- Use list_models to see all available models with their characteristics, strengths, weaknesses, and recommended use cases
-- Default model (FLUX.2 Pro) provides highest quality but is more expensive
-- For high-quality: FLUX.2 Pro or FLUX.2 Flex
-- For fast/cost-effective with aspect ratio control: Gemini models
-- Use check_model to verify model support
-- Gemini models support aspect_ratio (16:9, 9:16, etc.) and image_size (1K, 2K, 4K)`,
+      capabilities: { tools: {}, resources: {}, prompts: {} },
+      instructions: SERVER_INSTRUCTIONS,
     },
   );
 
   server.registerTool(
     'generate_image',
     {
-      description: 'Generate high-quality images from text descriptions using OpenRouter-supported models like FLUX.2-Pro, FLUX.2-Flex, or Gemini Image Generation.',
+      description:
+        'Generate images from text descriptions using OpenRouter image models. Use list_models to see available models and their capabilities.',
       inputSchema: GenerateImageSchema,
     },
-    withToolErrorHandler('generate_image', (args) => generateImage(args, openRouterClient)),
+    withToolErrorHandler('generate_image', (args) => generateImage(args, openRouter)),
   );
 
   server.registerTool(
     'list_models',
     {
-      description: 'List all available image generation models from OpenRouter, combining static metadata (characteristics, strengths, weaknesses, recommended use cases) with dynamic API data. This provides a comprehensive view of all models including well-tested ones with detailed metadata and newly added models.',
+      description:
+        'List available image generation models from OpenRouter with metadata (capabilities, strengths, use cases). Use this to choose a model for generate_image.',
       inputSchema: {},
     },
-    withToolErrorHandler('list_models', () => listModels(openRouterClient)),
+    withToolErrorHandler('list_models', () => listModels(openRouter)),
   );
 
   server.registerTool(
     'check_model',
     {
-      description: 'Check if a specific model exists in OpenRouter and supports image generation. Useful for validating model IDs before using them with generate_image.',
+      description:
+        'Check whether a model exists on OpenRouter and supports image generation. Use before calling generate_image with an unfamiliar model ID.',
       inputSchema: CheckModelSchema,
     },
-    withToolErrorHandler('check_model', (args) => checkModel(args, openRouterClient)),
+    withToolErrorHandler('check_model', (args) => checkModel(args, openRouter)),
   );
 
   server.registerResource(
     'info',
     'image-gen://info',
-    {
-      description: 'Information about the image generation MCP server',
-      mimeType: 'application/json',
-    },
+    { description: 'Information about the image generation MCP server', mimeType: 'application/json' },
     async () => ({
       contents: [
         {
@@ -104,8 +88,8 @@ Usage:
           mimeType: 'application/json',
           text: JSON.stringify(
             {
-              name: 'image-generation-mcp-server',
-              version: '1.0.0',
+              name: SERVER_NAME,
+              version: SERVER_VERSION,
               description: 'MCP Server providing image generation via OpenRouter API',
               tools: ['generate_image', 'list_models', 'check_model'],
               uptime: process.uptime(),
@@ -123,9 +107,6 @@ Usage:
   return server;
 }
 
-/**
- * Creates a new session for an initialize request
- */
 function createSession(): { server: McpServer; transport: StreamableHTTPServerTransport } {
   const server = createMcpServer();
   const transport = new StreamableHTTPServerTransport({
@@ -148,9 +129,6 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
   return { server, transport };
 }
 
-/**
- * Creates and configures the Express application
- */
 function createApp(): express.Application {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
@@ -168,17 +146,13 @@ function createApp(): express.Application {
   return app;
 }
 
-/**
- * Main entry point
- */
 async function main(): Promise<void> {
   try {
     const app = createApp();
-    const server = app.listen(PORT, '0.0.0.0', () => {
+    const httpServer = app.listen(PORT, '0.0.0.0', () => {
       logger.info({ port: PORT, server: SERVER_NAME, version: SERVER_VERSION }, 'MCP Image Generation Server started');
     });
-
-    setupGracefulShutdown(server, transports, logger);
+    setupGracefulShutdown(httpServer, transports, logger);
   } catch (error) {
     logger.error({ error }, 'Failed to start server');
     process.exit(1);
