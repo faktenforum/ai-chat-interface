@@ -38,9 +38,9 @@ No automatic MCP polling. LLM asks user to request status; then calls `get_statu
 
 ## Dependencies
 
-- **YTPTube** – queues URLs, serves files. Set `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` so `request_download_link` returns valid links. [GitHub](https://github.com/ArabCoders/ytptube)
-- **yt-dlp** – used by YTPTube. Supported sites: [dev/yt-dlp/supportedsites.md](dev/yt-dlp/supportedsites.md). MCP canonical keys (yt-dlp-aligned): YouTube, Instagram, TikTok, Douyin, Twitter/X, Vimeo, Twitch, Facebook, Reddit, Dailymotion, Bilibili, Rumble, SoundCloud, BitChute, 9GAG, Streamable, Wistia, PeerTube, Bandcamp, Odysee/LBRY, VK, Coub, Mixcloud, Imgur, Naver TV, Youku, Zhihu; others via normalized URL or YTPTube `archive_id`.
-- **Transcription (optional)** – OpenAI-compatible `/audio/transcriptions`. Set `TRANSCRIPTION_BASE_URL` + `TRANSCRIPTION_API_KEY` to enable; else platform-subtitles-only and clear error when transcription would be needed. e.g. [Scaleway](https://www.scaleway.com/) `whisper-large-v3`.
+- **YTPTube** – queues URLs, serves files. `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` required for `request_download_link` links. [GitHub](https://github.com/ArabCoders/ytptube)
+- **yt-dlp** – used by YTPTube. Supported sites: [dev/yt-dlp/supportedsites.md](dev/yt-dlp/supportedsites.md). MCP matches by canonical key (platform-specific or normalized URL) and YTPTube `archive_id`.
+- **Transcription (optional)** – OpenAI-compatible `/audio/transcriptions`. Set both `TRANSCRIPTION_BASE_URL` and `TRANSCRIPTION_API_KEY`; else platform subtitles only, with clear error when transcription would be needed (e.g. [Scaleway](https://www.scaleway.com/) whisper-large-v3).
 
 ## Standalone / other setups
 
@@ -78,17 +78,13 @@ Waits for YTPTube (GET api/ping/), then syncs transcript preset. Timeout: `YTPTU
 
 **Fallback:** No subtitles in yt-dlp info → transcript preset (audio). After download: prefer `.vtt`; if none or empty → transcription API when configured (`transcript_source=transcription`), else clear error (set `TRANSCRIPTION_BASE_URL`/`TRANSCRIPTION_API_KEY` or use media with subs). VTT with empty text → fallback to audio + transcription when configured.
 
-**Path resolution:** Finished items: `item.filename`/`folder` when present; else file-browser. Subtitle/audio paths are resolved from the same folder; multiple candidates are matched by item (title slug, video_id, archive_id).
-
-## Path resolution and video-only
-
-Finished items: MCP uses `item.filename`/`folder` when present; else file-browser. **Video-only:** If URL was only downloaded as video, `request_transcript` starts a transcript job and returns `status=queued`; poll `get_status`, then call again for transcript.
+**Path resolution:** Finished items use `item.filename`/`folder` when present, else file-browser; subtitle/audio paths from same folder, matched by title slug, video_id, or archive_id. **Video-only:** If the URL was only downloaded as video, `request_transcript` starts a transcript job and returns `status=queued`; poll `get_status`, then call again for transcript.
 
 ## Video after transcript
 
-Transcript jobs download only audio (saves bandwidth). To allow requesting the **video** later for the same URL, transcript jobs must use a preset that writes to a **separate archive** (e.g. `archive_audio.log`). The upstream default preset `audio_only` uses the main `archive.log` and is **not** suitable: the URL would be in the main archive and a later video request (preset `default`) would be skipped.
+Transcript jobs use audio-only (saves bandwidth). To allow requesting **video** later for the same URL, the transcript preset must use a **separate archive** (e.g. `archive_audio.log`). The upstream `audio_only` preset uses main `archive.log` and is not suitable—later video request would be skipped. MCP ensures preset `mcp_audio` on startup.
 
-MCP ensures preset `mcp_audio` exists on startup. Manual: **POST /api/presets** with YTPTube auth. Body (Ogg Vorbis):
+Manual creation: **POST /api/presets** with YTPTube auth. Body (Ogg Vorbis):
 
 ```json
 {
@@ -104,7 +100,7 @@ MCP ensures preset `mcp_audio` exists on startup. Manual: **POST /api/presets** 
 
 ## URL matching
 
-Match by URL, item identifiers, or **POST /api/yt-dlp/archive_id/** (any platform). Canonical keys (same URL → same key): YouTube, Instagram, TikTok, Douyin, Twitter/X, Vimeo, Twitch, Facebook, Reddit, Dailymotion, Bilibili, Rumble, SoundCloud, BitChute, 9GAG, Streamable, Wistia, PeerTube, Bandcamp, Odysee/LBRY, VK, Coub, Mixcloud, Imgur, Naver TV, Youku, Zhihu; generic URLs normalized (RFC 3986 dot-segments, no query). Protocol-relative URLs (`//...`) and typos (`httpss://`, `rmtp://`) are sanitized. Others: YTPTube `archive_id`. `get_status(media_url)` not_found → check URL form or timing; use `list_recent_downloads` and `MCP_YTPTUBE_DEBUG_API=1` + `LOG_LEVEL=debug` to inspect.
+Match by URL, item identifiers, or **POST /api/yt-dlp/archive_id/** (any platform). Canonical keys: major platforms (YouTube, Instagram, TikTok, Vimeo, etc.) plus normalized URL fallback; protocol-relative and typos sanitized. Not found → check URL form/timing; debug: `list_recent_downloads`, `MCP_YTPTUBE_DEBUG_API=1`, `LOG_LEVEL=debug`.
 
 ## Troubleshooting
 

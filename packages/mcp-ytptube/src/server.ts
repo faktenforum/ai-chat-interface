@@ -76,17 +76,21 @@ function createMcpServer(): McpServer {
     },
   );
 
-  type ToolHandler = (args: unknown, deps: RequestTranscriptDeps) => Promise<{ content: Array<{ type: 'text'; text: string }> }>;
+  type ToolResult = Promise<{ content: Array<{ type: 'text'; text: string }>; isError?: boolean }>;
+  type ToolHandler = (args: unknown, deps: RequestTranscriptDeps) => ToolResult;
+
+  function safeLogArgs(args: unknown): { media_url?: string; job_id?: string } {
+    if (args == null || typeof args !== 'object') return {};
+    const o = args as Record<string, unknown>;
+    return {
+      ...(typeof o.media_url === 'string' && { media_url: o.media_url }),
+      ...(typeof o.job_id === 'string' && { job_id: o.job_id }),
+    };
+  }
+
   const withErrorHandler = (toolName: string, handler: ToolHandler) => {
     return async (args: unknown) => {
-      const safe =
-        args != null && typeof args === 'object'
-          ? {
-              media_url: (args as { media_url?: string }).media_url,
-              job_id: (args as { job_id?: string }).job_id,
-            }
-          : {};
-      logger.debug({ tool: toolName, ...safe }, 'Tool invoked');
+      logger.debug({ tool: toolName, ...safeLogArgs(args) }, 'Tool invoked');
       try {
         return await handler(args, deps);
       } catch (error) {

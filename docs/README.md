@@ -12,7 +12,7 @@ Essential guides for the AI Chat Interface platform.
 - **[Services](SERVICES.md)** - Services and MCP services overview, network architecture
 - **[Administration](ADMINISTRATION.md)** - User management and administration
 - **[LibreChat Features](LIBRECHAT_FEATURES.md)** - LibreChat configuration and features
-- **[MCP YTPTube](MCP_YTPTUBE.md)** - YTPTube MCP (video URL → transcript via Scaleway STT; extensible). [Verification (debug)](MCP_YTPTUBE_VERIFICATION.md) - URL normalization and Docker logs check. [Future work](YTPTUBE_FUTURE_WORK.md) - production proxy, FlareSolverr, office Pi ideas.
+- **[MCP YTPTube](MCP_YTPTUBE.md)** - YTPTube MCP (media URL → transcript or download). [Future work](YTPTUBE_FUTURE_WORK.md) - production proxy, FlareSolverr.
 - **[YTPTube Cleanup](YTPTUBE_CLEANUP.md)** - Where archive and downloads live; how to clean for fresh tests
 - **[MCP YouTube Transcript](MCP_YOUTUBE_TRANSCRIPT.md)** - YouTube Transcript MCP (video URL → transcript via youtube-transcript-api)
 - **[Webshare Proxy](WEBSHARE_PROXY.md)** - Fixed proxy URL setup (Rotating/Backbone) for mcp-ytptube and mcp-youtube-transcript
@@ -33,8 +33,6 @@ Essential guides for the AI Chat Interface platform.
 - **[Cursor Rules](CURSOR_RULES.md)** - Integrating services and MCP servers
 - **[Cursor MongoDB MCP](CURSOR_MONGODB_MCP.md)** - Cursor MongoDB integration
 - **[Agent Firecrawl Tools](AGENT_FIRECRAWL_TOOLS.md)** - Firecrawl MCP tool guide
-- **[Refactor Summary](REFACTOR_SUMMARY.md)** - Vision capability refactoring for PR submission
-
 ## WIP (Work in Progress)
 
 - **[WIP Documentation](wip/README.md)** - Vision architecture, vision design, debug status, agent token metadata (custom/Scaleway). Vision re-enabled as **experimental/WIP**; branch `feat/vision` in `dev/librechat` and `dev/agents`; draft PRs [LibreChat #11501](https://github.com/danny-avila/LibreChat/pull/11501), [agents #48](https://github.com/danny-avila/agents/pull/48)
