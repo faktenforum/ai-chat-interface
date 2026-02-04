@@ -8,14 +8,14 @@ export const CONFIG_DIR = '/app/config';
 export const ASSETS_DIR = '/app/assets';
 export const IMAGES_DIR = '/images';
 
-export const ROLES_CONFIG_PATH = '/app/data/roles.json';
-export const ROLES_CONFIG_FALLBACK = '../config/roles.json';
+export const ROLES_CONFIG_PATH = '/app/data/roles.yaml';
+export const ROLES_CONFIG_FALLBACK = '../config/roles.yaml';
 
-export const PUBLIC_AGENTS_PATH = '/app/data/agents.json';
-export const PUBLIC_AGENTS_FALLBACK = '../config/agents.json';
+export const PUBLIC_AGENTS_PATH = '/app/data/agents.yaml';
+export const PUBLIC_AGENTS_FALLBACK = '../config/agents.yaml';
 
-export const PRIVATE_AGENTS_PATH = '/app/data/agents.private.json';
-export const PRIVATE_AGENTS_FALLBACK = '../config/agents.private.json';
+export const PRIVATE_AGENTS_PATH = '/app/data/agents.private.yaml';
+export const PRIVATE_AGENTS_FALLBACK = '../config/agents.private.yaml';
 
 // ============================================================================
 // MCP Configuration

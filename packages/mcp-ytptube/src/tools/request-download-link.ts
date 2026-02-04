@@ -29,7 +29,8 @@ import { VideoTranscriptsError, NotFoundError, InvalidCookiesError } from '../ut
 import { isValidNetscapeCookieFormat, INVALID_COOKIES_MESSAGE } from '../utils/netscape-cookies.ts';
 import { logger } from '../utils/logger.ts';
 import { formatDownloadLinkResponse, formatStatusResponse, formatErrorResponse } from '../utils/response-format.ts';
-import { getProxyUrl, PRESET_VIDEO } from '../utils/env.ts';
+import { getProxyUrl, jobAttemptContext, PRESET_VIDEO } from '../utils/env.ts';
+import { isBlockedLikeError } from '../utils/blocked-retry.ts';
 
 const POST_TO_QUEUE_DELAY_MS = 500;
 
@@ -54,8 +55,15 @@ const NO_VIDEO_USE_AUDIO_MSG =
 
 const DOWNLOAD_RELAY = 'Use this link to download the file (e.g. in browser or wget).';
 
-const VIDEO_QUEUED_RELAY =
+const RELAY_VIDEO_QUEUED =
   'Video download queued. Use get_status to check; when finished call request_download_link again for the video link.';
+
+const RELAY_RETRY_WITH_PROXY =
+  'Previous attempt may have been blocked. Started new job (with proxy). Use get_status; when finished call request_download_link again for link.';
+
+const RELAY_USE_GET_STATUS = 'Use get_status to check; when finished, call request_download_link again for link.';
+
+const RELAY_QUEUED_FALLBACK = 'Download queued. Use get_status with media_url to check; when finished call request_download_link again for link.';
 
 /**
  * Queue a video download for the same URL (preset uses main archive so URL is not skipped).
@@ -67,6 +75,7 @@ async function queueVideoDownloadAndReturnQueued(
   presetForVideo: string,
   cookies: string | undefined,
 ): Promise<{ content: TextContent[] } | null> {
+  const attemptCtx = jobAttemptContext();
   const proxy = getProxyUrl();
   const cli = proxy ? `--proxy ${proxy}` : '';
   const body = {
@@ -96,7 +105,9 @@ async function queueVideoDownloadAndReturnQueued(
             status: 'queued',
             url: mediaUrl,
             canonical_key: canonicalVideoKey(mediaUrl) ?? undefined,
-            relay: VIDEO_QUEUED_RELAY,
+            relay: RELAY_VIDEO_QUEUED,
+            proxy_used: attemptCtx.proxy_used,
+            attempt: attemptCtx.attempt,
           }),
         },
       ],
@@ -117,7 +128,9 @@ async function queueVideoDownloadAndReturnQueued(
             url: mediaUrl,
             status_url: storedUrl,
             canonical_key: canonicalKeyForDisplay(afterFound.item, mediaUrl),
-            relay: VIDEO_QUEUED_RELAY,
+            relay: RELAY_VIDEO_QUEUED,
+            proxy_used: attemptCtx.proxy_used,
+            attempt: attemptCtx.attempt,
           }),
         },
       ],
@@ -131,7 +144,100 @@ async function queueVideoDownloadAndReturnQueued(
           status: 'queued',
           url: mediaUrl,
           canonical_key: canonicalVideoKey(mediaUrl) ?? undefined,
-          relay: VIDEO_QUEUED_RELAY,
+          relay: RELAY_VIDEO_QUEUED,
+          proxy_used: attemptCtx.proxy_used,
+          attempt: attemptCtx.attempt,
+        }),
+      },
+    ],
+  };
+}
+
+/**
+ * Start a new download job (video or audio) and return queued status.
+ * Used for retry when a previous job failed with a blocked-like error (with proxy).
+ */
+async function startDownloadJobAndReturnQueued(
+  ytp: YTPTubeConfig,
+  mediaUrl: string,
+  type: 'audio' | 'video',
+  preset: string | undefined,
+  cookies: string | undefined,
+  relay: string,
+): Promise<{ content: TextContent[] }> {
+  const attemptCtx = jobAttemptContext(true);
+  const proxy = getProxyUrl(true);
+  const cliBase = type === 'audio' ? '--extract-audio --audio-format mp3' : '';
+  const cli = proxy ? (cliBase ? `${cliBase} --proxy ${proxy}` : `--proxy ${proxy}`) : cliBase;
+  const body = {
+    url: mediaUrl,
+    preset: preset ?? (type === 'video' ? PRESET_VIDEO : undefined),
+    folder: MCP_DOWNLOAD_FOLDER,
+    cli: cli || undefined,
+    auto_start: true as const,
+    ...(cookies?.trim() && { cookies: cookies.trim() }),
+  };
+  try {
+    await postHistory(ytp, body);
+  } catch (e) {
+    logger.warn({ err: e, mediaUrl }, 'YTPTube POST /api/history (retry) failed');
+    throw new VideoTranscriptsError(`Retry failed: ${e instanceof Error ? e.message : String(e)}`, 'YTPTUBE_ERROR');
+  }
+  await new Promise((r) => setTimeout(r, POST_TO_QUEUE_DELAY_MS));
+  let queueItems: HistoryItem[];
+  try {
+    queueItems = await getHistoryQueue(ytp);
+  } catch {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'queued',
+            url: mediaUrl,
+            canonical_key: canonicalVideoKey(mediaUrl) ?? undefined,
+            relay,
+            proxy_used: attemptCtx.proxy_used,
+            attempt: attemptCtx.attempt,
+          }),
+        },
+      ],
+    };
+  }
+  const afterFound =
+    findItemByUrlInItems(queueItems, mediaUrl) ??
+    (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, mediaUrl));
+  if (afterFound) {
+    const storedUrl = typeof afterFound.item.url === 'string' ? afterFound.item.url : undefined;
+    return {
+      content: [
+        {
+          type: 'text',
+          text: formatStatusResponse({
+            status: 'queued',
+            job_id: afterFound.id,
+            url: mediaUrl,
+            status_url: storedUrl,
+            canonical_key: canonicalKeyForDisplay(afterFound.item, mediaUrl),
+            relay,
+            proxy_used: attemptCtx.proxy_used,
+            attempt: attemptCtx.attempt,
+          }),
+        },
+      ],
+    };
+  }
+  return {
+    content: [
+      {
+        type: 'text',
+        text: formatStatusResponse({
+          status: 'queued',
+          url: mediaUrl,
+          canonical_key: canonicalVideoKey(mediaUrl) ?? undefined,
+          relay,
+          proxy_used: attemptCtx.proxy_used,
+          attempt: attemptCtx.attempt,
         }),
       },
     ],
@@ -147,6 +253,12 @@ function formatProgress(item: HistoryItem): number {
   const p = item.progress;
   if (typeof p === 'number' && p >= 0 && p <= 100) return Math.round(p);
   return 0;
+}
+
+/** Error message from a YTPTube history item (status=error). API may use error, reason, or message. */
+function getItemErrorMessage(item: HistoryItem): string {
+  const o = item as { error?: string; reason?: string; message?: string };
+  return o.error ?? o.reason ?? o.message ?? 'YTPTube job ended with status error';
 }
 
 type ResolveDownloadResult =
@@ -286,7 +398,18 @@ export async function requestDownloadLink(
     }
 
     if (status === 'error') {
-      const msg = (item as HistoryItem & { error?: string }).error ?? 'YTPTube job ended with status error';
+      const msg = getItemErrorMessage(item);
+      if (isBlockedLikeError(msg) && getProxyUrl(true)) {
+        logger.info({ mediaUrl }, 'Blocked-like error, retrying with new job (with proxy)');
+        return startDownloadJobAndReturnQueued(
+          ytp,
+          mediaUrl,
+          type,
+          preset,
+          cookies,
+          RELAY_RETRY_WITH_PROXY,
+        );
+      }
       throw new VideoTranscriptsError(msg, 'error');
     }
 
@@ -314,7 +437,6 @@ export async function requestDownloadLink(
     const fresh = await getHistoryById(ytp, id).catch(() => item);
     const pct = formatProgress(fresh);
     const isQueued = status === 'queued' || status === 'pending' || pct === 0;
-    const relay = 'Use get_status to check; when finished, call request_download_link again for link.';
     return {
       content: [
         {
@@ -326,14 +448,15 @@ export async function requestDownloadLink(
             status_url: storedUrl,
             canonical_key: canonicalKeyForDisplay(item, mediaUrl),
             progress: isQueued ? undefined : pct,
-            relay,
+            relay: RELAY_USE_GET_STATUS,
           }),
         },
       ],
     };
   }
 
-  // Not found: trigger POST
+  // Not found: trigger POST (first attempt: no proxy when Webshare, else use configured proxy)
+  const attemptCtxFirst = jobAttemptContext();
   const proxy = getProxyUrl();
   const cliBase = type === 'audio' ? '--extract-audio --audio-format mp3' : '';
   const cli = proxy ? (cliBase ? `${cliBase} --proxy ${proxy}` : `--proxy ${proxy}`) : cliBase;
@@ -400,7 +523,18 @@ export async function requestDownloadLink(
     }
 
     if (status === 'error') {
-      const msg = (item as HistoryItem & { error?: string }).error ?? 'YTPTube job ended with status error';
+      const msg = getItemErrorMessage(item);
+      if (isBlockedLikeError(msg) && getProxyUrl(true)) {
+        logger.info({ mediaUrl }, 'Blocked-like error, retrying with new job (with proxy)');
+        return startDownloadJobAndReturnQueued(
+          ytp,
+          mediaUrl,
+          type,
+          preset,
+          cookies,
+          RELAY_RETRY_WITH_PROXY,
+        );
+      }
       throw new VideoTranscriptsError(msg, 'error');
     }
 
@@ -417,7 +551,9 @@ export async function requestDownloadLink(
             status_url: storedUrl,
             canonical_key: canonicalKeyForDisplay(item, mediaUrl),
             progress: isQueued ? undefined : pct,
-            relay: 'Use get_status to check; when finished, call request_download_link again for link.',
+            relay: RELAY_USE_GET_STATUS,
+            proxy_used: attemptCtxFirst.proxy_used,
+            attempt: attemptCtxFirst.attempt,
           }),
         },
       ],
@@ -457,7 +593,9 @@ export async function requestDownloadLink(
             url: mediaUrl,
             status_url: storedUrl,
             canonical_key: canonicalKeyForDisplay(afterFound.item, mediaUrl),
-            relay: 'Use get_status to check; when finished, call request_download_link again for link.',
+            relay: RELAY_USE_GET_STATUS,
+            proxy_used: attemptCtxFirst.proxy_used,
+            attempt: attemptCtxFirst.attempt,
           }),
         },
       ],
@@ -531,7 +669,9 @@ export async function requestDownloadLink(
           status: 'queued',
           url: mediaUrl,
           canonical_key: canonicalVideoKey(mediaUrl) ?? undefined,
-          relay: 'Download queued. Use get_status with media_url to check; when finished call request_download_link again for link.',
+          relay: RELAY_QUEUED_FALLBACK,
+          proxy_used: attemptCtxFirst.proxy_used,
+          attempt: attemptCtxFirst.attempt,
         }),
       },
     ],

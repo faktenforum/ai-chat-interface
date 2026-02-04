@@ -18,6 +18,10 @@ export interface TranscriptResponseParams {
   language_instruction?: string;
   /** Canonical key for this video (same key = same video); for deduplication and debugging. */
   canonical_key?: string;
+  /** Whether the job that produced this transcript used a proxy (only set when known). */
+  proxy_used?: boolean;
+  /** 1-based attempt number for this URL (only set when known). */
+  attempt?: number;
 }
 
 export interface TranscriptResponseBlocks {
@@ -25,9 +29,9 @@ export interface TranscriptResponseBlocks {
   transcript: string;
 }
 
-/** Two blocks for transcript: metadata (result, url, job_id, transcript_source, language_used?, language_instruction?, relay) and transcript text. */
+/** Two blocks for transcript: metadata (result, url, job_id, transcript_source, language_used?, proxy_used?, attempt?, relay) and transcript text. */
 export function formatTranscriptResponseAsBlocks(params: TranscriptResponseParams): TranscriptResponseBlocks {
-  const { url, job_id, transcript, fromArchive, status_url, transcript_source, language_used, language_instruction, canonical_key } = params;
+  const { url, job_id, transcript, fromArchive, status_url, transcript_source, language_used, language_instruction, canonical_key, proxy_used, attempt } = params;
   const relay = fromArchive
     ? 'Transcript below (from archive).'
     : 'Transcript below.';
@@ -42,6 +46,8 @@ export function formatTranscriptResponseAsBlocks(params: TranscriptResponseParam
   if (transcript_source != null) lines.push(`transcript_source=${transcript_source}`);
   if (language_used != null) lines.push(`language=${language_used}`);
   if (language_instruction != null) lines.push(`language_instruction=${language_instruction}`);
+  if (proxy_used !== undefined) lines.push(`proxy_used=${proxy_used}`);
+  if (attempt != null) lines.push(`attempt=${attempt}`);
   const metadata = lines.join('\n');
   const transcriptText =
     (transcript_source != null ? `[transcript_source=${transcript_source}]\n` : '') +
@@ -65,6 +71,10 @@ export interface StatusResponseParams {
   language_instruction?: string;
   /** Canonical key for this video (same key = same video); for deduplication and debugging. */
   canonical_key?: string;
+  /** Whether this job used a proxy (only set when known, e.g. when we just queued the job). */
+  proxy_used?: boolean;
+  /** 1-based attempt number for this URL (only set when known). */
+  attempt?: number;
 }
 
 /** Single key=value block for status (no transcript). */
@@ -76,6 +86,8 @@ export function formatStatusResponse(params: StatusResponseParams): string {
   if (params.canonical_key != null) parts.push(`canonical_key=${params.canonical_key}`);
   if (params.progress != null) parts.push(`progress=${params.progress}%`);
   if (params.reason != null) parts.push(`reason=${params.reason}`);
+  if (params.proxy_used !== undefined) parts.push(`proxy_used=${params.proxy_used}`);
+  if (params.attempt != null) parts.push(`attempt=${params.attempt}`);
   if (params.language != null) parts.push(`language=${params.language}`);
   if (params.language_instruction != null) parts.push(`language_instruction=${params.language_instruction}`);
   parts.push(`relay=${params.relay}`);

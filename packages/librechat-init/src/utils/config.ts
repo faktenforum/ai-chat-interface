@@ -1,50 +1,60 @@
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { parse as parseYaml } from 'yaml';
 import mongoose from 'mongoose';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+function parseWithExtension<T>(filePath: string, content: string): T {
+  const isYaml = filePath.endsWith('.yaml') || filePath.endsWith('.yml');
+  const isJson = filePath.endsWith('.json');
+  try {
+    if (isYaml) return parseYaml(content) as T;
+    if (isJson) return JSON.parse(content) as T;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to parse ${filePath}: ${msg}`);
+  }
+  throw new Error(`Unsupported config extension: ${filePath}`);
+}
+
+/** Returns [path] or [path, pathWithJsonExt] when path is .yaml/.yml. */
+function pathWithJsonFallback(path: string): string[] {
+  if (path.endsWith('.yaml')) return [path, path.slice(0, -5) + '.json'];
+  if (path.endsWith('.yml')) return [path, path.slice(0, -4) + '.json'];
+  return [path];
+}
+
+/** Ordered list of paths to try: primary (yaml then json), then fallback (yaml then json). */
+function candidatePaths(primaryPath: string, fallbackPath?: string): string[] {
+  const primary = pathWithJsonFallback(primaryPath);
+  if (!fallbackPath) return primary;
+  const resolved = fallbackPath.startsWith('/')
+    ? fallbackPath
+    : join(__dirname, fallbackPath);
+  return [...primary, ...pathWithJsonFallback(resolved)];
+}
+
 /**
- * Loads a JSON config file from primary path, falling back to secondary path if provided.
- * @throws Error if file is not found or cannot be parsed
+ * Loads a config file (YAML or JSON). Tries primary path, then same path with .json if primary
+ * is .yaml, then fallback path(s). Backward-compatible with existing .json configs.
+ * @throws Error if no file found or parse failed
  */
 export function loadConfigFile<T>(primaryPath: string, fallbackPath?: string): T {
-  if (existsSync(primaryPath)) {
-    try {
-      return JSON.parse(readFileSync(primaryPath, 'utf-8')) as T;
-    } catch (error) {
-      throw new Error(
-        `Failed to parse ${primaryPath}: ${error instanceof Error ? error.message : String(error)}`
-      );
+  for (const path of candidatePaths(primaryPath, fallbackPath)) {
+    if (existsSync(path)) {
+      return parseWithExtension<T>(path, readFileSync(path, 'utf-8'));
     }
   }
-
-  if (fallbackPath) {
-    const resolvedFallback = fallbackPath.startsWith('/')
-      ? fallbackPath
-      : join(__dirname, fallbackPath);
-
-    if (existsSync(resolvedFallback)) {
-      try {
-        return JSON.parse(readFileSync(resolvedFallback, 'utf-8')) as T;
-      } catch (error) {
-        throw new Error(
-          `Failed to parse ${resolvedFallback}: ${error instanceof Error ? error.message : String(error)}`
-        );
-      }
-    }
-  }
-
   throw new Error(
     `Config file not found: ${primaryPath}${fallbackPath ? ` or ${fallbackPath}` : ''}`
   );
 }
 
 /**
- * Loads a JSON config file, returning defaultValue if file is not found.
- * Still throws if file exists but cannot be parsed.
+ * Like loadConfigFile but returns defaultValue when no file exists. Still throws on parse error.
  */
 export function loadOptionalConfigFile<T>(
   primaryPath: string,
@@ -61,7 +71,6 @@ export function loadOptionalConfigFile<T>(
 /**
  * Resolves the system user ID for agent ownership.
  * Priority: LIBRECHAT_DEFAULT_ADMINS → first admin → first user.
- * @throws Error if no users exist in database
  */
 export async function getSystemUserId(
   User: mongoose.Model<mongoose.Document>
@@ -75,16 +84,12 @@ export async function getSystemUserId(
 
     for (const email of adminEmails) {
       const user = await User.findOne({ email });
-      if (user) {
-        return user._id;
-      }
+      if (user) return user._id;
     }
   }
 
   const adminUser = await User.findOne({ role: 'ADMIN' });
-  if (adminUser) {
-    return adminUser._id;
-  }
+  if (adminUser) return adminUser._id;
 
   const anyUser = await User.findOne();
   if (anyUser) {

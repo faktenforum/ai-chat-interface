@@ -44,7 +44,8 @@ import { isValidNetscapeCookieFormat, INVALID_COOKIES_MESSAGE } from '../utils/n
 import { logger } from '../utils/logger.ts';
 import { formatTranscriptResponseAsBlocks, formatStatusResponse } from '../utils/response-format.ts';
 import { vttToPlainText } from '../utils/vtt-to-text.ts';
-import { getProxyUrl, CLI_AUDIO, CLI_SUBS, PRESET_TRANSCRIPT } from '../utils/env.ts';
+import { getProxyUrl, jobAttemptContext, CLI_AUDIO, CLI_SUBS, PRESET_TRANSCRIPT } from '../utils/env.ts';
+import { isBlockedLikeError } from '../utils/blocked-retry.ts';
 
 const POST_TO_QUEUE_DELAY_MS = 500;
 
@@ -62,9 +63,10 @@ export interface RequestTranscriptDeps {
   transcription: TranscriptionConfig | null;
 }
 
-const DEFAULT_QUEUED_RELAY = 'Download started. Use get_status; when finished request transcript again.';
-const VIDEO_ONLY_QUEUED_RELAY =
-  'Item was video-only; started transcript job. Use get_status; when finished request transcript again.';
+const RELAY_QUEUED = 'Download started. Use get_status; when finished request transcript again.';
+const RELAY_QUEUED_FALLBACK = 'Download queued. Use get_status with media_url to check; when finished request transcript again.';
+const RELAY_VIDEO_ONLY_QUEUED = 'Item was video-only; started transcript job. Use get_status; when finished request transcript again.';
+const RELAY_RETRY_WITH_PROXY = 'Previous attempt may have been blocked. Started new job (with proxy). Use get_status; when finished request transcript again.';
 
 /** Shown when no language_hint: LLM should ask user for correct language and re-call with language_hint. */
 const LANGUAGE_UNKNOWN_INSTRUCTION =
@@ -84,8 +86,18 @@ function statusLanguageParams(lang: string | undefined): { language: string; lan
   };
 }
 
-/** Build yt-dlp CLI for transcript job: subs-only if available, else audio; optional proxy. */
-async function buildTranscriptCli(ytp: YTPTubeConfig, mediaUrl: string): Promise<string> {
+/** Error message from a YTPTube history item (status=error). API may use error, reason, or message. */
+function getItemErrorMessage(item: HistoryItem): string {
+  const o = item as { error?: string; reason?: string; message?: string };
+  return o.error ?? o.reason ?? o.message ?? 'YTPTube job ended with status error';
+}
+
+/** Build yt-dlp CLI for transcript job: subs-only if available, else audio; optional proxy. useProxy: true = retry with proxy. */
+async function buildTranscriptCli(
+  ytp: YTPTubeConfig,
+  mediaUrl: string,
+  opts?: { useProxy?: boolean },
+): Promise<string> {
   let cliBase = CLI_AUDIO;
   try {
     const info = await getUrlInfo(ytp, mediaUrl);
@@ -99,7 +111,10 @@ async function buildTranscriptCli(ytp: YTPTubeConfig, mediaUrl: string): Promise
   } catch (e) {
     logger.debug({ err: e, mediaUrl }, 'getUrlInfo failed, using audio CLI');
   }
-  const proxy = getProxyUrl();
+  const proxy = getProxyUrl(opts?.useProxy);
+  if (proxy) {
+    logger.info({ mediaUrl }, 'Transcript job will use proxy (Webshare/YTPTUBE_PROXY)');
+  }
   return proxy ? `${cliBase} --proxy ${proxy}` : cliBase;
 }
 
@@ -271,14 +286,15 @@ async function startTranscriptJobAndReturnQueued(
   mediaUrl: string,
   preset: string | undefined,
   lang: string | undefined,
-  options: { relay?: string; language?: string; language_instruction?: string; cookies?: string } = {},
+  options: { relay?: string; language?: string; language_instruction?: string; cookies?: string; useProxy?: boolean } = {},
 ): Promise<{ content: TextContent[] }> {
   const { ytptube: ytp } = deps;
-  const relay = options.relay ?? DEFAULT_QUEUED_RELAY;
+  const relay = options.relay ?? RELAY_QUEUED;
   const language = options.language ?? (lang ?? 'unknown');
   const language_instruction = options.language_instruction ?? (lang == null ? LANGUAGE_UNKNOWN_INSTRUCTION : undefined);
+  const attemptCtx = jobAttemptContext(options.useProxy);
 
-  const cli = await buildTranscriptCli(ytp, mediaUrl);
+  const cli = await buildTranscriptCli(ytp, mediaUrl, { useProxy: options.useProxy });
   const body = {
     url: mediaUrl,
     preset: preset ?? PRESET_TRANSCRIPT,
@@ -320,6 +336,8 @@ async function startTranscriptJobAndReturnQueued(
             relay,
             language,
             language_instruction,
+            proxy_used: attemptCtx.proxy_used,
+            attempt: attemptCtx.attempt,
           }),
         },
       ],
@@ -334,9 +352,11 @@ async function startTranscriptJobAndReturnQueued(
           status: 'queued',
           url: mediaUrl,
           canonical_key: canonicalVideoKey(mediaUrl) ?? undefined,
-          relay: 'Download queued. Use get_status with media_url to check; when finished request transcript again.',
+          relay: RELAY_QUEUED_FALLBACK,
           language,
           language_instruction,
+          proxy_used: attemptCtx.proxy_used,
+          attempt: attemptCtx.attempt,
         }),
       },
     ],
@@ -383,13 +403,21 @@ export async function requestTranscript(
       const result = await buildTranscriptForFinishedItem(deps, mediaUrl, item, id, lang, { fromArchive: false });
       if (result) return result;
       return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, {
-        relay: VIDEO_ONLY_QUEUED_RELAY,
+        relay: RELAY_VIDEO_ONLY_QUEUED,
         ...(cookies?.trim() && { cookies: cookies.trim() }),
       });
     }
 
     if (status === 'error') {
-      const msg = (item as HistoryItem & { error?: string }).error ?? 'YTPTube job ended with status error';
+      const msg = getItemErrorMessage(item);
+      if (isBlockedLikeError(msg) && getProxyUrl(true)) {
+        logger.info({ mediaUrl }, 'Blocked-like error, retrying with new job (with proxy)');
+        return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, {
+          relay: RELAY_RETRY_WITH_PROXY,
+          useProxy: true,
+          ...(cookies?.trim() && { cookies: cookies.trim() }),
+        });
+      }
       throw new YTPTubeError(msg, 'error');
     }
 
@@ -435,7 +463,7 @@ export async function requestTranscript(
               url: mediaUrl,
               status_url: storedUrl,
               canonical_key: canonicalKeyForDisplay(item, mediaUrl),
-              relay: 'Download started. Use get_status; when finished request transcript again.',
+              relay: RELAY_QUEUED,
               ...statusLanguageParams(lang),
             }),
           },
@@ -461,6 +489,7 @@ export async function requestTranscript(
     };
   }
 
+  const attemptCtxFirst = jobAttemptContext();
   const cli = await buildTranscriptCli(ytp, mediaUrl);
   const body = {
     url: mediaUrl,
@@ -495,11 +524,19 @@ export async function requestTranscript(
     if (status === 'finished') {
       const result = await buildTranscriptForFinishedItem(deps, mediaUrl, item, id, lang, { fromArchive: true });
       if (result) return result;
-      return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, { relay: VIDEO_ONLY_QUEUED_RELAY });
+      return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, { relay: RELAY_VIDEO_ONLY_QUEUED });
     }
 
     if (status === 'error') {
-      const msg = (item as HistoryItem & { error?: string }).error ?? 'YTPTube job ended with status error';
+      const msg = getItemErrorMessage(item);
+      if (isBlockedLikeError(msg) && getProxyUrl(true)) {
+        logger.info({ mediaUrl }, 'Blocked-like error, retrying with new job (with proxy)');
+        return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, {
+          relay: RELAY_RETRY_WITH_PROXY,
+          useProxy: true,
+          ...(cookies?.trim() && { cookies: cookies.trim() }),
+        });
+      }
       throw new YTPTubeError(msg, 'error');
     }
 
@@ -543,7 +580,9 @@ export async function requestTranscript(
               url: mediaUrl,
               status_url: storedUrl,
               canonical_key: canonicalKeyForDisplay(item, mediaUrl),
-              relay: 'Download started. Use get_status; when finished request transcript again.',
+              relay: RELAY_QUEUED,
+              proxy_used: attemptCtxFirst.proxy_used,
+              attempt: attemptCtxFirst.attempt,
               ...statusLanguageParams(lang),
             }),
           },
@@ -562,6 +601,8 @@ export async function requestTranscript(
             canonical_key: canonicalKeyForDisplay(item, mediaUrl),
             progress: pct,
             relay: `Downloading (${pct}%). Use get_status; when 100% request transcript again.`,
+            proxy_used: attemptCtxFirst.proxy_used,
+            attempt: attemptCtxFirst.attempt,
             ...statusLanguageParams(lang),
           }),
         },
@@ -602,7 +643,9 @@ export async function requestTranscript(
             url: mediaUrl,
             status_url: storedUrl,
             canonical_key: canonicalKeyForDisplay(afterFound.item, mediaUrl),
-            relay: 'Download started. Use get_status; when finished request transcript again.',
+            relay: RELAY_QUEUED,
+            proxy_used: attemptCtxFirst.proxy_used,
+            attempt: attemptCtxFirst.attempt,
             ...statusLanguageParams(lang),
           }),
         },
@@ -619,7 +662,7 @@ export async function requestTranscript(
       const { item, id } = doneFound;
       const result = await buildTranscriptForFinishedItem(deps, mediaUrl, item, id, lang, { fromArchive: true });
       if (result) return result;
-      return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, { relay: VIDEO_ONLY_QUEUED_RELAY });
+      return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, { relay: RELAY_VIDEO_ONLY_QUEUED });
     }
     if (doneStatus === 'skip' || doneStatus === 'cancelled') {
       const { item, id } = doneFound;
@@ -658,7 +701,9 @@ export async function requestTranscript(
           status: 'queued',
           url: mediaUrl,
           canonical_key: canonicalVideoKey(mediaUrl) ?? undefined,
-          relay: 'Download queued. Use get_status with media_url to check; when finished request transcript again.',
+          relay: RELAY_QUEUED_FALLBACK,
+          proxy_used: attemptCtxFirst.proxy_used,
+          attempt: attemptCtxFirst.attempt,
           ...statusLanguageParams(lang),
         }),
       },

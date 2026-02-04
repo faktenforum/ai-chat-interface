@@ -17,7 +17,7 @@ Media URL (video or audio) → transcript or download link. Uses YTPTube; option
 
 ## Response format
 
-Key=value lines. **Transcript:** metadata block (`result=transcript`, `url`, `job_id`, `transcript_source`, `language?`, `language_instruction?`, `relay`) + transcript text. **Status:** `result=status`, `status`, `job_id?`, `url?`, `progress?`, `relay`. **Error:** `result=error`, `relay=`.
+Key=value lines. **Transcript:** metadata block (`result=transcript`, `url`, `job_id`, `transcript_source`, `language?`, `language_instruction?`, `relay`) + transcript text. **Status:** `result=status`, `status`, `job_id?`, `url?`, `progress?`, `proxy_used?`, `attempt?`, `relay`. When we just queued the job, `proxy_used` (true/false) and `attempt` (1 or 2) are set so the LLM knows whether proxy was used and which attempt. **Error:** `result=error`, `relay=`.
 
 ## Transcript language
 

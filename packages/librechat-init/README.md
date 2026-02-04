@@ -9,39 +9,38 @@ Initialization services for LibreChat configuration and agent setup.
 
 ## Configuration
 
-### Roles (`config/roles.json`)
+Config files are YAML by default; if a `.yaml` file is missing, the loader tries the same path with `.json` (backward compatibility).
 
-```json
-{
-  "roles": [
-    {
-      "name": "DEVELOPER",
-      "permissions": {
-        "PROMPTS": { "SHARED_GLOBAL": true, "USE": true, "CREATE": true }
-      }
-    }
-  ]
-}
+### Roles (`config/roles.yaml`)
+
+```yaml
+roles:
+  - name: DEVELOPER
+    permissions:
+      PROMPTS:
+        SHARED_GLOBAL: true
+        USE: true
+        CREATE: true
 ```
 
 ### Agents
 
-**Files:** `config/agents.json` (public), `config/agents.private.json` (private)
+**Files:** `config/agents.yaml` (public), `config/agents.private.yaml` (private)
 
-```json
-{
-  "agents": [
-    {
-      "name": "Research Assistant",
-      "provider": "Scaleway",
-      "model": "mistral-small-3.2-24b-instruct-2506",
-      "tools": ["web_search", "file_search"],
-      "mcpServers": ["firecrawl"],
-      "mcpTools": ["firecrawl_search_mcp_firecrawl"],
-      "permissions": { "public": true }
-    }
-  ]
-}
+```yaml
+agents:
+  - name: Research Assistant
+    provider: Scaleway
+    model: mistral-small-3.2-24b-instruct-2506
+    tools:
+      - web_search
+      - file_search
+    mcpServers:
+      - firecrawl
+    mcpTools:
+      - firecrawl_search_mcp_firecrawl
+    permissions:
+      public: true
 ```
 
 **MCP Configuration:**

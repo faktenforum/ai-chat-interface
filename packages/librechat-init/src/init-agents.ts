@@ -91,12 +91,14 @@ function convertMCPServersToTools(
 function buildToolsArray(agentConfig: AgentConfig): string[] {
   const tools: string[] = [...(agentConfig.tools || [])];
 
-  if (agentConfig.mcpServers?.length > 0) {
-    const mcpTools = convertMCPServersToTools(agentConfig.mcpServers, agentConfig.mcpTools);
+  const mcpServers = agentConfig.mcpServers;
+  const mcpTools = agentConfig.mcpTools;
+  if (mcpServers && mcpServers.length > 0) {
+    const converted = convertMCPServersToTools(mcpServers, mcpTools);
+    tools.push(...converted);
+  } else if (mcpTools && mcpTools.length > 0) {
     tools.push(...mcpTools);
-  } else if (agentConfig.mcpTools?.length > 0) {
-    tools.push(...agentConfig.mcpTools);
-    console.log(`    ✓ Added ${agentConfig.mcpTools.length} explicit MCP tool(s)`);
+    console.log(`    ✓ Added ${mcpTools.length} explicit MCP tool(s)`);
   }
 
   return tools;
@@ -312,10 +314,10 @@ export async function initializeAgents(): Promise<void> {
 
     console.log('Initializing agents from configuration...');
     if (publicCount > 0) {
-      console.log(`  Loading ${publicCount} agent(s) from agents.json`);
+      console.log(`  Loading ${publicCount} agent(s) from agents.yaml`);
     }
     if (privateCount > 0) {
-      console.log(`  Loading ${privateCount} agent(s) from agents.private.json`);
+      console.log(`  Loading ${privateCount} agent(s) from agents.private.yaml`);
     }
 
     let systemUserId: mongoose.Types.ObjectId | string | null = null;

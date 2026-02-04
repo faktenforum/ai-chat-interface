@@ -131,6 +131,8 @@ const PROMPTS: Record<string, PromptConfig> = {
     // YTPTube MCP
     'YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL': { message: 'YTPTube public download base URL (optional; e.g. https://ytptube.<DOMAIN>):', type: 'input' },
     'YTPTUBE_PROXY': { message: 'YTPTube proxy URL (optional; press enter to skip):', type: 'password' },
+    'WEBSHARE_PROXY_USERNAME': { message: 'Webshare proxy username (optional; for Rotating/Backbone at p.webshare.io):', type: 'input' },
+    'WEBSHARE_PROXY_PASSWORD': { message: 'Webshare proxy password (optional; press enter to skip):', type: 'password' },
 
     // Mongo (using --noauth, so INITDB credentials not needed)
     'LIBRECHAT_MONGO_DATABASE': { message: 'Mongo Database Name:', type: 'input', defaultGen: () => 'librechat' },

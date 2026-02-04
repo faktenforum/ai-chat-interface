@@ -75,7 +75,7 @@
 - [ ] Re-enable Firecrawl MCP server after connection stability is fixed
   - Status: Currently disabled due to unstable connection to MCP server
   - The tool is very helpful for reading special URLs, but connection issues prevent reliable usage
-  - Waiting for fix before re-enabling in `librechat.yaml` and `agents.json`
+  - Waiting for fix before re-enabling in `librechat.yaml` and `agents.yaml`
   - Related to SSE stream disconnection issue above
 - [ ] Update OpenStreetMap MCP server to use official version after PR merge
   - Status: Currently using fork `faktenforum/open-streetmap-mcp` with merged `bump-fastmcp` branch

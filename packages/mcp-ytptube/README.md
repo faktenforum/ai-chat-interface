@@ -44,7 +44,7 @@ npm install && npm run dev
 | `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` | Optional. Public URL for `request_download_link` (where clients reach YTPTube). |
 | `YTPTUBE_PRESET_TRANSCRIPT`, `YTPTUBE_PRESET_VIDEO` | Preset names (defaults `mcp_audio`, `default`). |
 | `YTPTUBE_SKIP_PRESET_SYNC` | `1` or `true` to skip preset sync on startup. |
-| `WEBSHARE_PROXY_*`, `YTPTUBE_PROXY` | Optional proxy; [WEBSHARE_PROXY.md](../../docs/WEBSHARE_PROXY.md). |
+| `WEBSHARE_PROXY_*`, `YTPTUBE_PROXY` | Optional proxy; [WEBSHARE_PROXY.md](../../docs/WEBSHARE_PROXY.md). When running in Docker, pass `--env-file .env.local` so these (and other) env vars are applied on up/rebuild. |
 | `YTPTUBE_STARTUP_MAX_WAIT_MS` | Max ms wait for YTPTube at startup (default 5 min). |
 | `PORT` / `MCP_YTPTUBE_PORT` | HTTP port (default `3010`). |
 
