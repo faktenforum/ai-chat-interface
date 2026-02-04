@@ -155,7 +155,7 @@ agents:
     permissions:
       public: true
       publicEdit: false
-  # Video-Transkripte: not public yet – not extensively tested in production.
+  # Video-Transkripte: public false until server-side access is reliable (proxy/geo). See docs/YTPTUBE_FUTURE_WORK.md.
   - id: shared-agent-005
     name: Video-Transkripte
     description: Transkripte, Metadaten, Thumbnails und Download-Links für Video-URLs (YouTube, Instagram, TikTok u. a.).

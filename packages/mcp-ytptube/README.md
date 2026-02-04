@@ -10,7 +10,7 @@ Connects to your YTPTube instance (`YTPTUBE_URL`; default `http://ytptube:8081` 
 - **Transcripts** — Platform subtitles (VTT) when available; else optional OpenAI-compatible transcription API. `language_hint`, cookies for age-restricted/geo-blocked. Without transcription config: platform subtitles only; audio-only without subs returns a clear error.
 - **Download links** — Request → poll → retrieve (video or audio).
 - **Multi-platform** — Any [yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) site (YouTube, SoundCloud, Vimeo, TikTok, etc.).
-- **Webshare proxy** — Optional [Webshare](https://www.webshare.io/) proxy to bypass IP blocks; [WEBSHARE_PROXY.md](../../docs/WEBSHARE_PROXY.md).
+- **Webshare proxy** — Optional [Webshare](https://www.webshare.io/) proxy to bypass IP blocks; [WEBSHARE_PROXY.md](../../docs/WEBSHARE_PROXY.md). For production/server blocking and future options (FlareSolverr, office Pi): [YTPTUBE_FUTURE_WORK.md](../../docs/YTPTUBE_FUTURE_WORK.md).
 - **Stateless HTTP** — Streamable-http, health check, Pino logging.
 
 ## Tools
