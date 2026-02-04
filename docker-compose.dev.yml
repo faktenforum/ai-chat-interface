@@ -50,6 +50,15 @@ services:
     container_name: ${STACK_NAME:-prod}-librechat
     # Use pre-built image from registry (built by GitHub Actions)
     image: ghcr.io/faktenforum/librechat:dev
+    depends_on:
+      librechat-init:
+        condition: service_completed_successfully
+      mongodb:
+        condition: service_started
+      meilisearch:
+        condition: service_started
+      mcp-ytptube:
+        condition: service_healthy
     networks:
       - traefik-net
       - app-net

@@ -262,36 +262,44 @@ function createApp(): express.Application {
   return app;
 }
 
-async function main(): Promise<void> {
+/**
+ * Run YTPTube wait and preset sync in the background so the HTTP server can start immediately.
+ * Tools will return normal errors if YTPTube is not reachable yet.
+ */
+function runYTPTubeStartupInBackground(): void {
   const ytptube = getYTPTubeConfig();
   const startupMaxWaitMs = parseInt(
     process.env.YTPTUBE_STARTUP_MAX_WAIT_MS ?? String(5 * 60 * 1000),
     10,
   );
+  const skipPresetSync =
+    process.env.YTPTUBE_SKIP_PRESET_SYNC === '1' || process.env.YTPTUBE_SKIP_PRESET_SYNC === 'true';
 
-  try {
-    await waitForYTPTube(ytptube, { maxWaitMs: startupMaxWaitMs });
-  } catch (e) {
-    logger.error({ error: e }, 'YTPTube not reachable at startup');
-    process.exit(1);
-  }
-
-  const skipPresetSync = process.env.YTPTUBE_SKIP_PRESET_SYNC === '1' || process.env.YTPTUBE_SKIP_PRESET_SYNC === 'true';
-  if (!skipPresetSync) {
+  void (async () => {
+    try {
+      await waitForYTPTube(ytptube, { maxWaitMs: startupMaxWaitMs });
+    } catch (e) {
+      logger.warn({ error: e }, 'YTPTube not reachable yet; tools will fail until it is up');
+      return;
+    }
+    if (skipPresetSync) {
+      logger.info('YTPTUBE_SKIP_PRESET_SYNC set; skipping preset sync');
+      return;
+    }
     try {
       await ensureMcpPreset(ytptube);
     } catch (e) {
-      logger.error({ error: e }, 'Failed to ensure transcript preset');
-      process.exit(1);
+      logger.warn({ error: e }, 'Preset sync failed; transcript preset may be missing or outdated');
     }
-  } else {
-    logger.info('YTPTUBE_SKIP_PRESET_SYNC set; skipping preset sync');
-  }
+  })();
+}
 
+async function main(): Promise<void> {
   try {
     const app = createApp();
     const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info({ port: PORT, service: SERVER_NAME, version: SERVER_VERSION }, 'MCP YTPTube Server started');
+      runYTPTubeStartupInBackground();
     });
 
     setupGracefulShutdown(server, transports, logger);

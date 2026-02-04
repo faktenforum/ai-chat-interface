@@ -70,7 +70,7 @@ YTPTube compose: `YTP_OUTPUT_TEMPLATE`/`YTP_OUTPUT_TEMPLATE_CHAPTER` set to shor
 
 ## Startup
 
-Waits for YTPTube (GET api/ping/), then syncs transcript preset. Timeout: `YTPTUBE_STARTUP_MAX_WAIT_MS`. `YTPTUBE_SKIP_PRESET_SYNC=1` to skip.
+The HTTP server listens on port 3010 **immediately** so the container becomes healthy quickly and LibreChat is not blocked. YTPTube reachability (GET api/ping/) and transcript preset sync run **in the background**; on failure they are logged only (no exit). Tools return normal errors until YTPTube is up. Timeout for background wait: `YTPTUBE_STARTUP_MAX_WAIT_MS`. `YTPTUBE_SKIP_PRESET_SYNC=1` to skip preset sync.
 
 ## Transcript: subtitles vs audio
 
@@ -115,14 +115,69 @@ Match by URL, item identifiers, or **POST /api/yt-dlp/archive_id/** (any platfor
 
 LibreChat reaches the MCP at `http://mcp-ytptube:3010/mcp` over Docker network `app-net`. If you see **fetch failed** or **Failed to connect after 3 attempts**:
 
-1. **Container running and healthy**  
+1. **Start order**  
+   mcp-ytptube listens on port 3010 immediately (YTPTube wait and preset sync run in the background) and becomes healthy within ~10s. In **dev** and **prod** compose, `api` has `depends_on: mcp-ytptube: condition: service_healthy` so LibreChat starts only after mcp-ytptube is healthy. That avoids "fetch failed" at startup (LibreChat's MCP client can race with mcp-ytptube if both start in parallel).
+
+2. **Container running and healthy**  
    In Portainer → Stack → your stack → check that the **mcp-ytptube** container (e.g. `dev-mcp-ytptube`) is **Running** and **healthy**. If it is **Exited** or **Unhealthy**, open its logs and fix the cause (e.g. env, YTPTube not reachable at `ytptube:8081`).
 
-2. **Dev stack: image tag**  
+3. **Dev stack: image tag**  
    Dev compose uses `ghcr.io/faktenforum/mcp-ytptube:dev`. That image is built by GitHub Actions on **non-default branches** (see `.github/workflows/build-mcp-ytptube.yml`). Ensure the workflow has run for your branch and the `:dev` image exists; otherwise the container may fail to start or be missing.
 
-3. **Same network**  
+4. **Same network**  
    Both LibreChat (`api`) and `mcp-ytptube` must be on **app-net** (in dev/prod the network is named `${STACK_NAME}-app-net`). The compose files set this explicitly; if you use a custom compose, keep `networks: - app-net` for both services.
+
+### Debugging connectivity (Portainer / CLI)
+
+Run these from the **host** (replace `dev` with your stack name if different, e.g. `prod`).
+
+**1. From LibreChat container: can it reach mcp-ytptube?**
+
+```bash
+# Health (run and note the output: status code + body, or "Error: ...")
+docker exec dev-librechat node -e "require('http').get('http://mcp-ytptube:3010/health', (r) => { let d=''; r.on('data',c=>d+=c); r.on('end',()=>console.log(r.statusCode, d)); }).on('error', e => console.error('Error:', e.message));"
+```
+
+- If you see **`200 { ... "status":"ok" ... }`**: connectivity from LibreChat to mcp-ytptube works; the "fetch failed" in LibreChat may be due to how/when the MCP client connects (e.g. timing or the `/mcp` request).
+- If you see **`Error: getaddrinfo ENOTFOUND mcp-ytptube`**: DNS resolution failed; check step 4 (same network).
+- If you see **`Error: connect ECONNREFUSED`**: mcp-ytptube is not listening on 3010 or is on a different network.
+- If the command hangs or times out: firewall or mcp-ytptube not responding.
+
+**2. From LibreChat container: DNS and network**
+
+```bash
+# Resolve hostname (should list the mcp-ytptube container IP)
+docker exec dev-librechat getent hosts mcp-ytptube
+
+# Or with Node (LibreChat has Node)
+docker exec dev-librechat node -e "require('http').get('http://mcp-ytptube:3010/health', (r) => { let d=''; r.on('data',c=>d+=c); r.on('end',()=>console.log(r.statusCode, d)); }).on('error', e => console.error('Error:', e.message));"
+```
+
+**3. From mcp-ytptube container: is it listening?**
+
+```bash
+# Process listening on 3010
+docker exec dev-mcp-ytptube netstat -tlnp 2>/dev/null || docker exec dev-mcp-ytptube ss -tlnp
+```
+
+**4. Both containers on the same network?**
+
+```bash
+# Network name (e.g. dev-app-net)
+docker network ls | grep app-net
+
+# Inspect network: both dev-librechat and dev-mcp-ytptube should be listed
+docker network inspect dev-app-net --format '{{range .Containers}}{{.Name}} {{end}}'
+```
+
+**5. From host: direct health check**
+
+```bash
+# Only works if mcp-ytptube publishes port 3010 to host (dev/prod typically do not)
+curl -s http://localhost:3010/health
+```
+
+If step 1 fails and step 4 shows both containers on the same network, restart the mcp-ytptube container and retry; if it still fails, check mcp-ytptube logs for bind errors or early exit.
 
 **Other MCP log messages:** "SSE stream disconnected" / "SSE stream not available (404)" for other MCPs (e.g. db-timetable, weather, stackoverflow, npm-search) are a known LibreChat/client behaviour; see [TODO.md](TODO.md) (SSE stream disconnection). Servers that only support streamable-http may log 404 for SSE; LibreChat continues with POST. If a specific MCP keeps failing, check that its container is running and on **app-net** as above.
 
