@@ -746,7 +746,7 @@ mcpServers:
     description: Aktuelle Wetterdaten, Luftqualität und Zeitzoneninformationen
     iconPath: /images/mcp-weather-icon.svg
     initTimeout: 120000
-    chatMenu: false
+    chatMenu: true
     startup: true
     serverInstructions: true
 
