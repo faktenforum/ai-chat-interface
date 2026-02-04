@@ -284,6 +284,7 @@ modelSpecs:
     # ==========================================
     # Alle Modelle: Open Source, Europa-gehostet, DSGVO-konform
     # Chat Modelle (Text-only)
+    # Token limits: Scaleway Generative APIs + Managed Inference model catalog (Oct 2025)
     - name: "scaleway-llama-3.3-70b"
       label: "Llama 3.3 70B"
       description: "Meta's neuestes Modell. 100K Context, 4K Output. Sehr gut für allgemeine Gespräche und Aufgaben. Llama 3.3 Community License. Empfohlen von Scaleway."
@@ -294,7 +295,9 @@ modelSpecs:
         endpoint: "Scaleway"
         endpointType: "custom"
         model: "llama-3.3-70b-instruct"
-    
+        maxContextTokens: 100000   # Generative APIs; Managed Inference up to 128k (instance-dependent)
+        maxOutputTokens: 4096
+
     - name: "scaleway-qwen3-235b"
       label: "Qwen3 235B"
       description: "Sehr großes Modell (235B Parameter). 250K Context, 8K Output. Optimal für komplexe Aufgaben und lange Kontexte. Apache-2.0 License."
@@ -304,7 +307,9 @@ modelSpecs:
         endpoint: "Scaleway"
         endpointType: "custom"
         model: "qwen3-235b-a22b-instruct-2507"
-    
+        maxContextTokens: 250000
+        maxOutputTokens: 8192
+
     - name: "scaleway-qwen3-coder-30b"
       label: "Qwen3 Coder 30B"
       description: "Spezialisiert auf Programmierung und Code-Generierung. 128K Context, 8K Output. Apache-2.0 License."
@@ -314,17 +319,21 @@ modelSpecs:
         endpoint: "Scaleway"
         endpointType: "custom"
         model: "qwen3-coder-30b-a3b-instruct"
-    
+        maxContextTokens: 128000
+        maxOutputTokens: 8192
+
     - name: "scaleway-gpt-oss-120b"
       label: "GPT-OSS 120B"
-      description: "Großes Modell für komplexe Aufgaben."
+      description: "Großes Modell für komplexe Aufgaben. 128K Context, 8K Output. Apache-2.0 License."
       group: "Empfohlen: Europa & Open Source"
       order: 4
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
         model: "gpt-oss-120b"
-    
+        maxContextTokens: 128000
+        maxOutputTokens: 8192
+
     # Chat & Vision Modelle (vision: true = WIP/experimental, draft PRs LibreChat #11501 / agents #48)
     - name: "scaleway-mistral-small-3.2"
       label: "Mistral Small 3.2 24B"
@@ -337,7 +346,9 @@ modelSpecs:
         endpoint: "Scaleway"
         endpointType: "custom"
         model: "mistral-small-3.2-24b-instruct-2506"
-    
+        maxContextTokens: 128000
+        maxOutputTokens: 8192
+
     - name: "scaleway-pixtral-12b"
       label: "Pixtral 12B"
       description: "Spezialisiert auf Bildverständnis und Chat. 128K Context, 4K Output. Unterstützt Bilder bis 32M Pixel. Apache-2.0 License."
@@ -348,6 +359,8 @@ modelSpecs:
         endpoint: "Scaleway"
         endpointType: "custom"
         model: "pixtral-12b-2409"
+        maxContextTokens: 128000
+        maxOutputTokens: 4096
     
     # ==========================================
     # Premium-Modelle (OpenRouter)
