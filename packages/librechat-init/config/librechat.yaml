@@ -334,6 +334,18 @@ modelSpecs:
         maxContextTokens: 128000
         maxOutputTokens: 8192
 
+    - name: "scaleway-devstral-2-123b"
+      label: "Devstral 2 123B"
+      description: "Coding- und Agent-Modell (Mistral). 200K Context, 8K Output. Ideal für Code, Tools und Software-Agents. Modified MIT."
+      group: "Empfohlen: Europa & Open Source"
+      order: 5
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "devstral-2-123b-instruct-2512"
+        maxContextTokens: 200000
+        maxOutputTokens: 8192
+
     # Chat & Vision Modelle (vision: true = WIP/experimental, draft PRs LibreChat #11501 / agents #48)
     - name: "scaleway-mistral-small-3.2"
       label: "Mistral Small 3.2 24B"
@@ -361,7 +373,45 @@ modelSpecs:
         model: "pixtral-12b-2409"
         maxContextTokens: 128000
         maxOutputTokens: 4096
-    
+
+    - name: "scaleway-gemma-3-27b"
+      label: "Gemma 3 27B"
+      description: "Kompaktes Chat- und Vision-Modell (Google). 40K Context, 8K Output. Gut für Bildanalyse und allgemeine Aufgaben. Gemma License, derzeit Preview bei Scaleway."
+      group: "Empfohlen: Europa & Open Source"
+      order: 8
+      vision: true
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "gemma-3-27b-it"
+        maxContextTokens: 40000
+        maxOutputTokens: 8192
+
+    - name: "scaleway-voxtral-small-24b"
+      label: "Voxtral Small 24B"
+      description: "Chat- und Audio-Modell (Mistral). 32K Context, 8K Output. Transkription und Verstehen von Audio (WAV, MP3), mehrsprachig. Apache-2.0 License. Zum Testen der Audio-Fähigkeiten."
+      group: "Empfohlen: Europa & Open Source"
+      order: 9
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "voxtral-small-24b-2507"
+        maxContextTokens: 32000
+        maxOutputTokens: 8192
+
+    - name: "scaleway-holo2-30b"
+      label: "Holo2 30B"
+      description: "Chat- und Vision-Modell mit Fokus auf GUI-Analyse (Browser, Software-Oberflächen). 22K Context, 8K Output. CC-BY-NC-4.0; Nutzung über Scaleway erlaubt. Zum Testen von UI/UX-Verständnis."
+      group: "Empfohlen: Europa & Open Source"
+      order: 10
+      vision: true
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "holo2-30b-a3b"
+        maxContextTokens: 22000
+        maxOutputTokens: 8192
+
     # ==========================================
     # Premium-Modelle (OpenRouter)
     # ==========================================
