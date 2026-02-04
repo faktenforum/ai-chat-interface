@@ -2,7 +2,11 @@
 
 Media URL (video or audio) → transcript or download link. Uses YTPTube; optional OpenAI-compatible transcription API when platform subtitles are missing (otherwise clear error). This stack: Traefik exposes only `/api/download` for YTPTube; MCP internal.
 
-**Status:** Works locally. On production (e.g. Hetzner), server IP may be blocked; optional [Webshare proxy](WEBSHARE_PROXY.md) or [FlareSolverr / office proxy ideas](YTPTUBE_FUTURE_WORK.md). The **Video-Transkripte** agent is in config with `public: false` until server-side access is reliable.
+## Status & limitations
+
+- **Local:** Works; Video-Transkripte agent is in config with `public: false`.
+- **Production (e.g. Hetzner):** Server IP can be blocked (geo/bot); optional [Webshare proxy](WEBSHARE_PROXY.md) or [FlareSolverr / office proxy ideas](wip/YTPTUBE_FUTURE_WORK.md).
+- **More:** [wip/YTPTUBE_FUTURE_WORK.md](wip/YTPTUBE_FUTURE_WORK.md) (production options), [WEBSHARE_PROXY.md](WEBSHARE_PROXY.md) (proxy setup), [YTPTUBE_CLEANUP.md](YTPTUBE_CLEANUP.md) (cleanup for fresh tests).
 
 ## Tools
 

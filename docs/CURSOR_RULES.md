@@ -4,11 +4,19 @@ This project uses [Cursor Rules](https://docs.cursor.com/features/rules) to enab
 
 ## Overview
 
-Cursor Rules are workspace-level instructions that guide AI agents through complex integration tasks. Specialized rules include:
+Cursor Rules are workspace-level instructions that guide AI agents. All rule files live in `.cursor/rules/`:
 
-- **`create-new-service`** - Integration guide for new Docker services
-- **`create-new-mcp`** - Integration guide for new MCP (Model Context Protocol) servers
-- **`debug-test-internal-mcp`** - Debug and test internal (self-hosted) MCP servers; IDE as test client, Docker logs, reload after changes (applies when editing `packages/mcp-*/**`)
+| Rule | Purpose |
+|------|---------|
+| `create-new-service.mdc` | Integrate new Docker services into the stack |
+| `create-new-mcp.mdc` | Integrate new MCP servers (Docker) |
+| `create-external-mcp.mdc` | Integrate external/remote MCP servers (no Docker) |
+| `debug-test-internal-mcp.mdc` | Debug and test internal MCPs from Cursor IDE (editing `packages/mcp-*/**`) |
+| `docker-env.mdc` | Docker env and compose file structure |
+| `environment-variables.mdc` | Environment variable guidelines for the stack |
+| `documentation.mdc` | Documentation standards (minimal, scannable) |
+| `general.mdc` | Language, submodules, code quality (always applied) |
+| `typescript.mdc` | TypeScript conventions |
 
 ## Usage
 
@@ -21,9 +29,7 @@ Cursor Rules are workspace-level instructions that guide AI agents through compl
 
 ### Rule Files Location
 
-- `.cursor/rules/create-new-service.mdc` - Service integration checklist
-- `.cursor/rules/create-new-mcp.mdc` - MCP server integration checklist
-- `.cursor/rules/debug-test-internal-mcp.mdc` - Debug and test internal MCP servers
+All rules: `.cursor/rules/`. See the table in [Overview](#overview) for each file's purpose.
 
 ## What Gets Created
 
@@ -43,5 +49,6 @@ Cursor Rules are workspace-level instructions that guide AI agents through compl
 
 ## Reference
 
+- **Rules directory:** `.cursor/rules/`
 - [Cursor Rules Documentation](https://docs.cursor.com/features/rules)
 - [Cursor Agent Documentation](https://docs.cursor.com/chat/agent)

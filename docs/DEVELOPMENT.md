@@ -14,16 +14,7 @@ This guide explains how to work with local source builds and git submodules.
 
 ## Git Submodules
 
-The project includes several git submodules in the `/dev` directory:
-
-- `dev/librechat` - Main LibreChat application
-- `dev/agents` - npm package used by LibreChat
-- `dev/rag_api` - RAG API service
-- `dev/librechat-doc` - LibreChat documentation
-- `dev/firecrawl` - Firecrawl web scraping service
-- `dev/searxng` - SearXNG metasearch engine
-- `dev/mcp-youtube-transcript` - YouTube Transcript MCP server
-- `dev/yt-dlp` - yt-dlp (reference only; used indirectly via YTPTube; we do not build from sources)
+Full list and descriptions: [dev/README.md](../dev/README.md#submodules).
 
 ### Initializing Submodules
 

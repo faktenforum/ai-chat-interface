@@ -1,6 +1,10 @@
 # WIP Documentation
 
-Work-in-progress notes and design docs for vision handling, agent token metadata, and related refactors. Content may change as implementation evolves.
+Work-in-progress notes and design docs for vision handling, YTPTube production, agent token metadata, and related refactors. Content may change as implementation evolves.
+
+## YTPTube production
+
+Works locally; on server (e.g. Hetzner), blocking (geo/bot) may apply. See [YTPTUBE_FUTURE_WORK.md](YTPTUBE_FUTURE_WORK.md) for production options and [TODO.md](../TODO.md) for the tracked task.
 
 ## Branch Status & Upstream Sync (Jan 2025)
 
@@ -23,6 +27,8 @@ To bring submodule `main` in line with upstream while keeping vision on `feat/vi
 
 | Document | Description |
 |----------|-------------|
+| **[YTPTube Future Work](YTPTUBE_FUTURE_WORK.md)** | Production options (proxy, FlareSolverr, office Pi); status and ideas |
+| **[PR: LibreChat testing](PR-feat-librechat-testing.md)** | PR text draft for feat/librechat-testing |
 | **[Vision Architecture](VISION_ARCHITECTURE.md)** | Vision capability detection and MCP artifact processing (Agents & Assistants) |
 | **[Vision Design](VISION_DESIGN.md)** | Single rule and where images are filtered for non-vision models |
 | **[Vision Debug Status](VISION_DEBUG_STATUS.md)** | Vision artifact refactoring status and testing notes |

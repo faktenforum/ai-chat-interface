@@ -17,6 +17,7 @@ This project includes the following git submodules:
 - **dev/db-timetable-mcp** - Deutsche Bahn Timetable MCP server
 - **dev/stackoverflow-mcp** - Stack Overflow MCP server
 - **dev/npm-search-mcp** - npm Search MCP server (fork with HTTP transport support)
+- **dev/ytptube** - YTPTube (yt-dlp Web UI; used by MCP YTPTube)
 - **dev/mcp-youtube-transcript** - YouTube Transcript MCP server (video URL → transcript)
 - **dev/yt-dlp** - yt-dlp (reference only; used indirectly via YTPTube; we do not build from sources)
 

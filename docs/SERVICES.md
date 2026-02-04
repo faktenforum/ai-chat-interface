@@ -107,6 +107,7 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 | **StackOverflow** | Programming Q&A and debugging | Internal Docker | ❌ | ❌ | ✅ |
 | **npm Search** | npm package search | Internal Docker | ❌ | ❌ | ✅ |
 | **YTPTube** | Video URLs → transcripts (YTPTube + optional transcription API) | Internal Docker | ❌ | ❌ | ✅ |
+| **YouTube Transcript** | YouTube video URL → transcript (youtube-transcript-api) | Internal Docker | ❌ | ❌ | ✅ |
 | **GitHub** | Repos, issues, PRs, code search | Remote (`api.githubcopilot.com`) | ❌ | ❌ | N/A (external) |
 | **Mapbox** | Geo search, routing, geocoding, maps | Remote (`mcp.mapbox.com`) | ❌ | ❌ | N/A (external) |
 | **Firecrawl** | Web scraping tools for agents | Internal Docker | — | — | **Disabled** in config |
@@ -130,6 +131,8 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 **npm Search** — npm package search. Network: `app-net`. URL: `http://mcp-npm-search:3009/mcp`.
 
 **YTPTube** — Media URL → transcript or download link. Tools: `request_transcript`, `get_status`, `request_download_link`, `get_media_info`, `get_thumbnail_url`, `list_recent_downloads`. Optional: `TRANSCRIPTION_BASE_URL` + `TRANSCRIPTION_API_KEY` for audio transcription; omit for platform-subtitles-only. Network: `app-net`. URL: `http://mcp-ytptube:3010/mcp`. [MCP YTPTube](MCP_YTPTUBE.md)
+
+**YouTube Transcript** — YouTube video URL → transcript via youtube-transcript-api. Tools: `get_transcript`, `get_timed_transcript`, `get_video_info`. Network: `app-net`. URL: `http://mcp-youtube-transcript:3011/mcp`. [MCP YouTube Transcript](MCP_YOUTUBE_TRANSCRIPT.md)
 
 **GitHub** — Repository management, issues, pull requests, code search. Remote; requires `MCP_GITHUB_PAT`. URL: `https://api.githubcopilot.com/mcp/`
 
