@@ -112,6 +112,10 @@ services:
       SEARCH: ${LIBRECHAT_SEARCH_ENABLED:-true}
       MEILI_MASTER_KEY: ${LIBRECHAT_MEILI_MASTER_KEY}
       CONFIG_PATH: /app/config/librechat.yaml
+      # When set, only these providers appear in the model selector. Empty = LibreChat default (all).
+      # Portainer (prod/dev): set ENDPOINTS=agents in env so only "My Agents" is shown.
+      # Local: leave ENDPOINTS unset for all endpoints (Agents, OpenRouter, Scaleway, Google, etc.).
+      ENDPOINTS: ${ENDPOINTS:-}
       OCR_API_KEY: ${LIBRECHAT_OCR_API_KEY:-}
       OCR_BASEURL: ${LIBRECHAT_OCR_BASEURL:-https://api.mistral.ai/v1}
       MCP_GITHUB_PAT: ${MCP_GITHUB_PAT:-}

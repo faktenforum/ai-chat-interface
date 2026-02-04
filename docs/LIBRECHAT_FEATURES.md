@@ -138,6 +138,22 @@ docker compose -f docker-compose.local-dev.yml run --rm librechat-init
 docker compose -f docker-compose.local-dev.yml restart api
 ```
 
+### Which providers appear in the model selector
+
+LibreChat includes **Google**, OpenAI, Anthropic, Bedrock, and **custom** endpoints in its default list. You control what appears via the **`ENDPOINTS`** environment variable:
+
+| Environment | `ENDPOINTS` | Result |
+|-------------|-------------|--------|
+| **Portainer** (prod/dev) | `agents` | Only **My Agents** (Recherche-Assistent, Bildgenerierungs-Assistent, etc.). No OpenRouter or Scaleway as separate entries. |
+| **Local** | unset (empty) | **All** endpoints: Agents, OpenRouter, Scaleway, Google, OpenAI, etc. |
+
+- **Portainer:** `env.prod.example` and `env.dev.example` set `ENDPOINTS=agents`, so users only see and choose agents; the agent config (provider/model) is fixed per agent.
+- **Local:** `env.local.example` does not set `ENDPOINTS`; `docker-compose.librechat.yml` passes `ENDPOINTS: ${ENDPOINTS:-}` so an empty value uses LibreChat’s default (all endpoints).
+
+To restrict locally to e.g. agents only, set `ENDPOINTS=agents` in your local env. To add more on Portainer (e.g. custom), set `ENDPOINTS=agents,custom` (comma-separated endpoint keys).
+
+**Alternative:** Use `modelSpecs.addedEndpoints` in `librechat.yaml` to restrict which endpoints appear when `interface.modelSelect` is `true`.
+
 ### Endpoints Configuration
 
 **Lines 77-101:** OpenRouter endpoint
