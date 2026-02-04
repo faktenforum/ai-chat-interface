@@ -30,13 +30,14 @@ import {
   type GetHistoryResponse,
   type HistoryItem,
 } from '../clients/ytptube.ts';
-import type { ScalewayConfig } from '../clients/scaleway.ts';
-import { transcribe, filenameForScaleway } from '../clients/scaleway.ts';
+import type { TranscriptionConfig } from '../clients/transcription.ts';
+import { transcribe, filenameForTranscription } from '../clients/transcription.ts';
 import {
   InvalidUrlError,
   InvalidCookiesError,
   YTPTubeError,
   TranscriptionError,
+  TranscriptionNotConfiguredError,
   NotFoundError,
 } from '../utils/errors.ts';
 import { isValidNetscapeCookieFormat, INVALID_COOKIES_MESSAGE } from '../utils/netscape-cookies.ts';
@@ -58,7 +59,7 @@ function isVideoPath(path: string): boolean {
 
 export interface RequestTranscriptDeps {
   ytptube: YTPTubeConfig;
-  scaleway: ScalewayConfig;
+  transcription: TranscriptionConfig | null;
 }
 
 const DEFAULT_QUEUED_RELAY = 'Download started. Use get_status; when finished request transcript again.';
@@ -105,7 +106,7 @@ async function buildTranscriptCli(ytp: YTPTubeConfig, mediaUrl: string): Promise
 type FileBrowserContents = Awaited<ReturnType<typeof getFileBrowser>>['contents'];
 
 /**
- * Build transcript content for a finished history item (subtitle VTT or audio → Scaleway).
+ * Build transcript content for a finished history item (subtitle VTT or audio → transcription API).
  * Returns content array, or null if item is video-only (caller should start transcript job).
  */
 async function buildTranscriptForFinishedItem(
@@ -116,7 +117,7 @@ async function buildTranscriptForFinishedItem(
   lang: string | undefined,
   options: { fromArchive?: boolean },
 ): Promise<{ content: TextContent[] } | null> {
-  const { ytptube: ytp, scaleway: scw } = deps;
+  const { ytptube: ytp, transcription } = deps;
   let resolvedItem = item;
   const pathFromResolved = relativePathFromItem(item);
   if (!pathFromResolved) {
@@ -225,6 +226,12 @@ async function buildTranscriptForFinishedItem(
     );
   }
 
+  if (!transcription) {
+    throw new TranscriptionNotConfiguredError(
+      'No platform subtitles available; audio transcription is not configured. Set TRANSCRIPTION_BASE_URL and TRANSCRIPTION_API_KEY to enable it, or use media that provides subtitles.',
+    );
+  }
+
   let audioBuffer: ArrayBuffer;
   try {
     audioBuffer = await downloadFile(ytp, relativePath);
@@ -233,13 +240,13 @@ async function buildTranscriptForFinishedItem(
     logger.warn({ err, relativePath, id }, 'YTPTube GET /api/download failed');
     throw new YTPTubeError(`Failed to download audio: ${err.message}`);
   }
-  const filename = filenameForScaleway(relativePath);
+  const filename = filenameForTranscription(relativePath);
   let text: string;
   try {
-    text = await transcribe(scw, audioBuffer, filename, lang);
+    text = await transcribe(transcription, audioBuffer, filename, lang);
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));
-    logger.warn({ err, id }, 'Scaleway transcription failed');
+    logger.warn({ err, id }, 'Transcription API failed');
     throw new TranscriptionError(`Transcription failed: ${err.message}`);
   }
   const { metadata, transcript: transcriptText } = formatTranscriptResponseAsBlocks({
@@ -356,7 +363,6 @@ export async function requestTranscript(
   }
   const lang = language_hint?.trim() ? language_hint.trim().slice(0, 2).toLowerCase() : undefined;
   const ytp = deps.ytptube;
-  const scw = deps.scaleway;
 
   let data: GetHistoryResponse;
   try {

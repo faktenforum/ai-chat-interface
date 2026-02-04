@@ -1,20 +1,20 @@
 /**
- * Scaleway Transcriptions API client (OpenAI-compatible).
- * POST {baseUrl}/audio/transcriptions with multipart file + model (e.g. whisper-large-v3).
+ * OpenAI-compatible transcriptions API client.
+ * POST {baseUrl}/audio/transcriptions with multipart file + model (e.g. whisper-1, whisper-large-v3).
  * Uses retry logic for transient failures (network, 5xx).
  */
 
 import { withRetry } from '../utils/retry.ts';
 
-export interface ScalewayConfig {
+export interface TranscriptionConfig {
   baseUrl: string;
   apiKey: string;
   model?: string;
 }
 
-const DEFAULT_MODEL = 'whisper-large-v3';
+const DEFAULT_MODEL = 'whisper-1';
 
-/** Scaleway supported extensions (API docs). Single source for MIME and filename checks. */
+/** Supported audio extensions (OpenAI-compatible). Single source for MIME and filename checks. */
 const MIME_BY_EXT: Record<string, string> = {
   flac: 'audio/flac',
   mp3: 'audio/mpeg',
@@ -25,7 +25,7 @@ const MIME_BY_EXT: Record<string, string> = {
   wav: 'audio/wav',
 };
 
-export const SCALEWAY_SUPPORTED_EXTENSIONS = Object.keys(MIME_BY_EXT);
+export const TRANSCRIPTION_SUPPORTED_EXTENSIONS = Object.keys(MIME_BY_EXT);
 
 function normalizeBaseUrl(url: string): string {
   const u = url.replace(/\/+$/, '');
@@ -37,27 +37,28 @@ function mimeForFilename(filename: string): string {
   return MIME_BY_EXT[ext] ?? 'audio/mpeg';
 }
 
-/** Return a filename safe for Scaleway: same stem, extension in SCALEWAY_SUPPORTED_EXTENSIONS or `.ogg`. */
-export function filenameForScaleway(relativePath: string, fallbackExt = 'ogg'): string {
+/** Return a filename safe for transcription API: same stem, extension in supported list or `.ogg`. */
+export function filenameForTranscription(relativePath: string, fallbackExt = 'ogg'): string {
   const name = relativePath.includes('/') ? relativePath.split('/').pop() ?? `audio.${fallbackExt}` : relativePath;
   const ext = name.toLowerCase().replace(/^.*\./, '') || '';
-  if (SCALEWAY_SUPPORTED_EXTENSIONS.includes(ext)) return name;
+  if (TRANSCRIPTION_SUPPORTED_EXTENSIONS.includes(ext)) return name;
   const stem = name.replace(/\.[^.]+$/i, '') || 'audio';
   return `${stem}.${fallbackExt}`;
 }
 
 /**
- * Transcribe audio via Scaleway OpenAI-compatible transcriptions endpoint.
+ * Transcribe audio via OpenAI-compatible transcriptions endpoint.
  * Retries up to 3 times on transient errors (e.g. fetch failed, 5xx).
  * Supported formats: wav, mp3, flac, mpga, oga, ogg (filename extension used for MIME type).
  *
+ * @param config - Transcription API config (baseUrl, apiKey, optional model)
  * @param audioBuffer - Raw audio bytes (format should match filename extension)
  * @param filename - Filename for the multipart part (e.g. "audio.ogg"); extension determines MIME type
  * @param language - Optional ISO-639-1 language code (e.g. "de", "en"); omit for auto-detect
  * @returns Transcript text
  */
 export async function transcribe(
-  config: ScalewayConfig,
+  config: TranscriptionConfig,
   audioBuffer: ArrayBuffer,
   filename: string = 'audio.mp3',
   language?: string,
@@ -94,7 +95,7 @@ export async function transcribe(
         } catch {
           err = text || res.statusText;
         }
-        const error = new Error(`Scaleway transcription failed (${res.status}): ${err}`) as Error & { retryable?: boolean };
+        const error = new Error(`Transcription API failed (${res.status}): ${err}`) as Error & { retryable?: boolean };
         if (res.status >= 500) error.retryable = true;
         throw error;
       }

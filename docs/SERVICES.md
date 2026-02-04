@@ -106,7 +106,7 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 | **DB Timetable** | Deutsche Bahn schedules, stations, routes | Internal Docker | ❌ | ❌ | ✅ |
 | **StackOverflow** | Programming Q&A and debugging | Internal Docker | ❌ | ❌ | ✅ |
 | **npm Search** | npm package search | Internal Docker | ❌ | ❌ | ✅ |
-| **YTPTube** | Video URLs → transcripts (YTPTube + Scaleway STT) | Internal Docker | ❌ | ❌ | ✅ |
+| **YTPTube** | Video URLs → transcripts (YTPTube + optional transcription API) | Internal Docker | ❌ | ❌ | ✅ |
 | **GitHub** | Repos, issues, PRs, code search | Remote (`api.githubcopilot.com`) | ❌ | ❌ | N/A (external) |
 | **Mapbox** | Geo search, routing, geocoding, maps | Remote (`mcp.mapbox.com`) | ❌ | ❌ | N/A (external) |
 | **Firecrawl** | Web scraping tools for agents | Internal Docker | — | — | **Disabled** in config |
@@ -129,7 +129,7 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 
 **npm Search** — npm package search. Network: `app-net`. URL: `http://mcp-npm-search:3009/mcp`.
 
-**YTPTube** — Media URL (video or audio) → transcript (YTPTube + Scaleway STT) or download link. Tools: `request_transcript`, `get_status`, `request_download_link`, `get_media_info`, `get_thumbnail_url`, `list_recent_downloads`. Network: `app-net`. URL: `http://mcp-ytptube:3010/mcp`. Details: [MCP YTPTube](MCP_YTPTUBE.md)
+**YTPTube** — Media URL → transcript or download link. Tools: `request_transcript`, `get_status`, `request_download_link`, `get_media_info`, `get_thumbnail_url`, `list_recent_downloads`. Optional: `TRANSCRIPTION_BASE_URL` + `TRANSCRIPTION_API_KEY` for audio transcription; omit for platform-subtitles-only. Network: `app-net`. URL: `http://mcp-ytptube:3010/mcp`. [MCP YTPTube](MCP_YTPTUBE.md)
 
 **GitHub** — Repository management, issues, pull requests, code search. Remote; requires `MCP_GITHUB_PAT`. URL: `https://api.githubcopilot.com/mcp/`
 
@@ -143,7 +143,7 @@ When using the **local** stack (`docker-compose -f docker-compose.local.yml …`
 
 1. **Start the MCP servers** so something is listening on the ports used in `.cursor/mcp.json`:
    - Full stack: `docker compose -f docker-compose.local.yml up -d` (or `docker-compose.local-dev.yml`).
-   - **YTPTube only** (and its backend): `docker compose -f docker-compose.local.yml up -d ytptube mcp-ytptube`. Ensure `.env.local` has `SCALEWAY_BASE_URL`, `SCALEWAY_API_KEY`, and optionally `YTPTUBE_URL`, `YTPTUBE_API_KEY`.
+   - **YTPTube only**: `docker compose -f docker-compose.local.yml up -d ytptube mcp-ytptube`. `.env.local`: `YTPTUBE_URL`; optional `TRANSCRIPTION_BASE_URL`/`TRANSCRIPTION_API_KEY` (e.g. `${SCALEWAY_BASE_URL}`/`${SCALEWAY_API_KEY}`).
    - Other MCPs: start the service and any dependencies it has (e.g. `mcp-firecrawl` needs `firecrawl-api` and its stack).
 2. Use the URL-based entries in `.cursor/mcp.json` (`http://localhost:PORT/mcp`). Cursor loads these from the project config and uses the tools when the agent considers them relevant.
 

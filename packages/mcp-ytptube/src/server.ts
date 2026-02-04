@@ -9,7 +9,7 @@ import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { YTPTubeConfig } from './clients/ytptube.ts';
-import type { ScalewayConfig } from './clients/scaleway.ts';
+import type { TranscriptionConfig } from './clients/transcription.ts';
 import { requestTranscript, type RequestTranscriptDeps } from './tools/request-transcript.ts';
 import { getStatus } from './tools/get-status.ts';
 import { requestDownloadLink } from './tools/request-download-link.ts';
@@ -46,20 +46,18 @@ function getYTPTubeConfig(): YTPTubeConfig {
   return { baseUrl, apiKey: apiKey || undefined, pollIntervalMs, maxWaitMs };
 }
 
-function getScalewayConfig(): ScalewayConfig {
-  const baseUrl = process.env.SCALEWAY_BASE_URL ?? '';
-  const apiKey = process.env.SCALEWAY_API_KEY ?? '';
-  if (!baseUrl || !apiKey) {
-    throw new Error('SCALEWAY_BASE_URL and SCALEWAY_API_KEY must be set');
-  }
-  const model = process.env.SCALEWAY_TRANSCRIPTION_MODEL ?? 'whisper-large-v3';
+function getTranscriptionConfig(): TranscriptionConfig | null {
+  const baseUrl = (process.env.TRANSCRIPTION_BASE_URL ?? '').trim();
+  const apiKey = (process.env.TRANSCRIPTION_API_KEY ?? '').trim();
+  if (!baseUrl || !apiKey) return null;
+  const model = (process.env.TRANSCRIPTION_MODEL ?? 'whisper-1').trim() || undefined;
   return { baseUrl, apiKey, model };
 }
 
 function createMcpServer(): McpServer {
   const ytptube = getYTPTubeConfig();
-  const scaleway = getScalewayConfig();
-  const deps: RequestTranscriptDeps = { ytptube, scaleway };
+  const transcription = getTranscriptionConfig();
+  const deps: RequestTranscriptDeps = { ytptube, transcription };
 
   const server = new McpServer(
     {
@@ -225,13 +223,6 @@ function createApp(): express.Application {
 }
 
 async function main(): Promise<void> {
-  try {
-    getScalewayConfig();
-  } catch (e) {
-    logger.error({ error: e }, 'SCALEWAY_BASE_URL / SCALEWAY_API_KEY not set');
-    process.exit(1);
-  }
-
   const ytptube = getYTPTubeConfig();
   const startupMaxWaitMs = parseInt(
     process.env.YTPTUBE_STARTUP_MAX_WAIT_MS ?? String(5 * 60 * 1000),

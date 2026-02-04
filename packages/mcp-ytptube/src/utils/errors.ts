@@ -45,3 +45,10 @@ export class NotFoundError extends VideoTranscriptsError {
     this.name = 'NotFoundError';
   }
 }
+
+export class TranscriptionNotConfiguredError extends VideoTranscriptsError {
+  constructor(message: string) {
+    super(message, 'TRANSCRIPTION_NOT_CONFIGURED');
+    this.name = 'TranscriptionNotConfiguredError';
+  }
+}

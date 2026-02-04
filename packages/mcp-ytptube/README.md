@@ -1,26 +1,30 @@
-# MCP YTPTube
+# YTPTube MCP Server
 
-**Media URL (video or audio) → transcript or download link.** MCP server that uses [YTPTube](https://github.com/ArabCoders/ytptube) and [Scaleway](https://www.scaleway.com/) STT; works with any URL [yt-dlp](https://github.com/yt-dlp/yt-dlp) supports (YouTube, SoundCloud, Vimeo, TikTok, …). Code layout: `server.ts` wires tools and HTTP; `instructions.ts` holds LLM-facing copy; `schemas/` and `tools/` align with tool names (e.g. `request-transcript.schema.ts` ↔ `request_transcript`).
+MCP server for [YTPTube](https://github.com/ArabCoders/ytptube): media URL → transcript or download link. Works with any [yt-dlp](https://github.com/yt-dlp/yt-dlp)-supported URL. Use from Cursor, Claude Desktop, LibreChat, or any [MCP](https://modelcontextprotocol.io/) client.
 
-- **Transcripts** — Platform subtitles or Scaleway Whisper; optional `language_hint` and cookies. Works for both video and audio-only URLs.
-- **Download links** — Video or audio URL; same request–poll–retrieve flow.
-- **Multi-platform** — Any yt-dlp-supported site (video and audio); optional cookies for age-restricted/geo-blocked.
-- **Stateless HTTP** — Streamable-http transport, health check, structured logging (Pino).
+Connects to your YTPTube instance (`YTPTUBE_URL`; default `http://ytptube:8081` for Docker). Optional: any OpenAI-compatible transcription API when platform subtitles are missing. Standalone: point `YTPTUBE_URL` at your instance (e.g. `http://localhost:8081`, `https://ytptube.example.com`).
 
----
+## Features
+
+- **Media info** — Title, duration, extractor; no download required (`get_media_info`, `get_thumbnail_url`).
+- **Transcripts** — Platform subtitles (VTT) when available; else optional OpenAI-compatible transcription API. `language_hint`, cookies for age-restricted/geo-blocked. Without transcription config: platform subtitles only; audio-only without subs returns a clear error.
+- **Download links** — Request → poll → retrieve (video or audio).
+- **Multi-platform** — Any [yt-dlp](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) site (YouTube, SoundCloud, Vimeo, TikTok, etc.).
+- **Webshare proxy** — Optional [Webshare](https://www.webshare.io/) proxy to bypass IP blocks; [WEBSHARE_PROXY.md](../../docs/WEBSHARE_PROXY.md).
+- **Stateless HTTP** — Streamable-http, health check, Pino logging.
 
 ## Tools
 
-| Tool | What it does |
-|------|----------------|
-| `request_transcript` | Get transcript (platform subs or Scaleway). Not ready → status; poll `get_status`, then call again. |
+| Tool | Description |
+|------|-------------|
+| `request_transcript` | Get transcript (platform subs or transcription API). If not ready → status; poll `get_status`, then call again. |
 | `request_download_link` | Get download URL (video or audio). Same flow: request → poll → call again. |
 | `get_status` | Poll by `media_url` or `job_id` (UUID from a prior response). |
 | `list_recent_downloads` | List last N queue/history items. |
 | `get_media_info` | Metadata (title, duration) without downloading. |
 | `get_thumbnail_url` | Thumbnail URL (may be empty for audio-only). |
 
-Optional args: **language_hint** (e.g. `de`), **cookies** (Netscape format) for age-restricted or geo-blocked content. Details → [docs/MCP_YTPTUBE.md](../../docs/MCP_YTPTUBE.md).
+Optional: **language_hint** (e.g. `de`), **cookies** (Netscape). Details: [MCP_YTPTUBE.md](../../docs/MCP_YTPTUBE.md).
 
 ---
 
@@ -33,20 +37,18 @@ npm install && npm run dev
 
 | Env | Purpose |
 |-----|--------|
-| `YTPTUBE_URL` | YTPTube base URL (required) |
-| `SCALEWAY_BASE_URL`, `SCALEWAY_API_KEY` | Transcription (required) |
-| `YTPTUBE_API_KEY` | Optional Basic auth |
-| `YTPTUBE_PRESET_TRANSCRIPT` | Preset for transcript jobs (default `mcp_audio`; see below) |
-| `YTPTUBE_PRESET_VIDEO` | Preset for video download jobs (default `default`) |
-| `YTPTUBE_SKIP_PRESET_SYNC` | `1` or `true` to skip preset sync on startup |
-| `YTPTUBE_STARTUP_MAX_WAIT_MS` | Max ms to wait for YTPTube at startup (default 5 min) |
-| `PORT` / `MCP_YTPTUBE_PORT` | HTTP port (default `3010`) |
+| `YTPTUBE_URL` | YTPTube instance URL (default `http://ytptube:8081`). Any deployment: `http://localhost:8081`, `https://ytptube.example.com`, etc. |
+| `TRANSCRIPTION_BASE_URL`, `TRANSCRIPTION_API_KEY` | Optional. Both set → audio transcription (OpenAI-compatible, e.g. Scaleway). |
+| `TRANSCRIPTION_MODEL` | Optional (default `whisper-1`). e.g. `whisper-large-v3` for Scaleway. |
+| `YTPTUBE_API_KEY` | Optional. YTPTube Basic auth. |
+| `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` | Optional. Public URL for `request_download_link` (where clients reach YTPTube). |
+| `YTPTUBE_PRESET_TRANSCRIPT`, `YTPTUBE_PRESET_VIDEO` | Preset names (defaults `mcp_audio`, `default`). |
+| `YTPTUBE_SKIP_PRESET_SYNC` | `1` or `true` to skip preset sync on startup. |
+| `WEBSHARE_PROXY_*`, `YTPTUBE_PROXY` | Optional proxy; [WEBSHARE_PROXY.md](../../docs/WEBSHARE_PROXY.md). |
+| `YTPTUBE_STARTUP_MAX_WAIT_MS` | Max ms wait for YTPTube at startup (default 5 min). |
+| `PORT` / `MCP_YTPTUBE_PORT` | HTTP port (default `3010`). |
 
-Full config, Docker, cookies, troubleshooting: **[docs/MCP_YTPTUBE.md](../../docs/MCP_YTPTUBE.md)**.
-
-**Startup:** Waits for YTPTube, then syncs the transcript preset. `YTPTUBE_SKIP_PRESET_SYNC=1` to skip.
-
-**Video after transcript:** Transcript jobs use a separate archive (`archive_audio.log`) so the same URL can later be requested as video. Preset JSON (Ogg Vorbis for Scaleway): see [docs/MCP_YTPTUBE.md](../../docs/MCP_YTPTUBE.md#video-after-transcript).
+Full reference: [MCP_YTPTUBE.md](../../docs/MCP_YTPTUBE.md). Startup: waits for YTPTube, syncs transcript preset unless `YTPTUBE_SKIP_PRESET_SYNC=1`. Video after transcript: [preset JSON](../../docs/MCP_YTPTUBE.md#video-after-transcript).
 
 ---
 

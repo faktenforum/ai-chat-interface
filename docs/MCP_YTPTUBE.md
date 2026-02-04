@@ -1,6 +1,6 @@
 # MCP YTPTube
 
-YTPTube-backed MCP: media URL (video or audio) → transcript (YTPTube + Scaleway STT) or download link. Prod/dev: Traefik exposes only `/api/download` for YTPTube; MCP is internal.
+Media URL (video or audio) → transcript or download link. Uses YTPTube; optional OpenAI-compatible transcription API when platform subtitles are missing (otherwise clear error). This stack: Traefik exposes only `/api/download` for YTPTube; MCP internal.
 
 ## Tools
 
@@ -35,38 +35,43 @@ No automatic MCP polling. LLM asks user to request status; then calls `get_statu
 
 - **YTPTube** – queues URLs, serves files. Set `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` so `request_download_link` returns valid links. [GitHub](https://github.com/ArabCoders/ytptube)
 - **yt-dlp** – used by YTPTube. Supported sites: [dev/yt-dlp/supportedsites.md](dev/yt-dlp/supportedsites.md). MCP canonical keys (yt-dlp-aligned): YouTube, Instagram, TikTok, Douyin, Twitter/X, Vimeo, Twitch, Facebook, Reddit, Dailymotion, Bilibili, Rumble, SoundCloud, BitChute, 9GAG, Streamable, Wistia, PeerTube, Bandcamp, Odysee/LBRY, VK, Coub, Mixcloud, Imgur, Naver TV, Youku, Zhihu; others via normalized URL or YTPTube `archive_id`.
-- **Scaleway** – `SCALEWAY_BASE_URL` + `SCALEWAY_API_KEY`; OpenAI-compatible `/audio/transcriptions` (e.g. whisper-large-v3).
+- **Transcription (optional)** – OpenAI-compatible `/audio/transcriptions`. Set `TRANSCRIPTION_BASE_URL` + `TRANSCRIPTION_API_KEY` to enable; else platform-subtitles-only and clear error when transcription would be needed. e.g. [Scaleway](https://www.scaleway.com/) `whisper-large-v3`.
+
+## Standalone / other setups
+
+Works with any YTPTube instance. Set `YTPTUBE_URL` (e.g. `http://localhost:8081`, `https://ytptube.example.com`). For `request_download_link`: `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL`. Other preset names: `YTPTUBE_PRESET_TRANSCRIPT`, `YTPTUBE_PRESET_VIDEO`, `YTPTUBE_SKIP_PRESET_SYNC=1`. Auth: `YTPTUBE_API_KEY`.
 
 ## Env
 
 | Var | Description |
 |-----|-------------|
-| `YTPTUBE_URL` | Base URL (default `http://ytptube:8081`). |
-| `YTPTUBE_API_KEY` | Optional; for YTPTube auth and download links. |
-| `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` | Public base for download links (e.g. `https://ytptube.${DOMAIN}`). |
-| `YTPTUBE_SUB_LANGS` | Optional. Subtitle langs for platform subs (e.g. `en,en-US`). |
-| `YTPTUBE_PRESET_TRANSCRIPT` | Preset for transcript jobs (default `mcp_audio`). See "Video after transcript" below. |
-| `YTPTUBE_PRESET_VIDEO` | Preset for video download jobs (default `default`). |
+| `YTPTUBE_URL` | YTPTube instance URL (default `http://ytptube:8081`). Any deployment. |
+| `YTPTUBE_API_KEY` | Optional. YTPTube Basic auth. |
+| `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` | Optional. Public base for download links (`request_download_link`). |
+| `YTPTUBE_SUB_LANGS` | Optional. Subtitle langs (e.g. `en,en-US`). |
+| `YTPTUBE_PRESET_TRANSCRIPT` | Transcript preset (default `mcp_audio`). See "Video after transcript". |
+| `YTPTUBE_PRESET_VIDEO` | Video preset (default `default`). |
 | `YTPTUBE_PROXY` | Optional. Proxy for yt-dlp (overrides Webshare). |
-| `WEBSHARE_PROXY_USERNAME`, `WEBSHARE_PROXY_PASSWORD` | Optional. Webshare fixed proxy when `YTPTUBE_PROXY` unset. Same as mcp-youtube-transcript. [WEBSHARE_PROXY.md](WEBSHARE_PROXY.md) |
-| `SCALEWAY_BASE_URL`, `SCALEWAY_API_KEY` | Required for transcription. |
+| `WEBSHARE_PROXY_USERNAME`, `WEBSHARE_PROXY_PASSWORD` | Optional. [WEBSHARE_PROXY.md](WEBSHARE_PROXY.md) |
+| `TRANSCRIPTION_BASE_URL`, `TRANSCRIPTION_API_KEY` | Optional. Both set → audio transcription (OpenAI-compatible). |
+| `TRANSCRIPTION_MODEL` | Optional (default `whisper-1`). e.g. `whisper-large-v3`. |
 | `MCP_YTPTUBE_PORT` / `PORT` | HTTP port (default 3010). |
 | `MCP_YTPTUBE_LOG_LEVEL` / `LOG_LEVEL` | Log level (default `info`). |
-| `MCP_YTPTUBE_DEBUG_API` | `1` or `true` to log full YTPTube API responses; use with `LOG_LEVEL=debug`. |
-| `YTPTUBE_SKIP_PRESET_SYNC` | `1` or `true` to skip creating/updating the transcript preset on startup (e.g. when presets are managed elsewhere). |
-| `YTPTUBE_STARTUP_MAX_WAIT_MS` | Max ms to wait for YTPTube at startup (default `300000` = 5 min). |
+| `MCP_YTPTUBE_DEBUG_API` | `1` or `true` to log full YTPTube API responses. |
+| `YTPTUBE_SKIP_PRESET_SYNC` | `1` or `true` to skip preset sync on startup. |
+| `YTPTUBE_STARTUP_MAX_WAIT_MS` | Max ms wait for YTPTube at startup (default 5 min). |
 
 YTPTube compose: `YTP_OUTPUT_TEMPLATE`/`YTP_OUTPUT_TEMPLATE_CHAPTER` set to short values to avoid "File name too long".
 
 ## Startup
 
-On start, the server waits for YTPTube (GET api/ping/), then creates or updates the transcript preset to match the canonical definition. Timeout: `YTPTUBE_STARTUP_MAX_WAIT_MS`. Set `YTPTUBE_SKIP_PRESET_SYNC=1` to skip when you manage presets yourself.
+Waits for YTPTube (GET api/ping/), then syncs transcript preset. Timeout: `YTPTUBE_STARTUP_MAX_WAIT_MS`. `YTPTUBE_SKIP_PRESET_SYNC=1` to skip.
 
 ## Transcript: subtitles vs audio
 
 **Preferred:** Platform subtitles (VTT). When starting a transcript job, the MCP calls YTPTube/yt-dlp `url/info`; if `subtitles` or `automatic_captions` are present, it uses `--skip-download --write-subs --write-auto-subs` so manual and auto-generated captions (e.g. YouTube Shorts) are downloaded. No audio needed.
 
-**Fallback:** If no subtitles are reported (e.g. LinkedIn often doesn’t expose them in yt-dlp info), the job uses the transcript preset (audio-only). After download, the MCP looks for a `.vtt` file first; if none or VTT is empty, it uses the audio file and Scaleway STT (`transcript_source=transcription`). If a VTT file is found but yields empty text (e.g. placeholder or wrong match), the MCP falls back to audio + Scaleway.
+**Fallback:** No subtitles in yt-dlp info → transcript preset (audio). After download: prefer `.vtt`; if none or empty → transcription API when configured (`transcript_source=transcription`), else clear error (set `TRANSCRIPTION_BASE_URL`/`TRANSCRIPTION_API_KEY` or use media with subs). VTT with empty text → fallback to audio + transcription when configured.
 
 **Path resolution:** Finished items: `item.filename`/`folder` when present; else file-browser. Subtitle/audio paths are resolved from the same folder; multiple candidates are matched by item (title slug, video_id, archive_id).
 
@@ -78,7 +83,7 @@ Finished items: MCP uses `item.filename`/`folder` when present; else file-browse
 
 Transcript jobs download only audio (saves bandwidth). To allow requesting the **video** later for the same URL, transcript jobs must use a preset that writes to a **separate archive** (e.g. `archive_audio.log`). The upstream default preset `audio_only` uses the main `archive.log` and is **not** suitable: the URL would be in the main archive and a later video request (preset `default`) would be skipped.
 
-The MCP server ensures the preset (default `mcp_audio`) exists and is up to date on startup. To create or change it manually (e.g. `YTPTUBE_SKIP_PRESET_SYNC=1`), use **POST /api/presets** with YTPTube API auth. Body example (Ogg Vorbis for Scaleway STT):
+MCP ensures preset `mcp_audio` exists on startup. Manual: **POST /api/presets** with YTPTube auth. Body (Ogg Vorbis):
 
 ```json
 {
@@ -102,7 +107,8 @@ Match by URL, item identifiers, or **POST /api/yt-dlp/archive_id/** (any platfor
 - **Item not found:** URL format, item not in queue yet, or wrong YTPTube URL.
 - **job_id:** Use internal UUID from responses, not platform video id.
 - **status=error, No formats:** Geo-restricted, private, or unsupported; try cookies or another URL.
-- **Transcription fetch failed / EAI_AGAIN:** Scaleway API calls are retried up to 3 times with a short delay; if it still fails, check DNS and network from the MCP container to `api.scaleway.ai`.
+- **Transcription failed / EAI_AGAIN:** Retried 3×; check DNS/network to transcription API host.
+- **Transcription not configured:** No platform subs and TRANSCRIPTION_* unset → clear error; set both vars or use media with subtitles.
 
 ## Example test URLs
 

@@ -1,4 +1,4 @@
-# MCP YTPTube – YTPTube-backed MCP (transcripts via Scaleway STT; extensible). Internal only (no Traefik).
+# MCP YTPTube – YTPTube-backed MCP (transcripts via optional OpenAI-compatible API). Internal only (no Traefik).
 services:
   mcp-ytptube:
     image: ghcr.io/faktenforum/mcp-ytptube:latest
@@ -16,8 +16,9 @@ services:
       WEBSHARE_PROXY_USERNAME: ${WEBSHARE_PROXY_USERNAME:-}
       WEBSHARE_PROXY_PASSWORD: ${WEBSHARE_PROXY_PASSWORD:-}
       WEBSHARE_PROXY_PORT: ${WEBSHARE_PROXY_PORT:-80}
-      SCALEWAY_BASE_URL: ${SCALEWAY_BASE_URL:-}
-      SCALEWAY_API_KEY: ${SCALEWAY_API_KEY:-}
+      TRANSCRIPTION_BASE_URL: ${TRANSCRIPTION_BASE_URL:-}
+      TRANSCRIPTION_API_KEY: ${TRANSCRIPTION_API_KEY:-}
+      TRANSCRIPTION_MODEL: ${TRANSCRIPTION_MODEL:-}
     expose:
       - "3010"
     networks:
