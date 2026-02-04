@@ -129,7 +129,7 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 
 **npm Search** — npm package search. Network: `app-net`. URL: `http://mcp-npm-search:3009/mcp`.
 
-**YTPTube** — Video URL → transcript (YTPTube audio + Scaleway STT). Tools: `request_video_transcript`, `get_transcript_status`, `get_video_download_link`. Extensible for more YTPTube features. Network: `app-net`. URL: `http://mcp-ytptube:3010/mcp`. Details: [MCP YTPTube](MCP_YTPTUBE.md)
+**YTPTube** — Media URL (video or audio) → transcript (YTPTube + Scaleway STT) or download link. Tools: `request_transcript`, `get_status`, `request_download_link`, `get_media_info`, `get_thumbnail_url`, `list_recent_downloads`. Network: `app-net`. URL: `http://mcp-ytptube:3010/mcp`. Details: [MCP YTPTube](MCP_YTPTUBE.md)
 
 **GitHub** — Repository management, issues, pull requests, code search. Remote; requires `MCP_GITHUB_PAT`. URL: `https://api.githubcopilot.com/mcp/`
 

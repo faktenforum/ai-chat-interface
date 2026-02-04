@@ -16,8 +16,8 @@ export interface GetThumbnailUrlDeps {
 }
 
 /**
- * get_thumbnail_url(video_url)
- * Returns thumbnail URL from YTPTube GET /api/yt-dlp/url/info (thumbnail field in yt-dlp info).
+ * get_thumbnail_url(media_url)
+ * Returns thumbnail URL from YTPTube GET /api/yt-dlp/url/info (thumbnail field in yt-dlp info; may be empty for audio-only).
  */
 export async function getThumbnailUrl(
   input: unknown,
@@ -29,11 +29,11 @@ export async function getThumbnailUrl(
     throw new VideoTranscriptsError(msg, 'VALIDATION_ERROR');
   }
 
-  const { video_url } = parsed.data;
+  const { media_url } = parsed.data;
   const ytp = deps.ytptube;
 
   try {
-    const info = await getUrlInfo(ytp, video_url);
+    const info = await getUrlInfo(ytp, media_url);
     const thumbnail = typeof info.thumbnail === 'string' ? info.thumbnail : undefined;
     if (!thumbnail?.trim()) {
       return {
@@ -50,7 +50,7 @@ export async function getThumbnailUrl(
     return { content: [{ type: 'text', text }] };
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));
-    logger.warn({ err, video_url }, 'YTPTube GET /api/yt-dlp/url/info failed for thumbnail');
+    logger.warn({ err, media_url }, 'YTPTube GET /api/yt-dlp/url/info failed for thumbnail');
     return {
       content: [
         { type: 'text', text: formatErrorResponse(`Failed to get thumbnail: ${err.message}`) },

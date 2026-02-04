@@ -1,7 +1,7 @@
 {
   "name": "@ai-chat-interface/mcp-ytptube",
   "version": "1.0.0",
-  "description": "MCP server for YTPTube: video URL → transcript (YTPTube + Scaleway STT); extendable for more YTPTube features",
+  "description": "MCP server for YTPTube: media URL (video or audio) → transcript or download link (YTPTube + Scaleway STT)",
   "type": "module",
   "main": "src/server.ts",
   "scripts": {

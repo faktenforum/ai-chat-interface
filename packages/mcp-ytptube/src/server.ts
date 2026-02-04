@@ -1,6 +1,6 @@
 #!/usr/bin/env -S node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings
 
-/** MCP YTPTube: YTPTube-backed MCP (video URL → transcript via Scaleway STT; extensible). Streamable HTTP transport. */
+/** MCP YTPTube: YTPTube-backed MCP (media URL → transcript or download; video or audio-only). Streamable HTTP transport. */
 
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
@@ -10,17 +10,17 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { YTPTubeConfig } from './clients/ytptube.ts';
 import type { ScalewayConfig } from './clients/scaleway.ts';
-import { requestVideoTranscript, type RequestVideoTranscriptDeps } from './tools/request-video-transcript.ts';
+import { requestTranscript, type RequestTranscriptDeps } from './tools/request-transcript.ts';
 import { getStatus } from './tools/get-status.ts';
 import { requestDownloadLink } from './tools/request-download-link.ts';
 import { listRecentDownloads } from './tools/list-recent-downloads.ts';
-import { getVideoInfo } from './tools/get-video-info.ts';
+import { getMediaInfo } from './tools/get-media-info.ts';
 import { getThumbnailUrl } from './tools/get-thumbnail-url.ts';
-import { RequestVideoTranscriptSchema } from './schemas/request-video-transcript.schema.ts';
+import { RequestTranscriptSchema } from './schemas/request-transcript.schema.ts';
 import { GetStatusSchema } from './schemas/get-status.schema.ts';
 import { RequestDownloadLinkSchema } from './schemas/request-download-link.schema.ts';
 import { ListRecentDownloadsSchema } from './schemas/list-recent-downloads.schema.ts';
-import { GetVideoInfoSchema } from './schemas/get-video-info.schema.ts';
+import { GetMediaInfoSchema } from './schemas/get-media-info.schema.ts';
 import { GetThumbnailUrlSchema } from './schemas/get-thumbnail-url.schema.ts';
 import { waitForYTPTube, ensureMcpPreset } from './clients/ytptube-presets.ts';
 import { logger } from './utils/logger.ts';
@@ -59,7 +59,7 @@ function getScalewayConfig(): ScalewayConfig {
 function createMcpServer(): McpServer {
   const ytptube = getYTPTubeConfig();
   const scaleway = getScalewayConfig();
-  const deps: RequestVideoTranscriptDeps = { ytptube, scaleway };
+  const deps: RequestTranscriptDeps = { ytptube, scaleway };
 
   const server = new McpServer(
     {
@@ -72,13 +72,13 @@ function createMcpServer(): McpServer {
     },
   );
 
-  type ToolHandler = (args: unknown, deps: RequestVideoTranscriptDeps) => Promise<{ content: Array<{ type: 'text'; text: string }> }>;
+  type ToolHandler = (args: unknown, deps: RequestTranscriptDeps) => Promise<{ content: Array<{ type: 'text'; text: string }> }>;
   const withErrorHandler = (toolName: string, handler: ToolHandler) => {
     return async (args: unknown) => {
       const safe =
         args != null && typeof args === 'object'
           ? {
-              video_url: (args as { video_url?: string }).video_url,
+              media_url: (args as { media_url?: string }).media_url,
               job_id: (args as { job_id?: string }).job_id,
             }
           : {};
@@ -107,20 +107,20 @@ function createMcpServer(): McpServer {
   };
 
   server.registerTool(
-    'request_video_transcript',
+    'request_transcript',
     {
       description:
-        'Get transcript for a video URL. If exists → transcript; else starts job and returns status. Poll get_status; when finished call again for transcript. Video-only items start a transcript job automatically. language_hint (e.g. "de") forces language; omit → language=unknown + instruction to ask user and re-call if wrong. Optional cookies (Netscape format) for age-restricted or login-required videos; user can paste content or upload file – see server instructions.',
-      inputSchema: RequestVideoTranscriptSchema,
+        'Get transcript for a media URL (video or audio-only). Any yt-dlp-supported URL (YouTube, SoundCloud, etc.). If result exists → transcript; else starts job and returns status. Poll get_status; when finished call again for transcript. Video-only items start a transcript job automatically. language_hint (e.g. "de") forces language; omit → language=unknown + instruction to ask user and re-call if wrong. Optional cookies (Netscape format) for age-restricted or login-required; user can paste content or upload file – see server instructions.',
+      inputSchema: RequestTranscriptSchema,
     },
-    withErrorHandler('request_video_transcript', (a, d) => requestVideoTranscript(a, d)),
+    withErrorHandler('request_transcript', (a, d) => requestTranscript(a, d)),
   );
 
   server.registerTool(
     'get_status',
     {
       description:
-        'Poll status of a YTPTube item (transcript or download). Use video_url (the URL you requested) or job_id (the UUID from a prior response; not the platform video id). When status=finished, call request_video_transcript or request_download_link again to get transcript or link.',
+        'Poll status of a YTPTube item (transcript or download). Use media_url (the URL you requested) or job_id (the UUID from a prior response; not the platform media id). When status=finished, call request_transcript or request_download_link again to get transcript or link.',
       inputSchema: GetStatusSchema,
     },
     withErrorHandler('get_status', (a, d) => getStatus(a, { ytptube: d.ytptube })),
@@ -131,7 +131,7 @@ function createMcpServer(): McpServer {
     'request_download_link',
     {
       description:
-        'Get download link (video or audio) for a video URL. If the file exists, returns download_url; otherwise starts download and returns status=queued. Poll with get_status; when finished call this tool again for the link. Use type=video for video file, type=audio for audio-only (e.g. when only transcript/audio exists). Optional cookies (Netscape format) for age-restricted or login-required videos; user can paste content or upload file – see server instructions.',
+        'Get download link (video or audio) for a media URL. If the file exists, returns download_url; otherwise starts download and returns status=queued. Poll with get_status; when finished call this tool again for the link. Use type=video for video file, type=audio for audio-only (e.g. when only transcript/audio exists). Optional cookies (Netscape format) for age-restricted or login-required; user can paste content or upload file – see server instructions.',
       inputSchema: RequestDownloadLinkSchema,
     },
     withErrorHandler('request_download_link', (a) =>
@@ -152,19 +152,19 @@ function createMcpServer(): McpServer {
   );
 
   server.registerTool(
-    'get_video_info',
+    'get_media_info',
     {
       description:
-        'Fetch metadata (title, duration, extractor) for a video URL without downloading. Use to preview or check support before requesting transcript or download.',
-      inputSchema: GetVideoInfoSchema,
+        'Fetch metadata (title, duration, extractor) for a media URL (video or audio-only) without downloading. Use to preview or check support before requesting transcript or download.',
+      inputSchema: GetMediaInfoSchema,
     },
-    withErrorHandler('get_video_info', (a) => getVideoInfo(a, { ytptube })),
+    withErrorHandler('get_media_info', (a) => getMediaInfo(a, { ytptube })),
   );
 
   server.registerTool(
     'get_thumbnail_url',
     {
-      description: 'Get the thumbnail image URL for a video (from yt-dlp). Use for preview or UI.',
+      description: 'Get the thumbnail image URL for a media item (from yt-dlp). Use for preview or UI; may be empty for audio-only.',
       inputSchema: GetThumbnailUrlSchema,
     },
     withErrorHandler('get_thumbnail_url', (a) => getThumbnailUrl(a, { ytptube })),
@@ -175,7 +175,7 @@ function createMcpServer(): McpServer {
     {
       title: 'How to use cookies with YTPTube',
       description:
-        'Instructions for using Netscape-format cookies with request_video_transcript and request_download_link (403, age-restricted, login-only). Cookies are not stored; reuse from conversation for multiple videos.',
+        'Instructions for using Netscape-format cookies with request_transcript and request_download_link (403, age-restricted, login-only). Cookies are not stored; reuse from conversation for multiple items.',
     },
     () => ({
       messages: [{ role: 'user', content: { type: 'text', text: COOKIES_USAGE_PROMPT_TEXT } }],

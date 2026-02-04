@@ -1,6 +1,6 @@
 /**
  * Tool: get_status
- * Status of a YTPTube item (transcript or download) by job_id and/or video_url. Returns progress %, STATUS, and relay line.
+ * Status of a YTPTube item (transcript or download) by job_id and/or media_url. Returns progress %, STATUS, and relay line.
  */
 
 import type { TextContent } from '@modelcontextprotocol/sdk/types.js';
@@ -25,8 +25,8 @@ export interface GetStatusDeps {
 }
 
 /**
- * get_status(job_id?, video_url?)
- * Resolve by job_id or video_url; return STATUS, progress %, and relay line.
+ * get_status(job_id?, media_url?)
+ * Resolve by job_id or media_url; return STATUS, progress %, and relay line.
  */
 export async function getStatus(
   input: unknown,
@@ -38,7 +38,7 @@ export async function getStatus(
     throw new VideoTranscriptsError(msg, 'VALIDATION_ERROR');
   }
 
-  const { job_id, video_url } = parsed.data as GetStatusInput;
+  const { job_id, media_url } = parsed.data as GetStatusInput;
   const ytp = deps.ytptube;
 
   let item: HistoryItem;
@@ -57,7 +57,7 @@ export async function getStatus(
               type: 'text',
               text: formatStatusResponse({
                 status: 'not_found',
-                relay: 'No job. Request transcript or download with video URL to start.',
+                relay: 'No job. Request transcript or download with media URL to start.',
               }),
             },
           ],
@@ -66,17 +66,17 @@ export async function getStatus(
       logger.warn({ err, job_id }, 'YTPTube GET /api/history/{id} failed');
       throw new VideoTranscriptsError(`Failed to get status: ${err.message}`, 'YTPTUBE_ERROR');
     }
-  } else if (video_url) {
+  } else if (media_url) {
     const [data, queueItems, doneItems] = await Promise.all([
       getHistory(ytp).catch((e) => {
         const err = e instanceof Error ? e : new Error(String(e));
-        logger.warn({ err, video_url }, 'YTPTube GET /api/history failed');
+        logger.warn({ err, media_url }, 'YTPTube GET /api/history failed');
         throw new VideoTranscriptsError(`Failed to look up by URL: ${err.message}`, 'YTPTUBE_ERROR');
       }),
       getHistoryQueue(ytp).catch(() => [] as HistoryItem[]),
       getHistoryDone(ytp).catch(() => [] as HistoryItem[]),
     ]);
-    const found = await findItemByUrlInAll(ytp, data, video_url, {
+    const found = await findItemByUrlInAll(ytp, data, media_url, {
       queue: queueItems,
       done: doneItems,
     });
@@ -87,7 +87,7 @@ export async function getStatus(
             type: 'text',
             text: formatStatusResponse({
               status: 'not_found',
-              relay: 'No job. Request transcript or download with video URL to start.',
+              relay: 'No job. Request transcript or download with media URL to start.',
             }),
           },
         ],
@@ -96,7 +96,7 @@ export async function getStatus(
     item = found.item;
     id = found.id;
   } else {
-    throw new VideoTranscriptsError('At least one of job_id or video_url is required', 'VALIDATION_ERROR');
+    throw new VideoTranscriptsError('At least one of job_id or media_url is required', 'VALIDATION_ERROR');
   }
 
   const status = (item.status ?? 'unknown').toLowerCase();
@@ -115,7 +115,7 @@ export async function getStatus(
             url,
             status_url: url,
             canonical_key,
-            relay: 'Done. Call request_video_transcript or request_download_link again for transcript or link.',
+            relay: 'Done. Call request_transcript or request_download_link again for transcript or link.',
           }),
         },
       ],
@@ -160,7 +160,7 @@ export async function getStatus(
             canonical_key,
             reason,
             relay:
-              'Video was skipped (already in archive). If you need the transcript or download link, call request_video_transcript or request_download_link again with the same URL; the file may exist from a previous download.',
+              'Media was skipped (already in archive). If you need the transcript or download link, call request_transcript or request_download_link again with the same URL; the file may exist from a previous download.',
           }),
         },
       ],
@@ -178,7 +178,7 @@ export async function getStatus(
             url,
             status_url: url,
             canonical_key,
-            relay: 'Queued. Use get_status to check; when finished call request_video_transcript or request_download_link again.',
+            relay: 'Queued. Use get_status to check; when finished call request_transcript or request_download_link again.',
           }),
         },
       ],
@@ -196,7 +196,7 @@ export async function getStatus(
           status_url: url,
           canonical_key,
           progress: pct,
-          relay: `${pct}% done. Ask for status; when 100% call request_video_transcript or request_download_link again.`,
+          relay: `${pct}% done. Ask for status; when 100% call request_transcript or request_download_link again.`,
         }),
       },
     ],

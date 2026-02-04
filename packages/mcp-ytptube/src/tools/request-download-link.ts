@@ -63,14 +63,14 @@ const VIDEO_QUEUED_RELAY =
  */
 async function queueVideoDownloadAndReturnQueued(
   ytp: YTPTubeConfig,
-  video_url: string,
+  mediaUrl: string,
   presetForVideo: string,
   cookies: string | undefined,
 ): Promise<{ content: TextContent[] } | null> {
   const proxy = getProxyUrl();
   const cli = proxy ? `--proxy ${proxy}` : '';
   const body = {
-    url: video_url,
+    url: mediaUrl,
     preset: presetForVideo,
     folder: MCP_DOWNLOAD_FOLDER,
     cli: cli || undefined,
@@ -80,7 +80,7 @@ async function queueVideoDownloadAndReturnQueued(
   try {
     await postHistory(ytp, body);
   } catch (e) {
-    logger.warn({ err: e, video_url }, 'YTPTube POST /api/history (video) failed');
+    logger.warn({ err: e, mediaUrl }, 'YTPTube POST /api/history (video) failed');
     return null;
   }
   await new Promise((r) => setTimeout(r, POST_TO_QUEUE_DELAY_MS));
@@ -94,8 +94,8 @@ async function queueVideoDownloadAndReturnQueued(
           type: 'text',
           text: formatStatusResponse({
             status: 'queued',
-            url: video_url,
-            canonical_key: canonicalVideoKey(video_url) ?? undefined,
+            url: mediaUrl,
+            canonical_key: canonicalVideoKey(mediaUrl) ?? undefined,
             relay: VIDEO_QUEUED_RELAY,
           }),
         },
@@ -103,8 +103,8 @@ async function queueVideoDownloadAndReturnQueued(
     };
   }
   const afterFound =
-    findItemByUrlInItems(queueItems, video_url) ??
-    (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, video_url));
+    findItemByUrlInItems(queueItems, mediaUrl) ??
+    (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, mediaUrl));
   if (afterFound) {
     const storedUrl = typeof afterFound.item.url === 'string' ? afterFound.item.url : undefined;
     return {
@@ -114,9 +114,9 @@ async function queueVideoDownloadAndReturnQueued(
           text: formatStatusResponse({
             status: 'queued',
             job_id: afterFound.id,
-            url: video_url,
+            url: mediaUrl,
             status_url: storedUrl,
-            canonical_key: canonicalKeyForDisplay(afterFound.item, video_url),
+            canonical_key: canonicalKeyForDisplay(afterFound.item, mediaUrl),
             relay: VIDEO_QUEUED_RELAY,
           }),
         },
@@ -129,8 +129,8 @@ async function queueVideoDownloadAndReturnQueued(
         type: 'text',
         text: formatStatusResponse({
           status: 'queued',
-          url: video_url,
-          canonical_key: canonicalVideoKey(video_url) ?? undefined,
+          url: mediaUrl,
+          canonical_key: canonicalVideoKey(mediaUrl) ?? undefined,
           relay: VIDEO_QUEUED_RELAY,
         }),
       },
@@ -203,7 +203,7 @@ async function resolveDownloadUrl(
   };
 }
 
-/** Resolve item by video_url and prefer item whose file matches type (video vs audio) when multiple exist. */
+/** Resolve item by media URL and prefer item whose file matches type (video vs audio) when multiple exist. */
 async function resolveItem(
   ytp: YTPTubeConfig,
   videoUrl: string,
@@ -230,7 +230,7 @@ export async function requestDownloadLink(
     throw new VideoTranscriptsError(msg, 'VALIDATION_ERROR');
   }
 
-  const { video_url, type, preset, cookies } = parsed.data as RequestDownloadLinkInput;
+  const { media_url: mediaUrl, type, preset, cookies } = parsed.data as RequestDownloadLinkInput;
   if (cookies?.trim() && !isValidNetscapeCookieFormat(cookies)) {
     throw new InvalidCookiesError(INVALID_COOKIES_MESSAGE);
   }
@@ -248,7 +248,7 @@ export async function requestDownloadLink(
     };
   }
 
-  const resolved = await resolveItem(ytp, video_url, type);
+  const resolved = await resolveItem(ytp, mediaUrl, type);
 
   if (resolved) {
     const { item, id } = resolved;
@@ -264,8 +264,8 @@ export async function requestDownloadLink(
               type: 'text',
               text: formatDownloadLinkResponse({
                 download_url: result.downloadUrl,
-                url: storedUrl ?? video_url,
-                canonical_key: canonicalKeyForDisplay(item, video_url),
+                url: storedUrl ?? mediaUrl,
+                canonical_key: canonicalKeyForDisplay(item, mediaUrl),
                 relay: DOWNLOAD_RELAY,
               }),
             },
@@ -275,7 +275,7 @@ export async function requestDownloadLink(
       if (result.error === 'no_video') {
         const queueVideoResult = await queueVideoDownloadAndReturnQueued(
           ytp,
-          video_url,
+          mediaUrl,
           preset ?? PRESET_VIDEO,
           cookies,
         );
@@ -299,9 +299,9 @@ export async function requestDownloadLink(
             text: formatStatusResponse({
               status: 'skipped',
               job_id: id,
-              url: video_url,
+              url: mediaUrl,
               status_url: storedUrl,
-              canonical_key: canonicalKeyForDisplay(item, video_url),
+              canonical_key: canonicalKeyForDisplay(item, mediaUrl),
               reason,
               relay:
                 'Video was skipped (already in archive). Call request_download_link again with the same URL to try getting the link from the existing download.',
@@ -322,9 +322,9 @@ export async function requestDownloadLink(
           text: formatStatusResponse({
             status: isQueued ? 'queued' : 'downloading',
             job_id: id,
-            url: video_url,
+            url: mediaUrl,
             status_url: storedUrl,
-            canonical_key: canonicalKeyForDisplay(item, video_url),
+            canonical_key: canonicalKeyForDisplay(item, mediaUrl),
             progress: isQueued ? undefined : pct,
             relay,
           }),
@@ -338,7 +338,7 @@ export async function requestDownloadLink(
   const cliBase = type === 'audio' ? '--extract-audio --audio-format mp3' : '';
   const cli = proxy ? (cliBase ? `${cliBase} --proxy ${proxy}` : `--proxy ${proxy}`) : cliBase;
   const body = {
-    url: video_url,
+    url: mediaUrl,
     preset: preset ?? (type === 'video' ? PRESET_VIDEO : undefined),
     folder: MCP_DOWNLOAD_FOLDER,
     cli: cli || undefined,
@@ -351,12 +351,12 @@ export async function requestDownloadLink(
     postResult = await postHistory(ytp, body);
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));
-    logger.warn({ err, video_url }, 'YTPTube POST /api/history failed');
+    logger.warn({ err, mediaUrl }, 'YTPTube POST /api/history failed');
     throw new VideoTranscriptsError(`Failed to add URL to YTPTube: ${err.message}`, 'YTPTUBE_ERROR');
   }
 
-  let postFound = findItemByUrlInItems(postResult, video_url);
-  if (!postFound) postFound = await findItemByUrlInItemsWithArchiveIdFallback(ytp, postResult, video_url);
+  let postFound = findItemByUrlInItems(postResult, mediaUrl);
+  if (!postFound) postFound = await findItemByUrlInItemsWithArchiveIdFallback(ytp, postResult, mediaUrl);
   if (!postFound && postResult.length === 1) {
     const single = postResult[0]!;
     const sid = single.id ?? (single as { _id?: string })._id;
@@ -367,7 +367,7 @@ export async function requestDownloadLink(
     const { item, id } = postFound;
     const status = (item.status ?? '').toLowerCase();
     const storedUrl = typeof item.url === 'string' ? item.url : undefined;
-    logger.debug({ video_url, ytptubeUrl: storedUrl, status, id }, 'Matched video from POST response');
+    logger.debug({ mediaUrl, ytptubeUrl: storedUrl, status, id }, 'Matched video from POST response');
 
     if (status === 'finished') {
       const result = await resolveDownloadUrl(ytp, publicBaseUrl, item, id, type);
@@ -378,8 +378,8 @@ export async function requestDownloadLink(
               type: 'text',
               text: formatDownloadLinkResponse({
                 download_url: result.downloadUrl,
-                url: storedUrl ?? video_url,
-                canonical_key: canonicalKeyForDisplay(item, video_url),
+                url: storedUrl ?? mediaUrl,
+                canonical_key: canonicalKeyForDisplay(item, mediaUrl),
                 relay: DOWNLOAD_RELAY,
               }),
             },
@@ -389,7 +389,7 @@ export async function requestDownloadLink(
       if (result.error === 'no_video') {
         const queueVideoResult = await queueVideoDownloadAndReturnQueued(
           ytp,
-          video_url,
+          mediaUrl,
           preset ?? PRESET_VIDEO,
           cookies,
         );
@@ -413,9 +413,9 @@ export async function requestDownloadLink(
           text: formatStatusResponse({
             status: isQueued ? 'queued' : 'downloading',
             job_id: id,
-            url: video_url,
+            url: mediaUrl,
             status_url: storedUrl,
-            canonical_key: canonicalKeyForDisplay(item, video_url),
+            canonical_key: canonicalKeyForDisplay(item, mediaUrl),
             progress: isQueued ? undefined : pct,
             relay: 'Use get_status to check; when finished, call request_download_link again for link.',
           }),
@@ -431,16 +431,16 @@ export async function requestDownloadLink(
     queueItems = await getHistoryQueue(ytp);
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));
-    logger.warn({ err, video_url }, 'YTPTube GET /api/history?type=queue after POST failed');
+    logger.warn({ err, mediaUrl }, 'YTPTube GET /api/history?type=queue after POST failed');
     throw new VideoTranscriptsError(`Download was queued but could not resolve job id: ${err.message}`, 'YTPTUBE_ERROR');
   }
 
-  let afterFound = findItemByUrlInItems(queueItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, video_url));
+  let afterFound = findItemByUrlInItems(queueItems, mediaUrl) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, mediaUrl));
   if (!afterFound) {
     await new Promise((r) => setTimeout(r, POST_TO_QUEUE_DELAY_MS));
     try {
       queueItems = await getHistoryQueue(ytp);
-      afterFound = findItemByUrlInItems(queueItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, video_url));
+      afterFound = findItemByUrlInItems(queueItems, mediaUrl) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, mediaUrl));
     } catch {
       /* ignore retry, continue to check done */
     }
@@ -454,9 +454,9 @@ export async function requestDownloadLink(
           text: formatStatusResponse({
             status: 'queued',
             job_id: afterFound.id,
-            url: video_url,
+            url: mediaUrl,
             status_url: storedUrl,
-            canonical_key: canonicalKeyForDisplay(afterFound.item, video_url),
+            canonical_key: canonicalKeyForDisplay(afterFound.item, mediaUrl),
             relay: 'Use get_status to check; when finished, call request_download_link again for link.',
           }),
         },
@@ -466,7 +466,7 @@ export async function requestDownloadLink(
 
   const doneItems = await getHistoryDone(ytp).catch(() => [] as HistoryItem[]);
   const doneFound =
-    findItemByUrlInItems(doneItems, video_url) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, doneItems, video_url));
+    findItemByUrlInItems(doneItems, mediaUrl) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, doneItems, mediaUrl));
   if (doneFound) {
     const doneStatus = (doneFound.item.status ?? '').toLowerCase();
     if (doneStatus === 'finished') {
@@ -480,8 +480,8 @@ export async function requestDownloadLink(
               type: 'text',
               text: formatDownloadLinkResponse({
                 download_url: result.downloadUrl,
-                url: storedUrl ?? video_url,
-                canonical_key: canonicalKeyForDisplay(item, video_url),
+                url: storedUrl ?? mediaUrl,
+                canonical_key: canonicalKeyForDisplay(item, mediaUrl),
                 relay: DOWNLOAD_RELAY,
               }),
             },
@@ -491,7 +491,7 @@ export async function requestDownloadLink(
       if (result.error === 'no_video') {
         const queueVideoResult = await queueVideoDownloadAndReturnQueued(
           ytp,
-          video_url,
+          mediaUrl,
           preset ?? PRESET_VIDEO,
           cookies,
         );
@@ -510,9 +510,9 @@ export async function requestDownloadLink(
             text: formatStatusResponse({
               status: 'skipped',
               job_id: id,
-              url: video_url,
+              url: mediaUrl,
               status_url: typeof item.url === 'string' ? item.url : undefined,
-              canonical_key: canonicalKeyForDisplay(item, video_url),
+              canonical_key: canonicalKeyForDisplay(item, mediaUrl),
               reason,
               relay:
                 'Video was skipped (already in archive). Call request_download_link again with the same URL to try getting the link from the existing download.',
@@ -529,9 +529,9 @@ export async function requestDownloadLink(
         type: 'text',
         text: formatStatusResponse({
           status: 'queued',
-          url: video_url,
-          canonical_key: canonicalVideoKey(video_url) ?? undefined,
-          relay: 'Download queued. Use get_status with video_url to check; when finished call request_download_link again for link.',
+          url: mediaUrl,
+          canonical_key: canonicalVideoKey(mediaUrl) ?? undefined,
+          relay: 'Download queued. Use get_status with media_url to check; when finished call request_download_link again for link.',
         }),
       },
     ],

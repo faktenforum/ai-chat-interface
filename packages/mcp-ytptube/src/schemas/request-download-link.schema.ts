@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
 export const RequestDownloadLinkSchema = z.object({
-  video_url: z.string().url().describe('Video URL to request download for'),
+  media_url: z
+    .string()
+    .url()
+    .describe('Media URL to request download for (video or audio-only; any yt-dlp-supported URL).'),
   type: z.enum(['audio', 'video']).optional().default('video').describe('Download type: video (default) or audio'),
   preset: z.string().optional().describe('YTPTube preset name'),
   cookies: z

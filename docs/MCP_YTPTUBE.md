@@ -1,19 +1,19 @@
 # MCP YTPTube
 
-YTPTube-backed MCP: video URL → transcript (YTPTube + Scaleway STT) or download link. Prod/dev: Traefik exposes only `/api/download` for YTPTube; MCP is internal.
+YTPTube-backed MCP: media URL (video or audio) → transcript (YTPTube + Scaleway STT) or download link. Prod/dev: Traefik exposes only `/api/download` for YTPTube; MCP is internal.
 
 ## Tools
 
-**Request pattern:** `request_video_transcript` and `request_download_link` return result if present; else start job and return status. Poll with `get_status`; when finished, call the same request tool again.
+**Request pattern:** `request_transcript` and `request_download_link` return result if present; else start job and return status. Poll with `get_status`; when finished, call the same request tool again.
 
 | Tool | Args | Behavior |
 |------|------|----------|
-| `request_video_transcript` | video_url, preset?, language_hint?, cookies? | Transcript. Resolve by URL; if finished → transcript; else status or POST + queued. **language_hint** (ISO-639-1); omit → `language=unknown` + instruction to ask user. **cookies?** Netscape format for age-restricted/login/403. |
-| `request_download_link` | video_url, type? (video), preset?, cookies? | Download link (video/audio). Requires `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL`. |
-| `get_status` | video_url? or job_id? (one required) | Status by **job_id** (UUID from prior response) or **video_url**. When finished, call request tool again. |
+| `request_transcript` | media_url, preset?, language_hint?, cookies? | Transcript (video or audio-only URL). Resolve by URL; if finished → transcript; else status or POST + queued. **language_hint** (ISO-639-1); omit → `language=unknown` + instruction to ask user. **cookies?** Netscape format for age-restricted/login/403. |
+| `request_download_link` | media_url, type? (video), preset?, cookies? | Download link (video/audio). Requires `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL`. |
+| `get_status` | media_url? or job_id? (one required) | Status by **job_id** (UUID from prior response) or **media_url**. When finished, call request tool again. |
 | `list_recent_downloads` | limit?, status_filter? (all\|finished\|queue) | Last N items; optional `download_url` when finished. |
-| `get_video_info` | video_url | Metadata (title, duration, extractor) without downloading. |
-| `get_thumbnail_url` | video_url | Thumbnail URL (yt-dlp). |
+| `get_media_info` | media_url | Metadata (title, duration, extractor) without downloading. |
+| `get_thumbnail_url` | media_url | Thumbnail URL (yt-dlp; may be empty for audio-only). |
 
 ## Response format
 
@@ -72,7 +72,7 @@ On start, the server waits for YTPTube (GET api/ping/), then creates or updates 
 
 ## Path resolution and video-only
 
-Finished items: MCP uses `item.filename`/`folder` when present; else file-browser. **Video-only:** If URL was only downloaded as video, `request_video_transcript` starts a transcript job and returns `status=queued`; poll `get_status`, then call again for transcript.
+Finished items: MCP uses `item.filename`/`folder` when present; else file-browser. **Video-only:** If URL was only downloaded as video, `request_transcript` starts a transcript job and returns `status=queued`; poll `get_status`, then call again for transcript.
 
 ## Video after transcript
 
@@ -94,7 +94,7 @@ The MCP server ensures the preset (default `mcp_audio`) exists and is up to date
 
 ## URL matching
 
-Match by URL, item identifiers, or **POST /api/yt-dlp/archive_id/** (any platform). Canonical keys (same URL → same key): YouTube, Instagram, TikTok, Douyin, Twitter/X, Vimeo, Twitch, Facebook, Reddit, Dailymotion, Bilibili, Rumble, SoundCloud, BitChute, 9GAG, Streamable, Wistia, PeerTube, Bandcamp, Odysee/LBRY, VK, Coub, Mixcloud, Imgur, Naver TV, Youku, Zhihu; generic URLs normalized (RFC 3986 dot-segments, no query). Protocol-relative URLs (`//...`) and typos (`httpss://`, `rmtp://`) are sanitized. Others: YTPTube `archive_id`. `get_status(video_url)` not_found → check URL form or timing; use `list_recent_downloads` and `MCP_YTPTUBE_DEBUG_API=1` + `LOG_LEVEL=debug` to inspect.
+Match by URL, item identifiers, or **POST /api/yt-dlp/archive_id/** (any platform). Canonical keys (same URL → same key): YouTube, Instagram, TikTok, Douyin, Twitter/X, Vimeo, Twitch, Facebook, Reddit, Dailymotion, Bilibili, Rumble, SoundCloud, BitChute, 9GAG, Streamable, Wistia, PeerTube, Bandcamp, Odysee/LBRY, VK, Coub, Mixcloud, Imgur, Naver TV, Youku, Zhihu; generic URLs normalized (RFC 3986 dot-segments, no query). Protocol-relative URLs (`//...`) and typos (`httpss://`, `rmtp://`) are sanitized. Others: YTPTube `archive_id`. `get_status(media_url)` not_found → check URL form or timing; use `list_recent_downloads` and `MCP_YTPTUBE_DEBUG_API=1` + `LOG_LEVEL=debug` to inspect.
 
 ## Troubleshooting
 

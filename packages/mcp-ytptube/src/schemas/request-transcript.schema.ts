@@ -1,8 +1,13 @@
 import { z } from 'zod';
 
-/** Input for request_video_transcript tool. */
-export const RequestVideoTranscriptSchema = z.object({
-  video_url: z.string().url().describe('URL of the video to transcribe (e.g. YouTube, Vimeo)'),
+/** Input for request_transcript tool. */
+export const RequestTranscriptSchema = z.object({
+  media_url: z
+    .string()
+    .url()
+    .describe(
+      'URL of the media to transcribe (video or audio-only). Any yt-dlp-supported URL, e.g. YouTube, Vimeo, SoundCloud, Bandcamp.',
+    ),
   preset: z.string().optional().describe('YTPTube preset name (e.g. for audio-only). Omit to use default or inline cli.'),
   language_hint: z
     .string()
@@ -18,4 +23,4 @@ export const RequestVideoTranscriptSchema = z.object({
     ),
 });
 
-export type RequestVideoTranscriptInput = z.infer<typeof RequestVideoTranscriptSchema>;
+export type RequestTranscriptInput = z.infer<typeof RequestTranscriptSchema>;

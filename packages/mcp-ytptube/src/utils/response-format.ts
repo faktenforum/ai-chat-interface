@@ -8,7 +8,7 @@ export interface TranscriptResponseParams {
   job_id: string;
   transcript: string;
   fromArchive?: boolean;
-  /** URL as stored by YTPTube; use as video_url in get_status when present. */
+  /** URL as stored by YTPTube; use as media_url in get_status when present. */
   status_url?: string;
   /** How the transcript was obtained: platform_subtitles = from video subtitles/captions; transcription = generated from audio (e.g. Scaleway). */
   transcript_source?: TranscriptSource;
@@ -126,7 +126,7 @@ export function formatListRecentDownloadsItem(params: {
   return parts.join('\t');
 }
 
-/** Key=value block for get_video_info (title, duration, extractor, relay). */
+/** Key=value block for get_media_info (title, duration, extractor, relay). */
 export function formatVideoInfoResponse(params: {
   title?: string;
   duration?: number;
