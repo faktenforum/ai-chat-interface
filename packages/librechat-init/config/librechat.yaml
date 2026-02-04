@@ -418,6 +418,7 @@ modelSpecs:
     # Premium-Modelle: Top-Performance Modelle für spezielle Anwendungsfälle
     # Diese Modelle sind Closed Source oder erfordern spezielle Zugänge
     # Hosted über OpenRouter (USA), daher nur für nicht-datenschutzkritische Aufgaben
+    # Token limits: OpenRouter API / provider docs (context_length, max_completion_tokens)
     - name: "claude-sonnet-4.5"
       label: "Claude Sonnet 4.5"
       description: "Top-Performance Modell für komplexe Aufgaben, Programmierung und Reasoning. 200K Context, 64K Output. Unterstützt Vision. Closed Source (Anthropic)."
@@ -429,7 +430,9 @@ modelSpecs:
         endpoint: "OpenRouter"
         endpointType: "custom"
         model: "anthropic/claude-sonnet-4.5"
-    
+        maxContextTokens: 200000
+        maxOutputTokens: 64000
+
     - name: "openai-gpt5-2"
       label: "GPT-5.2"
       description: "OpenAI's neuestes Top-Modell. 400K Context, 128K Output. Dynamic Reasoning, ~80% weniger Halluzinationen als o3. Unterstützt Vision. Closed Source (OpenAI)."
@@ -440,7 +443,9 @@ modelSpecs:
         endpoint: "OpenRouter"
         endpointType: "custom"
         model: "openai/gpt-5.2"
-    
+        maxContextTokens: 400000
+        maxOutputTokens: 128000
+
     - name: "google-gemini-2.5-flash-lite"
       label: "Gemini 2.5 Flash Lite"
       description: "Schnell und kostengünstig. Optimiert für schnelle Antworten bei guter Qualität. Unterstützt Vision. Closed Source (Google)."
@@ -451,26 +456,97 @@ modelSpecs:
         endpoint: "OpenRouter"
         endpointType: "custom"
         model: "google/gemini-2.5-flash-lite"
-    
+        maxContextTokens: 1048576
+        maxOutputTokens: 65536
+
     - name: "mistral-large-2411"
       label: "Mistral Large 2411"
-      description: "Premium-Modell von Mistral (französisches Unternehmen). Sehr beliebt bei europäischen Nutzern. Gute Balance aus Performance und Datenschutz."
+      description: "Premium-Modell von Mistral (französisches Unternehmen). Sehr beliebt bei europäischen Nutzern. Gute Balance aus Performance und Datenschutz. 256K Context, 8K Output."
       group: "Premium-Modelle"
       order: 4
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
         model: "mistralai/mistral-large-2411"
-    
+        maxContextTokens: 256000
+        maxOutputTokens: 8192
+
     - name: "z-ai-glm-4.7"
       label: "GLM 4.7"
-      description: "Fortgeschrittenes Modell mit exzellentem logischen Denken. Sehr gut für komplexe Aufgaben und Reasoning. Closed Source (Z.AI)."
+      description: "Fortgeschrittenes Modell mit exzellentem logischen Denken. Sehr gut für komplexe Aufgaben und Reasoning. 203K Context, 65K Output. Closed Source (Z.AI)."
       group: "Premium-Modelle"
       order: 5
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
         model: "glm/glm-4.7"
+        maxContextTokens: 202752
+        maxOutputTokens: 65535
+
+    # Newer premium models (OpenRouter, Feb 2025+)
+    - name: "claude-opus-4.5"
+      label: "Claude Opus 4.5"
+      description: "Anthropics leistungsstärkstes Modell. Optimiert für komplexe Software-Engineering-, Agent- und Reasoning-Aufgaben. 200K Context, 64K Output. Vision, erweiterte Tool-Nutzung. Closed Source (Anthropic)."
+      group: "Premium-Modelle"
+      order: 6
+      vision: true
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "anthropic/claude-opus-4.5"
+        maxContextTokens: 200000
+        maxOutputTokens: 64000
+
+    - name: "openai-gpt5-2-pro"
+      label: "GPT-5.2 Pro"
+      description: "OpenAI's leistungsstärkstes Modell für anspruchsvolle Reasoning- und Agent-Aufgaben. 400K Context, 128K Output. Starke Verbesserungen bei Coding und Langkontext. Vision. Closed Source (OpenAI)."
+      group: "Premium-Modelle"
+      order: 7
+      vision: true
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "openai/gpt-5.2-pro"
+        maxContextTokens: 400000
+        maxOutputTokens: 128000
+
+    - name: "google-gemini-3-pro-preview"
+      label: "Gemini 3 Pro Preview"
+      description: "Googles aktuelles Spitzenmodell. 1M Context, Text/Image/Audio/Video. Starke Multimodal- und Reasoning-Fähigkeiten, Agent-Coding. Closed Source (Google)."
+      group: "Premium-Modelle"
+      order: 8
+      vision: true
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "google/gemini-3-pro-preview"
+        maxContextTokens: 1048576
+        maxOutputTokens: 65536
+
+    - name: "mistral-large-2512"
+      label: "Mistral Large 3 2512"
+      description: "Mistrals aktuellstes Großmodell (675B MoE, 41B aktiv). 262K Context. Text + Vision. Apache 2.0. Gute Option für Europa-relevante Premium-Aufgaben."
+      group: "Premium-Modelle"
+      order: 9
+      vision: true
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "mistralai/mistral-large-2512"
+        maxContextTokens: 262144
+        maxOutputTokens: 8192
+
+    - name: "deepseek-v3.2"
+      label: "DeepSeek V3.2"
+      description: "Starkes Reasoning- und Tool-Use-Modell. 164K Context, 65K Output. Gutes Preis-Leistungs-Verhältnis für Coding und mehrstufige Aufgaben. Open Weights (DeepSeek)."
+      group: "Premium-Modelle"
+      order: 10
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "deepseek/deepseek-v3.2"
+        maxContextTokens: 163840
+        maxOutputTokens: 65536
 
 
 webSearch:
