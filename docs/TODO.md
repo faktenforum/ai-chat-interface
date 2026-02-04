@@ -87,6 +87,9 @@
   - Fork includes HTTP transport support and Dockerfile from PR [#10](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/10)
   - Our improvements submitted as PR [#11](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/11): Docker port configuration and FastMCP 0.2.0+ compatibility
   - Once PRs #10 and #11 are merged upstream, consider switching to official version
+- [ ] Find alternative to passing cookies.txt via LLM for MCP (e.g. YTPTube/YouTube)
+  - Current approach of sending cookies.txt through the LLM (as prompt/content) is inefficient and error-prone: the file is already very long for YouTube alone, blows up context and can break or truncate.
+  - Goal: support file upload and pass file content directly to the tool/LLM (e.g. as attachment or tool resource) instead of in the user prompt.
 - [x] Fix MCP tools returning malformed responses mixing text and JSON
   - Issue: [LibreChat #11494](https://github.com/danny-avila/LibreChat/issues/11494) - MCP image responses with mixed text content are not displayed
   - Fixed by: [LibreChat PR #11499](https://github.com/danny-avila/LibreChat/pull/11499) (automatic detection of OpenAI-compatible endpoints for MCP formatting)

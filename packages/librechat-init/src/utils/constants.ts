@@ -1,20 +1,28 @@
+import { existsSync } from 'fs';
+import { join } from 'path';
+
 // ============================================================================
 // File Paths
 // ============================================================================
 
-export const CONFIG_SOURCE = '/app/data/librechat.yaml';
+/** When running with host config mounted at /app/config-source (local dev), use it instead of baked-in /app/data. */
+const CONFIG_SOURCE_DIR = existsSync('/app/config-source/librechat.yaml')
+  ? '/app/config-source'
+  : '/app/data';
+
+export const CONFIG_SOURCE = join(CONFIG_SOURCE_DIR, 'librechat.yaml');
 export const CONFIG_TARGET = '/app/config/librechat.yaml';
 export const CONFIG_DIR = '/app/config';
 export const ASSETS_DIR = '/app/assets';
 export const IMAGES_DIR = '/images';
 
-export const ROLES_CONFIG_PATH = '/app/data/roles.yaml';
+export const ROLES_CONFIG_PATH = join(CONFIG_SOURCE_DIR, 'roles.yaml');
 export const ROLES_CONFIG_FALLBACK = '../config/roles.yaml';
 
-export const PUBLIC_AGENTS_PATH = '/app/data/agents.yaml';
+export const PUBLIC_AGENTS_PATH = join(CONFIG_SOURCE_DIR, 'agents.yaml');
 export const PUBLIC_AGENTS_FALLBACK = '../config/agents.yaml';
 
-export const PRIVATE_AGENTS_PATH = '/app/data/agents.private.yaml';
+export const PRIVATE_AGENTS_PATH = join(CONFIG_SOURCE_DIR, 'agents.private.yaml');
 export const PRIVATE_AGENTS_FALLBACK = '../config/agents.private.yaml';
 
 // ============================================================================

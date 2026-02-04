@@ -37,6 +37,17 @@ services:
   librechat-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-init }
     env_file: .env.local
+    # Mount host config so changes to librechat.yaml/roles/agents apply without image rebuild.
+    # Init reads from /app/config-source when present and writes to volume /app/config.
+    volumes:
+      - librechat-config:/app/config
+      - ./packages/librechat-init/config:/app/config-source:ro
+      - ./logs:/logs
+      - ./images:/images
+      - ./uploads:/uploads
+      - ./data-node:/mongo_data
+      - ./meili_data_v1.12:/meili_data
+      - mongoconfig:/mongo_configdb
 
   librechat-post-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-post-init }

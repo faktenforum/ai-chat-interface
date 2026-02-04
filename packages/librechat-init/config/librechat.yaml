@@ -128,6 +128,19 @@ endpoints:
       apiKey: "$${SCALEWAY_API_KEY}"
       baseURL: "$${SCALEWAY_BASE_URL}"
       iconURL: "https://www.scaleway.com/favicon/website/favicon.svg"
+      # Scaleway docs: "Meta models do not support parallel tool calls."
+      # Affected: Llama 3.1 (8b, 70b), Llama 3.3 (70b). Without this → 400 single tool-calls error.
+      # See docs/LIBRECHAT_FEATURES.md#scaleway-parallel-tool-calls.
+      addParams:
+        parallel_tool_calls: false
+      # Scaleway Chat Completions API does not support these params; strip to avoid errors.
+      # See docs/LIBRECHAT_FEATURES.md#scaleway-unsupported-parameters.
+      dropParams:
+        - frequencyPenalty   # frequency_penalty not supported
+        - n                  # multiple completions not supported
+        - topLogprobs        # top_logprobs not supported
+        - logitBias          # logit_bias not supported
+        - user               # user identifier not supported
       # BASE_URL construction: If SCALEWAY_PROJECT_ID is set, the initialization script
       # automatically constructs the BASE_URL as https://api.scaleway.ai/{project_id}/v1.
       # Otherwise, the default SCALEWAY_BASE_URL value is used.

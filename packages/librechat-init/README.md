@@ -11,6 +11,15 @@ Initialization services for LibreChat configuration and agent setup.
 
 Config files are YAML by default; if a `.yaml` file is missing, the loader tries the same path with `.json` (backward compatibility).
 
+### Local dev: mount config (no image rebuild)
+
+When the host directory `config/` is mounted at `/app/config-source` (e.g. in `docker-compose.local-dev.yml` and `docker-compose.local.yml`), the init script reads from that path instead of the baked-in `/app/data`. After editing `librechat.yaml`, `roles.yaml`, or `agents.yaml`, run init again and restart the API; no image rebuild needed.
+
+```bash
+docker compose -f docker-compose.local-dev.yml run --rm librechat-init
+docker compose -f docker-compose.local-dev.yml restart api
+```
+
 ### Roles (`config/roles.yaml`)
 
 ```yaml

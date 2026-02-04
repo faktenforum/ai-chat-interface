@@ -129,6 +129,15 @@ Persistent memory system that stores relevant user information and includes it i
 
 ## Endpoints & Model Specs
 
+### Local development: config mount (no image rebuild)
+
+In `docker-compose.local-dev.yml` and `docker-compose.local.yml`, `packages/librechat-init/config` is mounted at `/app/config-source` for the `librechat-init` service. The init script reads from that path when present (instead of the baked-in `/app/data`). After editing `librechat.yaml`, `roles.yaml`, or `agents.yaml`, re-run init and restart the API; no image rebuild is required.
+
+```bash
+docker compose -f docker-compose.local-dev.yml run --rm librechat-init
+docker compose -f docker-compose.local-dev.yml restart api
+```
+
 ### Endpoints Configuration
 
 **Lines 77-101:** OpenRouter endpoint
@@ -140,6 +149,29 @@ Persistent memory system that stores relevant user information and includes it i
 - `models.fetch: true` - Automatically fetches available models from OpenRouter
 - `titleConvo: true` - Auto-generates conversation titles
 - `summarize: true` - Enables summarization for long conversations
+
+### Scaleway: parallel tool calls
+
+**Config:** Scaleway endpoint uses `addParams: { parallel_tool_calls: false }`.
+
+Scaleway’s docs state: **“Meta models do not support parallel tool calls.”**  
+If the client sends multiple tool calls in one request, the API returns `400 This model only supports single tool-calls at once!`.
+
+**Models affected (Meta/Llama on Scaleway):**
+- `llama-3.1-8b-instruct`, `llama-3.1-70b-instruct`
+- `llama-3.3-70b-instruct`
+
+Other Scaleway models (Mistral, Qwen, etc.) may support parallel tool calls; the setting is applied endpoint-wide, so all Scaleway models use single-tool-calls. Sequential execution still works.
+
+**Sources:** [Scaleway – How to use function calling](https://www.scaleway.com/en/docs/generative-apis/how-to/use-function-calling) (“Meta models do not support parallel tool calls”); [Managed Inference – function calling support](https://www.scaleway.com/en/docs/managed-inference/reference-content/function-calling-support/).
+
+### Scaleway: unsupported parameters
+
+**Config:** Scaleway endpoint uses `dropParams` to strip parameters the Scaleway Chat Completions API does not support.
+
+Scaleway's [OpenAI compatibility docs](https://www.scaleway.com/en/docs/managed-inference/reference-content/openai-compatibility/) list the following as **unsupported**: `frequency_penalty`, `n`, `top_logprobs`, `logit_bias`, `user`. If sent, they can cause errors or undefined behaviour. LibreChat strips them for the Scaleway endpoint via `dropParams` (camelCase keys: `frequencyPenalty`, `n`, `topLogprobs`, `logitBias`, `user`).
+
+**Supported by Scaleway (no change needed):** `messages`, `model`, `max_tokens`, `temperature`, `top_p`, `presence_penalty`, `response_format`, `logprobs`, `stop`, `seed`, `stream`, `tools`, `tool_choice`.
 
 ### Model Specs
 
