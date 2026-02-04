@@ -23,6 +23,9 @@ Connects to your YTPTube instance (`YTPTUBE_URL`; default `http://ytptube:8081` 
 | `list_recent_downloads` | List last N queue/history items. |
 | `get_media_info` | Metadata (title, duration) without downloading. |
 | `get_thumbnail_url` | Thumbnail URL (may be empty for audio-only). |
+| `get_logs` | Recent YTPTube application logs (offset, limit). For debugging; 404 when file logging disabled. |
+| `get_system_configuration` | Instance overview: version, presets, queue count, history_count, paused, folders. |
+| `get_history_item` | Full details of one queue/history item by `job_id` (from `get_status` or `list_recent_downloads`). |
 
 Optional: **language_hint** (e.g. `de`), **cookies** (Netscape). Details: [MCP_YTPTUBE.md](../../docs/MCP_YTPTUBE.md).
 

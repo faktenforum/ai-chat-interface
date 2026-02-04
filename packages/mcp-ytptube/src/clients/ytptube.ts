@@ -1354,6 +1354,97 @@ export async function getHistoryById(config: YTPTubeConfig, id: string): Promise
   return data;
 }
 
+/** Response shape of GET /api/logs. API may use (timestamp, level, message) or (line, datetime). */
+export interface LogEntry {
+  timestamp?: string;
+  level?: string;
+  message?: string;
+  line?: string;
+  datetime?: string;
+  [key: string]: unknown;
+}
+
+export interface GetLogsResponse {
+  logs: LogEntry[];
+  offset: number;
+  limit: number;
+  next_offset?: number;
+  end_is_reached?: boolean;
+}
+
+/**
+ * GET /api/logs – recent application logs (if file logging is enabled). Returns 404 when disabled.
+ */
+export async function getLogs(
+  config: YTPTubeConfig,
+  options: { offset?: number; limit?: number } = {},
+): Promise<GetLogsResponse> {
+  const base = ensureSlash(config.baseUrl);
+  const offset = options.offset ?? 0;
+  const limit = Math.min(options.limit ?? 100, 150);
+  const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+  const res = await fetch(`${base}api/logs?${params}`, {
+    headers: getAuthHeaders(config.apiKey),
+  });
+
+  if (!res.ok) {
+    if (res.status === 404) {
+      throw new Error('YTPTube file logging is not enabled; GET /api/logs returned 404.');
+    }
+    const text = await res.text();
+    let err: string;
+    try {
+      const j = JSON.parse(text) as { error?: string };
+      err = j.error ?? text;
+    } catch {
+      err = text || res.statusText;
+    }
+    throw new Error(`YTPTube GET /api/logs failed (${res.status}): ${err}`);
+  }
+
+  const data = (await res.json()) as GetLogsResponse;
+  logApiResponse('GET', 'api/logs', data);
+  return data;
+}
+
+/** Response shape of GET /api/system/configuration (app, presets, queue, etc.). */
+export interface SystemConfigurationResponse {
+  app?: { version?: string; download_path?: string; base_path?: string; [key: string]: unknown };
+  presets?: unknown[];
+  dl_fields?: unknown[];
+  paused?: boolean;
+  folders?: Array<{ name?: string; path?: string }>;
+  history_count?: number;
+  queue?: HistoryItem[];
+  [key: string]: unknown;
+}
+
+/**
+ * GET /api/system/configuration – app version, presets, queue, history_count, paused, folders.
+ */
+export async function getSystemConfiguration(config: YTPTubeConfig): Promise<SystemConfigurationResponse> {
+  const base = ensureSlash(config.baseUrl);
+  const res = await fetch(`${base}api/system/configuration`, {
+    headers: getAuthHeaders(config.apiKey),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    let err: string;
+    try {
+      const j = JSON.parse(text) as { error?: string };
+      err = j.error ?? text;
+    } catch {
+      err = text || res.statusText;
+    }
+    throw new Error(`YTPTube GET /api/system/configuration failed (${res.status}): ${err}`);
+  }
+
+  const data = (await res.json()) as SystemConfigurationResponse;
+  logApiResponse('GET', 'api/system/configuration', data);
+  return data;
+}
+
 /**
  * GET /api/history/live – current queue (and optionally history). Used to poll by id.
  */

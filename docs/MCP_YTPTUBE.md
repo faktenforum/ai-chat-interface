@@ -16,6 +16,9 @@ Media URL (video or audio) → transcript or download link. Uses YTPTube; option
 | `list_recent_downloads` | limit?, status_filter? (all\|finished\|queue) | Last N items; optional `download_url` when finished. |
 | `get_media_info` | media_url | Metadata (title, duration, extractor) without downloading. |
 | `get_thumbnail_url` | media_url | Thumbnail URL (yt-dlp; may be empty for audio-only). |
+| `get_logs` | offset?, limit? (max 150) | Recent YTPTube application log lines. 404 when file logging disabled. |
+| `get_system_configuration` | — | Instance overview: version, presets, queue count, history_count, paused, folders. |
+| `get_history_item` | job_id | Full queue/history item by job_id (UUID from get_status or list_recent_downloads). |
 
 ## Response format
 

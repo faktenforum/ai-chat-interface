@@ -16,12 +16,18 @@ import { requestDownloadLink } from './tools/request-download-link.ts';
 import { listRecentDownloads } from './tools/list-recent-downloads.ts';
 import { getMediaInfo } from './tools/get-media-info.ts';
 import { getThumbnailUrl } from './tools/get-thumbnail-url.ts';
+import { getLogsTool } from './tools/get-logs.ts';
+import { getSystemConfigurationTool } from './tools/get-system-configuration.ts';
+import { getHistoryItemTool } from './tools/get-history-item.ts';
 import { RequestTranscriptSchema } from './schemas/request-transcript.schema.ts';
 import { GetStatusSchema } from './schemas/get-status.schema.ts';
 import { RequestDownloadLinkSchema } from './schemas/request-download-link.schema.ts';
 import { ListRecentDownloadsSchema } from './schemas/list-recent-downloads.schema.ts';
 import { GetMediaInfoSchema } from './schemas/get-media-info.schema.ts';
 import { GetThumbnailUrlSchema } from './schemas/get-thumbnail-url.schema.ts';
+import { GetLogsSchema } from './schemas/get-logs.schema.ts';
+import { GetSystemConfigurationSchema } from './schemas/get-system-configuration.schema.ts';
+import { GetHistoryItemSchema } from './schemas/get-history-item.schema.ts';
 import { waitForYTPTube, ensureMcpPreset } from './clients/ytptube-presets.ts';
 import { logger } from './utils/logger.ts';
 import { VideoTranscriptsError } from './utils/errors.ts';
@@ -166,6 +172,36 @@ function createMcpServer(): McpServer {
       inputSchema: GetThumbnailUrlSchema,
     },
     withErrorHandler('get_thumbnail_url', (a) => getThumbnailUrl(a, { ytptube })),
+  );
+
+  server.registerTool(
+    'get_logs',
+    {
+      description:
+        'Retrieve recent YTPTube application log lines for debugging. Optional offset and limit (max 150). Returns 404 when file logging is disabled.',
+      inputSchema: GetLogsSchema,
+    },
+    withErrorHandler('get_logs', (a) => getLogsTool(a, { ytptube })),
+  );
+
+  server.registerTool(
+    'get_system_configuration',
+    {
+      description:
+        'YTPTube instance overview: app version, presets, queue count, history_count, paused, folders. Use for debugging and quick status.',
+      inputSchema: GetSystemConfigurationSchema,
+    },
+    withErrorHandler('get_system_configuration', (a) => getSystemConfigurationTool(a ?? {}, { ytptube })),
+  );
+
+  server.registerTool(
+    'get_history_item',
+    {
+      description:
+        'Full details of a single YTPTube queue/history item by job_id (UUID from get_status or list_recent_downloads). Use for debugging a specific job.',
+      inputSchema: GetHistoryItemSchema,
+    },
+    withErrorHandler('get_history_item', (a) => getHistoryItemTool(a, { ytptube })),
   );
 
   server.registerPrompt(
