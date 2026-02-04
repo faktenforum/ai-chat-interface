@@ -651,7 +651,7 @@ mcpServers:
     iconPath: /images/mcp-ytptube-icon.svg
     initTimeout: 120000
     timeout: 300000   # 5 min — downloads + STT
-    chatMenu: true
+    chatMenu: false
     startup: true
     serverInstructions: true
 
@@ -662,7 +662,7 @@ mcpServers:
     description: Transkripte von YouTube-Videos abrufen
     iconPath: /images/mcp-youtube-transcript-icon.svg
     initTimeout: 120000
-    chatMenu: true
+    chatMenu: false
     startup: true
     serverInstructions: true
 

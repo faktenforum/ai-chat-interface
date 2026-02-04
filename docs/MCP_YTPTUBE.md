@@ -111,6 +111,21 @@ Match by URL, item identifiers, or **POST /api/yt-dlp/archive_id/** (any platfor
 - **Transcription failed / EAI_AGAIN:** Retried 3×; check DNS/network to transcription API host.
 - **Transcription not configured:** No platform subs and TRANSCRIPTION_* unset → clear error; set both vars or use media with subtitles.
 
+### LibreChat: "fetch failed" / "Failed to connect to MCP server ytptube" (Portainer dev/prod)
+
+LibreChat reaches the MCP at `http://mcp-ytptube:3010/mcp` over Docker network `app-net`. If you see **fetch failed** or **Failed to connect after 3 attempts**:
+
+1. **Container running and healthy**  
+   In Portainer → Stack → your stack → check that the **mcp-ytptube** container (e.g. `dev-mcp-ytptube`) is **Running** and **healthy**. If it is **Exited** or **Unhealthy**, open its logs and fix the cause (e.g. env, YTPTube not reachable at `ytptube:8081`).
+
+2. **Dev stack: image tag**  
+   Dev compose uses `ghcr.io/faktenforum/mcp-ytptube:dev`. That image is built by GitHub Actions on **non-default branches** (see `.github/workflows/build-mcp-ytptube.yml`). Ensure the workflow has run for your branch and the `:dev` image exists; otherwise the container may fail to start or be missing.
+
+3. **Same network**  
+   Both LibreChat (`api`) and `mcp-ytptube` must be on **app-net** (in dev/prod the network is named `${STACK_NAME}-app-net`). The compose files set this explicitly; if you use a custom compose, keep `networks: - app-net` for both services.
+
+**Other MCP log messages:** "SSE stream disconnected" / "SSE stream not available (404)" for other MCPs (e.g. db-timetable, weather, stackoverflow, npm-search) are a known LibreChat/client behaviour; see [TODO.md](TODO.md) (SSE stream disconnection). Servers that only support streamable-http may log 404 for SSE; LibreChat continues with POST. If a specific MCP keeps failing, check that its container is running and on **app-net** as above.
+
 ## Example test URLs
 
 | Platform | URL |

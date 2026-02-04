@@ -232,6 +232,8 @@ services:
     extends: { file: docker-compose.mcp-ytptube.yml, service: mcp-ytptube }
     container_name: ${STACK_NAME:-prod}-mcp-ytptube
     image: ghcr.io/faktenforum/mcp-ytptube:latest
+    networks:
+      - app-net
     depends_on:
       ytptube:
         condition: service_started

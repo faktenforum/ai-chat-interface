@@ -235,8 +235,10 @@ services:
   mcp-ytptube:
     extends: { file: docker-compose.mcp-ytptube.yml, service: mcp-ytptube }
     container_name: ${STACK_NAME:-prod}-mcp-ytptube
-    # Use pre-built image from registry (built by GitHub Actions)
+    # Use pre-built image from registry (built by GitHub Actions; :dev on feature branches)
     image: ghcr.io/faktenforum/mcp-ytptube:dev
+    networks:
+      - app-net
     depends_on:
       ytptube:
         condition: service_started
