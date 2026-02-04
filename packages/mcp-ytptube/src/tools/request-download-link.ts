@@ -30,7 +30,7 @@ import { isValidNetscapeCookieFormat, INVALID_COOKIES_MESSAGE } from '../utils/n
 import { logger } from '../utils/logger.ts';
 import { formatDownloadLinkResponse, formatStatusResponse, formatErrorResponse } from '../utils/response-format.ts';
 import { getProxyUrl, jobAttemptContext, PRESET_VIDEO } from '../utils/env.ts';
-import { isBlockedLikeError } from '../utils/blocked-retry.ts';
+import { isBlockedLikeError, sleepBeforeProxyRetry } from '../utils/blocked-retry.ts';
 
 const POST_TO_QUEUE_DELAY_MS = 500;
 
@@ -401,6 +401,7 @@ export async function requestDownloadLink(
       const msg = getItemErrorMessage(item);
       if (isBlockedLikeError(msg) && getProxyUrl(true)) {
         logger.info({ mediaUrl }, 'Blocked-like error, retrying with new job (with proxy)');
+        await sleepBeforeProxyRetry();
         return startDownloadJobAndReturnQueued(
           ytp,
           mediaUrl,
@@ -526,6 +527,7 @@ export async function requestDownloadLink(
       const msg = getItemErrorMessage(item);
       if (isBlockedLikeError(msg) && getProxyUrl(true)) {
         logger.info({ mediaUrl }, 'Blocked-like error, retrying with new job (with proxy)');
+        await sleepBeforeProxyRetry();
         return startDownloadJobAndReturnQueued(
           ytp,
           mediaUrl,

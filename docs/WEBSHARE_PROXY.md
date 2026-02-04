@@ -2,7 +2,7 @@
 
 Minimal setup for Webshare **fixed proxy URL** (Rotating/Backbone). Used by mcp-ytptube and mcp-youtube-transcript when `YTPTUBE_PROXY` is unset. Available on all Webshare plans including Free.
 
-**Behaviour:** Requests are tried **first without proxy**. If the job fails with a blocked-like error (rate limit, no formats, etc.), a **retry with proxy** is started automatically (and, with Webshare rotating proxy, further retries use a different IP). If you set `YTPTUBE_PROXY` explicitly, the proxy is used from the first attempt (no try-without-proxy).
+**Behaviour:** Requests are tried **first without proxy**. If the job fails with a blocked-like error (rate limit, no formats, etc.), a **retry with proxy** is started automatically after a random short delay (2–6 s); with Webshare rotating proxy, the retry uses a different IP. If you set `YTPTUBE_PROXY` explicitly, the proxy is used from the first attempt (no try-without-proxy).
 
 ## Recommended plan
 
@@ -66,6 +66,22 @@ curl -x "http://YOUR_USER:YOUR_PASS@p.webshare.io:80" https://api.ipify.org
 You should see an IP (Webshare exit). Replace `YOUR_USER` / `YOUR_PASS` with your credentials, or use the same values as in `.env.local`.
 
 **In-app:** Use an agent that calls the YouTube transcript or YTPTube tool (e.g. request transcript for a public video). Status responses include `proxy_used=true|false` and `attempt=1|2` so the LLM knows whether the current job used a proxy and which attempt it was. Failures may show in mcp-ytptube logs: `docker compose -f docker-compose.local.yml --env-file .env.local logs mcp-ytptube --tail 50`.
+
+## What to try if it still fails (no extra cost)
+
+1. **Proxy from first request** — Set `YTPTUBE_PROXY` to your Webshare URL (e.g. `http://USER:PASS@p.webshare.io:80`). Then the proxy is used on the first attempt instead of only on retry. Useful if the server IP is blocked for the target site from the start.
+2. **Backbone instead of Rotating** — In Webshare Dashboard → Proxy List → Connection Method, switch to **Backbone Connection**. Same `p.webshare.io` and credentials; no code change. Can improve stability when IPs rotate.
+3. **Check account** — Email verified, subscription active, bandwidth left ([Troubleshooting](https://help.webshare.io/en/articles/8370531-proxies-are-not-working-troubleshooting-common-issues)).
+
+**Other sites than YouTube:** The same proxy (Proxy Server / Datacenter) works for all targets yt-dlp supports (Vimeo, SoundCloud, TikTok, etc.). One proxy URL is used for every request that goes through the proxy.
+
+## Tips from Webshare and other users
+
+- **403 / blocked by target:** With **Residential** proxies, some sites (e.g. YouTube) can return `client_connect_forbidden_host (403)`. Fix: use **Datacenter** (Proxy Server) or **Static Residential** — [Troubleshooting](https://help.webshare.io/en/articles/8370531-proxies-are-not-working-troubleshooting-common-issues). Our stack uses Proxy Server (Datacenter), which is the right product for this.
+- **If proxies are still blocked:** Replace blocked IPs from the [proxy list](https://dashboard.webshare.io/proxy/list); or upgrade to Private → Dedicated → Static Residential for lower block rates — [What can I do if the proxies are blocked?](https://help.webshare.io/en/articles/8370530-what-can-i-do-if-the-proxies-are-blocked).
+- **YouTube Proxies (paid, separate product):** Dedicated endpoint, port 30000, session ID in username for a new IP per video. Contact [Sales](https://www.webshare.io/youtube-proxy). Worth trying only if Proxy Server (above) still fails for YouTube at volume. Marketed for YouTube; in practice it is an HTTP proxy so it may work for other yt-dlp targets too — confirm with Webshare if you need Vimeo/SoundCloud etc. [YouTube Proxies](https://help.webshare.io/en/articles/11432234-youtube-proxies).
+- **Rotating without interruptions:** Prefer **Backbone Connection** over plain Rotating Endpoint when you need stable sessions while IPs change in the background — [Connection types](https://help.webshare.io/en/articles/8375305-understanding-proxy-connection-types-direct-rotating-and-backbone), [Rotating without interruptions](https://help.webshare.io/en/articles/9735479-how-to-use-rotating-proxies-without-interruptions).
+- **Scraping best practices (general):** Use random delays between requests, rotate User-Agent to realistic browser values, and ensure credentials/bandwidth/subscription are valid — [Troubleshooting](https://help.webshare.io/en/articles/8370531-proxies-are-not-working-troubleshooting-common-issues). We apply a **random 2–6 s delay before each proxy retry** (in mcp-ytptube) so the retry does not hit the target immediately.
 
 ## Reference
 

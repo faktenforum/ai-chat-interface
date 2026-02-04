@@ -45,7 +45,7 @@ import { logger } from '../utils/logger.ts';
 import { formatTranscriptResponseAsBlocks, formatStatusResponse } from '../utils/response-format.ts';
 import { vttToPlainText } from '../utils/vtt-to-text.ts';
 import { getProxyUrl, jobAttemptContext, CLI_AUDIO, CLI_SUBS, PRESET_TRANSCRIPT } from '../utils/env.ts';
-import { isBlockedLikeError } from '../utils/blocked-retry.ts';
+import { isBlockedLikeError, sleepBeforeProxyRetry } from '../utils/blocked-retry.ts';
 
 const POST_TO_QUEUE_DELAY_MS = 500;
 
@@ -412,6 +412,7 @@ export async function requestTranscript(
       const msg = getItemErrorMessage(item);
       if (isBlockedLikeError(msg) && getProxyUrl(true)) {
         logger.info({ mediaUrl }, 'Blocked-like error, retrying with new job (with proxy)');
+        await sleepBeforeProxyRetry();
         return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, {
           relay: RELAY_RETRY_WITH_PROXY,
           useProxy: true,
@@ -531,6 +532,7 @@ export async function requestTranscript(
       const msg = getItemErrorMessage(item);
       if (isBlockedLikeError(msg) && getProxyUrl(true)) {
         logger.info({ mediaUrl }, 'Blocked-like error, retrying with new job (with proxy)');
+        await sleepBeforeProxyRetry();
         return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, {
           relay: RELAY_RETRY_WITH_PROXY,
           useProxy: true,

@@ -35,3 +35,16 @@ export function isBlockedLikeError(message: string): boolean {
   const lower = message.toLowerCase();
   return BLOCKED_LIKE_PATTERNS.some((p) => lower.includes(p.toLowerCase()));
 }
+
+/** Min/max delay (ms) before retrying with proxy. Randomized to look less automated. */
+const RETRY_DELAY_MS_MIN = 2000;
+const RETRY_DELAY_MS_MAX = 6000;
+
+/**
+ * Waits a random short time before retrying with proxy (scraping best practice).
+ * Call this right before starting the retry job so the delay is between the failed attempt and the new one.
+ */
+export function sleepBeforeProxyRetry(): Promise<void> {
+  const ms = RETRY_DELAY_MS_MIN + Math.random() * (RETRY_DELAY_MS_MAX - RETRY_DELAY_MS_MIN);
+  return new Promise((resolve) => setTimeout(resolve, Math.round(ms)));
+}
