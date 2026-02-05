@@ -80,6 +80,30 @@ const extractVariableNames = (value: string): string[] => {
     return Array.from(matches, m => m[1]);
 };
 
+/**
+ * Resolve ${VAR} expansions in a value using the provided env map.
+ * Used to compare example default (which may contain ${X}) to written value.
+ */
+function resolveValueAgainstMap(
+    value: string,
+    envMap: Record<string, string>,
+    maxIterations: number = 50
+): string {
+    let result = value;
+    let iterations = 0;
+    while (containsVariableExpansion(result) && iterations < maxIterations) {
+        const varNames = extractVariableNames(result);
+        for (const varName of varNames) {
+            const resolved = envMap[varName];
+            if (resolved !== undefined) {
+                result = result.replace(new RegExp(`\\$\\{${varName}\\}`, 'g'), resolved);
+            }
+        }
+        iterations++;
+    }
+    return result;
+}
+
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -178,6 +202,8 @@ const MIGRATIONS: Record<string, string> = {
     'JINA_API_KEY': 'LIBRECHAT_JINA_API_KEY',
     'JINA_API_URL': 'LIBRECHAT_JINA_API_URL',
     'USE_DB_AUTHENTICATION': 'FIRECRAWL_USE_DB_AUTHENTICATION',
+    'PLAYWRIGHT_MICROSERVICE_URL': 'FIRECRAWL_PLAYWRIGHT_MICROSERVICE_URL',
+    'WEBHOOK_URL': 'N8N_WEBHOOK_URL',
 };
 
 // ============================================================================
@@ -232,6 +258,21 @@ function applyMigrations(existingEnv: Record<string, string>): void {
 /** True if key is a migration source or target — do not preserve in "unprocessed" pass */
 function isMigrationKey(key: string): boolean {
     return key in MIGRATIONS || Object.values(MIGRATIONS).includes(key);
+}
+
+/**
+ * Variables that are per-deployment (API keys, project IDs, etc.) and expected to differ from
+ * the empty/placeholder example default. Only used for the divergence report (not for prompting).
+ */
+const EXPECTED_TO_DIFFER_KEYS = new Set<string>([
+    'SCALEWAY_API_KEY',
+    'SCALEWAY_PROJECT_ID',
+    'MCP_STACKOVERFLOW_API_KEY',
+]);
+
+/** True if variable is expected to differ from example default (secrets, keys, prompted, or per-deployment). */
+function isExpectedToDiffer(key: string): boolean {
+    return key in AUTO_GENERATED || key in PROMPTS || EXPECTED_TO_DIFFER_KEYS.has(key);
 }
 
 // ============================================================================
@@ -506,6 +547,82 @@ function addProductionVariables(
 }
 
 // ============================================================================
+// Divergence and obsolete reports
+// ============================================================================
+
+const MAX_VALUE_PREVIEW_LEN = 40;
+
+function buildWrittenEnvFromLines(lines: string[]): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const line of lines) {
+        const idx = line.indexOf('=');
+        if (idx > 0) {
+            out[line.slice(0, idx)] = line.slice(idx + 1);
+        }
+    }
+    return out;
+}
+
+interface DivergenceReport {
+    expectedToDifferCount: number;
+    mightNeedReview: Array<{ key: string; example: string; current: string }>;
+    obsoleteKeys: string[];
+}
+
+function computeDivergenceAndObsolete(
+    writtenEnv: Record<string, string>,
+    baseDefaults: Record<string, string>
+): DivergenceReport {
+    const exampleKeys = new Set(Object.keys(baseDefaults));
+    let expectedToDifferCount = 0;
+    const mightNeedReview: Array<{ key: string; example: string; current: string }> = [];
+
+    for (const key of Object.keys(writtenEnv)) {
+        if (!exampleKeys.has(key)) continue;
+        const defaultValue = baseDefaults[key] ?? '';
+        const resolvedDefault = resolveValueAgainstMap(defaultValue, writtenEnv);
+        const current = (writtenEnv[key] ?? '').trim();
+        if (current !== resolvedDefault.trim()) {
+            if (isExpectedToDiffer(key)) {
+                expectedToDifferCount++;
+            } else {
+                mightNeedReview.push({ key, example: resolvedDefault, current });
+            }
+        }
+    }
+
+    const obsoleteKeys = Object.keys(writtenEnv).filter((k) => !exampleKeys.has(k));
+    return { expectedToDifferCount, mightNeedReview, obsoleteKeys };
+}
+
+function printDivergenceAndObsoleteReports(report: DivergenceReport): void {
+    const { expectedToDifferCount, mightNeedReview, obsoleteKeys } = report;
+
+    if (expectedToDifferCount > 0 || mightNeedReview.length > 0) {
+        console.log('\n📋 Variables differing from example default');
+        if (expectedToDifferCount > 0) {
+            console.log(
+                `   Expected to differ (secrets, keys, prompted — no action needed): ${expectedToDifferCount} variable(s)`
+            );
+        }
+        if (mightNeedReview.length > 0) {
+            console.log('   Might need review (example default may have changed):');
+            mightNeedReview.forEach(({ key, example, current }) => {
+                const ex = example.length > MAX_VALUE_PREVIEW_LEN ? example.slice(0, MAX_VALUE_PREVIEW_LEN - 3) + '...' : example;
+                const cu = current.length > MAX_VALUE_PREVIEW_LEN ? current.slice(0, MAX_VALUE_PREVIEW_LEN - 3) + '...' : current;
+                console.log(`     - ${key}: example="${ex}" → current="${cu}"`);
+            });
+        }
+    }
+
+    if (obsoleteKeys.length > 0) {
+        console.log('\n📋 Variables only in target (not in example files)');
+        console.log('   Can be removed if no longer used:');
+        obsoleteKeys.forEach((k) => console.log(`     - ${k}`));
+    }
+}
+
+// ============================================================================
 // Main Function
 // ============================================================================
 
@@ -610,6 +727,11 @@ async function main() {
     // 9. Write final file
     const finalContent = filteredLines.join('\n');
     fs.writeFileSync(targetFile, finalContent);
+
+    // 9b. Divergence and obsolete reports
+    const writtenEnv = buildWrittenEnvFromLines(filteredLines);
+    const report = computeDivergenceAndObsolete(writtenEnv, baseDefaults);
+    printDivergenceAndObsoleteReports(report);
 
     // 10. Summary
     const processedKeys = new Set(
