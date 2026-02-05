@@ -4,6 +4,7 @@ services:
       context: ./packages/librechat-init
       dockerfile: Dockerfile
     image: librechat-init:latest
+    pull_policy: never
     container_name: librechat-init
     restart: "no"
     user: root
@@ -37,6 +38,7 @@ services:
       context: ./packages/librechat-init
       dockerfile: Dockerfile
     image: librechat-init:latest
+    pull_policy: never
     container_name: librechat-post-init
     restart: "no"
     user: root

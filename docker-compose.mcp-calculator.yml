@@ -1,7 +1,7 @@
 services:
   mcp-calculator:
     # Internal service only - not exposed via Traefik
-    # Build section defined in docker-compose.local-dev.yml and docker-compose.prod.yml
+    # Build overridden in docker-compose.local.yml and docker-compose.local-dev.yml; prod pulls from registry
     image: ghcr.io/faktenforum/mcp-calculator:latest
     container_name: mcp-calculator
     restart: always

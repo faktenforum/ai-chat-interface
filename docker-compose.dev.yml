@@ -8,10 +8,7 @@ services:
     container_name: ${STACK_NAME:-prod}-librechat-init
     environment:
       LIBRECHAT_ENV: dev
-    build:
-      context: ./packages/librechat-init
-      dockerfile: Dockerfile
-    pull_policy: build
+    image: ghcr.io/faktenforum/librechat-init:dev
     volumes:
       - librechat-config:/app/config
       - ./images:/images
@@ -21,10 +18,7 @@ services:
   librechat-post-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-post-init }
     container_name: ${STACK_NAME:-prod}-librechat-post-init
-    build:
-      context: ./packages/librechat-init
-      dockerfile: Dockerfile
-    pull_policy: build
+    image: ghcr.io/faktenforum/librechat-init:dev
     volumes:
       - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
@@ -160,19 +154,13 @@ services:
   mcp-calculator:
     extends: { file: docker-compose.mcp-calculator.yml, service: mcp-calculator }
     container_name: ${STACK_NAME:-prod}-mcp-calculator
-    build:
-      context: ./packages/mcp-calculator
-      dockerfile: Dockerfile
-    pull_policy: build
+    image: ghcr.io/faktenforum/mcp-calculator:dev
     # No Traefik labels - internal service only
 
   mcp-image-gen:
     extends: { file: docker-compose.mcp-image-gen.yml, service: mcp-image-gen }
     container_name: ${STACK_NAME:-prod}-mcp-image-gen
-    build:
-      context: ./packages/mcp-image-gen
-      dockerfile: Dockerfile
-    pull_policy: build
+    image: ghcr.io/faktenforum/mcp-image-gen:dev
     # No Traefik labels - internal service only
 
   mcp-firecrawl:

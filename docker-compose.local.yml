@@ -71,6 +71,7 @@ services:
     # Build from submodule Dockerfile (like rag_api)
     # Use unique image name to prevent Docker layering built image on base image
     image: librechat:local
+    pull_policy: never
     build:
       context: ./dev/librechat
       dockerfile: Dockerfile
