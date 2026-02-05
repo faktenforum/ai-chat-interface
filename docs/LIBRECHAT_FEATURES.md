@@ -2,6 +2,18 @@
 
 This documentation explains all configured features in `docker-compose.librechat.yml` and additional available options.
 
+## Where configuration lives
+
+Project-defined LibreChat behaviour comes from these files under **`packages/librechat-init/config/`**:
+
+| File | Contents |
+|------|----------|
+| **`librechat.yaml`** | Main LibreChat config: endpoints (OpenRouter, Scaleway), model specs, interface, memory, MCP servers, web search, OCR, etc. |
+| **`agents.yaml`** | Shared agents (e.g. Recherche-Assistent, Bildgenerierungs-Assistent, Reise-Assistent) and their providers, models, tools, MCPs. |
+| **`roles.yaml`** | Roles and permissions (access to agents and features). |
+
+They are included in the librechat-init image and deployed to the config volume at container startup. Changes require rebuilding the init image and re-running init (see [Local development: config mount](#local-development-config-mount-no-image-rebuild)).
+
 ## Table of Contents
 
 1. [Cache](#cache)
@@ -415,11 +427,11 @@ Rating system for AI responses with thumbs up/down and detailed tags.
 - [ ] Cache works (Redis or In-Memory)
 - [x] Custom welcome shows username
 - [x] File search works with uploaded files
-- [ ] Privacy policy link works
+- [x] Privacy policy link works
 - [x] Terms of service modal appears for new users
 
 ### Interface Features
-- [ ] Endpoints menu visible
+- [x] Endpoints menu visible
 - [x] Model select works
 - [ ] Parameters panel opens
 - [x] Side panel works
@@ -427,9 +439,9 @@ Rating system for AI responses with thumbs up/down and detailed tags.
 - [ ] Prompts can be created
 - [x] Bookmarks work
 - [x] Multi-convo works
-- [ ] Agents can be created
+- [x] Agents can be created
 - [ ] People picker works (in sharing dialogs)
-- [ ] Marketplace accessible
+- [x] Marketplace accessible
 - [ ] File citations displayed
 - [x] Search works
 
@@ -448,14 +460,14 @@ Rating system for AI responses with thumbs up/down and detailed tags.
 - [ ] Group icons displayed correctly
 
 ### Web Search
-- [ ] Web search can be enabled
-- [ ] Search results included
-- [ ] Source citations displayed
-- [ ] SearXNG/Firecrawl/Jina work
+- [x] Web search can be enabled
+- [x] Search results included
+- [x] Source citations displayed
+- [x] SearXNG/Firecrawl/Jina work
 
 ### Registration
-- [ ] Registration with allowed domain works
-- [ ] Registration with disallowed domain rejected
+- [x] Registration with allowed domain works
+- [x] Registration with disallowed domain rejected
 - [ ] Social login with allowed domain works
 
 ---

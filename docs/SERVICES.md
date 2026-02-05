@@ -14,7 +14,7 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 |---------|-------------|---------------------|--------------------------|---------------|
 | **LibreChat** | Main AI chat interface | ✅ `http://chat.localhost` | ✅ `https://chat.{DOMAIN}` | ❌ |
 | **SearXNG** | Meta search engine for web search | ✅ `http://searxng.localhost` | ❌ Not exposed | ✅ Internal only |
-| **Firecrawl API** | Web scraping service | ✅ `http://firecrawl.localhost` | ✅ `https://firecrawl.{DOMAIN}` | ❌ |
+| **Firecrawl API** | Web scraping service | ✅ `http://firecrawl.localhost` | ❌ Not exposed | ✅ Internal only (prod/dev) |
 | **n8n** | Workflow automation platform | ✅ `http://n8n.localhost` | ✅ `https://n8n.{DOMAIN}` | ❌ |
 | **MailDev** | Development mail server | ✅ `http://maildev.localhost` | ❌ Not in production | ❌ |
 | **Traefik** | Reverse proxy and load balancer | ✅ `http://localhost:8080` (API) | External (separate container) | ❌ |
@@ -25,10 +25,10 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 | **n8n PostgreSQL** | n8n database | ❌ | ❌ | ✅ Internal only |
 | **YTPTube** | Web UI for yt-dlp (audio/video downloads); used by MCP YTPTube | ✅ Local: `http://ytptube.{DOMAIN}` | ✅ Prod/dev: only `https://ytptube.{DOMAIN}/api/download/*` (download-only router) | ✅ Web UI and rest of API internal in prod/dev |
 | **Firecrawl Services** | Internal Firecrawl dependencies | ❌ | ❌ | ✅ Internal only |
-| - playwright-service | Browser automation | ❌ | ❌ | ✅ Internal only |
-| - redis | Firecrawl cache/queue | ❌ | ❌ | ✅ Internal only |
-| - nuq-postgres | Firecrawl database | ❌ | ❌ | ✅ Internal only |
-| - rabbitmq | Firecrawl message queue | ❌ | ❌ | ✅ Internal only |
+| **playwright-service** | Browser automation | ❌ | ❌ | ✅ Internal only |
+| **redis** | Firecrawl cache/queue | ❌ | ❌ | ✅ Internal only |
+| **nuq-postgres** | Firecrawl database | ❌ | ❌ | ✅ Internal only |
+| **rabbitmq** | Firecrawl message queue | ❌ | ❌ | ✅ Internal only |
 
 ### Service Details
 
@@ -49,11 +49,12 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 - **Note**: Bot detection is disabled as it's only used internally
 
 **Firecrawl API**
-- **Local**: `http://firecrawl.localhost`
-- **Production**: `https://firecrawl.{DOMAIN}`
-- **Purpose**: Web scraping and content extraction service
-- **Network**: `traefik-net` + `firecrawl-network` + `app-net`
+- **Local**: `http://firecrawl.localhost` (exposed for debugging)
+- **Production / Dev (Portainer)**: ❌ **Not exposed** (internal only)
+- **Purpose**: Web scraping and content extraction; used by LibreChat (scraper) and mcp-firecrawl via `http://firecrawl-api:3002`
+- **Network**: `firecrawl-network` + `app-net` (prod/dev); local also has `traefik-net` for firecrawl.localhost
 - **Internal Dependencies**: playwright-service, redis, nuq-postgres, rabbitmq
+- **Note**: No need to expose publicly; all consumers use the internal hostname.
 
 **n8n**
 - **Local**: `http://n8n.localhost`
@@ -110,7 +111,7 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 | **YouTube Transcript** | YouTube video URL → transcript (youtube-transcript-api) | Internal Docker | ❌ | ❌ | ✅ |
 | **GitHub** | Repos, issues, PRs, code search | Remote (`api.githubcopilot.com`) | ❌ | ❌ | N/A (external) |
 | **Mapbox** | Geo search, routing, geocoding, maps | Remote (`mcp.mapbox.com`) | ❌ | ❌ | N/A (external) |
-| **Firecrawl** | Web scraping tools for agents | Internal Docker | — | — | **Disabled** in config |
+| **Firecrawl** | Web scraping tools for agents | Internal Docker | ❌ | ❌ | ✅ (chatMenu: false; agents only) |
 
 ### MCP Server Details
 
@@ -138,7 +139,7 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 
 **Mapbox** — Geo search, routing, geocoding, map visualisation. Remote; requires `MCP_MAPBOX_ACCESS_TOKEN`. URL: `https://mcp.mapbox.com/mcp`
 
-**Firecrawl** — Web scraping tools (`firecrawl_scrape`, `firecrawl_batch_scrape`, `firecrawl_map`, `firecrawl_crawl`, `firecrawl_search`, `firecrawl_extract`). Backend: internal Firecrawl API (`firecrawl-api:3002`). **Currently disabled** in `librechat.yaml` due to unstable connection; domain remains in `mcpSettings.allowedDomains` for when re-enabled. Image: `ghcr.io/firecrawl/firecrawl-mcp-server:latest`
+**Firecrawl** — Web scraping tools (`firecrawl_scrape`, `firecrawl_batch_scrape`, `firecrawl_map`, `firecrawl_crawl`, `firecrawl_search`, `firecrawl_extract`). Backend: internal Firecrawl API (`firecrawl-api:3002`). Network: `app-net`. URL: `http://mcp-firecrawl:3003/mcp`. Configured with `chatMenu: false` (not in chat dropdown; available for agents). Image: `ghcr.io/firecrawl/firecrawl-mcp-server:latest`
 
 ### Testing internal MCPs from Cursor IDE
 

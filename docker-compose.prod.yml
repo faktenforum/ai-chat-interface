@@ -92,19 +92,9 @@ services:
     extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
     container_name: ${STACK_NAME:-prod}-firecrawl-api
     networks:
-      - traefik-net
       - firecrawl-network
       - app-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=loadbalancer-net"
-      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl.entrypoints=web"
-      - "traefik.http.services.${STACK_NAME:-prod}-firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"
-      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.entrypoints=websecure"
-      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.tls=true"
-      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.tls.certresolver=le"
+    # Not exposed via Traefik: only LibreChat (firecrawl-api:3002) and mcp-firecrawl use it internally.
 
   playwright-service:
     extends: { file: docker-compose.websearch.yml, service: playwright-service }
