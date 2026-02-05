@@ -12,6 +12,8 @@ Cursor Rules are workspace-level instructions that guide AI agents. All rule fil
 | `create-new-mcp.mdc` | Integrate new MCP servers (Docker) |
 | `create-external-mcp.mdc` | Integrate external/remote MCP servers (no Docker) |
 | `debug-test-internal-mcp.mdc` | Debug and test internal MCPs from Cursor IDE (editing `packages/mcp-*/**`) |
+| `forked-submodules.mdc` | Work with Faktenforum fork submodules (upstream sync, PR workflow) |
+| `build-deploy-fork-images.mdc` | Build and deploy Docker images from fork submodules (local build, Portainer registry image) |
 | `docker-env.mdc` | Docker env and compose file structure |
 | `environment-variables.mdc` | Environment variable guidelines for the stack |
 | `documentation.mdc` | Documentation standards (minimal, scannable) |

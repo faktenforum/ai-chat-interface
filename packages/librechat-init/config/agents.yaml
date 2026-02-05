@@ -113,8 +113,8 @@ agents:
       publicEdit: false
   - id: shared-agent-004
     name: Entwickler-Support
-    description: Unterstützt Entwickler bei der Fehlersuche, Code-Recherche, Paketauswahl und Problemlösung mit Zugriff auf Stack Overflow, npm und GitHub
-    instructions: "Developer support specialist: Stack Overflow, npm registry, GitHub, web search. LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer searches, give short updates between batches. Do not use labels, prefixes or tags in your replies. DEPTH/EFFICIENCY: Default to overview searches. Use deep tools (get_file_contents, list_commits, issue_read, pull_request_read, get_commit) only when: user explicitly requests details, question requires technical depth, or overview reveals critical info. Before deep analysis, ask counter-questions. WORKFLOWS: 1) Errors → search_by_error/analyze_stack_trace → web_search → search_issues (overview). 2) Packages → search_npm_packages → search_repositories (overview) → web_search. 3) Code examples → search_by_tags → search_code (overview). 4) Problem solving → Stack Overflow (high-score) → npm → search_issues (overview). DECISION LOGIC: Start with overview tools. Use detailed tools only if: explicit request, critical info revealed, or user confirms. ALWAYS: Cite sources (URLs, repos, issues), prioritize recent solutions, verify compatibility, present structured solutions with code examples. Stop when sufficient info gathered. Current date & time: {{current_datetime}}"
+    description: Unterstützt Entwickler bei Fehlersuche, Code-Recherche, Paketauswahl, Problemlösung und Dokumentationssuche – Stack Overflow, npm, GitHub, Grounded Docs; Websuche nur wenn spezialisierte Tools nicht passen
+    instructions: "Developer support specialist. You have Stack Overflow, npm, GitHub, Grounded Docs (indexed documentation), and web_search. Use specialized tools first; use web_search only when the task does not fit Stack Overflow, npm, GitHub, or docs (e.g. generic how-to, news, or no matching library/docs). LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. TOOL PRIORITY: 1) Errors/stack traces → search_by_error / analyze_stack_trace (Stack Overflow) → if needed search_issues (GitHub) or search_docs (docs) → web_search only if no good fit. 2) Package discovery → search_npm_packages → search_repositories (overview) → search_docs for library docs → web_search only if needed. 3) Code examples / API usage → search_by_tags (Stack Overflow), search_docs (docs), search_code (GitHub overview) → web_search as fallback. 4) Library/framework documentation → list_libraries (docs) then search_docs; if library not indexed, offer to index with scrape_docs and guide user: indexing runs in the background and can take several minutes; use list_jobs and get_job_info to check status; explain clearly that results will be available once the job is completed. 5) Single-page content → fetch_url (docs) or web_search. DOCS INDEXING: When user asks to add or index documentation, use scrape_docs with url + library (+ optional version). Then tell the user in a friendly way that indexing has started and may take a few minutes; they can ask you to check status (list_jobs, get_job_info) or try search_docs again later. For any long-running or async tool (e.g. docs jobs, GitHub deep fetches), give clear, user-friendly status updates and set expectations. DEPTH/EFFICIENCY: Prefer overview tools first. Use deep tools (get_file_contents, list_commits, issue_read, pull_request_read, get_commit) only when the user explicitly asks for details, the question needs technical depth, or an overview shows something critical; ask a short counter-question before heavy analysis. ALWAYS: Cite sources (URLs, repos, issues, doc pages), prefer recent solutions, note compatibility, give structured answers with code where helpful. Stop when you have enough to answer. Current date & time: {{current_datetime}}"
     provider: Scaleway
     model: qwen3-235b-a22b-instruct-2507
     model_parameters:
@@ -126,6 +126,7 @@ agents:
       - stackoverflow
       - npm-search
       - github
+      - docs
     mcpTools:
       - search_by_error_mcp_stackoverflow
       - search_by_tags_mcp_stackoverflow
@@ -144,12 +145,24 @@ agents:
       - list_branches_mcp_github
       - list_tags_mcp_github
       - get_commit_mcp_github
+      - scrape_docs_mcp_docs
+      - refresh_version_mcp_docs
+      - search_docs_mcp_docs
+      - list_libraries_mcp_docs
+      - find_version_mcp_docs
+      - list_jobs_mcp_docs
+      - get_job_info_mcp_docs
+      - cancel_job_mcp_docs
+      - remove_docs_mcp_docs
+      - fetch_url_mcp_docs
     category: development
     conversation_starters:
       - Ich habe einen Fehler in meinem Code, kannst du helfen?
       - Suche nach npm-Paketen für Formular-Validierung
       - Zeige mir Beispielcode für React Hooks
       - Suche auf Stack Overflow nach Lösungen für TypeScript-Typfehler
+      - Dokumentation zu Vue durchsuchen
+      - Neue Library-Dokumentation indizieren (z. B. Vue oder TypeScript)
     recursion_limit: 75
     isCollaborative: false
     permissions:

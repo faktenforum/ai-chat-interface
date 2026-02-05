@@ -74,6 +74,9 @@
 
 ### MCP Docs (Grounded Docs)
 
+- [ ] Open PR for configurable embedding dimension (fork branch `vector-dimension`)
+  - **Goal:** Upstream [arabold/docs-mcp-server](https://github.com/arabold/docs-mcp-server) should support configurable `documents_vec` dimension so Scaleway (3584), OpenRouter (1536), and other providers work without DB mismatch.
+  - **Fork:** [faktenforum/docs-mcp-server](https://github.com/faktenforum/docs-mcp-server), branch `vector-dimension`. Create PR from `vector-dimension` → `arabold/docs-mcp-server:main`.
 - [ ] Reuse existing playwright-service for docs-mcp-server browser rendering
   - **Goal:** docs-mcp-server uses shared Firecrawl playwright-service instead of in-process Chromium for `scrapeMode` playwright/auto.
   - **Benefit:** Single browser pool (Firecrawl + docs-mcp), less resources in docs-mcp container, no Chromium in docs-mcp image.

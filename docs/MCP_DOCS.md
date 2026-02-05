@@ -1,6 +1,6 @@
 # MCP Grounded Docs
 
-[Grounded Docs](https://github.com/arabold/docs-mcp-server) MCP server: documentation index for AI (websites, GitHub, npm, local files). External image: `ghcr.io/arabold/docs-mcp-server:latest`. Integrated as **Pattern 2** (no build).
+[Grounded Docs](https://github.com/arabold/docs-mcp-server) MCP server: documentation index for AI (websites, GitHub, npm, local files). We use the [Faktenforum fork](https://github.com/faktenforum/docs-mcp-server) at `dev/docs-mcp-server` and **build the image from the submodule** (Pattern 3). The fork adds a configurable embedding dimension so Scaleway (3584) and OpenRouter (1536) work without DB mismatch.
 
 ## Configuration
 

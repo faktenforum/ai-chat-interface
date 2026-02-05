@@ -1,0 +1,37 @@
+---
+name: forked-submodules
+description: Working with git submodules that are Faktenforum forks (upstream sync, PR workflow)
+---
+
+# Forked Submodules
+
+Use this when working with a git submodule that is a **Faktenforum fork**: it has both `fork_url` and `upstream_url` in [scripts/submodules-upstream.yaml](scripts/submodules-upstream.yaml).
+
+## One-time setup (new fork)
+
+1. **Registry**: Add an entry in `scripts/submodules-upstream.yaml` with:
+   - `path`, `fork_url`, `upstream_url`, `upstream_branch`, `fork_branch`, `upstream_tracking_branch`, optional `description`
+2. **Submodule**: In `.gitmodules`, set the submodule `url` to the fork (e.g. `git@github.com:faktenforum/<repo>.git`) and `branch` (e.g. `main`)
+3. **Sync**: Run `npm run update:submodules` (or `./scripts/update-submodules.sh`) so the repo checks out the fork and the script creates the upstream remote and `upstream` tracking branch
+
+## Daily workflow
+
+- **Pull/merge upstream**: `npm run update:submodules` or `./scripts/update-submodules.sh --submodule dev/<name>`
+- **Build**: For post_init submodules use `npm run build:dev` / `npm run prepare:dev`. For Docker services built from the submodule: `docker compose ... build <service>` (e.g. `docker compose -f docker-compose.mcp-docs.yml build mcp-docs`)
+
+## Making changes and submitting a PR to upstream
+
+1. `cd dev/<submodule>`
+2. Ensure upstream remote exists: `git remote -v` (e.g. `upstream` → original repo)
+3. Branch from upstream: `git fetch upstream && git checkout upstream && git pull upstream main && git checkout -b fix/short-description`
+4. Implement the fix, commit, push to fork: `git push origin fix/short-description`
+5. Open PR: **from** `faktenforum/<repo>:fix/short-description` **to** upstream default branch (e.g. `arabold/<repo>:main`)
+
+## After upstream merges the PR
+
+- Merge upstream back into fork main: `npm run update:submodules` (merge upstream into main for that submodule)
+- In the **parent repo**: `git add dev/<submodule>` and commit the updated submodule pointer
+
+## Reference
+
+- [docs/SUBMODULE_SYNC.md](docs/SUBMODULE_SYNC.md) — Branch strategy, conflict resolution, status/dry-run

@@ -1,15 +1,16 @@
-# Grounded Docs MCP Server (docs-mcp-server) - external image, standalone mode
-# Pattern 2: no build, no Traefik (internal only)
+# Grounded Docs MCP Server (docs-mcp-server) - fork submodule, image from registry
+# Pattern 3: local stacks build from dev/docs-mcp-server; prod/Portainer use ghcr.io image
 services:
   mcp-docs:
-    image: ghcr.io/arabold/docs-mcp-server:latest
+    image: ghcr.io/faktenforum/mcp-docs:latest
+    container_name: mcp-docs
     restart: always
     command: ["--protocol", "http", "--host", "0.0.0.0", "--port", "6280"]
     environment:
       PORT: ${MCP_DOCS_PORT:-6280}
       DOCS_MCP_STORE_PATH: /data
       XDG_CONFIG_HOME: /config
-      # Optional: semantic search (MCP_DOCS_* in .env; see docs/MCP_DOCS.md)
+      # Optional: semantic search. We use MCP_DOCS_* in .env; server expects DOCS_MCP_* / OPENAI_API_* (see docs/MCP_DOCS.md)
       OPENAI_API_KEY: ${MCP_DOCS_OPENAI_API_KEY:-}
       OPENAI_API_BASE: ${MCP_DOCS_OPENAI_API_BASE:-}
       DOCS_MCP_EMBEDDING_MODEL: ${MCP_DOCS_EMBEDDING_MODEL:-}
@@ -23,18 +24,18 @@ services:
       - app-net
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('net').connect(6280,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))\""]
-      interval: 30s
-      timeout: 10s
+      interval: 45s
+      timeout: 15s
       retries: 3
-      start_period: 40s
+      start_period: 90s
     deploy:
       resources:
         limits:
+          cpus: '2'
+          memory: 1024M
+        reservations:
           cpus: '0.5'
           memory: 256M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
     logging:
       driver: "json-file"
       options:

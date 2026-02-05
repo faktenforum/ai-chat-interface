@@ -58,6 +58,14 @@ submodules:
     upstream_tracking_branch: upstream
     description: "Deutsche Bahn Timetable MCP server fork"
 
+  - path: dev/docs-mcp-server
+    fork_url: git@github.com:faktenforum/docs-mcp-server.git
+    upstream_url: https://github.com/arabold/docs-mcp-server.git
+    upstream_branch: main
+    fork_branch: main
+    upstream_tracking_branch: upstream
+    description: "Grounded Docs MCP server fork (configurable embedding dimension)"
+
   # --- Upstream-only (not forks): fork: false, no fork_url ---
   - path: dev/ytptube
     fork: false

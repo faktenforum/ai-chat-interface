@@ -170,6 +170,7 @@ services:
   mcp-docs:
     extends: { file: docker-compose.mcp-docs.yml, service: mcp-docs }
     container_name: ${STACK_NAME:-prod}-mcp-docs
+    image: ghcr.io/faktenforum/mcp-docs:dev
     # No Traefik labels - internal service only
 
   mcp-openstreetmap:

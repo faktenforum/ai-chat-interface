@@ -212,6 +212,11 @@ services:
   mcp-docs:
     extends: { file: docker-compose.mcp-docs.yml, service: mcp-docs }
     env_file: .env.local
+    # Build from submodule Dockerfile (like mcp-db-timetable)
+    image: ghcr.io/faktenforum/mcp-docs:latest
+    build:
+      context: ./dev/docs-mcp-server
+      dockerfile: Dockerfile
     ports:
       - "127.0.0.1:${MCP_DOCS_PORT:-6280}:${MCP_DOCS_PORT:-6280}"  # Cursor IDE – local only
 

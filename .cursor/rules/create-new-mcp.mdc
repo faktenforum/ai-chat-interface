@@ -95,15 +95,18 @@ In `docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.p
 
 ## Pattern 3: External Submodule with Modifications
 
+For **fork submodules where we build and publish the image**, follow `@.cursor/rules/build-deploy-fork-images.mdc`: base compose uses registry image only; local stacks override with build from submodule; prod/Portainer use registry image; CI workflow builds and pushes on submodule changes.
+
 ### 3.1 Git Submodule Setup
 Add submodule to `dev/{name}-mcp/`:
 - Add to `.gitmodules`: `[submodule "dev/{name}-mcp"]`, `path = dev/{name}-mcp`, `url = git@github.com:org/{name}-mcp.git`
 - Initialize: `git submodule update --init --recursive dev/{name}-mcp`
 - Update `dev/README.md` with submodule reference
+- For fork sync: add entry in `scripts/submodules-upstream.yaml`; see `@.cursor/rules/forked-submodules.mdc`
 
 ### 3.2 Docker Compose Base File
 Create `docker-compose.mcp-{name}.yml`:
-- Service: `mcp-{name}`, **image**: Use base image (e.g., `python:3.13-slim`) as fallback only if the service can run meaningfully without the built app (e.g. for quick tests). If the MCP **only** runs with the built image (command requires the app), use the real image name (e.g. `ghcr.io/faktenforum/mcp-{name}:latest`) in the base file; extension files then build or pull that same image. Do not use base file alone in that case.
+- Service: `mcp-{name}`, **image**: `ghcr.io/faktenforum/mcp-{name}:latest`, **container_name**: `mcp-{name}`. **No** `build` section in base (Portainer/prod pull from registry; local stacks override with build).
 - Networks: `app-net` only (internal service, **no Traefik**)
 - Environment: `PORT`, other required vars
 - Expose port (no publish) - internal access only
@@ -111,19 +114,12 @@ Create `docker-compose.mcp-{name}.yml`:
 - Resource limits: 0.5 CPU, 256M memory
 - Logging: json-file driver, max-size 10m, max-file 3, compress true
 
-### 3.3 Extension Files with Build
-In `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, and `docker-compose.dev.yml`:
-- Extend base service: `extends: { file: docker-compose.mcp-{name}.yml, service: mcp-{name} }`
-- **Build section**: `build: { context: ./dev/{name}-mcp, dockerfile: Dockerfile }` (local-dev only)
-- **CRITICAL**: Always set unique `image:` name (e.g., `ghcr.io/faktenforum/mcp-{name}:latest` for prod, `:dev` for dev stacks) to prevent Docker layering built image on base image
-- Add `env_file: .env.local` (local-dev only)
-- For prod/dev: Use pre-built image from registry (no build section)
-- Add `container_name: ${STACK_NAME:-prod}-mcp-{name}` (prod only)
-- Add `pull_policy: build` (prod only)
-- Comment: `# Build from submodule Dockerfile (like rag_api)`
+### 3.3 Extension Files
+- **Local / local-dev** (`docker-compose.local.yml`, `docker-compose.local-dev.yml`): Extend base; add `image: ghcr.io/faktenforum/mcp-{name}:latest` and `build: { context: ./dev/{name}-mcp, dockerfile: Dockerfile }` so the image is built from the submodule and tagged for local use. Add `env_file: .env.local`, ports for IDE.
+- **Prod / dev** (`docker-compose.prod.yml`, `docker-compose.dev.yml`): Extend base; set `container_name: ${STACK_NAME:-prod}-mcp-{name}`; override **image** to `ghcr.io/faktenforum/mcp-{name}:latest` (prod) or `:dev` (dev). **No** build section — use registry image only.
 
-### 3.4 No GitHub Actions Workflow
-- No workflow needed (submodule maintained externally, or build handled by Portainer/Git-based deployment)
+### 3.4 GitHub Actions Workflow (when we build and publish)
+When we build and publish the image from the fork submodule, add `.github/workflows/build-mcp-{name}.yml`. See `@.cursor/rules/build-deploy-fork-images.mdc` for trigger paths, build context (`./dev/{name}-mcp`), and push to `ghcr.io/faktenforum/mcp-{name}` (tags: `latest`, `dev`, branch). If the submodule is only used locally and we do not publish an image, omit the workflow.
 
 ## Common Steps (All Patterns)
 
