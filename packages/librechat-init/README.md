@@ -11,9 +11,13 @@ Initialization services for LibreChat configuration and agent setup.
 
 Config files are YAML by default; if a `.yaml` file is missing, the loader tries the same path with `.json` (backward compatibility).
 
+### Environment-specific overrides and `LIBRECHAT_ENV`
+
+Init merges an override file onto the base `librechat.yaml` depending on `LIBRECHAT_ENV` (`local` | `dev` | `prod`, default `prod`). Override files: `librechat.local.yaml`, `librechat.dev.yaml`, `librechat.prod.yaml` (same directory as the base). They contain only the keys that differ per environment (e.g. `modelSpecs.addedEndpoints`, `endpoints.agents.capabilities`, custom endpoint `models.fetch`). See [docs/LIBRECHAT_FEATURES.md](../docs/LIBRECHAT_FEATURES.md) for details.
+
 ### Local dev: mount config (no image rebuild)
 
-When the host directory `config/` is mounted at `/app/config-source` (e.g. in `docker-compose.local-dev.yml` and `docker-compose.local.yml`), the init script reads from that path instead of the baked-in `/app/data`. After editing `librechat.yaml`, `roles.yaml`, or `agents.yaml`, run init again and restart the API; no image rebuild needed.
+When the host directory `config/` is mounted at `/app/config-source` (e.g. in `docker-compose.local-dev.yml` and `docker-compose.local.yml`), the init script reads from that path instead of the baked-in `/app/data`. Set `LIBRECHAT_ENV=local` so `librechat.local.yaml` is applied. After editing `librechat.yaml`, override files, `roles.yaml`, or `agents.yaml`, run init again and restart the API; no image rebuild needed.
 
 ```bash
 docker compose -f docker-compose.local-dev.yml run --rm librechat-init

@@ -6,6 +6,8 @@ services:
   librechat-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-init }
     container_name: ${STACK_NAME:-prod}-librechat-init
+    environment:
+      LIBRECHAT_ENV: dev
     build:
       context: ./packages/librechat-init
       dockerfile: Dockerfile

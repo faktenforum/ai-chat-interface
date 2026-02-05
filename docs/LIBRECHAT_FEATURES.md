@@ -8,11 +8,12 @@ Project-defined LibreChat behaviour comes from these files under **`packages/lib
 
 | File | Contents |
 |------|----------|
-| **`librechat.yaml`** | Main LibreChat config: endpoints (OpenRouter, Scaleway), model specs, interface, memory, MCP servers, web search, OCR, etc. |
+| **`librechat.yaml`** | Base LibreChat config: endpoints (OpenRouter, Scaleway), model specs, interface, memory, MCP servers, web search, OCR, etc. |
+| **`librechat.local.yaml`**, **`librechat.dev.yaml`**, **`librechat.prod.yaml`** | Environment overrides (merged at init by `LIBRECHAT_ENV`). Only differing keys; e.g. prod disables `execute_code`, sets `modelSpecs.addedEndpoints: [agents]`, custom `fetch: false`. |
 | **`agents.yaml`** | Shared agents (e.g. Recherche-Assistent, Bildgenerierungs-Assistent, Reise-Assistent) and their providers, models, tools, MCPs. |
 | **`roles.yaml`** | Roles and permissions (access to agents and features). |
 
-They are included in the librechat-init image and deployed to the config volume at container startup. Changes require rebuilding the init image and re-running init (see [Local development: config mount](#local-development-config-mount-no-image-rebuild)).
+Init merges the override for the current `LIBRECHAT_ENV` (`local` | `dev` | `prod`, default `prod`) onto the base, then writes the result to the config volume. Files are included in the librechat-init image; for local dev, mounting `config/` and setting `LIBRECHAT_ENV=local` allows editing without rebuilding (see [Local development: config mount](#local-development-config-mount-no-image-rebuild)).
 
 ## Table of Contents
 
@@ -152,19 +153,16 @@ docker compose -f docker-compose.local-dev.yml restart api
 
 ### Which providers appear in the model selector
 
-LibreChat includes **Google**, OpenAI, Anthropic, Bedrock, and **custom** endpoints in its default list. You control what appears via the **`ENDPOINTS`** environment variable:
+Visibility is controlled by **environment override files** via `modelSpecs.addedEndpoints` (and `LIBRECHAT_ENV`):
 
-| Environment | `ENDPOINTS` | Result |
-|-------------|-------------|--------|
-| **Portainer** (prod/dev) | `agents` | Only **My Agents** (Recherche-Assistent, Bildgenerierungs-Assistent, etc.). No OpenRouter or Scaleway as separate entries. |
-| **Local** | unset (empty) | **All** endpoints: Agents, OpenRouter, Scaleway, Google, OpenAI, etc. |
+| Environment | Override file | Result |
+|-------------|---------------|--------|
+| **Local** | `librechat.local.yaml` (no `addedEndpoints`) | **All** endpoints: Agents, OpenRouter, Scaleway, Google, etc. |
+| **Dev** (Portainer) | `librechat.dev.yaml` | Only **My Agents** (`addedEndpoints: [agents]`). |
+| **Prod** (Portainer) | `librechat.prod.yaml` | Only **My Agents**; custom `fetch: false`; `execute_code` disabled. |
 
-- **Portainer:** `env.prod.example` and `env.dev.example` set `ENDPOINTS=agents`, so users only see and choose agents; the agent config (provider/model) is fixed per agent.
-- **Local:** `env.local.example` does not set `ENDPOINTS`; `docker-compose.librechat.yml` passes `ENDPOINTS: ${ENDPOINTS:-}` so an empty value uses LibreChat’s default (all endpoints).
 
-To restrict locally to e.g. agents only, set `ENDPOINTS=agents` in your local env. To add more on Portainer (e.g. custom), set `ENDPOINTS=agents,custom` (comma-separated endpoint keys).
-
-**Alternative:** Use `modelSpecs.addedEndpoints` in `librechat.yaml` to restrict which endpoints appear when `interface.modelSelect` is `true`.
+Compose sets `LIBRECHAT_ENV` per stack (local: `local`, dev: `dev`, prod: `prod`). To change behaviour, edit the corresponding override file under `packages/librechat-init/config/` (rebuild init image for prod/dev, or use the config mount for local).
 
 ### Endpoints Configuration
 

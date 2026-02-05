@@ -1,0 +1,4 @@
+# Dev (Portainer) overrides: only "My Agents" in model selector; base capabilities (execute_code on).
+modelSpecs:
+  addedEndpoints:
+    - agents

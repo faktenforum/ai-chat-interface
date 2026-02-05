@@ -25,6 +25,11 @@
 
 ## Features
 
+### LibreChat
+
+- [ ] Enable `execute_code` (Code Interpreter) on production once the backing service is available again
+  - The main LibreChat developer had disabled it; it is an external service used for LibreChat funding. Currently disabled in prod via `librechat.prod.yaml` (capabilities override); local/dev keep it enabled.
+
 ### Custom Roles Support
 - [ ] Add API endpoint and frontend support for custom roles
   - Custom roles created in MongoDB not visible in AdminSettingsDialog (only USER/ADMIN hardcoded)

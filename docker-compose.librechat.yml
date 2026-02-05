@@ -15,7 +15,7 @@ services:
       LIBRECHAT_CUSTOM_WELCOME: ${LIBRECHAT_CUSTOM_WELCOME:-}
       LIBRECHAT_PRIVACY_POLICY_URL: ${LIBRECHAT_PRIVACY_POLICY_URL:-}
       LIBRECHAT_TERMS_OF_SERVICE_URL: ${LIBRECHAT_TERMS_OF_SERVICE_URL:-}
-      LIBRECHAT_FETCH_MODELS: ${LIBRECHAT_FETCH_MODELS:-true}
+      LIBRECHAT_ENV: ${LIBRECHAT_ENV:-prod}
       SCALEWAY_PROJECT_ID: ${SCALEWAY_PROJECT_ID:-}
       SCALEWAY_BASE_URL: ${SCALEWAY_BASE_URL:-https://api.scaleway.ai/v1}
     volumes:
@@ -112,10 +112,6 @@ services:
       SEARCH: ${LIBRECHAT_SEARCH_ENABLED:-true}
       MEILI_MASTER_KEY: ${LIBRECHAT_MEILI_MASTER_KEY}
       CONFIG_PATH: /app/config/librechat.yaml
-      # When set, only these providers appear in the model selector. Empty = LibreChat default (all).
-      # Portainer (prod/dev): set ENDPOINTS=agents in env so only "My Agents" is shown.
-      # Local: leave ENDPOINTS unset for all endpoints (Agents, OpenRouter, Scaleway, Google, etc.).
-      ENDPOINTS: ${ENDPOINTS:-}
       OCR_API_KEY: ${LIBRECHAT_OCR_API_KEY:-}
       OCR_BASEURL: ${LIBRECHAT_OCR_BASEURL:-https://api.mistral.ai/v1}
       MCP_GITHUB_PAT: ${MCP_GITHUB_PAT:-}
