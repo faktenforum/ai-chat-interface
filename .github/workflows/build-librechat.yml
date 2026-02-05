@@ -4,6 +4,9 @@ on:
   push:
     branches: ['**']
     paths:
+      # Submodule pointer (gitlink) changes; ** does not match the directory entry itself
+      - dev/librechat
+      - dev/agents
       - dev/librechat/**
       - dev/agents/**
       - .github/workflows/build-librechat.yml

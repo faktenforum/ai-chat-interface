@@ -4,6 +4,7 @@ on:
   push:
     branches: ['**']
     paths:
+      - dev/db-timetable-mcp
       - dev/db-timetable-mcp/**
       - .github/workflows/build-mcp-db-timetable.yml
   workflow_dispatch:

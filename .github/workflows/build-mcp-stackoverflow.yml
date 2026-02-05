@@ -4,6 +4,7 @@ on:
   push:
     branches: ['**']
     paths:
+      - dev/stackoverflow-mcp
       - dev/stackoverflow-mcp/**
       - .github/workflows/build-mcp-stackoverflow.yml
   workflow_dispatch:

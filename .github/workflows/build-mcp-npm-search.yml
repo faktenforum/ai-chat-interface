@@ -4,6 +4,7 @@ on:
   push:
     branches: ['**']
     paths:
+      - dev/npm-search-mcp
       - dev/npm-search-mcp/**
       - .github/workflows/build-mcp-npm-search.yml
   workflow_dispatch:

@@ -137,6 +137,10 @@ git push origin main
 npm run update:submodules  # Step 1 updates all; step 2 merges upstream into main for forks
 ```
 
+## CI: Image builds on submodule updates
+
+When you commit a **submodule pointer update** (e.g. after `npm run update:submodules` and `git add dev/librechat`), GitHub records the change as the path `dev/librechat` (a gitlink). The build workflows (e.g. **Build and Push LibreChat Image**) use `paths` filters that include both that path and `dev/librechat/**`, so the workflow runs and the image is rebuilt. Same for `dev/agents` and other dev submodules (mcp-youtube-transcript, db-timetable-mcp, etc.). If you only update the pointer and push, the corresponding image workflow will run.
+
 ## Related Documentation
 
 - [Development Guide](DEVELOPMENT.md) - Working with git submodules

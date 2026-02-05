@@ -4,6 +4,7 @@ on:
   push:
     branches: ['**']
     paths:
+      - dev/mcp-youtube-transcript
       - dev/mcp-youtube-transcript/**
       - .github/workflows/build-mcp-youtube-transcript.yml
   workflow_dispatch:

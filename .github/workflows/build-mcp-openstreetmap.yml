@@ -4,6 +4,7 @@ on:
   push:
     branches: ['**']
     paths:
+      - dev/open-streetmap-mcp
       - dev/open-streetmap-mcp/**
       - .github/workflows/build-mcp-openstreetmap.yml
   workflow_dispatch:
