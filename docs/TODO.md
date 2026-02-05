@@ -72,6 +72,15 @@
 - [ ] Improve server-side video access (geo/bot blocking)
   - Status: Works locally; Video-Transkripte agent is in code with `public: false`. On Hetzner, optional Webshare proxy or FlareSolverr; see [YTPTUBE_FUTURE_WORK.md](wip/YTPTUBE_FUTURE_WORK.md) for FlareSolverr and office Pi / reverse-SSH-proxy ideas for later.
 
+### MCP Docs (Grounded Docs)
+
+- [ ] Reuse existing playwright-service for docs-mcp-server browser rendering
+  - **Goal:** docs-mcp-server uses shared Firecrawl playwright-service instead of in-process Chromium for `scrapeMode` playwright/auto.
+  - **Benefit:** Single browser pool (Firecrawl + docs-mcp), less resources in docs-mcp container, no Chromium in docs-mcp image.
+  - **Approach:** Add optional "remote Playwright" mode: when configured (e.g. env `PLAYWRIGHT_MICROSERVICE_URL` or `MCP_DOCS_PLAYWRIGHT_URL`), HtmlPlaywrightMiddleware (or equivalent) calls `POST /scrape` with `{ url, timeout?, headers?, ... }` and feeds returned HTML into existing HTML pipeline (Cheerio, sanitization, markdown, splitter). Default remains in-process Playwright for standalone deployments.
+  - **Risk:** playwright-service is Firecrawl’s internal contract; API may change with Firecrawl releases. Document the contract or pin a compatible version.
+  - **Ref:** [MCP_DOCS.md](MCP_DOCS.md), Firecrawl `dev/firecrawl/apps/playwright-service-ts` (POST `/scrape`).
+
 ### MCP Tools
 
 - [x] Fix MCP image generation tools sending artifacts to non-vision models
