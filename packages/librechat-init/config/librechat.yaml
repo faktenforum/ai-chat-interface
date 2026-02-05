@@ -710,7 +710,7 @@ mcpServers:
     iconPath: /images/mcp-calculator-icon.svg
     initTimeout: 120000
     chatMenu: false
-    startup: false
+    startup: true
     serverInstructions: true
 
   image-gen:
@@ -756,7 +756,7 @@ mcpServers:
     initTimeout: 120000
     timeout: 150000
     chatMenu: false
-    startup: false
+    startup: false # Currently experimental, maybe not needed in favor of default websearch feature
     serverInstructions: true
 
   db-timetable:
@@ -801,7 +801,7 @@ mcpServers:
     initTimeout: 120000
     timeout: 300000   # 5 min — downloads + STT
     chatMenu: false
-    startup: true
+    startup: false # Currently experimental
     serverInstructions: true
 
   youtube-transcript:
@@ -812,7 +812,7 @@ mcpServers:
     iconPath: /images/mcp-youtube-transcript-icon.svg
     initTimeout: 120000
     chatMenu: false
-    startup: true
+    startup: false # Currently experimental, mybe not needed in favor of ytptube
     serverInstructions: true
 
   github:
@@ -852,7 +852,7 @@ mcpServers:
     iconPath: /images/mcp-firecrawl-icon.svg
     initTimeout: 120000
     chatMenu: false
-    startup: true
+    startup: false
     serverInstructions: true
 
 # n8n MCP Server Integration (Future - disabled)
