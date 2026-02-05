@@ -1,0 +1,42 @@
+# Grounded Docs MCP Server (docs-mcp-server) - external image, standalone mode
+# Pattern 2: no build, no Traefik (internal only)
+services:
+  mcp-docs:
+    image: ghcr.io/arabold/docs-mcp-server:latest
+    restart: always
+    command: ["--protocol", "http", "--host", "0.0.0.0", "--port", "6280"]
+    environment:
+      PORT: ${MCP_DOCS_PORT:-6280}
+      DOCS_MCP_STORE_PATH: /data
+      XDG_CONFIG_HOME: /config
+    volumes:
+      - docs-mcp-data:/data
+      - docs-mcp-config:/config
+    expose:
+      - "6280"
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('net').connect(6280,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+
+volumes:
+  docs-mcp-data:
+  docs-mcp-config:

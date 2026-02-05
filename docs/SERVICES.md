@@ -109,6 +109,7 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 | **npm Search** | npm package search | Internal Docker | ❌ | ❌ | ✅ |
 | **YTPTube** | Video URLs → transcripts (YTPTube + optional transcription API) | Internal Docker | ❌ | ❌ | ✅ |
 | **YouTube Transcript** | YouTube video URL → transcript (youtube-transcript-api) | Internal Docker | ❌ | ❌ | ✅ |
+| **Grounded Docs** | Documentation index (websites, GitHub, npm, local files); optional semantic search via embeddings | Internal Docker | ❌ | ❌ | ✅ |
 | **GitHub** | Repos, issues, PRs, code search | Remote (`api.githubcopilot.com`) | ❌ | ❌ | N/A (external) |
 | **Mapbox** | Geo search, routing, geocoding, maps | Remote (`mcp.mapbox.com`) | ❌ | ❌ | N/A (external) |
 | **Firecrawl** | Web scraping tools for agents | Internal Docker | ❌ | ❌ | ✅ (chatMenu: false; agents only) |
@@ -134,6 +135,8 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 **YTPTube** — Media URL → transcript or download link. Tools: `request_transcript`, `get_status`, `request_download_link`, `get_media_info`, `get_thumbnail_url`, `list_recent_downloads`. Optional: `TRANSCRIPTION_BASE_URL` + `TRANSCRIPTION_API_KEY` for audio transcription; omit for platform-subtitles-only. Network: `app-net`. URL: `http://mcp-ytptube:3010/mcp`. [MCP YTPTube](MCP_YTPTUBE.md)
 
 **YouTube Transcript** — YouTube video URL → transcript via youtube-transcript-api. Tools: `get_transcript`, `get_timed_transcript`, `get_video_info`. Network: `app-net`. URL: `http://mcp-youtube-transcript:3011/mcp`. [MCP YouTube Transcript](MCP_YOUTUBE_TRANSCRIPT.md)
+
+**Grounded Docs** — Documentation index for AI (websites, GitHub, npm, local files). Optional semantic search via embedding model (`OPENAI_API_KEY`, `DOCS_MCP_EMBEDDING_MODEL`). Data and config in volumes `docs-mcp-data`, `docs-mcp-config`. Network: `app-net`. URL: `http://mcp-docs:6280/mcp`. Image: `ghcr.io/arabold/docs-mcp-server:latest`. Port: `MCP_DOCS_PORT` (default 6280).
 
 **GitHub** — Repository management, issues, pull requests, code search. Remote; requires `MCP_GITHUB_PAT`. URL: `https://api.githubcopilot.com/mcp/`
 
@@ -164,7 +167,7 @@ When using the **local** stack (`docker-compose -f docker-compose.local.yml …`
 
 2. **`app-net`** (Bridge)
    - LibreChat and related services: LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API, n8n, n8n-init, n8n PostgreSQL, YTPTube
-   - All internal MCP servers: mcp-calculator, mcp-image-gen, mcp-openstreetmap, mcp-weather, mcp-playwright, mcp-db-timetable, mcp-stackoverflow, mcp-npm-search, mcp-ytptube, mcp-firecrawl (when enabled)
+   - All internal MCP servers: mcp-calculator, mcp-image-gen, mcp-openstreetmap, mcp-weather, mcp-playwright, mcp-db-timetable, mcp-stackoverflow, mcp-npm-search, mcp-ytptube, mcp-docs, mcp-firecrawl (when enabled)
 
 3. **`firecrawl-network`** (Bridge)
    - Firecrawl only: firecrawl-api, playwright-service, redis, nuq-postgres, rabbitmq

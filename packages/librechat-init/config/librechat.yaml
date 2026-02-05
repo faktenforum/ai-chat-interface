@@ -691,6 +691,7 @@ mcpSettings:
     - 'mcp-npm-search'           # MCP npm Search service (Docker network)
     - 'mcp-ytptube'             # MCP YTPTube (YTPTube + Scaleway STT)
     - 'mcp-youtube-transcript'  # MCP YouTube Transcript (youtube-transcript-api)
+    - 'mcp-docs'                # MCP Docs (Grounded Docs) service (Docker network)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     - 'mcp.mapbox.com'           # Mapbox MCP Server (remote hosted)
     # - '*.example.com'           # Wildcard subdomain
@@ -742,6 +743,17 @@ mcpServers:
     title: Wetter
     description: Aktuelle Wetterdaten, Luftqualität und Zeitzoneninformationen
     iconPath: /images/mcp-weather-icon.svg
+    initTimeout: 120000
+    chatMenu: true
+    startup: true
+    serverInstructions: true
+
+  docs:
+    type: streamable-http
+    url: http://mcp-docs:6280/mcp
+    title: Grounded Docs
+    description: Aktuelle Dokumentation durchsuchen – Websites, GitHub, npm, lokale Dateien
+    iconPath: /images/mcp-docs-icon.svg
     initTimeout: 120000
     chatMenu: true
     startup: true

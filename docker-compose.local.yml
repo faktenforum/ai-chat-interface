@@ -208,6 +208,12 @@ services:
     ports:
       - "127.0.0.1:3003:3003"  # Cursor IDE – local only
 
+  mcp-docs:
+    extends: { file: docker-compose.mcp-docs.yml, service: mcp-docs }
+    env_file: .env.local
+    ports:
+      - "127.0.0.1:${MCP_DOCS_PORT:-6280}:${MCP_DOCS_PORT:-6280}"  # Cursor IDE – local only
+
   mcp-openstreetmap:
     extends: { file: docker-compose.mcp-openstreetmap.yml, service: mcp-openstreetmap }
     env_file: .env.local
@@ -313,6 +319,8 @@ networks:
     driver: bridge
 
 volumes:
+  docs-mcp-data:
+  docs-mcp-config:
   firecrawl_pgdata:
   librechat-config:
   mongodata:

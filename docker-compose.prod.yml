@@ -159,6 +159,11 @@ services:
     extends: { file: docker-compose.mcp-firecrawl.yml, service: mcp-firecrawl }
     container_name: ${STACK_NAME:-prod}-mcp-firecrawl
 
+  mcp-docs:
+    extends: { file: docker-compose.mcp-docs.yml, service: mcp-docs }
+    container_name: ${STACK_NAME:-prod}-mcp-docs
+    # No Traefik labels - internal service only
+
   mcp-openstreetmap:
     extends: { file: docker-compose.mcp-openstreetmap.yml, service: mcp-openstreetmap }
     container_name: ${STACK_NAME:-prod}-mcp-openstreetmap
@@ -262,3 +267,7 @@ volumes:
     name: ${STACK_NAME:-prod}-ytptube-config
   ytptube_downloads:
     name: ${STACK_NAME:-prod}-ytptube-downloads
+  docs-mcp-data:
+    name: ${STACK_NAME:-prod}-mcp-docs-data
+  docs-mcp-config:
+    name: ${STACK_NAME:-prod}-mcp-docs-config

@@ -51,3 +51,7 @@
 [submodule "dev/yt-dlp"]
 	path = dev/yt-dlp
 	url = git@github.com:yt-dlp/yt-dlp.git
+[submodule "dev/docs-mcp-server"]
+	path = dev/docs-mcp-server
+	url = https://github.com/arabold/docs-mcp-server.git
+	branch = main
