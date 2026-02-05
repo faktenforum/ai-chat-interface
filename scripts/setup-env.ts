@@ -80,12 +80,42 @@ const extractVariableNames = (value: string): string[] => {
     return Array.from(matches, m => m[1]);
 };
 
+/**
+ * Resolve ${VAR} expansions in a value using the provided env map.
+ * Used to compare example default (which may contain ${X}) to written value.
+ */
+function resolveValueAgainstMap(
+    value: string,
+    envMap: Record<string, string>,
+    maxIterations: number = 50
+): string {
+    let result = value;
+    let iterations = 0;
+    while (containsVariableExpansion(result) && iterations < maxIterations) {
+        const varNames = extractVariableNames(result);
+        for (const varName of varNames) {
+            const resolved = envMap[varName];
+            if (resolved !== undefined) {
+                result = result.replace(new RegExp(`\\$\\{${varName}\\}`, 'g'), resolved);
+            }
+        }
+        iterations++;
+    }
+    return result;
+}
+
 // ============================================================================
 // Configuration
 // ============================================================================
+//
+// Variable handling:
+// - AUTO_GENERATED: generated if missing, empty, or value contains "change-me" (or key-specific placeholders)
+// - PROMPTS: user is prompted (or default/existing used with --yes); optional keys can be skipped with Enter
+// - Default: keep existing value or use value from env.*.example
+//
 
 /**
- * Variables that should be automatically generated if missing
+ * Variables that should be automatically generated if missing or placeholder
  */
 const AUTO_GENERATED: Record<string, () => string> = {
     'LIBRECHAT_SESSION_SECRET': () => genSecret(32),
@@ -102,6 +132,11 @@ const AUTO_GENERATED: Record<string, () => string> = {
     'N8N_POSTGRES_PASSWORD': () => genPassword(16),
     'N8N_OWNER_EMAIL': () => `admin-${crypto.randomBytes(4).toString('hex')}@n8n.local`,
     'N8N_OWNER_PASSWORD': () => genPassword(16),
+};
+
+/** Values that trigger auto-generation for specific keys (in addition to empty / change-me) */
+const AUTO_GENERATE_PLACEHOLDERS: Record<string, string[]> = {
+    'FIRECRAWL_BULL_AUTH_KEY': ['my-secret-key'],
 };
 
 type PromptType = 'input' | 'password';
@@ -128,6 +163,12 @@ const PROMPTS: Record<string, PromptConfig> = {
     'MCP_DB_TIMETABLE_CLIENT_ID': { message: 'DB Timetable API Client ID (optional, press enter to skip):', type: 'input' },
     'MCP_DB_TIMETABLE_CLIENT_SECRET': { message: 'DB Timetable API Client Secret (optional, press enter to skip):', type: 'password' },
 
+    // YTPTube MCP
+    'YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL': { message: 'YTPTube public download base URL (optional; e.g. https://ytptube.<DOMAIN>):', type: 'input' },
+    'YTPTUBE_PROXY': { message: 'YTPTube proxy URL (optional; press enter to skip):', type: 'password' },
+    'WEBSHARE_PROXY_USERNAME': { message: 'Webshare proxy username (optional; for Rotating/Backbone at p.webshare.io):', type: 'input' },
+    'WEBSHARE_PROXY_PASSWORD': { message: 'Webshare proxy password (optional; press enter to skip):', type: 'password' },
+
     // Mongo (using --noauth, so INITDB credentials not needed)
     'LIBRECHAT_MONGO_DATABASE': { message: 'Mongo Database Name:', type: 'input', defaultGen: () => 'librechat' },
 
@@ -143,6 +184,11 @@ const PROMPTS: Record<string, PromptConfig> = {
     'EMAIL_PASSWORD': { message: 'SendGrid API Key (for email verification):', type: 'password', prodOnly: true },
     'EMAIL_FROM': { message: 'Email From Address (e.g., noreply@faktenforum.org):', type: 'input', prodOnly: true },
     'LIBRECHAT_DEFAULT_ADMINS': { message: 'Default LibreChat Admin Emails (comma-separated, optional):', type: 'input' },
+
+    // Optional API keys (press enter to skip; default empty)
+    'SPRINGER_NATURE_API_KEY': { message: 'Springer Nature API Key (optional; scientific literature search):', type: 'input', defaultGen: () => '' },
+    'MCP_GITHUB_PAT': { message: 'GitHub Personal Access Token (optional; for GitHub MCP):', type: 'password', defaultGen: () => '' },
+    'MCP_MAPBOX_ACCESS_TOKEN': { message: 'Mapbox Access Token (optional; for Mapbox MCP):', type: 'password', defaultGen: () => '' },
 };
 
 /**
@@ -156,6 +202,8 @@ const MIGRATIONS: Record<string, string> = {
     'JINA_API_KEY': 'LIBRECHAT_JINA_API_KEY',
     'JINA_API_URL': 'LIBRECHAT_JINA_API_URL',
     'USE_DB_AUTHENTICATION': 'FIRECRAWL_USE_DB_AUTHENTICATION',
+    'PLAYWRIGHT_MICROSERVICE_URL': 'FIRECRAWL_PLAYWRIGHT_MICROSERVICE_URL',
+    'WEBHOOK_URL': 'N8N_WEBHOOK_URL',
 };
 
 // ============================================================================
@@ -207,19 +255,46 @@ function applyMigrations(existingEnv: Record<string, string>): void {
     }
 }
 
+/** True if key is a migration source or target — do not preserve in "unprocessed" pass */
+function isMigrationKey(key: string): boolean {
+    return key in MIGRATIONS || Object.values(MIGRATIONS).includes(key);
+}
+
+/**
+ * Variables that are per-deployment (API keys, project IDs, etc.) and expected to differ from
+ * the empty/placeholder example default. Only used for the divergence report (not for prompting).
+ */
+const EXPECTED_TO_DIFFER_KEYS = new Set<string>([
+    'SCALEWAY_API_KEY',
+    'SCALEWAY_PROJECT_ID',
+    'MCP_STACKOVERFLOW_API_KEY',
+]);
+
+/** True if variable is expected to differ from example default (secrets, keys, prompted, or per-deployment). */
+function isExpectedToDiffer(key: string): boolean {
+    return key in AUTO_GENERATED || key in PROMPTS || EXPECTED_TO_DIFFER_KEYS.has(key);
+}
+
 // ============================================================================
 // Variable Processing Functions
 // ============================================================================
 
 /**
- * Process auto-generated variable
+ * Process auto-generated variable.
+ * Generates when: missing, empty, value contains "change-me", or value is a key-specific placeholder.
  */
 function processAutoGenerated(
     key: string,
     currentValue: string | undefined,
     generator: () => string
 ): string {
-    if (!currentValue || currentValue === 'change-me' || currentValue.includes('change-me')) {
+    const placeholders = AUTO_GENERATE_PLACEHOLDERS[key];
+    const isPlaceholder =
+        !currentValue ||
+        currentValue === 'change-me' ||
+        currentValue.includes('change-me') ||
+        (placeholders && placeholders.includes(currentValue));
+    if (isPlaceholder) {
         const secret = generator();
         console.log(`✨ Generated new secret for ${key}`);
         return secret;
@@ -398,22 +473,15 @@ async function processEnvExample(
 
     for (const line of exampleContent.split('\n')) {
         const trimmed = line.trim();
-
-        // Skip comments and empty lines
-        if (!trimmed || trimmed.startsWith('#')) {
-            continue;
-        }
+        if (!trimmed || trimmed.startsWith('#')) continue;
 
         const [key, ...valueParts] = trimmed.split('=');
-        if (!key || processedKeys.has(key)) {
-            continue;
-        }
+        if (!key || processedKeys.has(key)) continue;
 
         processedKeys.add(key);
         const defaultValue = baseDefaults[key] !== undefined ? baseDefaults[key] : valueParts.join('=');
         const currentValue = existingEnv[key];
 
-        // Process auto-generated variables
         if (AUTO_GENERATED[key]) {
             const value = processAutoGenerated(key, currentValue, AUTO_GENERATED[key]);
             finalEnvLines.push(`${key}=${value}`);
@@ -438,16 +506,10 @@ async function processEnvExample(
         finalEnvLines.push(`${key}=${currentValue !== undefined ? currentValue : defaultValue}`);
     }
 
-    // Preserve existing variables that weren't processed (e.g., optional/commented in example files)
-    // This ensures user-set values like API keys are retained even if not in example files
     for (const [key, value] of Object.entries(existingEnv)) {
-        if (!processedKeys.has(key) && !AUTO_GENERATED[key] && !PROMPTS[key]) {
-            // Only preserve if it's not a migration target (old key to be replaced)
-            if (!Object.values(MIGRATIONS).includes(key)) {
-                finalEnvLines.push(`${key}=${value}`);
-                processedKeys.add(key);
-            }
-        }
+        if (processedKeys.has(key) || AUTO_GENERATED[key] || PROMPTS[key] || isMigrationKey(key)) continue;
+        finalEnvLines.push(`${key}=${value}`);
+        processedKeys.add(key);
     }
 
     return finalEnvLines;
@@ -482,6 +544,82 @@ function addProductionVariables(
     }
 
     return envLines;
+}
+
+// ============================================================================
+// Divergence and obsolete reports
+// ============================================================================
+
+const MAX_VALUE_PREVIEW_LEN = 40;
+
+function buildWrittenEnvFromLines(lines: string[]): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const line of lines) {
+        const idx = line.indexOf('=');
+        if (idx > 0) {
+            out[line.slice(0, idx)] = line.slice(idx + 1);
+        }
+    }
+    return out;
+}
+
+interface DivergenceReport {
+    expectedToDifferCount: number;
+    mightNeedReview: Array<{ key: string; example: string; current: string }>;
+    obsoleteKeys: string[];
+}
+
+function computeDivergenceAndObsolete(
+    writtenEnv: Record<string, string>,
+    baseDefaults: Record<string, string>
+): DivergenceReport {
+    const exampleKeys = new Set(Object.keys(baseDefaults));
+    let expectedToDifferCount = 0;
+    const mightNeedReview: Array<{ key: string; example: string; current: string }> = [];
+
+    for (const key of Object.keys(writtenEnv)) {
+        if (!exampleKeys.has(key)) continue;
+        const defaultValue = baseDefaults[key] ?? '';
+        const resolvedDefault = resolveValueAgainstMap(defaultValue, writtenEnv);
+        const current = (writtenEnv[key] ?? '').trim();
+        if (current !== resolvedDefault.trim()) {
+            if (isExpectedToDiffer(key)) {
+                expectedToDifferCount++;
+            } else {
+                mightNeedReview.push({ key, example: resolvedDefault, current });
+            }
+        }
+    }
+
+    const obsoleteKeys = Object.keys(writtenEnv).filter((k) => !exampleKeys.has(k));
+    return { expectedToDifferCount, mightNeedReview, obsoleteKeys };
+}
+
+function printDivergenceAndObsoleteReports(report: DivergenceReport): void {
+    const { expectedToDifferCount, mightNeedReview, obsoleteKeys } = report;
+
+    if (expectedToDifferCount > 0 || mightNeedReview.length > 0) {
+        console.log('\n📋 Variables differing from example default');
+        if (expectedToDifferCount > 0) {
+            console.log(
+                `   Expected to differ (secrets, keys, prompted — no action needed): ${expectedToDifferCount} variable(s)`
+            );
+        }
+        if (mightNeedReview.length > 0) {
+            console.log('   Might need review (example default may have changed):');
+            mightNeedReview.forEach(({ key, example, current }) => {
+                const ex = example.length > MAX_VALUE_PREVIEW_LEN ? example.slice(0, MAX_VALUE_PREVIEW_LEN - 3) + '...' : example;
+                const cu = current.length > MAX_VALUE_PREVIEW_LEN ? current.slice(0, MAX_VALUE_PREVIEW_LEN - 3) + '...' : current;
+                console.log(`     - ${key}: example="${ex}" → current="${cu}"`);
+            });
+        }
+    }
+
+    if (obsoleteKeys.length > 0) {
+        console.log('\n📋 Variables only in target (not in example files)');
+        console.log('   Can be removed if no longer used:');
+        obsoleteKeys.forEach((k) => console.log(`     - ${k}`));
+    }
 }
 
 // ============================================================================
@@ -589,6 +727,11 @@ async function main() {
     // 9. Write final file
     const finalContent = filteredLines.join('\n');
     fs.writeFileSync(targetFile, finalContent);
+
+    // 9b. Divergence and obsolete reports
+    const writtenEnv = buildWrittenEnvFromLines(filteredLines);
+    const report = computeDivergenceAndObsolete(writtenEnv, baseDefaults);
+    printDivergenceAndObsoleteReports(report);
 
     // 10. Summary
     const processedKeys = new Set(

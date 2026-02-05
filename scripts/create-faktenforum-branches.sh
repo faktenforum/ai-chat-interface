@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Create upstream tracking branches in Faktenforum fork submodules
-#
-# Creates local 'upstream' branches that track upstream repository state.
-# These branches are used by sync-fork-submodules.sh for syncing.
-#
-# Note: Upstream branches are optional - sync script creates them automatically.
+# Creates upstream tracking branches for submodules that have upstream_url in submodules-upstream.yaml.
+# Used by update-submodules.sh. Optional — update script creates them automatically.
 
 set -euo pipefail
 
@@ -210,6 +206,11 @@ create_upstream_tracking_branch() {
         upstream_branch=$(echo "$config_json" | yq eval '.upstream_branch // "main"' -)
         upstream_url=$(echo "$config_json" | yq eval '.upstream_url' -)
         description=$(echo "$config_json" | yq eval '.description // ""' -)
+    fi
+    
+    # Skip entries without upstream_url (e.g. external dev submodules with only post_init)
+    if [ -z "$upstream_url" ]; then
+        return 0
     fi
     
     log_step "Processing ${path}"

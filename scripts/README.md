@@ -1,39 +1,30 @@
-# Submodule Management Scripts
+# Submodule Scripts
 
-Scripts for managing Faktenforum fork submodules.
+Scripts and one shared config for the dev submodule stack (local and local-dev).
+
+## Config
+
+**`submodules-upstream.yaml`** — Registry of dev submodules. Each script uses the fields it needs:
+
+| Script | Uses | Purpose |
+|--------|------|---------|
+| update-submodules.sh | all paths, `upstream_url`, `fork_url` | Bring all up to date: pull all, then forks: upstream + merge |
+| build-dev-submodules.sh | `post_init` | Build submodules required for local/local-dev stacks |
+| create-faktenforum-branches.sh | entries with `upstream_url` | Create upstream tracking branch (optional) |
 
 ## Scripts
 
-### `sync-fork-submodules.sh`
+**update-submodules.sh** — Brings all submodules up to date. (1) `git submodule update --init --remote` for all. (2) For entries with `upstream_url`: upstream remote, tracking branch; for forks: merge into main.  
+→ `npm run update:submodules` \| `update:submodules:status` \| `update:submodules:dry-run`
 
-Syncs Faktenforum fork submodules with their upstream repositories.
+**build-dev-submodules.sh** — Builds submodules that must be built for local and local-dev stacks (post_init only; no git update). Run after `update:submodules` if needed.  
+→ `npm run build:dev`
 
-**Usage:**
-```bash
-npm run sync:forks              # Sync all forks
-npm run sync:forks:status       # Show sync status
-npm run sync:forks:dry-run      # Preview changes
-```
+**create-faktenforum-branches.sh** — Creates upstream tracking branches for entries with `upstream_url`. Optional (update script does this too).  
+→ `npm run create:forks`
 
-**Features:**
-- Automatically configures upstream remotes
-- Creates/updates upstream tracking branches
-- Merges upstream changes into main branches
-- Interactive conflict resolution
+**Convenience:** `npm run prepare:dev` = `update:submodules` + `build:dev`. `sync:forks` / `sync:forks:status` / `sync:forks:dry-run` alias to the update:submodules variants.
 
-### `create-faktenforum-branches.sh`
+## Docs
 
-Creates upstream tracking branches (optional - sync script does this automatically).
-
-**Usage:**
-```bash
-npm run create:forks
-```
-
-## Configuration
-
-Upstream repositories are configured in `submodules-upstream.yaml`.
-
-## Documentation
-
-See [Submodule Sync Guide](../docs/SUBMODULE_SYNC.md) for detailed documentation.
+- [Submodule Sync Guide](../docs/SUBMODULE_SYNC.md) — Update/sync workflow (status, merge, conflicts).

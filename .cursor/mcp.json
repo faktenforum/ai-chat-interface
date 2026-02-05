@@ -10,6 +10,17 @@
       "env": {
         "MDB_MCP_CONNECTION_STRING": "mongodb://localhost:27017/LibreChat"
       }
-    }
+    },
+    "calculator": { "url": "http://localhost:3012/mcp" },
+    "image-gen": { "url": "http://localhost:3013/mcp" },
+    "firecrawl": { "url": "http://localhost:3003/mcp" },
+    "openstreetmap": { "url": "http://localhost:3004/mcp" },
+    "weather": { "url": "http://localhost:3005/mcp" },
+    "playwright": { "url": "http://localhost:3006/mcp" },
+    "db-timetable": { "url": "http://localhost:3007/mcp" },
+    "stackoverflow": { "url": "http://localhost:3008/mcp" },
+    "npm-search": { "url": "http://localhost:3009/mcp" },
+    "ytptube": { "url": "http://localhost:3010/mcp" },
+    "youtube-transcript": { "url": "http://localhost:3011/mcp" }
   }
 }

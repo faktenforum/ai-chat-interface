@@ -2,6 +2,19 @@
 
 This documentation explains all configured features in `docker-compose.librechat.yml` and additional available options.
 
+## Where configuration lives
+
+Project-defined LibreChat behaviour comes from these files under **`packages/librechat-init/config/`**:
+
+| File | Contents |
+|------|----------|
+| **`librechat.yaml`** | Base LibreChat config: endpoints (OpenRouter, Scaleway), model specs, interface, memory, MCP servers, web search, OCR, etc. |
+| **`librechat.local.yaml`**, **`librechat.dev.yaml`**, **`librechat.prod.yaml`** | Environment overrides (merged at init by `LIBRECHAT_ENV`). Only differing keys; e.g. prod disables `execute_code`, sets `modelSpecs.addedEndpoints: [agents]`, custom `fetch: false`. |
+| **`agents.yaml`** | Shared agents (e.g. Recherche-Assistent, Bildgenerierungs-Assistent, Reise-Assistent) and their providers, models, tools, MCPs. |
+| **`roles.yaml`** | Roles and permissions (access to agents and features). |
+
+Init merges the override for the current `LIBRECHAT_ENV` (`local` | `dev` | `prod`, default `prod`) onto the base, then writes the result to the config volume. Files are included in the librechat-init image; for local dev, mounting `config/` and setting `LIBRECHAT_ENV=local` allows editing without rebuilding (see [Local development: config mount](#local-development-config-mount-no-image-rebuild)).
+
 ## Table of Contents
 
 1. [Cache](#cache)
@@ -129,6 +142,28 @@ Persistent memory system that stores relevant user information and includes it i
 
 ## Endpoints & Model Specs
 
+### Local development: config mount (no image rebuild)
+
+In `docker-compose.local-dev.yml` and `docker-compose.local.yml`, `packages/librechat-init/config` is mounted at `/app/config-source` for the `librechat-init` service. The init script reads from that path when present (instead of the baked-in `/app/data`). After editing `librechat.yaml`, `roles.yaml`, or `agents.yaml`, re-run init and restart the API; no image rebuild is required.
+
+```bash
+docker compose -f docker-compose.local-dev.yml run --rm librechat-init
+docker compose -f docker-compose.local-dev.yml restart api
+```
+
+### Which providers appear in the model selector
+
+Visibility is controlled by **environment override files** via `modelSpecs.addedEndpoints` (and `LIBRECHAT_ENV`):
+
+| Environment | Override file | Result |
+|-------------|---------------|--------|
+| **Local** | `librechat.local.yaml` (no `addedEndpoints`) | **All** endpoints: Agents, OpenRouter, Scaleway, Google, etc. |
+| **Dev** (Portainer) | `librechat.dev.yaml` | Only **My Agents** (`addedEndpoints: [agents]`). |
+| **Prod** (Portainer) | `librechat.prod.yaml` | Only **My Agents**; custom `fetch: false`; `execute_code` disabled. |
+
+
+Compose sets `LIBRECHAT_ENV` per stack (local: `local`, dev: `dev`, prod: `prod`). To change behaviour, edit the corresponding override file under `packages/librechat-init/config/` (rebuild init image for prod/dev, or use the config mount for local).
+
 ### Endpoints Configuration
 
 **Lines 77-101:** OpenRouter endpoint
@@ -140,6 +175,29 @@ Persistent memory system that stores relevant user information and includes it i
 - `models.fetch: true` - Automatically fetches available models from OpenRouter
 - `titleConvo: true` - Auto-generates conversation titles
 - `summarize: true` - Enables summarization for long conversations
+
+### Scaleway: parallel tool calls
+
+**Config:** Scaleway endpoint uses `addParams: { parallel_tool_calls: false }`.
+
+Scaleway’s docs state: **“Meta models do not support parallel tool calls.”**  
+If the client sends multiple tool calls in one request, the API returns `400 This model only supports single tool-calls at once!`.
+
+**Models affected (Meta/Llama on Scaleway):**
+- `llama-3.1-8b-instruct`, `llama-3.1-70b-instruct`
+- `llama-3.3-70b-instruct`
+
+Other Scaleway models (Mistral, Qwen, etc.) may support parallel tool calls; the setting is applied endpoint-wide, so all Scaleway models use single-tool-calls. Sequential execution still works.
+
+**Sources:** [Scaleway – How to use function calling](https://www.scaleway.com/en/docs/generative-apis/how-to/use-function-calling) (“Meta models do not support parallel tool calls”); [Managed Inference – function calling support](https://www.scaleway.com/en/docs/managed-inference/reference-content/function-calling-support/).
+
+### Scaleway: unsupported parameters
+
+**Config:** Scaleway endpoint uses `dropParams` to strip parameters the Scaleway Chat Completions API does not support.
+
+Scaleway's [OpenAI compatibility docs](https://www.scaleway.com/en/docs/managed-inference/reference-content/openai-compatibility/) list the following as **unsupported**: `frequency_penalty`, `n`, `top_logprobs`, `logit_bias`, `user`. If sent, they can cause errors or undefined behaviour. LibreChat strips them for the Scaleway endpoint via `dropParams` (camelCase keys: `frequencyPenalty`, `n`, `topLogprobs`, `logitBias`, `user`).
+
+**Supported by Scaleway (no change needed):** `messages`, `model`, `max_tokens`, `temperature`, `top_p`, `presence_penalty`, `response_format`, `logprobs`, `stop`, `seed`, `stream`, `tools`, `tool_choice`.
 
 ### Model Specs
 
@@ -367,11 +425,11 @@ Rating system for AI responses with thumbs up/down and detailed tags.
 - [ ] Cache works (Redis or In-Memory)
 - [x] Custom welcome shows username
 - [x] File search works with uploaded files
-- [ ] Privacy policy link works
+- [x] Privacy policy link works
 - [x] Terms of service modal appears for new users
 
 ### Interface Features
-- [ ] Endpoints menu visible
+- [x] Endpoints menu visible
 - [x] Model select works
 - [ ] Parameters panel opens
 - [x] Side panel works
@@ -379,9 +437,9 @@ Rating system for AI responses with thumbs up/down and detailed tags.
 - [ ] Prompts can be created
 - [x] Bookmarks work
 - [x] Multi-convo works
-- [ ] Agents can be created
+- [x] Agents can be created
 - [ ] People picker works (in sharing dialogs)
-- [ ] Marketplace accessible
+- [x] Marketplace accessible
 - [ ] File citations displayed
 - [x] Search works
 
@@ -400,14 +458,14 @@ Rating system for AI responses with thumbs up/down and detailed tags.
 - [ ] Group icons displayed correctly
 
 ### Web Search
-- [ ] Web search can be enabled
-- [ ] Search results included
-- [ ] Source citations displayed
-- [ ] SearXNG/Firecrawl/Jina work
+- [x] Web search can be enabled
+- [x] Search results included
+- [x] Source citations displayed
+- [x] SearXNG/Firecrawl/Jina work
 
 ### Registration
-- [ ] Registration with allowed domain works
-- [ ] Registration with disallowed domain rejected
+- [x] Registration with allowed domain works
+- [x] Registration with disallowed domain rejected
 - [ ] Social login with allowed domain works
 
 ---

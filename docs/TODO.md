@@ -25,6 +25,11 @@
 
 ## Features
 
+### LibreChat
+
+- [ ] Enable `execute_code` (Code Interpreter) on production once the backing service is available again
+  - The main LibreChat developer had disabled it; it is an external service used for LibreChat funding. Currently disabled in prod via `librechat.prod.yaml` (capabilities override); local/dev keep it enabled.
+
 ### Custom Roles Support
 - [ ] Add API endpoint and frontend support for custom roles
   - Custom roles created in MongoDB not visible in AdminSettingsDialog (only USER/ADMIN hardcoded)
@@ -62,6 +67,11 @@
   - Mistral Console: https://console.mistral.ai/
   - LibreChat Docs: https://www.librechat.ai/docs/features/ocr
 
+### YTPTube / Video transcripts (production)
+
+- [ ] Improve server-side video access (geo/bot blocking)
+  - Status: Works locally; Video-Transkripte agent is in code with `public: false`. On Hetzner, optional Webshare proxy or FlareSolverr; see [YTPTUBE_FUTURE_WORK.md](wip/YTPTUBE_FUTURE_WORK.md) for FlareSolverr and office Pi / reverse-SSH-proxy ideas for later.
+
 ### MCP Tools
 
 - [x] Fix MCP image generation tools sending artifacts to non-vision models
@@ -75,13 +85,16 @@
 - [ ] Re-enable Firecrawl MCP server after connection stability is fixed
   - Status: Currently disabled due to unstable connection to MCP server
   - The tool is very helpful for reading special URLs, but connection issues prevent reliable usage
-  - Waiting for fix before re-enabling in `librechat.yaml` and `agents.json`
+  - Waiting for fix before re-enabling in `librechat.yaml` and `agents.yaml`
   - Related to SSE stream disconnection issue above
 - [ ] Update OpenStreetMap MCP server to use official version after PR merge
   - Status: Currently using fork `faktenforum/open-streetmap-mcp` with merged `bump-fastmcp` branch
   - Fork includes HTTP transport support and Dockerfile from PR [#10](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/10)
   - Our improvements submitted as PR [#11](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/11): Docker port configuration and FastMCP 0.2.0+ compatibility
   - Once PRs #10 and #11 are merged upstream, consider switching to official version
+- [ ] Find alternative to passing cookies.txt via LLM for MCP (e.g. YTPTube/YouTube)
+  - Current approach of sending cookies.txt through the LLM (as prompt/content) is inefficient and error-prone: the file is already very long for YouTube alone, blows up context and can break or truncate.
+  - Goal: support file upload and pass file content directly to the tool/LLM (e.g. as attachment or tool resource) instead of in the user prompt.
 - [x] Fix MCP tools returning malformed responses mixing text and JSON
   - Issue: [LibreChat #11494](https://github.com/danny-avila/LibreChat/issues/11494) - MCP image responses with mixed text content are not displayed
   - Fixed by: [LibreChat PR #11499](https://github.com/danny-avila/LibreChat/pull/11499) (automatic detection of OpenAI-compatible endpoints for MCP formatting)

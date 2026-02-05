@@ -4,135 +4,88 @@ import { OpenRouterClient } from '../services/openrouter.ts';
 import { InvalidInputError, ImageGenError } from '../utils/errors.ts';
 import { logger } from '../utils/logger.ts';
 import { parseImageData } from '../utils/data-url.ts';
-import { KNOWN_MODELS } from '../constants/models.ts';
-import { formatKnownModel, formatApiModel, formatModelDetails } from '../utils/model-formatting.ts';
+import { KNOWN_MODELS, EXAMPLE_MODEL_ID } from '../constants/models.ts';
+import {
+  formatKnownModel,
+  formatApiModel,
+  formatModelDetails,
+  buildListModelsUsageText,
+} from '../utils/model-formatting.ts';
 
 export type { KnownModel } from '../constants/models.ts';
+
+/** Merged view of a model (known metadata + optional API fields). */
+interface MergedModel {
+  id: string;
+  name: string;
+  description?: string;
+  pricing?: { prompt?: string; completion?: string };
+  context_length?: number;
+  strengths?: string[];
+  weaknesses?: string[];
+  recommendedUseCases?: string[];
+}
+
+// --- generate_image ----------------------------------------------------------
 
 export async function generateImage(
   input: unknown,
   openRouterClient: OpenRouterClient,
 ): Promise<{ content: Array<TextContent | ImageContent> }> {
   try {
-    const { prompt, model, aspect_ratio, image_size } = GenerateImageSchema.parse(input);
+    const parsed = GenerateImageSchema.parse(input);
+    logger.info(
+      { model: parsed.model, hasAspectRatio: !!parsed.aspect_ratio, hasImageSize: !!parsed.image_size },
+      'Generating image',
+    );
 
-    logger.info({ model, hasAspectRatio: !!aspect_ratio, hasImageSize: !!image_size }, 'Generating image');
-
-    const imageUrl = await openRouterClient.generateImage({
-      prompt,
-      model,
-      aspect_ratio,
-      image_size,
-    });
-
-    try {
-      const { data, mimeType } = parseImageData(imageUrl);
-      
-      if (!data || data.length === 0) {
-        throw new Error('Empty base64 data extracted from image URL');
-      }
-
-      const imageContent: ImageContent = {
-        type: 'image',
-        data,
-        mimeType,
-      };
-
-      logger.debug({ mimeType, hasData: !!data }, 'Returning image content');
-
-      return {
-        content: [
-          { type: 'text', text: 'Image generated successfully.' },
-          imageContent,
-        ],
-      };
-    } catch (parseError) {
-      logger.error(
-        {
-          error: parseError instanceof Error ? parseError.message : String(parseError),
-          imageUrlLength: imageUrl.length,
-          imageUrlPrefix: imageUrl.substring(0, 50),
-        },
-        'Error parsing image data URL',
-      );
-      throw new ImageGenError(
-        `Failed to parse image data: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
-        'IMAGE_DATA_PARSE_ERROR',
-      );
-    }
+    const imageUrl = await openRouterClient.generateImage(parsed);
+    return imageUrlToContent(imageUrl);
   } catch (error) {
     if (error instanceof InvalidInputError) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-      };
+      return { content: [{ type: 'text', text: `Error: ${error.message}` }] };
     }
     throw error;
   }
 }
 
-/**
- * Lists all available image generation models, combining static metadata from known models
- * with dynamic metadata from the OpenRouter API.
- */
+function imageUrlToContent(
+  imageUrl: string,
+): { content: Array<TextContent | ImageContent> } {
+  try {
+    const { data, mimeType } = parseImageData(imageUrl);
+    if (!data?.length) {
+      throw new Error('Empty base64 data extracted from image URL');
+    }
+    return {
+      content: [
+        { type: 'text', text: 'Image generated successfully.' },
+        { type: 'image', data, mimeType },
+      ],
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(
+      { error: msg, imageUrlLength: imageUrl.length, imageUrlPrefix: imageUrl.slice(0, 50) },
+      'Error parsing image data URL',
+    );
+    throw new ImageGenError(
+      `Failed to parse image data: ${msg}`,
+      'IMAGE_DATA_PARSE_ERROR',
+    );
+  }
+}
+
+// --- list_models --------------------------------------------------------------
+
 export async function listModels(
   openRouterClient: OpenRouterClient,
 ): Promise<{ content: TextContent[] }> {
   try {
     const apiModels = await openRouterClient.listImageModels();
-    // Create a Set of API model IDs for fast lookup
-    const apiModelIds = new Set(apiModels.map((model) => model.id));
+    const merged = mergeModelsWithKnown(apiModels);
 
-    const modelMap = new Map<string, { 
-      id: string; 
-      name: string; 
-      pricing?: { prompt?: string; completion?: string }; 
-      context_length?: number; 
-      description?: string;
-      // Additional metadata from known models
-      strengths?: string[];
-      weaknesses?: string[];
-      recommendedUseCases?: string[];
-    }>();
-
-    // Start with all known models (always included, even if not in API response)
-    Object.values(KNOWN_MODELS).forEach((knownModel) => {
-      modelMap.set(knownModel.id, {
-        id: knownModel.id,
-        name: knownModel.name,
-        description: knownModel.description,
-        pricing: knownModel.pricing,
-        strengths: [...knownModel.strengths],
-        weaknesses: [...knownModel.weaknesses],
-        recommendedUseCases: [...knownModel.recommended_for],
-      });
-    });
-
-    // Then merge in API models (adds new models and updates existing ones with API data)
-    apiModels.forEach((model) => {
-      const existing = modelMap.get(model.id);
-      if (existing) {
-        // Update existing known model with API data (prefer API data when available)
-        modelMap.set(model.id, {
-          ...existing,
-          pricing: model.pricing || existing.pricing,
-          context_length: model.context_length,
-          description: model.description || existing.description,
-        });
-      } else {
-        // Add new API-only model
-        modelMap.set(model.id, {
-          id: model.id,
-          name: model.name || model.id,
-          pricing: model.pricing,
-          context_length: model.context_length,
-          description: model.description,
-        });
-      }
-    });
-
-    const combinedModels = Array.from(modelMap.values());
-
-    if (combinedModels.length === 0) {
+    if (merged.length === 0) {
       return {
         content: [
           {
@@ -143,46 +96,25 @@ export async function listModels(
       };
     }
 
-    // Format models: use detailed format for known models, simple format for others
-    const formatted = combinedModels.map((model) => {
-      const knownModel = KNOWN_MODELS[model.id as keyof typeof KNOWN_MODELS];
-      if (knownModel) {
-        // Use detailed formatting for known models
-        return formatKnownModel(knownModel);
-      } else {
-        // Use simple formatting for API-only models
-        return formatApiModel(model);
-      }
-    }).join('\n\n');
-
-    const knownCount = combinedModels.filter(m => KNOWN_MODELS[m.id as keyof typeof KNOWN_MODELS]).length;
-    const totalCount = combinedModels.length;
-
-    // Structure the response using proper Text Content format
-    // Split into logical sections for better readability
-    const headerText = `# Available Image Generation Models\n\nFound ${totalCount} model(s)${knownCount > 0 ? ` (${knownCount} with detailed metadata)` : ''}:`;
-    const modelsText = formatted;
-    const usageText = `## Usage\n\nTo generate an image, use the \`generate_image\` tool with the **exact Model ID** shown above. Example:\n\`\`\`json\n{\n  "model": "black-forest-labs/flux.2-pro",\n  "prompt": "A beautiful sunset over mountains"\n}\n\`\`\`\n\n**Important:** Use the Model ID exactly as shown (case-sensitive). Models with detailed metadata (strengths, weaknesses, use cases) are well-tested and recommended. Other models are available from OpenRouter but may have limited testing.\n\nUse \`check_model\` to verify a specific model ID before generating images.`;
-
-    const content: TextContent[] = [
-      {
-        type: 'text',
-        text: headerText,
-      },
-      {
-        type: 'text',
-        text: modelsText,
-      },
-      {
-        type: 'text',
-        text: usageText,
-      },
-    ];
-
-    logger.debug({ contentLength: content.length }, 'Returning list_models result with multiple text content blocks');
+    const knownCount = merged.filter((m) =>
+      Object.prototype.hasOwnProperty.call(KNOWN_MODELS, m.id),
+    ).length;
+    const totalCount = merged.length;
+    const header = `# Available Image Generation Models\n\nFound ${totalCount} model(s)${knownCount > 0 ? ` (${knownCount} with detailed metadata)` : ''}:`;
+    const modelsText = merged
+      .map((m) => {
+        const known = KNOWN_MODELS[m.id as keyof typeof KNOWN_MODELS];
+        return known ? formatKnownModel(known) : formatApiModel(m);
+      })
+      .join('\n\n');
+    const usage = buildListModelsUsageText(EXAMPLE_MODEL_ID);
 
     return {
-      content,
+      content: [
+        { type: 'text', text: header },
+        { type: 'text', text: modelsText },
+        { type: 'text', text: usage },
+      ],
     };
   } catch (error) {
     logger.error(
@@ -192,6 +124,51 @@ export async function listModels(
     throw error;
   }
 }
+
+function mergeModelsWithKnown(
+  apiModels: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    pricing?: { prompt?: string; completion?: string };
+    context_length?: number;
+  }>,
+): MergedModel[] {
+  const map = new Map<string, MergedModel>();
+
+  for (const known of Object.values(KNOWN_MODELS)) {
+    map.set(known.id, {
+      id: known.id,
+      name: known.name,
+      description: known.description,
+      pricing: known.pricing,
+      strengths: [...known.strengths],
+      weaknesses: [...known.weaknesses],
+      recommendedUseCases: [...known.recommended_for],
+    });
+  }
+
+  for (const api of apiModels) {
+    const existing = map.get(api.id);
+    if (existing) {
+      existing.pricing = api.pricing ?? existing.pricing;
+      existing.context_length = api.context_length;
+      existing.description = api.description ?? existing.description;
+    } else {
+      map.set(api.id, {
+        id: api.id,
+        name: api.name || api.id,
+        description: api.description,
+        pricing: api.pricing,
+        context_length: api.context_length,
+      });
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+// --- check_model --------------------------------------------------------------
 
 export async function checkModel(
   input: unknown,
@@ -225,8 +202,8 @@ export async function checkModel(
       };
     }
 
-    const knownModel = KNOWN_MODELS[model as keyof typeof KNOWN_MODELS];
-    const details = formatModelDetails(result.details!, knownModel);
+    const known = KNOWN_MODELS[model as keyof typeof KNOWN_MODELS];
+    const details = formatModelDetails(result.details!, known);
 
     return {
       content: [
@@ -238,9 +215,7 @@ export async function checkModel(
     };
   } catch (error) {
     if (error instanceof InvalidInputError) {
-      return {
-        content: [{ type: 'text', text: `Error: ${error.message}` }],
-      };
+      return { content: [{ type: 'text', text: `Error: ${error.message}` }] };
     }
     throw error;
   }

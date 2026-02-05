@@ -1,3 +1,7 @@
+/**
+ * Parse a data URL or raw base64 string into { data, mimeType } for MCP image content.
+ * Callers (e.g. OpenRouter client) typically pass data URLs; this supports base64 and http(s) placeholders.
+ */
 export function parseImageData(imageUrl: string): { data: string; mimeType: string } {
   if (imageUrl.startsWith('data:')) {
     const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/);

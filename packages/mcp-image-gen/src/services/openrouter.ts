@@ -2,16 +2,20 @@ import axios, { type AxiosInstance } from 'axios';
 import { logger } from '../utils/logger.ts';
 import { OpenRouterAPIError } from '../utils/errors.ts';
 import type { GenerateImageInput } from '../schemas/image-gen.schema.ts';
-import { KNOWN_MODELS } from '../constants/models.ts';
+import {
+  KNOWN_MODELS,
+  MODEL_ID_PREFIXES,
+  EXAMPLE_MODEL_ID,
+  type ModalityRequest,
+} from '../constants/models.ts';
+
+// --- OpenRouter API types ----------------------------------------------------
 
 export interface OpenRouterModel {
   id: string;
   name: string;
   description?: string;
-  pricing?: {
-    prompt?: string;
-    completion?: string;
-  };
+  pricing?: { prompt?: string; completion?: string };
   context_length?: number;
   architecture?: {
     modality?: string;
@@ -21,261 +25,188 @@ export interface OpenRouterModel {
   };
 }
 
-export interface OpenRouterModelsResponse {
+interface OpenRouterModelsResponse {
   data: OpenRouterModel[];
 }
 
-export interface OpenRouterImageResponse {
+interface OpenRouterImageResponse {
   choices: Array<{
     message: {
-      images?: Array<{
-        type: string;
-        image_url: {
-          url: string;
-        };
-      }>;
-      content?: string | Array<{
+      images?: Array<{ type: string; image_url: { url: string } }>;
+      content?: Array<{
         type: string;
         text?: string;
-        image_url?: {
-          url: string;
-        };
+        image_url?: { url: string };
       }>;
     };
   }>;
 }
 
-export class OpenRouterClient {
-  private client: AxiosInstance;
-  private baseUrl: string;
-  private apiKey: string;
+/** Request body for POST /chat/completions (image generation). */
+interface ChatCompletionRequest {
+  model: string;
+  messages: Array<{ role: string; content: string }>;
+  modalities?: string[];
+  response_modalities?: string[];
+  image_config?: { aspect_ratio?: string; image_size?: string };
+}
 
-  constructor(apiKey: string, baseUrl: string = 'https://openrouter.ai/api/v1') {
-    this.apiKey = apiKey;
-    this.baseUrl = baseUrl.replace(/\/$/, '');
+// --- Helpers ------------------------------------------------------------------
 
-    this.client = axios.create({
-      baseURL: this.baseUrl,
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://librechat.ai',
-      },
-      timeout: 120000, // 120 seconds for image generation
-    });
-  }
+const NO_ENDPOINTS_PATTERN = /no endpoints found.*output modalities|modalities.*image/i;
 
-  /**
-   * Generate an image using OpenRouter API
-   */
-  async generateImage(input: GenerateImageInput): Promise<string> {
-    const { prompt, model, aspect_ratio, image_size } = input;
+function extractImageFromResponse(response: {
+  data: OpenRouterImageResponse;
+}): string {
+  const message = response.data.choices?.[0]?.message;
+  let images = message?.images ?? [];
 
-    // Check if model supports aspect ratio
-    const supportsAspectRatio = this.supportsAspectRatio(model);
-    const supportsImageSize = this.supportsImageSize(model);
-
-    if (aspect_ratio && !supportsAspectRatio) {
-      logger.warn(
-        { model, aspect_ratio },
-        'Aspect ratio is typically only supported for Gemini models. Ignoring aspect_ratio.',
-      );
-    }
-
-    if (image_size && !supportsImageSize) {
-      logger.warn(
-        { model, image_size },
-        'Image size is typically only supported for Gemini models. Ignoring image_size.',
-      );
-    }
-
-    // For Gemini models, use response_modalities to explicitly request image output
-    const isGeminiModel = model.toLowerCase().includes('gemini');
-    
-    const requestBody: {
-      model: string;
-      messages: Array<{ role: string; content: string }>;
-      modalities?: string[];
-      response_modalities?: string[];
-      image_config?: { aspect_ratio?: string; image_size?: string };
-    } = {
-      model,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-    };
-
-    // Set modalities based on model type
-    if (isGeminiModel) {
-      // For Gemini, explicitly request image in response
-      requestBody.response_modalities = ['image'];
-    } else {
-      // For other models, use modalities to indicate we want image output
-      requestBody.modalities = ['image', 'text'];
-    }
-
-    if (supportsAspectRatio && (aspect_ratio || image_size)) {
-      requestBody.image_config = {};
-      if (aspect_ratio) {
-        requestBody.image_config.aspect_ratio = aspect_ratio;
-      }
-      if (image_size) {
-        requestBody.image_config.image_size = image_size;
-      }
-    }
-
-    logger.debug({ model, hasAspectRatio: !!aspect_ratio, hasImageSize: !!image_size }, 'Generating image');
-
-    try {
-      const response = await this.client.post<OpenRouterImageResponse>('/chat/completions', requestBody);
-      const message = response.data.choices?.[0]?.message;
-      
-      // Log response structure for debugging (truncate large responses)
-      const responseStr = JSON.stringify(response.data);
-      logger.debug({
-        fullResponse: responseStr.length > 2000 ? responseStr.substring(0, 2000) + '... (truncated)' : responseStr,
-        hasMessage: !!message,
-        messageKeys: message ? Object.keys(message) : [],
-        messageContentType: typeof message?.content,
-        messageContentIsArray: Array.isArray(message?.content),
-      }, 'OpenRouter API response received');
-
-      // Try to extract image from images array first
-      let images = message?.images || [];
-      
-      // If no images array, try to extract from content array (alternative response format)
-      if (images.length === 0 && Array.isArray(message?.content)) {
-        logger.debug('No images array found, checking content array');
-        const imageContent = message.content.find(
-          (item) => item.type === 'image_url' && item.image_url?.url
-        );
-        if (imageContent?.image_url?.url) {
-          images = [{
-            type: 'image_url',
-            image_url: {
-              url: imageContent.image_url.url,
-            },
-          }];
-          logger.debug('Found image in content array');
-        }
-      }
-
-      logger.debug({
-        imagesCount: images.length,
-        hasImageUrl: images[0]?.image_url ? true : false,
-        messageContent: typeof message?.content === 'string' ? message.content.substring(0, 200) : 'not a string',
-      }, 'Image extraction attempt');
-
-      if (!images || images.length === 0 || !images[0]?.image_url) {
-        // Log full response for debugging
-        const fullResponseStr = JSON.stringify(response.data, null, 2);
-        logger.error({
-          responseData: fullResponseStr.substring(0, 2000),
-          message: message ? JSON.stringify(message, null, 2).substring(0, 2000) : 'no message',
-          messageType: typeof message?.content,
-          isContentArray: Array.isArray(message?.content),
-        }, 'No image data in OpenRouter response');
-        throw new OpenRouterAPIError(
-          'No image data returned from OpenRouter API. The model may not support image generation or the request may have failed. Check the logs for the full response structure.',
-        );
-      }
-
-      // Extract base64 from data URL (format: "data:image/png;base64,...")
-      const imageUrl = images[0].image_url.url;
-
-      if (!imageUrl || typeof imageUrl !== 'string') {
-        logger.error({ imageUrl: typeof imageUrl, imageUrlValue: imageUrl }, 'Invalid image URL type');
-        throw new OpenRouterAPIError('Invalid image URL format returned from OpenRouter API');
-      }
-
-      // Ensure imageUrl is in the correct format
-      if (!imageUrl.startsWith('data:')) {
-        logger.debug({ urlLength: imageUrl.length }, 'Adding data URL prefix to base64');
-        return `data:image/png;base64,${imageUrl}`;
-      }
-
-      logger.debug({ urlPrefix: imageUrl.substring(0, 30) + '...', urlLength: imageUrl.length }, 'Returning data URL');
-      return imageUrl;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorDetails = error.response?.data || error.message;
-        logger.error({ error: errorDetails, model }, 'Error generating image');
-        throw new OpenRouterAPIError(
-          `OpenRouter API error: ${typeof errorDetails === 'string' ? errorDetails : JSON.stringify(errorDetails)}`,
-          error.response?.status,
-        );
-      }
-      throw error;
+  if (images.length === 0 && Array.isArray(message?.content)) {
+    const item = message.content.find(
+      (c) => c.type === 'image_url' && c.image_url?.url,
+    );
+    if (item?.image_url?.url) {
+      images = [{ type: 'image_url', image_url: { url: item.image_url.url } }];
     }
   }
 
-  /**
-   * List all available models from OpenRouter API
-   */
-  async listModels(): Promise<OpenRouterModel[]> {
-    try {
-      const response = await this.client.get<OpenRouterModelsResponse>('/models');
-      return response.data.data || [];
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorDetails = error.response?.data || error.message;
-        logger.error({ error: errorDetails }, 'Error listing models');
-        throw new OpenRouterAPIError(
-          `OpenRouter API error: ${typeof errorDetails === 'string' ? errorDetails : JSON.stringify(errorDetails)}`,
-          error.response?.status,
-        );
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Get image generation models (filtered by output_modalities or known models)
-   */
-  async listImageModels(): Promise<OpenRouterModel[]> {
-    const allModels = await this.listModels();
-    const knownModelIds = new Set(Object.keys(KNOWN_MODELS));
-    
-    return allModels.filter(
-      (model) => 
-        model.architecture?.output_modalities?.includes('image') ||
-        knownModelIds.has(model.id),
+  const url = images[0]?.image_url?.url;
+  if (!url) {
+    throw new OpenRouterAPIError(
+      'No image data in OpenRouter response. The model may not support image generation or the request failed.',
     );
   }
 
-  /**
-   * Normalize model ID for matching (handles case-insensitive and namespace variations)
-   */
-  private normalizeModelId(modelId: string): string[] {
-    const normalized = modelId.toLowerCase().trim();
-    const variations: string[] = [modelId, normalized];
-    
-    // If ID doesn't have a namespace, try adding common namespaces
-    if (!normalized.includes('/')) {
-      // Try common prefixes for known models
-      if (normalized.includes('flux')) {
-        variations.push(`black-forest-labs/${normalized}`);
-        variations.push(`black-forest-labs/${modelId}`);
-      }
-      if (normalized.includes('gpt') || normalized.includes('image')) {
-        variations.push(`openai/${normalized}`);
-        variations.push(`openai/${modelId}`);
-      }
-      if (normalized.includes('gemini') || normalized.includes('nano')) {
-        variations.push(`google/${normalized}`);
-        variations.push(`google/${modelId}`);
-      }
-    }
-    
-    return variations;
+  return url.startsWith('data:') ? url : `data:image/png;base64,${url}`;
+}
+
+function noEndpointMessage(modelId: string): string {
+  return `Model "${modelId}" is not available for image generation on OpenRouter (no endpoint for image output). Use list_models or check_model to pick a supported model (e.g. ${EXAMPLE_MODEL_ID}).`;
+}
+
+function parseAxiosError(error: unknown): {
+  message: string;
+  status?: number;
+  isNoEndpoints404: boolean;
+} {
+  if (!axios.isAxiosError(error)) {
+    return {
+      message: error instanceof Error ? error.message : String(error),
+      isNoEndpoints404: false,
+    };
+  }
+  const data = error.response?.data ?? error.message;
+  const message =
+    typeof data === 'object' && data !== null && 'error' in data
+      ? String((data as { error?: { message?: string } }).error?.message ?? '')
+      : String(data);
+  const status = error.response?.status;
+  const isNoEndpoints404 =
+    status === 404 && NO_ENDPOINTS_PATTERN.test(message);
+  return { message, status, isNoEndpoints404 };
+}
+
+// --- Client -------------------------------------------------------------------
+
+export class OpenRouterClient {
+  private readonly client: AxiosInstance;
+  private readonly baseUrl: string;
+
+  constructor(
+    apiKey: string,
+    baseUrl: string = 'https://openrouter.ai/api/v1',
+  ) {
+    this.baseUrl = baseUrl.replace(/\/$/, '');
+    this.client = axios.create({
+      baseURL: this.baseUrl,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://librechat.ai',
+      },
+      timeout: 120_000,
+    });
   }
 
-  /**
-   * Check if a specific model exists and supports image generation
-   */
+  async generateImage(input: GenerateImageInput): Promise<string> {
+    const { prompt, model, aspect_ratio, image_size } = input;
+
+    this.warnUnsupportedOptions(model, aspect_ratio, image_size);
+
+    const requestBody = this.buildRequestBody({
+      model,
+      prompt,
+      aspect_ratio,
+      image_size,
+    });
+
+    logger.debug(
+      {
+        model,
+        modalities: requestBody.modalities ?? requestBody.response_modalities,
+      },
+      'Generating image',
+    );
+
+    try {
+      const response = await this.client.post<OpenRouterImageResponse>(
+        '/chat/completions',
+        requestBody,
+      );
+      return extractImageFromResponse(response);
+    } catch (error) {
+      const { message, status, isNoEndpoints404 } = parseAxiosError(error);
+
+      if (isNoEndpoints404 && requestBody.modalities?.includes('text')) {
+        logger.info({ model }, 'Retrying with modalities ["image"] only');
+        requestBody.modalities = ['image'];
+        try {
+          const retry = await this.client.post<OpenRouterImageResponse>(
+            '/chat/completions',
+            requestBody,
+          );
+          return extractImageFromResponse(retry);
+        } catch (retryErr) {
+          logger.error({ error: parseAxiosError(retryErr), model }, 'Retry failed');
+          throw new OpenRouterAPIError(noEndpointMessage(model), status);
+        }
+      }
+
+      logger.error({ error: message, model }, 'Error generating image');
+      if (isNoEndpoints404) {
+        throw new OpenRouterAPIError(noEndpointMessage(model), status);
+      }
+      throw new OpenRouterAPIError(
+        `OpenRouter API error: ${typeof message === 'string' ? message : JSON.stringify(message)}`,
+        status,
+      );
+    }
+  }
+
+  async listModels(): Promise<OpenRouterModel[]> {
+    try {
+      const res = await this.client.get<OpenRouterModelsResponse>('/models');
+      return res.data.data ?? [];
+    } catch (error) {
+      const { message, status } = parseAxiosError(error);
+      logger.error({ error: message }, 'Error listing models');
+      throw new OpenRouterAPIError(
+        `OpenRouter API error: ${message}`,
+        status,
+      );
+    }
+  }
+
+  async listImageModels(): Promise<OpenRouterModel[]> {
+    const all = await this.listModels();
+    const knownIds = new Set(Object.keys(KNOWN_MODELS));
+    return all.filter(
+      (m) =>
+        m.architecture?.output_modalities?.includes('image') ||
+        knownIds.has(m.id),
+    );
+  }
+
   async checkModel(modelId: string): Promise<{
     exists: boolean;
     supportsImageGeneration: boolean;
@@ -283,47 +214,12 @@ export class OpenRouterClient {
   }> {
     try {
       const models = await this.listModels();
-      const normalizedVariations = this.normalizeModelId(modelId);
-      
-      // Try exact match first
-      let model = models.find((m) => m.id === modelId);
-      
-      // If not found, try case-insensitive match
-      if (!model) {
-        const normalizedModelId = modelId.toLowerCase();
-        model = models.find((m) => m.id.toLowerCase() === normalizedModelId);
-      }
-      
-      // If still not found, try all variations
-      if (!model) {
-        for (const variation of normalizedVariations) {
-          model = models.find((m) => 
-            m.id === variation || m.id.toLowerCase() === variation.toLowerCase()
-          );
-          if (model) break;
-        }
-      }
-      
-      // Check if model is in KNOWN_MODELS (case-insensitive and with variations)
-      let knownModelKey: string | undefined;
-      let knownModel: typeof KNOWN_MODELS[keyof typeof KNOWN_MODELS] | undefined;
-      
-      for (const variation of normalizedVariations) {
-        knownModelKey = Object.keys(KNOWN_MODELS).find(
-          (key) => key.toLowerCase() === variation.toLowerCase()
-        );
-        if (knownModelKey) {
-          knownModel = KNOWN_MODELS[knownModelKey as keyof typeof KNOWN_MODELS];
-          break;
-        }
-      }
-      
-      const isKnownModel = knownModel !== undefined;
+      const variations = this.normalizeModelId(modelId);
 
-      // If model is in KNOWN_MODELS, it definitely supports image generation
-      // Even if not in API, we consider it as existing if it's in our known models
-      if (isKnownModel && knownModel && !model) {
-        // Model is known but not in API - return as existing with known model info
+      const model = this.findModel(models, modelId, variations);
+      const knownModel = this.findKnownModel(variations);
+
+      if (knownModel && !model) {
         return {
           exists: true,
           supportsImageGeneration: true,
@@ -337,20 +233,16 @@ export class OpenRouterClient {
       }
 
       if (!model) {
-        return {
-          exists: false,
-          supportsImageGeneration: false,
-        };
+        return { exists: false, supportsImageGeneration: false };
       }
 
-      // Check if model supports image generation via output_modalities or if it's a known model
-      const supportsImageGeneration = 
+      const supportsImage =
         (model.architecture?.output_modalities?.includes('image') ?? false) ||
-        isKnownModel;
+        knownModel !== undefined;
 
       return {
         exists: true,
-        supportsImageGeneration,
+        supportsImageGeneration: supportsImage,
         details: model,
       };
     } catch (error) {
@@ -359,13 +251,109 @@ export class OpenRouterClient {
     }
   }
 
+  private warnUnsupportedOptions(
+    model: string,
+    aspect_ratio?: string,
+    image_size?: string,
+  ): void {
+    if (aspect_ratio && !this.supportsAspectRatio(model)) {
+      logger.warn({ model, aspect_ratio }, 'Aspect ratio not supported; ignoring');
+    }
+    if (image_size && !this.supportsImageSize(model)) {
+      logger.warn({ model, image_size }, 'Image size not supported; ignoring');
+    }
+  }
+
+  private buildRequestBody(input: {
+    model: string;
+    prompt: string;
+    aspect_ratio?: string;
+    image_size?: string;
+  }): ChatCompletionRequest {
+    const { model, prompt, aspect_ratio, image_size } = input;
+    const modality = this.getModalityRequest(model);
+    const supportsAr = this.supportsAspectRatio(model);
+    const supportsSize = this.supportsImageSize(model);
+
+    const body: ChatCompletionRequest = {
+      model,
+      messages: [{ role: 'user', content: prompt }],
+    };
+
+    if (modality === 'response_modalities') {
+      body.response_modalities = ['image'];
+    } else if (modality === 'image_only') {
+      body.modalities = ['image'];
+    } else {
+      body.modalities = ['image', 'text'];
+    }
+
+    if (supportsAr && (aspect_ratio || image_size)) {
+      body.image_config = {};
+      if (aspect_ratio) body.image_config.aspect_ratio = aspect_ratio;
+      if (image_size && supportsSize) body.image_config.image_size = image_size;
+    }
+
+    return body;
+  }
+
+  private normalizeModelId(modelId: string): string[] {
+    const normalized = modelId.toLowerCase().trim();
+    const out: string[] = [modelId, normalized];
+    if (!normalized.includes('/')) {
+      for (const [key, prefix] of Object.entries(MODEL_ID_PREFIXES)) {
+        if (normalized.includes(key)) {
+          out.push(`${prefix}/${normalized}`, `${prefix}/${modelId}`);
+        }
+      }
+    }
+    return out;
+  }
+
+  private findModel(
+    models: OpenRouterModel[],
+    modelId: string,
+    variations: string[],
+  ): OpenRouterModel | undefined {
+    let m = models.find((x) => x.id === modelId);
+    if (m) return m;
+    const lower = modelId.toLowerCase();
+    m = models.find((x) => x.id.toLowerCase() === lower);
+    if (m) return m;
+    for (const v of variations) {
+      m = models.find(
+        (x) =>
+          x.id === v || x.id.toLowerCase() === v.toLowerCase(),
+      );
+      if (m) return m;
+    }
+    return undefined;
+  }
+
+  private findKnownModel(
+    variations: string[],
+  ): (typeof KNOWN_MODELS)[keyof typeof KNOWN_MODELS] | undefined {
+    for (const v of variations) {
+      const key = Object.keys(KNOWN_MODELS).find(
+        (k) => k.toLowerCase() === v.toLowerCase(),
+      );
+      if (key) return KNOWN_MODELS[key as keyof typeof KNOWN_MODELS];
+    }
+    return undefined;
+  }
+
+  private getModalityRequest(modelId: string): ModalityRequest {
+    const known = KNOWN_MODELS[modelId as keyof typeof KNOWN_MODELS];
+    return known?.modalityRequest ?? 'image_and_text';
+  }
+
   private supportsAspectRatio(modelId: string): boolean {
-    const knownModel = KNOWN_MODELS[modelId as keyof typeof KNOWN_MODELS];
-    return knownModel?.supportsAspectRatio ?? modelId.toLowerCase().includes('gemini');
+    const known = KNOWN_MODELS[modelId as keyof typeof KNOWN_MODELS];
+    return known?.supportsAspectRatio ?? false;
   }
 
   private supportsImageSize(modelId: string): boolean {
-    const knownModel = KNOWN_MODELS[modelId as keyof typeof KNOWN_MODELS];
-    return knownModel?.supportsImageSize ?? modelId.toLowerCase().includes('gemini');
+    const known = KNOWN_MODELS[modelId as keyof typeof KNOWN_MODELS];
+    return known?.supportsImageSize ?? false;
   }
 }

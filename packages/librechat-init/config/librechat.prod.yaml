@@ -1,0 +1,23 @@
+# Production overrides: only "My Agents" in selector; custom endpoints use default model list only (no API fetch); execute_code disabled.
+modelSpecs:
+  addedEndpoints:
+    - agents
+endpoints:
+  custom:
+    - name: OpenRouter
+      models:
+        fetch: false
+    - name: Scaleway
+      models:
+        fetch: false
+  agents:
+    capabilities:
+      - "file_search"
+      - "actions"
+      - "artifacts"
+      - "chain"
+      - "context"
+      - "ocr"
+      - "tools"
+      - "web_search"
+      - "vision"

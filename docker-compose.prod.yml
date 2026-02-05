@@ -2,10 +2,7 @@ services:
   librechat-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-init }
     container_name: ${STACK_NAME:-prod}-librechat-init
-    build:
-      context: ./packages/librechat-init
-      dockerfile: Dockerfile
-    pull_policy: build
+    image: ghcr.io/faktenforum/librechat-init:latest
     volumes:
       - librechat-config:/app/config
       - ./images:/images
@@ -15,10 +12,7 @@ services:
   librechat-post-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-post-init }
     container_name: ${STACK_NAME:-prod}-librechat-post-init
-    build:
-      context: ./packages/librechat-init
-      dockerfile: Dockerfile
-    pull_policy: build
+    image: ghcr.io/faktenforum/librechat-init:latest
     volumes:
       - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
@@ -46,6 +40,15 @@ services:
     container_name: ${STACK_NAME:-prod}-librechat
     # Use pre-built image from registry (built by GitHub Actions)
     image: ghcr.io/faktenforum/librechat:latest
+    depends_on:
+      librechat-init:
+        condition: service_completed_successfully
+      mongodb:
+        condition: service_started
+      meilisearch:
+        condition: service_started
+      mcp-ytptube:
+        condition: service_healthy
     networks:
       - traefik-net
       - app-net
@@ -83,19 +86,9 @@ services:
     extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
     container_name: ${STACK_NAME:-prod}-firecrawl-api
     networks:
-      - traefik-net
       - firecrawl-network
       - app-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=loadbalancer-net"
-      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl.entrypoints=web"
-      - "traefik.http.services.${STACK_NAME:-prod}-firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"
-      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.entrypoints=websecure"
-      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.tls=true"
-      - "traefik.http.routers.${STACK_NAME:-prod}-firecrawl-secure.tls.certresolver=le"
+    # Not exposed via Traefik: only LibreChat (firecrawl-api:3002) and mcp-firecrawl use it internally.
 
   playwright-service:
     extends: { file: docker-compose.websearch.yml, service: playwright-service }
@@ -155,19 +148,11 @@ services:
   mcp-calculator:
     extends: { file: docker-compose.mcp-calculator.yml, service: mcp-calculator }
     container_name: ${STACK_NAME:-prod}-mcp-calculator
-    build:
-      context: ./packages/mcp-calculator
-      dockerfile: Dockerfile
-    pull_policy: build
     # No Traefik labels - internal service only
 
   mcp-image-gen:
     extends: { file: docker-compose.mcp-image-gen.yml, service: mcp-image-gen }
     container_name: ${STACK_NAME:-prod}-mcp-image-gen
-    build:
-      context: ./packages/mcp-image-gen
-      dockerfile: Dockerfile
-    pull_policy: build
     # No Traefik labels - internal service only
 
   mcp-firecrawl:
@@ -211,6 +196,40 @@ services:
     image: ghcr.io/faktenforum/mcp-npm-search:latest
     # No Traefik labels - internal service only
 
+  # YTPTube - download-only exposed via Traefik (only /api/download); Web UI and rest of API internal
+  ytptube:
+    extends: { file: docker-compose.ytptube.yml, service: ytptube }
+    container_name: ${STACK_NAME:-prod}-ytptube
+    networks:
+      - app-net
+      - traefik-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=loadbalancer-net"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.rule=Host(`ytptube.${DOMAIN:-localhost}`) && PathPrefix(`/api/download`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.service=${STACK_NAME:-prod}-ytptube"
+      - "traefik.http.services.${STACK_NAME:-prod}-ytptube.loadbalancer.server.port=8081"
+
+  mcp-ytptube:
+    extends: { file: docker-compose.mcp-ytptube.yml, service: mcp-ytptube }
+    container_name: ${STACK_NAME:-prod}-mcp-ytptube
+    image: ghcr.io/faktenforum/mcp-ytptube:latest
+    networks:
+      - app-net
+    depends_on:
+      ytptube:
+        condition: service_started
+    # No Traefik labels - internal service only
+
+  mcp-youtube-transcript:
+    extends: { file: docker-compose.mcp-youtube-transcript.yml, service: mcp-youtube-transcript }
+    container_name: ${STACK_NAME:-prod}-mcp-youtube-transcript
+    image: ghcr.io/faktenforum/mcp-youtube-transcript:latest
+    # No Traefik labels - internal service only
+
 networks:
   traefik-net:
     external: true
@@ -239,3 +258,7 @@ volumes:
     name: ${STACK_NAME:-prod}-n8n-pgdata
   n8n_data:
     name: ${STACK_NAME:-prod}-n8n-data
+  ytptube_config:
+    name: ${STACK_NAME:-prod}-ytptube-config
+  ytptube_downloads:
+    name: ${STACK_NAME:-prod}-ytptube-downloads

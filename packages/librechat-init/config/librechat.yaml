@@ -116,8 +116,8 @@ endpoints:
           "mistralai/mistral-large-2411",     # European premium option (French)
           "glm/glm-4.7"                       # Advanced reasoning model
         ]
-        # Controlled by LIBRECHAT_FETCH_MODELS: true = fetch all models from API; false = default list only
-        fetch: $${LIBRECHAT_FETCH_MODELS}
+        # Default: fetch all models from API. Production override (librechat.prod.yaml) sets fetch: false.
+        fetch: true
       titleConvo: true
       summarize: true
       headers:
@@ -128,6 +128,19 @@ endpoints:
       apiKey: "$${SCALEWAY_API_KEY}"
       baseURL: "$${SCALEWAY_BASE_URL}"
       iconURL: "https://www.scaleway.com/favicon/website/favicon.svg"
+      # Scaleway docs: "Meta models do not support parallel tool calls."
+      # Affected: Llama 3.1 (8b, 70b), Llama 3.3 (70b). Without this → 400 single tool-calls error.
+      # See docs/LIBRECHAT_FEATURES.md#scaleway-parallel-tool-calls.
+      addParams:
+        parallel_tool_calls: false
+      # Scaleway Chat Completions API does not support these params; strip to avoid errors.
+      # See docs/LIBRECHAT_FEATURES.md#scaleway-unsupported-parameters.
+      dropParams:
+        - frequencyPenalty   # frequency_penalty not supported
+        - n                  # multiple completions not supported
+        - topLogprobs        # top_logprobs not supported
+        - logitBias          # logit_bias not supported
+        - user               # user identifier not supported
       # BASE_URL construction: If SCALEWAY_PROJECT_ID is set, the initialization script
       # automatically constructs the BASE_URL as https://api.scaleway.ai/{project_id}/v1.
       # Otherwise, the default SCALEWAY_BASE_URL value is used.
@@ -142,8 +155,8 @@ endpoints:
           "qwen3-embedding-8b",               # Embeddings - Generally Available
           "bge-multilingual-gemma2"           # Embeddings - Generally Available
         ]
-        # Controlled by LIBRECHAT_FETCH_MODELS: true = fetch all models from API; false = default list only
-        fetch: $${LIBRECHAT_FETCH_MODELS}
+        # Default: fetch all models from API. Production override (librechat.prod.yaml) sets fetch: false.
+        fetch: true
       titleConvo: true
       summarize: true
       headers:
@@ -280,52 +293,73 @@ endpoints:
 modelSpecs:
   list:
     # ==========================================
-    # Empfohlen: Europa & Open Source (Scaleway)
+    # Empfohlen: Europa & Open Source (Scaleway) – alphabetisch nach Label
     # ==========================================
     # Alle Modelle: Open Source, Europa-gehostet, DSGVO-konform
-    # Chat Modelle (Text-only)
-    - name: "scaleway-llama-3.3-70b"
-      label: "Llama 3.3 70B"
-      description: "Meta's neuestes Modell. 100K Context, 4K Output. Sehr gut für allgemeine Gespräche und Aufgaben. Llama 3.3 Community License. Empfohlen von Scaleway."
+    # Token limits: Scaleway Generative APIs + Managed Inference model catalog (Oct 2025)
+    - name: "scaleway-devstral-2-123b"
+      label: "Devstral 2 123B"
+      description: "Coding- und Agent-Modell (Mistral). 200K Context, 8K Output. Ideal für Code, Tools und Software-Agents. Modified MIT."
       group: "Empfohlen: Europa & Open Source"
       groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWxvY2staWNvbiBsdWNpZGUtbG9jayI+PHJlY3Qgd2lkdGg9IjE4IiBoZWlnaHQ9IjExIiB4PSIzIiB5PSIxMSIgcng9IjIiIHJ5PSIyIi8+PHBhdGggZD0iTTcgMTFWN2E1IDUgMCAwIDEgMTAgMHY0Ii8+PC9zdmc+"
       order: 1
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
-        model: "llama-3.3-70b-instruct"
-    
-    - name: "scaleway-qwen3-235b"
-      label: "Qwen3 235B"
-      description: "Sehr großes Modell (235B Parameter). 250K Context, 8K Output. Optimal für komplexe Aufgaben und lange Kontexte. Apache-2.0 License."
+        model: "devstral-2-123b-instruct-2512"
+        maxContextTokens: 200000
+        maxOutputTokens: 8192
+
+    - name: "scaleway-gemma-3-27b"
+      label: "Gemma 3 27B"
+      description: "Kompaktes Chat- und Vision-Modell (Google). 40K Context, 8K Output. Gut für Bildanalyse und allgemeine Aufgaben. Gemma License, derzeit Preview bei Scaleway."
       group: "Empfohlen: Europa & Open Source"
       order: 2
+      vision: true
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
-        model: "qwen3-235b-a22b-instruct-2507"
-    
-    - name: "scaleway-qwen3-coder-30b"
-      label: "Qwen3 Coder 30B"
-      description: "Spezialisiert auf Programmierung und Code-Generierung. 128K Context, 8K Output. Apache-2.0 License."
+        model: "gemma-3-27b-it"
+        maxContextTokens: 40000
+        maxOutputTokens: 8192
+
+    - name: "scaleway-gpt-oss-120b"
+      label: "GPT-OSS 120B"
+      description: "Großes Modell für komplexe Aufgaben. 128K Context, 8K Output. Apache-2.0 License."
       group: "Empfohlen: Europa & Open Source"
       order: 3
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
-        model: "qwen3-coder-30b-a3b-instruct"
-    
-    - name: "scaleway-gpt-oss-120b"
-      label: "GPT-OSS 120B"
-      description: "Großes Modell für komplexe Aufgaben."
+        model: "gpt-oss-120b"
+        maxContextTokens: 128000
+        maxOutputTokens: 8192
+
+    - name: "scaleway-holo2-30b"
+      label: "Holo2 30B"
+      description: "Chat- und Vision-Modell mit Fokus auf GUI-Analyse (Browser, Software-Oberflächen). 22K Context, 8K Output. CC-BY-NC-4.0; Nutzung über Scaleway erlaubt. Zum Testen von UI/UX-Verständnis."
       group: "Empfohlen: Europa & Open Source"
       order: 4
+      vision: true
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
-        model: "gpt-oss-120b"
-    
-    # Chat & Vision Modelle (vision: true = WIP/experimental, draft PRs LibreChat #11501 / agents #48)
+        model: "holo2-30b-a3b"
+        maxContextTokens: 22000
+        maxOutputTokens: 8192
+
+    - name: "scaleway-llama-3.3-70b"
+      label: "Llama 3.3 70B"
+      description: "Meta's neuestes Modell. 100K Context, 4K Output. Sehr gut für allgemeine Gespräche und Aufgaben. Llama 3.3 Community License. Empfohlen von Scaleway."
+      group: "Empfohlen: Europa & Open Source"
+      order: 5
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "llama-3.3-70b-instruct"
+        maxContextTokens: 100000   # Generative APIs; Managed Inference up to 128k (instance-dependent)
+        maxOutputTokens: 4096
+
     - name: "scaleway-mistral-small-3.2"
       label: "Mistral Small 3.2 24B"
       description: "Kosteneffektiv (3-6x günstiger als 70B Modelle). 128K Context, 8K Output. Unterstützt Chat und Vision. Apache-2.0 License. Empfohlen von Scaleway als Einstiegsmodell."
@@ -337,7 +371,9 @@ modelSpecs:
         endpoint: "Scaleway"
         endpointType: "custom"
         model: "mistral-small-3.2-24b-instruct-2506"
-    
+        maxContextTokens: 128000
+        maxOutputTokens: 8192
+
     - name: "scaleway-pixtral-12b"
       label: "Pixtral 12B"
       description: "Spezialisiert auf Bildverständnis und Chat. 128K Context, 4K Output. Unterstützt Bilder bis 32M Pixel. Apache-2.0 License."
@@ -348,16 +384,55 @@ modelSpecs:
         endpoint: "Scaleway"
         endpointType: "custom"
         model: "pixtral-12b-2409"
-    
+        maxContextTokens: 128000
+        maxOutputTokens: 4096
+
+    - name: "scaleway-qwen3-235b"
+      label: "Qwen3 235B"
+      description: "Sehr großes Modell (235B Parameter). 250K Context, 8K Output. Optimal für komplexe Aufgaben und lange Kontexte. Apache-2.0 License."
+      group: "Empfohlen: Europa & Open Source"
+      order: 8
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "qwen3-235b-a22b-instruct-2507"
+        maxContextTokens: 250000
+        maxOutputTokens: 8192
+
+    - name: "scaleway-qwen3-coder-30b"
+      label: "Qwen3 Coder 30B"
+      description: "Spezialisiert auf Programmierung und Code-Generierung. 128K Context, 8K Output. Apache-2.0 License."
+      group: "Empfohlen: Europa & Open Source"
+      order: 9
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "qwen3-coder-30b-a3b-instruct"
+        maxContextTokens: 128000
+        maxOutputTokens: 8192
+
+    - name: "scaleway-voxtral-small-24b"
+      label: "Voxtral Small 24B"
+      description: "Chat- und Audio-Modell (Mistral). 32K Context, 8K Output. Transkription und Verstehen von Audio (WAV, MP3), mehrsprachig. Apache-2.0 License. Zum Testen der Audio-Fähigkeiten."
+      group: "Empfohlen: Europa & Open Source"
+      order: 10
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "voxtral-small-24b-2507"
+        maxContextTokens: 32000
+        maxOutputTokens: 8192
+
     # ==========================================
-    # Premium-Modelle (OpenRouter)
+    # Premium-Modelle (OpenRouter) – alphabetisch nach Label
     # ==========================================
     # Premium-Modelle: Top-Performance Modelle für spezielle Anwendungsfälle
     # Diese Modelle sind Closed Source oder erfordern spezielle Zugänge
     # Hosted über OpenRouter (USA), daher nur für nicht-datenschutzkritische Aufgaben
-    - name: "claude-sonnet-4.5"
-      label: "Claude Sonnet 4.5"
-      description: "Top-Performance Modell für komplexe Aufgaben, Programmierung und Reasoning. 200K Context, 64K Output. Unterstützt Vision. Closed Source (Anthropic)."
+    # Token limits: OpenRouter API / provider docs (context_length, max_completion_tokens)
+    - name: "claude-opus-4.5"
+      label: "Claude Opus 4.5"
+      description: "Anthropics leistungsstärkstes Modell. Optimiert für komplexe Software-Engineering-, Agent- und Reasoning-Aufgaben. 200K Context, 64K Output. Vision, erweiterte Tool-Nutzung. Closed Source (Anthropic)."
       group: "Premium-Modelle"
       groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvdC1pY29uIGx1Y2lkZS1ib3QiPjxwYXRoIGQ9Ik0xMiA4VjRIOCIvPjxyZWN0IHdpZHRoPSIxNiIgaGVpZ2h0PSIxMiIgeD0iNCIgeT0iOCIgcng9IjIiLz48cGF0aCBkPSJNMiAxNGgyIi8+PHBhdGggZD0iTTIwIDE0aDIiLz48cGF0aCBkPSJNMTUgMTN2MiIvPjxwYXRoIGQ9Ik05IDEzdjIiLz48L3N2Zz4="
       order: 1
@@ -365,49 +440,123 @@ modelSpecs:
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "anthropic/claude-sonnet-4.5"
-    
-    - name: "openai-gpt5-2"
-      label: "GPT-5.2"
-      description: "OpenAI's neuestes Top-Modell. 400K Context, 128K Output. Dynamic Reasoning, ~80% weniger Halluzinationen als o3. Unterstützt Vision. Closed Source (OpenAI)."
+        model: "anthropic/claude-opus-4.5"
+        maxContextTokens: 200000
+        maxOutputTokens: 64000
+
+    - name: "claude-sonnet-4.5"
+      label: "Claude Sonnet 4.5"
+      description: "Top-Performance Modell für komplexe Aufgaben, Programmierung und Reasoning. 200K Context, 64K Output. Unterstützt Vision. Closed Source (Anthropic)."
       group: "Premium-Modelle"
       order: 2
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "openai/gpt-5.2"
-    
+        model: "anthropic/claude-sonnet-4.5"
+        maxContextTokens: 200000
+        maxOutputTokens: 64000
+
+    - name: "deepseek-v3.2"
+      label: "DeepSeek V3.2"
+      description: "Starkes Reasoning- und Tool-Use-Modell. 164K Context, 65K Output. Gutes Preis-Leistungs-Verhältnis für Coding und mehrstufige Aufgaben. Open Weights (DeepSeek)."
+      group: "Premium-Modelle"
+      order: 3
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "deepseek/deepseek-v3.2"
+        maxContextTokens: 163840
+        maxOutputTokens: 65536
+
     - name: "google-gemini-2.5-flash-lite"
       label: "Gemini 2.5 Flash Lite"
       description: "Schnell und kostengünstig. Optimiert für schnelle Antworten bei guter Qualität. Unterstützt Vision. Closed Source (Google)."
       group: "Premium-Modelle"
-      order: 3
+      order: 4
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
         model: "google/gemini-2.5-flash-lite"
-    
-    - name: "mistral-large-2411"
-      label: "Mistral Large 2411"
-      description: "Premium-Modell von Mistral (französisches Unternehmen). Sehr beliebt bei europäischen Nutzern. Gute Balance aus Performance und Datenschutz."
+        maxContextTokens: 1048576
+        maxOutputTokens: 65536
+
+    - name: "google-gemini-3-pro-preview"
+      label: "Gemini 3 Pro Preview"
+      description: "Googles aktuelles Spitzenmodell. 1M Context, Text/Image/Audio/Video. Starke Multimodal- und Reasoning-Fähigkeiten, Agent-Coding. Closed Source (Google)."
       group: "Premium-Modelle"
-      order: 4
+      order: 5
+      vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "mistralai/mistral-large-2411"
-    
+        model: "google/gemini-3-pro-preview"
+        maxContextTokens: 1048576
+        maxOutputTokens: 65536
+
     - name: "z-ai-glm-4.7"
       label: "GLM 4.7"
-      description: "Fortgeschrittenes Modell mit exzellentem logischen Denken. Sehr gut für komplexe Aufgaben und Reasoning. Closed Source (Z.AI)."
+      description: "Fortgeschrittenes Modell mit exzellentem logischen Denken. Sehr gut für komplexe Aufgaben und Reasoning. 203K Context, 65K Output. Closed Source (Z.AI)."
       group: "Premium-Modelle"
-      order: 5
+      order: 6
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
         model: "glm/glm-4.7"
+        maxContextTokens: 202752
+        maxOutputTokens: 65535
+
+    - name: "openai-gpt5-2"
+      label: "GPT-5.2"
+      description: "OpenAI's neuestes Top-Modell. 400K Context, 128K Output. Dynamic Reasoning, ~80% weniger Halluzinationen als o3. Unterstützt Vision. Closed Source (OpenAI)."
+      group: "Premium-Modelle"
+      order: 7
+      vision: true
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "openai/gpt-5.2"
+        maxContextTokens: 400000
+        maxOutputTokens: 128000
+
+    - name: "openai-gpt5-2-pro"
+      label: "GPT-5.2 Pro"
+      description: "OpenAI's leistungsstärkstes Modell für anspruchsvolle Reasoning- und Agent-Aufgaben. 400K Context, 128K Output. Starke Verbesserungen bei Coding und Langkontext. Vision. Closed Source (OpenAI)."
+      group: "Premium-Modelle"
+      order: 8
+      vision: true
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "openai/gpt-5.2-pro"
+        maxContextTokens: 400000
+        maxOutputTokens: 128000
+
+    - name: "mistral-large-2411"
+      label: "Mistral Large 2411"
+      description: "Premium-Modell von Mistral (französisches Unternehmen). Sehr beliebt bei europäischen Nutzern. Gute Balance aus Performance und Datenschutz. 256K Context, 8K Output."
+      group: "Premium-Modelle"
+      order: 9
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "mistralai/mistral-large-2411"
+        maxContextTokens: 256000
+        maxOutputTokens: 8192
+
+    - name: "mistral-large-2512"
+      label: "Mistral Large 3 2512"
+      description: "Mistrals aktuellstes Großmodell (675B MoE, 41B aktiv). 262K Context. Text + Vision. Apache 2.0. Gute Option für Europa-relevante Premium-Aufgaben."
+      group: "Premium-Modelle"
+      order: 10
+      vision: true
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "mistralai/mistral-large-2512"
+        maxContextTokens: 262144
+        maxOutputTokens: 8192
 
 
 webSearch:
@@ -540,6 +689,8 @@ mcpSettings:
     - 'mcp-db-timetable'        # MCP DB Timetable service (Docker network)
     - 'mcp-stackoverflow'       # MCP StackOverflow service (Docker network)
     - 'mcp-npm-search'           # MCP npm Search service (Docker network)
+    - 'mcp-ytptube'             # MCP YTPTube (YTPTube + Scaleway STT)
+    - 'mcp-youtube-transcript'  # MCP YouTube Transcript (youtube-transcript-api)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     - 'mcp.mapbox.com'           # Mapbox MCP Server (remote hosted)
     # - '*.example.com'           # Wildcard subdomain
@@ -553,18 +704,18 @@ mcpSettings:
 mcpServers:
   calculator:
     type: streamable-http
-    url: http://mcp-calculator:3000/mcp
+    url: http://mcp-calculator:3012/mcp
     title: Rechner
     description: Mathematische Berechnungen und Rechenoperationen
     iconPath: /images/mcp-calculator-icon.svg
     initTimeout: 120000
     chatMenu: false
-    startup: false
+    startup: true
     serverInstructions: true
 
   image-gen:
     type: streamable-http
-    url: http://mcp-image-gen:3001/mcp
+    url: http://mcp-image-gen:3013/mcp
     title: Bildgenerierung
     description: Bilder aus Textbeschreibungen erstellen
     iconPath: /images/mcp-image-gen-icon.svg
@@ -592,7 +743,7 @@ mcpServers:
     description: Aktuelle Wetterdaten, Luftqualität und Zeitzoneninformationen
     iconPath: /images/mcp-weather-icon.svg
     initTimeout: 120000
-    chatMenu: false
+    chatMenu: true
     startup: true
     serverInstructions: true
 
@@ -605,7 +756,7 @@ mcpServers:
     initTimeout: 120000
     timeout: 150000
     chatMenu: false
-    startup: false
+    startup: false # Currently experimental, maybe not needed in favor of default websearch feature
     serverInstructions: true
 
   db-timetable:
@@ -641,6 +792,29 @@ mcpServers:
     startup: true
     serverInstructions: true
 
+  ytptube:
+    type: streamable-http
+    url: http://mcp-ytptube:3010/mcp
+    title: Video Transkripte
+    description: Transkripte von Videos anfordern und Status prüfen.
+    iconPath: /images/mcp-ytptube-icon.svg
+    initTimeout: 120000
+    timeout: 300000   # 5 min — downloads + STT
+    chatMenu: false
+    startup: false # Currently experimental
+    serverInstructions: true
+
+  youtube-transcript:
+    type: streamable-http
+    url: http://mcp-youtube-transcript:3011/mcp
+    title: YouTube Transkript
+    description: Transkripte von YouTube-Videos abrufen
+    iconPath: /images/mcp-youtube-transcript-icon.svg
+    initTimeout: 120000
+    chatMenu: false
+    startup: false # Currently experimental, mybe not needed in favor of ytptube
+    serverInstructions: true
+
   github:
     type: streamable-http
     url: https://api.githubcopilot.com/mcp/
@@ -669,17 +843,17 @@ mcpServers:
     startup: true
     serverInstructions: true
 
-  # This MCP tool is very helpful when special URLs need to be read. Unfortunately, the connection to the MCP server is currently too unstable and has therefore been deactivated for the time being.
-  # firecrawl:
-  #   type: streamable-http
-  #   url: http://mcp-firecrawl:3003/mcp
-  #   title: Web Scraping
-  #   description: Webseiten scrapen, durchsuchen und analysieren
-  #   iconPath: /images/mcp-firecrawl-icon.svg
-  #   initTimeout: 120000
-  #   chatMenu: true
-  #   startup: true
-  #   serverInstructions: true
+  # Web scraping (scrape, search, map, crawl, extract). Not shown in chat dropdown; available for agents.
+  firecrawl:
+    type: streamable-http
+    url: http://mcp-firecrawl:3003/mcp
+    title: Web Scraping
+    description: Webseiten scrapen, durchsuchen und analysieren
+    iconPath: /images/mcp-firecrawl-icon.svg
+    initTimeout: 120000
+    chatMenu: false
+    startup: false
+    serverInstructions: true
 
 # n8n MCP Server Integration (Future - disabled)
 # To integrate n8n workflows with LibreChat Agents via MCP:

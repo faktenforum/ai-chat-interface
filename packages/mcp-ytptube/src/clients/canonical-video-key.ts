@@ -1,0 +1,585 @@
+/** Canonical video key from URL (yt-dlp-aligned). Same key => same video. */
+
+/**
+ * Remove dot segments from a path per RFC 3986 section 5.2.4.
+ * Handles paths like "/a/b/../c/./d" → "/a/c/d"
+ */
+function removeDotSegments(path: string): string {
+  if (!path) return '/';
+  
+  const segments = path.split('/');
+  const output: string[] = [];
+  
+  for (const segment of segments) {
+    if (segment === '.') {
+      continue;
+    } else if (segment === '..') {
+      if (output.length > 0 && output[output.length - 1] !== '') {
+        output.pop();
+      }
+    } else {
+      output.push(segment);
+    }
+  }
+  
+  // Preserve leading slash
+  if (segments[0] === '' && (output.length === 0 || output[0] !== '')) {
+    output.unshift('');
+  }
+  
+  // Preserve trailing slash if original had one
+  if (segments.length > 0 && segments[segments.length - 1] === '' && output[output.length - 1] !== '') {
+    output.push('');
+  }
+  
+  return output.join('/') || '/';
+}
+
+/**
+ * Sanitize URL before canonical key extraction (from yt-dlp sanitize_url).
+ * - Protocol-relative URLs (//example.com) → https://example.com
+ * - Common typos: httpss:// → https://, rmtp(s|e):// → rtmp\1://
+ */
+function sanitizeUrlForCanonical(url: string): string | null {
+  if (!url) return null;
+  if (url.startsWith('//')) return `https:${url}`;
+  if (/^httpss:\/\//i.test(url)) return url.replace(/^httpss:\/\//i, 'https://');
+  if (/^rmtp([es]?):\/\//i.test(url)) return url.replace(/^rmtp([es]?):\/\//i, 'rtmp$1://');
+  return url;
+}
+
+/** Platform-specific key or normalized origin+path. */
+
+export function canonicalVideoKey(url: string): string | null {
+  const trimmed = (url ?? '').trim();
+  if (!trimmed) return null;
+
+  const sanitized = sanitizeUrlForCanonical(trimmed);
+  if (!sanitized) return null;
+
+  try {
+    const parsed = new URL(sanitized);
+    const hostname = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    const pathname = parsed.pathname.replace(/\/$/, '') || '/';
+
+    // YouTube: various forms → youtube:VIDEO_ID
+    if (hostname === 'youtube.com' || hostname === 'youtu.be') {
+      let videoId: string | null = null;
+      if (hostname === 'youtu.be') {
+        videoId = pathname.slice(1) || null;
+      } else if (pathname.startsWith('/shorts/')) {
+        videoId = pathname.slice(8) || null;
+      } else if (pathname.startsWith('/embed/')) {
+        videoId = pathname.slice(7) || null;
+      } else if (pathname.startsWith('/v/')) {
+        videoId = pathname.slice(3) || null;
+      } else if (pathname.startsWith('/e/')) {
+        videoId = pathname.slice(3) || null;
+      } else if (pathname === '/watch') {
+        videoId = parsed.searchParams.get('v');
+      }
+      // YouTube video IDs are always 11 characters (alphanumeric, dash, underscore)
+      if (videoId && /^[0-9A-Za-z_-]{11}$/.test(videoId)) {
+        return `youtube:${videoId}`;
+      }
+    }
+
+    // Instagram: /reel/ID, /p/ID, /tv/ID → instagram:ID (hostname already normalized, no www)
+    if (hostname === 'instagram.com') {
+      const m = pathname.match(/^\/(reel|p|tv)\/([^/]+)/);
+      if (m) return `instagram:${m[2]}`;
+    }
+
+    // TikTok: /@user/video/ID, /video/ID, or /t/ID (short links) → tiktok:ID
+    if (hostname === 'tiktok.com' || hostname === 'vm.tiktok.com' || hostname === 'vt.tiktok.com') {
+      // Short links: /t/ID
+      if (hostname === 'vm.tiktok.com' || hostname === 'vt.tiktok.com') {
+        const shortId = pathname.slice(1);
+        if (shortId) return `tiktok:${shortId}`;
+      }
+      // Regular video URLs: /@user/video/ID or /video/ID
+      const m = pathname.match(/\/video\/(\d+)/);
+      if (m) return `tiktok:${m[1]}`;
+    }
+
+    // Douyin (Chinese TikTok): /video/ID → douyin:ID
+    if (hostname === 'douyin.com') {
+      const m = pathname.match(/\/video\/(\d+)/);
+      if (m) return `douyin:${m[1]}`;
+    }
+
+    // Twitter/X: /status/ID, /i/videos/ID, or /i/cards/tfw/v1/ID → twitter:ID
+    if (hostname === 'twitter.com' || hostname === 'x.com' || hostname === 'mobile.twitter.com') {
+      // /status/ID or /i/web/status/ID
+      let statusMatch = pathname.match(/\/(?:i\/web\/)?status\/(\d+)/);
+      if (statusMatch) return `twitter:${statusMatch[1]}`;
+      // /i/videos/ID or /i/videos/tweet/ID
+      let videosMatch = pathname.match(/\/i\/videos(?:\/tweet)?\/(\d+)/);
+      if (videosMatch) return `twitter:${videosMatch[1]}`;
+      // /i/cards/tfw/v1/ID
+      let cardsMatch = pathname.match(/\/i\/cards\/tfw\/v1\/(\d+)/);
+      if (cardsMatch) return `twitter:${cardsMatch[1]}`;
+    }
+
+    // Vimeo: /ID (numeric) → vimeo:ID
+    if (hostname === 'vimeo.com' || hostname === 'player.vimeo.com') {
+      // Main pattern: /ID where ID is numeric
+      const numericMatch = pathname.match(/^\/(\d+)(?:\/|$)/);
+      if (numericMatch) return `vimeo:${numericMatch[1]}`;
+      // On-demand: /ondemand/.../ID
+      const ondemandMatch = pathname.match(/\/ondemand\/[^/]+\/([^/?#]+)/);
+      if (ondemandMatch) return `vimeo:${ondemandMatch[1]}`;
+    }
+
+    // Twitch: /videos/ID or /clip/ID → twitch:ID
+    if (hostname === 'twitch.tv' || hostname === 'go.twitch.tv' || hostname === 'm.twitch.tv' || hostname === 'clips.twitch.tv') {
+      // Videos: /videos/ID or /user/video/ID
+      const videoMatch = pathname.match(/\/(?:videos|video)\/(\d+)/);
+      if (videoMatch) return `twitch:${videoMatch[1]}`;
+      // Clips: /clip/ID or clips.twitch.tv/ID
+      const clipMatch = pathname.match(/\/(?:clip\/)?([^/?#]+)/);
+      if (clipMatch && hostname === 'clips.twitch.tv') {
+        return `twitch:clip:${clipMatch[1]}`;
+      }
+      if (pathname.includes('/clip/')) {
+        const clipPathMatch = pathname.match(/\/clip\/([^/?#]+)/);
+        if (clipPathMatch) return `twitch:clip:${clipPathMatch[1]}`;
+      }
+    }
+
+    // Facebook: /reel/ID, /watch?v=ID, or /videos/ID (www/m/facebook.com, fb.com, fb.watch) → facebook:ID
+    // YTPTube/yt-dlp often store reel URLs as m.facebook.com/watch/?v=ID; we must match that for get_status(video_url).
+    const fbHost =
+      hostname === 'facebook.com' ||
+      hostname === 'm.facebook.com' ||
+      hostname === 'fb.com' ||
+      hostname === 'fb.watch';
+    if (fbHost) {
+      const reelMatch = pathname.match(/\/reel\/(\d+)/);
+      if (reelMatch) return `facebook:${reelMatch[1]}`;
+      if (pathname === '/watch' || pathname === '/watch/') {
+        const v = parsed.searchParams.get('v');
+        if (v && /^\d+$/.test(v)) return `facebook:${v}`;
+      }
+      const videosMatch = pathname.match(/\/videos\/(\d+)/);
+      if (videosMatch) return `facebook:${videosMatch[1]}`;
+    }
+
+    // Reddit: /r/subreddit/comments/ID/... → reddit:ID
+    if (hostname === 'reddit.com' || hostname.endsWith('.reddit.com') || hostname === 'redd.it') {
+      // /r/subreddit/comments/ID/... or /user/username/comments/ID/...
+      const commentsMatch = pathname.match(/\/(?:r|user)\/[^/]+\/comments\/([^/?#&]+)/);
+      if (commentsMatch) return `reddit:${commentsMatch[1]}`;
+    }
+
+    // Dailymotion: /video/ID or dai.ly/ID → dailymotion:ID
+    if (hostname === 'dailymotion.com' || hostname.endsWith('.dailymotion.com') || hostname === 'dai.ly') {
+      if (hostname === 'dai.ly') {
+        const shortId = pathname.slice(1);
+        if (shortId) return `dailymotion:${shortId}`;
+      }
+      // /video/ID or /embed/video/ID
+      const videoMatch = pathname.match(/\/(?:embed\/)?video\/([^/?_&#]+)/);
+      if (videoMatch) {
+        // Dailymotion IDs typically start with 'x' followed by alphanumeric
+        const id = videoMatch[1].split('_')[0]; // Remove trailing title slug
+        return `dailymotion:${id}`;
+      }
+    }
+
+    // Bilibili: /video/BV... or /video/av... → bilibili:BV... or bilibili:av...
+    const bilibiliHostname = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    if (bilibiliHostname === 'player.bilibili.com' && pathname === '/player.html') {
+      const aid = parsed.searchParams.get('aid');
+      if (aid) return `bilibili:av${aid}`;
+    }
+    if (bilibiliHostname === 'bilibili.com' || bilibiliHostname === 'bilibili.tv' || bilibiliHostname === 'biliintl.com') {
+      // /video/BV... or /video/av... (case-insensitive)
+      const bvMatch = pathname.match(/\/video\/([aAbB][vV][^/?#&]+)/i);
+      if (bvMatch) {
+        const id = bvMatch[1].toUpperCase();
+        return `bilibili:${id}`;
+      }
+      // /video/av... (legacy format)
+      const avMatch = pathname.match(/\/video\/av(\d+)/i);
+      if (avMatch) return `bilibili:av${avMatch[1]}`;
+    }
+
+    // Rumble: /vID or /embed/ID → rumble:ID
+    if (hostname === 'rumble.com') {
+      // /embed/ID or /embed/prefix.ID
+      const embedMatch = pathname.match(/\/embed\/(?:[0-9a-z]+\.)?([0-9a-z]+)/);
+      if (embedMatch) return `rumble:${embedMatch[1]}`;
+      // /vID (main video URLs)
+      const videoMatch = pathname.match(/^\/(v[^/?#]+)/);
+      if (videoMatch) {
+        // Remove .html extension if present
+        const id = videoMatch[1].replace(/\.html$/, '');
+        return `rumble:${id}`;
+      }
+    }
+
+    // SoundCloud: /uploader/title → soundcloud:uploader/title
+    if (hostname === 'soundcloud.com' || hostname === 'm.soundcloud.com') {
+      // Main pattern: /uploader/title (excluding special paths like tracks/, sets/, etc.)
+      const scMatch = pathname.match(/^\/([\w\d-]+)\/([\w\d-]+)(?:\/([^/?#]+))?(?:\?|$|#)/);
+      if (scMatch) {
+        const uploader = scMatch[1];
+        const title = scMatch[2];
+        const skipPaths = ['tracks', 'albums', 'sets', 'reposts', 'likes', 'spotlight', 'comments'];
+        if (!skipPaths.includes(title)) {
+          return `soundcloud:${uploader}/${title}`;
+        }
+      }
+    }
+
+    // BitChute: /video/ID, /embed/ID → bitchute:ID
+    if (hostname === 'bitchute.com' || hostname === 'old.bitchute.com') {
+      const bcMatch = pathname.match(/\/(?:video|embed|torrent\/[^/]+)\/([^/?#&]+)/);
+      if (bcMatch) return `bitchute:${bcMatch[1]}`;
+    }
+
+    // 9GAG: /gag/ID → 9gag:ID
+    if (hostname === '9gag.com') {
+      const gagMatch = pathname.match(/\/gag\/([^/?#&]+)/);
+      if (gagMatch) return `9gag:${gagMatch[1]}`;
+    }
+
+    // Streamable: /ID, /e/ID, /s/ID → streamable:ID
+    if (hostname === 'streamable.com') {
+      const streamMatch = pathname.match(/^\/(?:e\/|s\/)?([\w]+)$/);
+      if (streamMatch) return `streamable:${streamMatch[1]}`;
+    }
+
+    // Wistia: /embed/iframe/ID, /medias/ID (10-char alphanumeric) → wistia:ID
+    if (hostname === 'wistia.com' || hostname === 'wistia.net' || hostname.endsWith('.wistia.com') || hostname.endsWith('.wistia.net')) {
+      const wistiaMatch = pathname.match(/\/(?:iframe|medias)\/([a-z0-9]{10})/);
+      if (wistiaMatch) return `wistia:${wistiaMatch[1]}`;
+    }
+
+    // PeerTube: /videos/watch/ID, /videos/embed/ID, /w/ID (UUID) → peertube:host:ID
+    const peertubePath = pathname.includes('/videos/watch/') || pathname.includes('/videos/embed/') || pathname.startsWith('/w/');
+    if (peertubePath) {
+      const uuidMatch = pathname.match(/(?:\/videos\/(?:watch|embed)|\/w)\/([\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}|[\da-zA-Z]{22})/);
+      if (uuidMatch) {
+        // Only treat as PeerTube if path is /videos/... or host looks like PeerTube (e.g. framatube.org, peertube.tv)
+        if (pathname.includes('/videos/') || /peertube|framatube|tube\.|\.tube\b/.test(hostname)) {
+          return `peertube:${hostname}:${uuidMatch[1]}`;
+        }
+      }
+    }
+
+    // Bandcamp: subdomain.bandcamp.com/track/slug → bandcamp:subdomain:slug
+    if (hostname.endsWith('.bandcamp.com') && !hostname.startsWith('www.')) {
+      const bcTrackMatch = pathname.match(/^\/track\/([^/?#&]+)/);
+      if (bcTrackMatch) {
+        const subdomain = hostname.replace(/\.bandcamp\.com$/, '');
+        return `bandcamp:${subdomain}:${bcTrackMatch[1]}`;
+      }
+    }
+
+    // Odysee/LBRY: odysee.com, lbry.tv — @channel:cid/name:claim_id or $/video/... → lbry:claim_id
+    if (hostname === 'odysee.com' || hostname === 'lbry.tv') {
+      // $/video/name or $/embed/... — claim_id often in redirect; path has name
+      if (pathname.startsWith('/$/video/') || pathname.startsWith('/$/embed/')) {
+        const slug = pathname.replace(/^\/\$\/video\/|\/\$\/embed\/?/, '').split('/')[0];
+        if (slug) return `lbry:${hostname}:${slug}`;
+      }
+      // @channel:channel_id/Video-Name:claim_id — extract last :claim_id (hex)
+      const claimMatch = pathname.match(/:([0-9a-f]{1,40})$/);
+      if (claimMatch) return `lbry:${claimMatch[1]}`;
+    }
+
+    // VK: /video owner_id_video_id or /video?z=video-owner_id_video_id → vk:owner_id_video_id
+    if (hostname === 'vk.com' || hostname === 'vk.ru' || hostname === 'm.vk.com' || hostname === 'vksport.vk.com') {
+      const zParam = parsed.searchParams.get('z');
+      if (zParam && zParam.startsWith('video')) {
+        const vkFromZ = zParam.match(/video(-?\d+_\d+)/);
+        if (vkFromZ) return `vk:${vkFromZ[1]}`;
+      }
+      const vkPathMatch = pathname.match(/\/(?:video|clip)(-?\d+_\d+)/);
+      if (vkPathMatch) return `vk:${vkPathMatch[1]}`;
+    }
+
+    // Coub: /view/ID, /embed/ID, /coubs/ID → coub:ID
+    if (hostname === 'coub.com') {
+      const coubMatch = pathname.match(/\/(?:view|embed|coubs)\/([\da-z]+)/);
+      if (coubMatch) return `coub:${coubMatch[1]}`;
+    }
+
+    // Mixcloud: /user/track (exclude stream, uploads, favorites, playlists) → mixcloud:user/track
+    if (hostname === 'mixcloud.com' || hostname === 'm.mixcloud.com' || hostname === 'beta.mixcloud.com') {
+      const mixMatch = pathname.match(/^\/([^/]+)\/([^/]+)\/?$/);
+      if (mixMatch) {
+        const [, user, track] = mixMatch;
+        const skip = ['stream', 'uploads', 'favorites', 'listens', 'playlists'];
+        if (!skip.includes(track)) return `mixcloud:${user}/${track}`;
+      }
+    }
+
+    // Imgur: /ID (single media; exclude /a/, /gallery/, /t/) → imgur:ID
+    if (hostname === 'imgur.com' || hostname === 'i.imgur.com') {
+      if (!pathname.startsWith('/a/') && !pathname.startsWith('/gallery/') && !pathname.startsWith('/t/') && !pathname.startsWith('/topic/') && !pathname.startsWith('/r/')) {
+        const imgurMatch = pathname.match(/^\/(?:[^/]+-)?([a-zA-Z0-9]+)\/?$/);
+        if (imgurMatch) return `imgur:${imgurMatch[1]}`;
+      }
+    }
+
+    // Naver TV: tv.naver.com/v/ID, /embed/ID → naver:ID
+    if (hostname === 'tv.naver.com' || hostname === 'tvcast.naver.com' || hostname === 'm.tv.naver.com') {
+      const naverMatch = pathname.match(/\/(?:v|embed)\/(\d+)/);
+      if (naverMatch) return `naver:${naverMatch[1]}`;
+    }
+
+    // Youku: v.youku.com/v_show/id_ID, player.youku.com/.../ID → youku:ID
+    if (hostname === 'v.youku.com' || hostname === 'player.youku.com' || hostname === 'play.youku.com' || hostname === 'video.tudou.com') {
+      const youkuIdMatch = pathname.match(/(?:v_show\/id_|player\.php\/sid\/|v\/)([A-Za-z0-9]+)/);
+      if (youkuIdMatch) return `youku:${youkuIdMatch[1]}`;
+    }
+    if (hostname === 'youku.com') {
+      const youkuShowMatch = pathname.match(/\/v_show\/id_([A-Za-z0-9]+)/);
+      if (youkuShowMatch) return `youku:${youkuShowMatch[1]}`;
+    }
+
+    // Zhihu: zhihu.com/zvideo/ID → zhihu:ID
+    if (hostname === 'zhihu.com') {
+      const zhihuMatch = pathname.match(/\/zvideo\/(\d+)/);
+      if (zhihuMatch) return `zhihu:${zhihuMatch[1]}`;
+    }
+
+    // TED: ted.com/talks/slug, embed.ted.com/talks/slug → ted:slug
+    if (hostname === 'ted.com' || hostname === 'embed.ted.com' || hostname === 'www.ted.com') {
+      const tedMatch = pathname.match(/\/talks\/([\w-]+)/);
+      if (tedMatch) return `ted:${tedMatch[1]}`;
+    }
+
+    // Dumpert: dumpert.nl/mediabase/ID, /embed/ID, /item/ID → dumpert:ID
+    if (hostname === 'dumpert.nl' || hostname === 'legacy.dumpert.nl') {
+      const dumpertMatch = pathname.match(/\/(?:mediabase|embed|item)\/([0-9]+[/_][0-9a-zA-Z]+)/);
+      if (dumpertMatch) return `dumpert:${dumpertMatch[1]}`;
+    }
+
+    // Weibo: weibo.com/uid/status_id or m.weibo.cn/status/status_id → weibo:status_id
+    if (hostname === 'weibo.com' || hostname === 'm.weibo.cn') {
+      const weiboStatusMatch = pathname.match(/\/(?:status|detail)\/([a-zA-Z0-9]+)/);
+      if (weiboStatusMatch) return `weibo:${weiboStatusMatch[1]}`;
+      const weiboUrlMatch = pathname.match(/^\/\d+\/([a-zA-Z0-9]+)/);
+      if (weiboUrlMatch) return `weibo:${weiboUrlMatch[1]}`;
+    }
+    if (hostname === 'video.weibo.com' && parsed.searchParams.get('fid')) {
+      const fid = parsed.searchParams.get('fid');
+      if (fid) return `weibo:${fid}`;
+    }
+
+    // archive.org: archive.org/details/ID, /embed/ID → archiveorg:ID
+    if (hostname === 'archive.org' || hostname === 'www.archive.org') {
+      const archiveMatch = pathname.match(/\/(?:details|embed)\/([^/?#]+)/);
+      if (archiveMatch) return `archiveorg:${archiveMatch[1]}`;
+    }
+
+    // Rutube: rutube.ru/video/32char, /embed/32char → rutube:ID
+    if (hostname === 'rutube.ru') {
+      const rutubeMatch = pathname.match(/\/(?:video(?:\/private)?|embed|play\/embed)\/([\da-z]{32})/);
+      if (rutubeMatch) return `rutube:${rutubeMatch[1]}`;
+    }
+
+    // TwitCasting: twitcasting.tv/user/movie/ID or /twplayer/ID → twitcasting:ID
+    if (hostname.endsWith('twitcasting.tv')) {
+      const twitMatch = pathname.match(/\/(?:movie|twplayer)\/(\d+)/);
+      if (twitMatch) return `twitcasting:${twitMatch[1]}`;
+    }
+
+    // Telegram: t.me/channel/ID → telegram:channel:ID
+    if (hostname === 't.me') {
+      const tgMatch = pathname.match(/^\/([^/]+)\/(\d+)/);
+      if (tgMatch) return `telegram:${tgMatch[1]}:${tgMatch[2]}`;
+    }
+
+    // Dropbox: dropbox.com/s/ID, /sh/ID → dropbox:ID
+    if (hostname === 'dropbox.com' || hostname === 'www.dropbox.com') {
+      const dbMatch = pathname.match(/\/(?:s(?:cl\/f[io])?|h?)\/(\w+)/);
+      if (dbMatch) return `dropbox:${dbMatch[1]}`;
+    }
+
+    // Cloudflare Stream: *.cloudflarestream.com — path or ?video= ID (32 hex)
+    if (hostname.endsWith('cloudflarestream.com') || hostname.endsWith('videodelivery.net') || hostname.endsWith('bytehighway.net')) {
+      const cfVideoParam = parsed.searchParams.get('video');
+      if (cfVideoParam && /^[\da-f]{32}$/.test(cfVideoParam)) return `cloudflarestream:${cfVideoParam}`;
+      const cfPathMatch = pathname.match(/\/([\da-f]{32})\/?$/);
+      if (cfPathMatch) return `cloudflarestream:${cfPathMatch[1]}`;
+    }
+
+    // XHamster: /videos/slug-ID or /movies/ID → xhamster:ID
+    if (hostname.includes('xhamster') || hostname === 'xhms.pro' || hostname === 'xhday.com' || hostname === 'xhvid.com') {
+      const xhMoviesMatch = pathname.match(/\/movies\/([\dA-Za-z]+)/);
+      if (xhMoviesMatch) return `xhamster:${xhMoviesMatch[1]}`;
+      const xhVideosMatch = pathname.match(/\/videos\/[^/]+-([\dA-Za-z]+)/);
+      if (xhVideosMatch) return `xhamster:${xhVideosMatch[1]}`;
+    }
+
+    // XVideos: /video.ID or embedframe/ID → xvideos:ID
+    if (hostname.includes('xvideos')) {
+      const xvMatch = pathname.match(/(?:video\.?|embedframe\/)([0-9a-z]+)/);
+      if (xvMatch) return `xvideos:${xvMatch[1]}`;
+    }
+
+    // Pornhub: view_video.php?viewkey=ID or embed/ID → pornhub:ID
+    if (hostname.includes('pornhub') || hostname.includes('pornhubpremium') || hostname === 'thumbzilla.com') {
+      const phViewkey = parsed.searchParams.get('viewkey');
+      if (phViewkey && /^[\da-z]+$/.test(phViewkey)) return `pornhub:${phViewkey}`;
+      const phEmbedMatch = pathname.match(/\/embed\/([\da-z]+)/);
+      if (phEmbedMatch) return `pornhub:${phEmbedMatch[1]}`;
+    }
+
+    // Kick: /user/videos/UUID (VOD) or /user/clips/clip_xxx / ?clip=clip_xxx → kick:ID
+    if (hostname === 'kick.com') {
+      const kickVodMatch = pathname.match(/\/[\w-]+\/videos\/([\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12})/);
+      if (kickVodMatch) return `kick:${kickVodMatch[1]}`;
+      const kickClipPath = pathname.match(/\/[\w-]+\/clips\/(clip_[\w-]+)/);
+      if (kickClipPath) return `kick:${kickClipPath[1]}`;
+      const kickClipParam = parsed.searchParams.get('clip');
+      if (kickClipParam && kickClipParam.startsWith('clip_')) return `kick:${kickClipParam}`;
+    }
+
+    // Nebula: nebula.tv/videos/slug → nebula:slug
+    if (hostname === 'nebula.tv' || hostname === 'nebula.app' || hostname === 'watchnebula.com') {
+      const nebulaMatch = pathname.match(/\/videos\/([\w-]+)/);
+      if (nebulaMatch) return `nebula:${nebulaMatch[1]}`;
+    }
+
+    // Newgrounds: /audio/listen/ID or /portal/view/ID (numeric) → newgrounds:ID
+    if (hostname === 'newgrounds.com') {
+      const ngMatch = pathname.match(/\/(?:audio\/listen|portal\/view)\/(\d+)/);
+      if (ngMatch) return `newgrounds:${ngMatch[1]}`;
+    }
+
+    // Floatplane: /post/ID → floatplane:ID
+    if (hostname === 'floatplane.com') {
+      const fpMatch = pathname.match(/^\/post\/([\w-]+)/);
+      if (fpMatch) return `floatplane:${fpMatch[1]}`;
+    }
+
+    // CDA (cda.pl): /video/ID or ebd.cda.pl/WxH/ID → cda:ID
+    if (hostname === 'cda.pl') {
+      const cdaMatch = pathname.match(/\/video\/([0-9a-z]+)/);
+      if (cdaMatch) return `cda:${cdaMatch[1]}`;
+    }
+    if (hostname === 'ebd.cda.pl') {
+      const cdaEmbedMatch = pathname.match(/\/([0-9a-z]+)$/);
+      if (cdaEmbedMatch) return `cda:${cdaEmbedMatch[1]}`;
+    }
+
+    // Utreon / Playeur: /v/ID → utreon:ID
+    if (hostname === 'utreon.com' || hostname === 'playeur.com') {
+      const utMatch = pathname.match(/^\/v\/([\w-]+)/);
+      if (utMatch) return `utreon:${utMatch[1]}`;
+    }
+
+    // Likee: /video/ID or /user/video/ID or /v/ID → likee:ID
+    if (hostname === 'likee.video') {
+      const likeeMatch = pathname.match(/(?:\/video\/|\/v\/)([^/?#]+)/);
+      if (likeeMatch) return `likee:${likeeMatch[1]}`;
+    }
+
+    // Iwara: /videos/ID or /video/ID → iwara:ID
+    if (hostname === 'iwara.tv' || hostname === 'ecchi.iwara.tv') {
+      const iwaraMatch = pathname.match(/\/videos?\/([a-zA-Z0-9]+)/);
+      if (iwaraMatch) return `iwara:${iwaraMatch[1]}`;
+    }
+
+    // EbaumsWorld: /videos/.../ID → ebaumsworld:ID
+    if (hostname === 'ebaumsworld.com') {
+      const ebMatch = pathname.match(/\/videos\/[^/]+\/(\d+)/);
+      if (ebMatch) return `ebaumsworld:${ebMatch[1]}`;
+    }
+
+    // Odnoklassniki (OK.ru): /video/ID or /videoembed/... → okru:ID
+    if (hostname === 'odnoklassniki.ru' || hostname === 'ok.ru') {
+      const okMatch = pathname.match(/\/video(?:embed)?\/([\d-]+)/);
+      if (okMatch) return `okru:${okMatch[1]}`;
+      const okLiveMatch = pathname.match(/\/live\/([\d-]+)/);
+      if (okLiveMatch) return `okru:${okLiveMatch[1]}`;
+    }
+
+    // Dropout: .../videos/ID → dropout:ID
+    if (hostname === 'dropout.tv' || hostname === 'watch.dropout.tv') {
+      const doMatch = pathname.match(/\/videos\/([^/?#]+)/);
+      if (doMatch) return `dropout:${doMatch[1]}`;
+    }
+
+    // CuriosityStream: /video/ID (numeric) → curiositystream:ID
+    if (hostname === 'curiositystream.com' || hostname === 'app.curiositystream.com') {
+      const csMatch = pathname.match(/^\/video\/(\d+)/);
+      if (csMatch) return `curiositystream:${csMatch[1]}`;
+    }
+
+    // Bandlab: /track/ID, /post/ID, /revision/ID → bandlab:ID
+    if (hostname === 'bandlab.com') {
+      const blMatch = pathname.match(/\/(?:track|post|revision)\/([\da-f_-]+)/);
+      if (blMatch) return `bandlab:${blMatch[1]}`;
+    }
+
+    // Gettr: /post/ID or /streaming/ID → gettr:ID
+    if (hostname === 'gettr.com') {
+      const gtMatch = pathname.match(/\/(?:post|streaming)\/([a-z0-9]+)/);
+      if (gtMatch) return `gettr:${gtMatch[1]}`;
+    }
+
+    // Minds: /media/ID, /newsfeed/ID, /archive/view/ID → minds:ID
+    if (hostname === 'minds.com') {
+      const mindsMatch = pathname.match(/(?:media|newsfeed|archive\/view)\/(\d+)/);
+      if (mindsMatch) return `minds:${mindsMatch[1]}`;
+    }
+
+    // Aparat: /v/ID or .../videohash/ID → aparat:ID
+    if (hostname === 'aparat.com') {
+      const aparatMatch = pathname.match(/(?:^\/v\/|videohash\/)([a-zA-Z0-9]+)/);
+      if (aparatMatch) return `aparat:${aparatMatch[1]}`;
+    }
+
+    // AcFun: /v/acID → acfun:acID
+    if (hostname === 'acfun.cn') {
+      const acMatch = pathname.match(/\/v\/ac([_\d]+)/);
+      if (acMatch) return `acfun:ac${acMatch[1]}`;
+    }
+
+    // XNXX: /video-ID/ or /videoID/ → xnxx:ID
+    if (hostname.includes('xnxx')) {
+      const xnxxMatch = pathname.match(/\/video-?([0-9a-z]+)/);
+      if (xnxxMatch) return `xnxx:${xnxxMatch[1]}`;
+    }
+
+    // DrTuber: /video/ID or /embed/ID → drtuber:ID
+    if (hostname === 'drtuber.com') {
+      const dtMatch = pathname.match(/\/(?:video|embed)\/(\d+)/);
+      if (dtMatch) return `drtuber:${dtMatch[1]}`;
+    }
+
+    // Dailymail (video): /video/.../video-ID or /embed/video/ID → dailymail:ID
+    if (hostname === 'dailymail.co.uk') {
+      const dmMatch = pathname.match(/(?:video\/[^/]+\/video-|embed\/video\/)(\d+)/);
+      if (dmMatch) return `dailymail:${dmMatch[1]}`;
+    }
+
+    // Bluesky: .../post/ID → bluesky:handle:ID
+    if (hostname === 'bsky.app' || hostname === 'bsky.social' || hostname === 'main.bsky.dev') {
+      const bskyMatch = pathname.match(/\/profile\/([^/]+)\/post\/([^/?#]+)/);
+      if (bskyMatch) return `bluesky:${bskyMatch[1]}:${bskyMatch[2]}`;
+    }
+
+    // Flickr: /photos/.../ID → flickr:ID
+    if (hostname === 'flickr.com' || hostname === 'secure.flickr.com') {
+      const flickrMatch = pathname.match(/\/photos\/[^/]+\/(\d+)/);
+      if (flickrMatch) return `flickr:${flickrMatch[1]}`;
+    }
+
+    // Generic: normalized origin (no www) + pathname for stable comparison
+    // Remove dot segments (.. and .) from pathname per RFC 3986
+    const normalizedPathname = removeDotSegments(pathname);
+    const normalizedHost = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    const origin = `${parsed.protocol}//${normalizedHost}`;
+    return `${origin}${normalizedPathname}`.toLowerCase();
+  } catch {
+    return null;
+  }
+}

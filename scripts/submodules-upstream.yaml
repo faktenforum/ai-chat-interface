@@ -1,12 +1,15 @@
-# Upstream repository configuration for Faktenforum fork submodules
+# Dev submodules registry (single config for all scripts)
 #
-# Branch Strategy:
-#   - main: Production branch with Faktenforum-specific modifications
-#   - upstream: Local tracking branch for upstream state (auto-created)
+# Responsibilities:
+#   update-submodules.sh       — Bring all up to date: (1) git submodule update --init --remote for all;
+#                                (2) for entries with upstream_url: upstream remote, tracking branch; forks: merge into main.
+#   build-dev-submodules.sh    — Build submodules needed for local/local-dev stacks (post_init steps only).
+#   create-faktenforum-branches.sh — For entries with upstream_url: create upstream tracking branch (optional).
 #
-# Used by: scripts/sync-fork-submodules.sh
+# Fields: path (required); upstream_url + fork_url (forks) or upstream_url only (upstream-only); post_init (for build-dev).
 
 submodules:
+  # --- Faktenforum forks (fork_url + upstream_url) ---
   - path: dev/librechat
     fork_url: git@github.com:faktenforum/LibreChat.git
     upstream_url: https://github.com/danny-avila/LibreChat.git
@@ -54,3 +57,35 @@ submodules:
     fork_branch: main
     upstream_tracking_branch: upstream
     description: "Deutsche Bahn Timetable MCP server fork"
+
+  # --- Upstream-only (not forks): fork: false, no fork_url ---
+  - path: dev/ytptube
+    fork: false
+    upstream_url: https://github.com/arabcoders/ytptube.git
+    upstream_branch: main
+    fork_branch: main
+    upstream_tracking_branch: upstream
+    description: "ytptube (upstream only, not a fork)"
+
+  # --- External dev submodules (updated by update-submodules step 1; no upstream sync) ---
+  - path: dev/agents
+    description: "LibreChat agents npm package"
+    post_init: npm_install_build
+
+  - path: dev/rag_api
+    description: "RAG API service"
+
+  - path: dev/firecrawl
+    description: "Firecrawl web scraping service"
+
+  - path: dev/searxng
+    description: "SearXNG metasearch engine"
+
+  - path: dev/n8n
+    description: "n8n workflow automation platform"
+
+  - path: dev/mcp-youtube-transcript
+    description: "YouTube Transcript MCP server (video URL → transcript via youtube-transcript-api)"
+
+  - path: dev/yt-dlp
+    description: "yt-dlp (reference only; used indirectly via YTPTube; we do not build from sources)"

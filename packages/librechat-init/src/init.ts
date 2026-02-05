@@ -1,8 +1,10 @@
 #!/usr/bin/env -S node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings
 import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { setupPermissions } from './setup-permissions.ts';
 import { initializeRoles } from './init-roles.ts';
+import { deepMerge } from './utils/merge.ts';
 import {
   CONFIG_SOURCE,
   CONFIG_TARGET,
@@ -60,11 +62,22 @@ async function main() {
         console.log('✓ Created config directory');
       }
 
-      const sourceContent = readFileSync(CONFIG_SOURCE, 'utf-8');
-      let resolvedContent = resolveConfigPlaceholders(sourceContent);
+      const libreachEnv = process.env.LIBRECHAT_ENV ?? 'prod';
+      const configSourceDir = dirname(CONFIG_SOURCE);
+      const overridePath = join(configSourceDir, `librechat.${libreachEnv}.yaml`);
+
+      let configObj = parseYaml(readFileSync(CONFIG_SOURCE, 'utf-8')) as object;
+      if (existsSync(overridePath)) {
+        const overrideObj = parseYaml(readFileSync(overridePath, 'utf-8')) as object;
+        configObj = deepMerge(configObj, overrideObj) as object;
+        console.log(`✓ Merged override: librechat.${libreachEnv}.yaml`);
+      }
+
+      let resolvedContent = stringifyYaml(configObj);
+      resolvedContent = resolveConfigPlaceholders(resolvedContent);
       resolvedContent = injectConstructedBaseURLs(resolvedContent);
       writeFileSync(CONFIG_TARGET, resolvedContent, 'utf-8');
-      console.log('✓ Config copied and placeholders resolved successfully');
+      console.log('✓ Config written and placeholders resolved successfully');
     } else {
       throw new Error(`Config file not found: ${CONFIG_SOURCE}`);
     }

@@ -2,6 +2,8 @@
 
 Run LibreChat unit and E2E tests on the host from `dev/librechat`. For E2E, start the test stack (MongoDB + Meilisearch) first; unit tests use in-memory MongoDB and do not need it. Optionally link `dev/agents` to use your local agents package.
 
+**PR draft:** [wip/PR-feat-librechat-testing.md](wip/PR-feat-librechat-testing.md)
+
 ## Table of Contents
 
 - [LibreChat Testing](#librechat-testing)

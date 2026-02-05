@@ -1,0 +1,2 @@
+# Local environment overrides.
+# Empty: base config is used as-is (all endpoints visible, fetch: true, execute_code enabled).

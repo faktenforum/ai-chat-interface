@@ -103,7 +103,7 @@ Add submodule to `dev/{name}-mcp/`:
 
 ### 3.2 Docker Compose Base File
 Create `docker-compose.mcp-{name}.yml`:
-- Service: `mcp-{name}`, **fallback image**: Base image (e.g., `python:3.13-slim`) - used if build fails or for testing without build
+- Service: `mcp-{name}`, **image**: Use base image (e.g., `python:3.13-slim`) as fallback only if the service can run meaningfully without the built app (e.g. for quick tests). If the MCP **only** runs with the built image (command requires the app), use the real image name (e.g. `ghcr.io/faktenforum/mcp-{name}:latest`) in the base file; extension files then build or pull that same image. Do not use base file alone in that case.
 - Networks: `app-net` only (internal service, **no Traefik**)
 - Environment: `PORT`, other required vars
 - Expose port (no publish) - internal access only
@@ -129,6 +129,8 @@ In `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, and `docker-compos
 
 ### Extension Files & Environment Variables
 Follow `@.cursor/rules/create-new-service.mdc` sections 2-3, MCP-specific: **No Traefik labels** (internal only, Docker network access). Extension files: `docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, `docker-compose.dev.yml`. Environment pattern: `MCP_{NAME}_PORT=3000`, `MCP_{NAME}_LOG_LEVEL=info`, optional `MCP_{NAME}_API_KEYS` (comma-separated). Add to all three: `env.local.example`, `env.prod.example`, `env.dev.example`.
+
+**IDE testing setup:** In `docker-compose.local.yml`, add `ports: ["127.0.0.1:{PORT}:{PORT}"]` with comment `# Cursor IDE – local only` to expose MCP server to IDE. Add entry to `.cursor/mcp.json`: `"{name}": { "url": "http://localhost:{PORT}/mcp" }`. See `@.cursor/rules/debug-test-internal-mcp.mdc` for testing workflow.
 
 ### LibreChat Configuration
 Update `packages/librechat-init/config/librechat.yaml`:

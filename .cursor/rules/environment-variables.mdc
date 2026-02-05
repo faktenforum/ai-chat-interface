@@ -61,7 +61,8 @@ Variables that are automatically generated if missing or set to `change-me`:
 **Auto-Generation Triggers**:
 - Variable is missing/undefined
 - Variable value is empty string
-- Variable value contains `change-me` (case-insensitive)
+- Variable value contains `change-me`
+- Variable value equals a key-specific placeholder (see `AUTO_GENERATE_PLACEHOLDERS`, e.g. `FIRECRAWL_BULL_AUTH_KEY` → `my-secret-key`)
 
 **Adding New Auto-Generated Variables**:
 ```typescript
@@ -91,6 +92,8 @@ interface PromptConfig {
 - If existing value present: Show "(already set, enter to keep)" message
 - If `defaultGen` provided: Show "(default: {generated})" in message
 
+**Optional API Keys** (prompt with "press enter to skip", `defaultGen: () => ''`): Springer Nature, GitHub PAT, Mapbox; also Jina, OCR, DB Timetable, YTPTube/Webshare.
+
 **Adding New Prompts**:
 ```typescript
 const PROMPTS: Record<string, PromptConfig> = {
@@ -101,7 +104,7 @@ const PROMPTS: Record<string, PromptConfig> = {
     'NEW_SERVICE_OPTIONAL_CONFIG': { 
         message: 'Optional config (press enter to skip):', 
         type: 'input',
-        defaultGen: () => 'default-value'
+        defaultGen: () => ''  // empty = skip
     },
     'PROD_ONLY_VAR': {
         message: 'Production-only setting:',

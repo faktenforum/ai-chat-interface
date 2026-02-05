@@ -4,6 +4,7 @@ alwaysApply: true
 * Always write code, comments and documentation in English, and ensure that only English is used in the repository.
 * Always use the latest version of the dependencies and tools.
 * We do not normally modify the code of projects in /dev, as we use their official images and do not build them ourselves. Exceptions are when we are working on a PR that we want to bring upstream.
+* Implement everything **elegantly, sustainably, consistently, cleanly, and understandably**: minimal complexity; maintainable design and avoidance of tech debt; adherence to existing patterns, naming, and structure; readable code without cruft; self-explanatory names, logic, and documentation where non-obvious.
 
 ## Git Submodules
 
@@ -15,5 +16,12 @@ This project uses git submodules in `/dev` for local development and PR testing:
 - `dev/firecrawl` - Firecrawl web scraping service
 - `dev/searxng` - SearXNG metasearch engine
 - `dev/n8n` - n8n workflow automation platform
+- `dev/open-streetmap-mcp` - OpenStreetMap MCP server (fork with HTTP transport)
+- `dev/db-timetable-mcp` - Deutsche Bahn Timetable MCP server
+- `dev/stackoverflow-mcp` - Stack Overflow MCP server
+- `dev/npm-search-mcp` - npm Search MCP server (fork with HTTP transport)
+- `dev/ytptube` - YTPTube (yt-dlp Web UI; used by MCP YTPTube)
+- `dev/mcp-youtube-transcript` - YouTube Transcript MCP server
+- `dev/yt-dlp` - yt-dlp (reference only; used indirectly via YTPTube)
 
 Use `docker-compose.local-dev.yml` to build images from submodule sources locally. Use `docker-compose.prod.yml` for production (published `:latest` images) or `docker-compose.dev.yml` for dev/test (published `:dev` images). See `dev/README.md` for details.

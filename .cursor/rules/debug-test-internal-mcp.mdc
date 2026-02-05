@@ -1,0 +1,35 @@
+---
+description: Guide for debugging and testing internal (self-hosted) MCP servers
+globs: "packages/mcp-*/**"
+alwaysApply: false
+---
+
+# Debug and Test Internal MCP Servers
+
+## Use the IDE as Test Client
+
+- **Cursor talks to the MCP server directly** via `.cursor/mcp.json`. Internal servers use `url: "http://localhost:<port>/mcp"`.
+- Use this connection to **exercise MCP tools** from the agent: call tools, check parameters and responses, reproduce failures.
+- When debugging, prefer **in-IDE tool calls** over external clients; behaviour (errors, timing) is what production will see.
+
+## Logs and Observability
+
+- **MCP container**: `docker logs <mcp-service-name>` (e.g. `docker logs mcp-calculator`). Watch for tool invocations, schema errors, upstream calls.
+- **Upstream/connected services**: Check logs of any service the MCP calls (e.g. RAG, Firecrawl, external APIs). Failures often show there first.
+- **Structured logging**: Use the project logger (e.g. `pino`); add **explicit debug logs** at tool entry, before/after external calls, and on error. Example: `logger.debug({ tool, input }, 'tool invoked')`.
+- **Correlation**: Include request/task IDs or short context in log lines so MCP logs and upstream logs can be correlated.
+
+## Reload After Code/Config Changes
+
+- **Tool/schema/server changes** in the MCP package are not picked up by Cursor until the MCP connection is refreshed.
+- **Reload MCP in Cursor**: MCP Settings → disconnect/reconnect the server, or reload the Cursor window (**Developer: Reload Window**). Restart the MCP container if it was code-changed: `docker compose -f docker-compose.mcp-<name>.yml up -d --build`.
+
+## Quick Checklist
+
+| Step | Action |
+|------|--------|
+| Test behaviour | Call MCP tools from the agent; observe inputs/outputs and errors |
+| Inspect MCP | `docker logs -f <mcp-service>` while reproducing |
+| Inspect upstream | `docker logs -f <upstream-service>` if the MCP calls other containers |
+| Add clues | `logger.debug` / `logger.info` at boundaries; rebuild and restart container |
+| Apply changes | Rebuild MCP image if code changed; reload MCP in Cursor (or reload window) |

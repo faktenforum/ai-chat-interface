@@ -9,39 +9,51 @@ Initialization services for LibreChat configuration and agent setup.
 
 ## Configuration
 
-### Roles (`config/roles.json`)
+Config files are YAML by default; if a `.yaml` file is missing, the loader tries the same path with `.json` (backward compatibility).
 
-```json
-{
-  "roles": [
-    {
-      "name": "DEVELOPER",
-      "permissions": {
-        "PROMPTS": { "SHARED_GLOBAL": true, "USE": true, "CREATE": true }
-      }
-    }
-  ]
-}
+### Environment-specific overrides and `LIBRECHAT_ENV`
+
+Init merges an override file onto the base `librechat.yaml` depending on `LIBRECHAT_ENV` (`local` | `dev` | `prod`, default `prod`). Override files: `librechat.local.yaml`, `librechat.dev.yaml`, `librechat.prod.yaml` (same directory as the base). They contain only the keys that differ per environment (e.g. `modelSpecs.addedEndpoints`, `endpoints.agents.capabilities`, custom endpoint `models.fetch`). See [docs/LIBRECHAT_FEATURES.md](../docs/LIBRECHAT_FEATURES.md) for details.
+
+### Local dev: mount config (no image rebuild)
+
+When the host directory `config/` is mounted at `/app/config-source` (e.g. in `docker-compose.local-dev.yml` and `docker-compose.local.yml`), the init script reads from that path instead of the baked-in `/app/data`. Set `LIBRECHAT_ENV=local` so `librechat.local.yaml` is applied. After editing `librechat.yaml`, override files, `roles.yaml`, or `agents.yaml`, run init again and restart the API; no image rebuild needed.
+
+```bash
+docker compose -f docker-compose.local-dev.yml run --rm librechat-init
+docker compose -f docker-compose.local-dev.yml restart api
+```
+
+### Roles (`config/roles.yaml`)
+
+```yaml
+roles:
+  - name: DEVELOPER
+    permissions:
+      PROMPTS:
+        SHARED_GLOBAL: true
+        USE: true
+        CREATE: true
 ```
 
 ### Agents
 
-**Files:** `config/agents.json` (public), `config/agents.private.json` (private)
+**Files:** `config/agents.yaml` (public), `config/agents.private.yaml` (private)
 
-```json
-{
-  "agents": [
-    {
-      "name": "Research Assistant",
-      "provider": "Scaleway",
-      "model": "mistral-small-3.2-24b-instruct-2506",
-      "tools": ["web_search", "file_search"],
-      "mcpServers": ["firecrawl"],
-      "mcpTools": ["firecrawl_search_mcp_firecrawl"],
-      "permissions": { "public": true }
-    }
-  ]
-}
+```yaml
+agents:
+  - name: Research Assistant
+    provider: Scaleway
+    model: mistral-small-3.2-24b-instruct-2506
+    tools:
+      - web_search
+      - file_search
+    mcpServers:
+      - firecrawl
+    mcpTools:
+      - firecrawl_search_mcp_firecrawl
+    permissions:
+      public: true
 ```
 
 **MCP Configuration:**

@@ -16,9 +16,9 @@ feat: LibreChat test stack and docs for upstream contribution workflow
 
 **Goal:** Run LibreChat unit and E2E tests locally so we can contribute patches upstream.
 
-**What’s in this PR:**
+**What's in this PR:**
 - Dedicated test stack (MongoDB + Meilisearch) and env template
-- Docs: [LibreChat Testing](docs/LIBRECHAT_TESTING.md) — prerequisites, stack, unit/E2E steps, OpenSSL 1.1 for `mongodb-memory-server`, troubleshooting
+- Docs: [LibreChat Testing](../LIBRECHAT_TESTING.md) — prerequisites, stack, unit/E2E steps, OpenSSL 1.1 for `mongodb-memory-server`, troubleshooting
 - Root npm scripts: `test:librechat:stack:up/down`, `test:librechat:unit`, `test:librechat:e2e`, `test:librechat:link-agents/unlink-agents`
 - Index updates in `docs/README.md` and `docs/SERVICES.md`
 

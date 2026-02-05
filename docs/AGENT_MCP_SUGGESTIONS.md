@@ -455,7 +455,7 @@ This document provides suggestions for additional Agents and MCP Servers that co
 ### Configuration
 - Add MCP servers to `librechat.yaml` under `mcpServers`
 - Add domain to `mcpSettings.allowedDomains` if needed
-- Configure agents in `agents.json` or `agents.private.json`
+- Configure agents in `agents.yaml` or `agents.private.yaml`
 - Set appropriate environment variables
 
 ---
