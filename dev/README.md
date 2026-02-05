@@ -19,7 +19,7 @@ This project includes the following git submodules:
 - **dev/npm-search-mcp** - npm Search MCP server (fork with HTTP transport support)
 - **dev/ytptube** - YTPTube (yt-dlp Web UI; used by MCP YTPTube)
 - **dev/mcp-youtube-transcript** - YouTube Transcript MCP server (video URL → transcript)
-- **dev/docs-mcp-server** - Grounded Docs MCP server (Faktenforum fork; we build the image from this submodule; fork adds configurable embedding dimension for Scaleway/OpenRouter)
+- **dev/docs-mcp-server** - Grounded Docs MCP (Faktenforum fork; we build image; configurable embedding dimension)
 - **dev/yt-dlp** - yt-dlp (reference only; used indirectly via YTPTube; we do not build from sources)
 
 ## Documentation

@@ -1,5 +1,5 @@
-# Grounded Docs MCP Server (docs-mcp-server) - fork submodule, image from registry
-# Pattern 3: local stacks build from dev/docs-mcp-server; prod/Portainer use ghcr.io image
+# Grounded Docs MCP (docs-mcp-server). Pattern 3: local build from dev/docs-mcp-server; prod/Portainer use registry image.
+# Internal only – no Traefik.
 services:
   mcp-docs:
     image: ghcr.io/faktenforum/mcp-docs:latest
@@ -10,7 +10,7 @@ services:
       PORT: ${MCP_DOCS_PORT:-6280}
       DOCS_MCP_STORE_PATH: /data
       XDG_CONFIG_HOME: /config
-      # Optional: semantic search. We use MCP_DOCS_* in .env; server expects DOCS_MCP_* / OPENAI_API_* (see docs/MCP_DOCS.md)
+      # Optional embeddings: MCP_DOCS_* → server OPENAI_API_* / DOCS_MCP_* (see docs/MCP_DOCS.md)
       OPENAI_API_KEY: ${MCP_DOCS_OPENAI_API_KEY:-}
       OPENAI_API_BASE: ${MCP_DOCS_OPENAI_API_BASE:-}
       DOCS_MCP_EMBEDDING_MODEL: ${MCP_DOCS_EMBEDDING_MODEL:-}

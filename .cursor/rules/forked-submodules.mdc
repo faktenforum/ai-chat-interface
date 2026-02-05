@@ -12,7 +12,7 @@ Use this when working with a git submodule that is a **Faktenforum fork**: it ha
 1. **Registry**: Add an entry in `scripts/submodules-upstream.yaml` with:
    - `path`, `fork_url`, `upstream_url`, `upstream_branch`, `fork_branch`, `upstream_tracking_branch`, optional `description`
 2. **Submodule**: In `.gitmodules`, set the submodule `url` to the fork (e.g. `git@github.com:faktenforum/<repo>.git`) and `branch` (e.g. `main`)
-3. **Sync**: Run `npm run update:submodules` (or `./scripts/update-submodules.sh`) so the repo checks out the fork and the script creates the upstream remote and `upstream` tracking branch
+3. **Sync:** Run `npm run update:submodules` (or `./scripts/update-submodules.sh`) so the fork is checked out and the script adds the upstream remote and tracking branch
 
 ## Daily workflow
 

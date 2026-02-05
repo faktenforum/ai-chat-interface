@@ -75,14 +75,9 @@
 ### MCP Docs (Grounded Docs)
 
 - [ ] Open PR for configurable embedding dimension (fork branch `vector-dimension`)
-  - **Goal:** Upstream [arabold/docs-mcp-server](https://github.com/arabold/docs-mcp-server) should support configurable `documents_vec` dimension so Scaleway (3584), OpenRouter (1536), and other providers work without DB mismatch.
-  - **Fork:** [faktenforum/docs-mcp-server](https://github.com/faktenforum/docs-mcp-server), branch `vector-dimension`. Create PR from `vector-dimension` → `arabold/docs-mcp-server:main`.
-- [ ] Reuse existing playwright-service for docs-mcp-server browser rendering
-  - **Goal:** docs-mcp-server uses shared Firecrawl playwright-service instead of in-process Chromium for `scrapeMode` playwright/auto.
-  - **Benefit:** Single browser pool (Firecrawl + docs-mcp), less resources in docs-mcp container, no Chromium in docs-mcp image.
-  - **Approach:** Add optional "remote Playwright" mode: when configured (e.g. env `PLAYWRIGHT_MICROSERVICE_URL` or `MCP_DOCS_PLAYWRIGHT_URL`), HtmlPlaywrightMiddleware (or equivalent) calls `POST /scrape` with `{ url, timeout?, headers?, ... }` and feeds returned HTML into existing HTML pipeline (Cheerio, sanitization, markdown, splitter). Default remains in-process Playwright for standalone deployments.
-  - **Risk:** playwright-service is Firecrawl’s internal contract; API may change with Firecrawl releases. Document the contract or pin a compatible version.
-  - **Ref:** [MCP_DOCS.md](MCP_DOCS.md), Firecrawl `dev/firecrawl/apps/playwright-service-ts` (POST `/scrape`).
+  - Upstream [arabold/docs-mcp-server](https://github.com/arabold/docs-mcp-server): support configurable `documents_vec` for Scaleway (3584), OpenRouter (1536). Fork [faktenforum/docs-mcp-server](https://github.com/faktenforum/docs-mcp-server); PR `vector-dimension` → `arabold/docs-mcp-server:main`.
+- [ ] Reuse Firecrawl playwright-service for docs-mcp-server browser rendering
+  - Optional remote Playwright mode (e.g. `MCP_DOCS_PLAYWRIGHT_URL`): docs-mcp calls playwright-service `POST /scrape`, feed HTML into existing pipeline. Single browser pool, no Chromium in docs-mcp image. Risk: Firecrawl contract may change. Ref: [MCP_DOCS.md](MCP_DOCS.md), `dev/firecrawl/apps/playwright-service-ts`.
 
 ### MCP Tools
 

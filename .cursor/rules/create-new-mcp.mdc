@@ -98,11 +98,10 @@ In `docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.p
 For **fork submodules where we build and publish the image**, follow `@.cursor/rules/build-deploy-fork-images.mdc`: base compose uses registry image only; local stacks override with build from submodule; prod/Portainer use registry image; CI workflow builds and pushes on submodule changes.
 
 ### 3.1 Git Submodule Setup
-Add submodule to `dev/{name}-mcp/`:
-- Add to `.gitmodules`: `[submodule "dev/{name}-mcp"]`, `path = dev/{name}-mcp`, `url = git@github.com:org/{name}-mcp.git`
-- Initialize: `git submodule update --init --recursive dev/{name}-mcp`
-- Update `dev/README.md` with submodule reference
-- For fork sync: add entry in `scripts/submodules-upstream.yaml`; see `@.cursor/rules/forked-submodules.mdc`
+Add submodule to `dev/{name}-mcp/` or `dev/{name}-mcp-server/` (e.g. `dev/docs-mcp-server`, `dev/db-timetable-mcp`):
+- Add to `.gitmodules`: `path`, `url` (fork if applicable), `branch`
+- Initialize: `git submodule update --init --recursive dev/<path>`
+- Update `dev/README.md`. For fork sync: add entry in `scripts/submodules-upstream.yaml`; see `@.cursor/rules/forked-submodules.mdc`
 
 ### 3.2 Docker Compose Base File
 Create `docker-compose.mcp-{name}.yml`:

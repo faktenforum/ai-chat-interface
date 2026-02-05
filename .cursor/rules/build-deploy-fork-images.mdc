@@ -5,40 +5,36 @@ description: Building and deploying Docker images from fork submodules (local bu
 
 # Building and Deploying Images from Fork Submodules
 
-Use this when a service runs from a **git submodule that we fork and maintain**, and we **build and publish** its Docker image ourselves. Local stacks build from the submodule Dockerfile; Portainer/prod use the image from the registry.
+Use when a service runs from a **fork submodule** and we **build and publish** its image. Local stacks build from the submodule; Portainer/prod use the registry image.
 
-**Related:** `@.cursor/rules/forked-submodules.mdc` (fork sync, PR workflow), `@.cursor/rules/create-new-mcp.mdc` Pattern 3.
+**Related:** `@.cursor/rules/forked-submodules.mdc`, `@.cursor/rules/create-new-mcp.mdc` Pattern 3.
 
 ## When this applies
 
 - Submodule in `dev/<name>/` (e.g. `dev/docs-mcp-server`, `dev/db-timetable-mcp`)
-- We build the image in CI and push to `ghcr.io/faktenforum/<image-name>`
-- **Local / local-dev:** Build from submodule (`build: context: ./dev/<name>`), tag with same image name as prod
-- **Prod / dev (Portainer):** Use registry image only (`image: ghcr.io/faktenforum/<image-name>:latest` or `:dev`), **no** `build` section
+- CI builds and pushes to `ghcr.io/faktenforum/mcp-<name>`
+- **Local / local-dev:** `build: context: ./dev/<name>`, same `image:` as prod (built locally)
+- **Prod / dev:** Registry image only, **no** `build` section
 
 ## Compose layout
 
 | File | Build | Image |
 |------|--------|--------|
 | Base `docker-compose.mcp-<name>.yml` | No | `ghcr.io/faktenforum/mcp-<name>:latest` |
-| `docker-compose.local.yml` | Yes, `./dev/<name>` | Same as base (built locally) |
-| `docker-compose.local-dev.yml` | Yes, `./dev/<name>` | Same as base (built locally) |
+| `docker-compose.local.yml` / `local-dev.yml` | Yes, `./dev/<name>` | Same (built locally) |
 | `docker-compose.prod.yml` | No | `ghcr.io/faktenforum/mcp-<name>:latest` |
 | `docker-compose.dev.yml` | No | `ghcr.io/faktenforum/mcp-<name>:dev` |
 
-Base file must not contain a `build` section so that prod/dev stacks only pull the image. Local stacks override with `build` and the same `image:` so the built image is tagged for local use.
+Base has no `build` so prod/dev only pull. Local override adds `build` and same `image:`.
 
-## GitHub Actions workflow
+## GitHub Actions
 
 - **Path:** `.github/workflows/build-mcp-<name>.yml`
-- **Trigger:** `push` with `paths`: `dev/<name>`, `dev/<name>/**`, and the workflow file; plus `workflow_dispatch`
-- **Checkout:** `submodules: true`
-- **Build context:** `./dev/<name>`
-- **Push:** `ghcr.io/faktenforum/mcp-<name>` with tags: `latest` (default branch), `dev` (other branches), branch name
-- **Platform:** `linux/amd64`; use GHA cache (`cache-from` / `cache-to`)
+- **Trigger:** `push` paths `dev/<name>`, `dev/<name>/**`, workflow file; `workflow_dispatch`
+- **Checkout:** `submodules: true`. **Context:** `./dev/<name>`. **Push:** `ghcr.io/faktenforum/mcp-<name>` tags `latest` (default branch), `dev`, branch name. **Platform:** `linux/amd64`; GHA cache.
 
-Copy from an existing fork-build workflow (e.g. `build-mcp-db-timetable.yml`, `build-mcp-docs.yml`) and adjust service name and paths.
+Copy e.g. `build-mcp-docs.yml` or `build-mcp-db-timetable.yml` and adjust name/paths.
 
 ## Examples
 
-Services following this pattern: `mcp-docs`, `mcp-db-timetable`, `mcp-stackoverflow`, `mcp-npm-search`, `mcp-openstreetmap`, `mcp-youtube-transcript`.
+`mcp-docs`, `mcp-db-timetable`, `mcp-stackoverflow`, `mcp-npm-search`, `mcp-openstreetmap`, `mcp-youtube-transcript`.

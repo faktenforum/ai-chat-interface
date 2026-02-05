@@ -136,7 +136,7 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 
 **YouTube Transcript** — YouTube video URL → transcript via youtube-transcript-api. Tools: `get_transcript`, `get_timed_transcript`, `get_video_info`. Network: `app-net`. URL: `http://mcp-youtube-transcript:3011/mcp`. [MCP YouTube Transcript](MCP_YOUTUBE_TRANSCRIPT.md)
 
-**Grounded Docs** — Documentation index for AI (websites, GitHub, npm, local files). Optional semantic search via embedding model (`OPENAI_API_KEY`, `DOCS_MCP_EMBEDDING_MODEL`). Data and config in volumes `docs-mcp-data`, `docs-mcp-config`. Network: `app-net`. URL: `http://mcp-docs:6280/mcp`. Image: `ghcr.io/arabold/docs-mcp-server:latest`. Port: `MCP_DOCS_PORT` (default 6280).
+**Grounded Docs** — Documentation index (websites, GitHub, npm, local files). Optional semantic search via embeddings (`MCP_DOCS_*`). Volumes: `docs-mcp-data`, `docs-mcp-config`. Network: `app-net`. URL: `http://mcp-docs:6280/mcp`. Image: `ghcr.io/faktenforum/mcp-docs:latest`. Port: `MCP_DOCS_PORT` (default 6280). [MCP Grounded Docs](MCP_DOCS.md)
 
 **GitHub** — Repository management, issues, pull requests, code search. Remote; requires `MCP_GITHUB_PAT`. URL: `https://api.githubcopilot.com/mcp/`
 
