@@ -68,4 +68,4 @@ TODO list of MCP servers to evaluate and integrate for specific agents.
 
 ---
 
-See [SERVICES.md](SERVICES.md), [create-new-mcp](../.cursor/rules/create-new-mcp.mdc), [create-external-mcp](../.cursor/rules/create-external-mcp.mdc), [AGENT_MCP_SUGGESTIONS.md](AGENT_MCP_SUGGESTIONS.md).
+See [SERVICES.md](SERVICES.md), [create-new-mcp](../.cursor/rules/create-new-mcp.mdc), [AGENT_MCP_SUGGESTIONS.md](AGENT_MCP_SUGGESTIONS.md).

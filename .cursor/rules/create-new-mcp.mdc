@@ -1,38 +1,48 @@
 ---
 name: create-new-mcp
-description: Guide for integrating new MCP servers into the Docker stack
+description: Guide for integrating new MCP servers (Docker-based and external/remote)
 ---
 
 # MCP Server Integration Guide
 
-> **Note:** This guide covers MCP-specific integration steps. For general Docker service patterns (extension files, environment variables, documentation, naming, testing), see `@.cursor/rules/create-new-service.mdc`.
+> **Note:** This guide covers MCP-specific integration. For general Docker service patterns (extension files, environment variables, documentation, naming, testing), see `@.cursor/rules/create-new-service.mdc`.
+
+## Before You Start: Clarify the Implementation Approach
+
+**If it is not yet clear how the MCP server should be integrated, ask the user which approach to use.** Do not assume. Present the options:
+
+1. **Self-written** – We implement the MCP server ourselves (TypeScript/Node in `packages/mcp-{name}/`), with our Dockerfile and CI.
+2. **External published Docker image** – We use an existing image from a registry (e.g. Docker Hub, GHCR); no repo or build in this project.
+3. **External submodule (upstream)** – We add the upstream repo as a git submodule in `dev/` and use their published image (no fork, we do not publish an image).
+4. **External submodule (fork)** – We use our fork of an external repo as a submodule in `dev/`, build from it, and publish to `ghcr.io/faktenforum`.
+5. **External/remote hosted** – The MCP is a remote service over HTTPS (e.g. GitHub MCP, Mapbox); no Docker or submodule in this project.
+
+Once the user has chosen, follow the corresponding pattern below.
 
 ## Integration Patterns Overview
 
-Four integration patterns exist:
+| Pattern | Description | Docker Compose | Package/Submodule | We publish image? |
+|--------|-------------|----------------|-------------------|-------------------|
+| **1. Self-written** | Our NPM package in `packages/mcp-{name}/`, our Dockerfile, our workflow | ✅ Base + extensions | ✅ `packages/mcp-{name}/` | ✅ `ghcr.io/faktenforum/mcp-{name}` |
+| **2. External image** | Use third-party image as-is (e.g. Firecrawl, Weather) | ✅ Base + extensions | ❌ | ❌ |
+| **3. Submodule (upstream)** | Upstream repo as submodule in `dev/`; use their image | ✅ Base + extensions | ✅ Submodule only | ❌ |
+| **4. Submodule (fork)** | Our fork as submodule in `dev/`; we build and publish | ✅ Base + extensions | ✅ Submodule only | ✅ `ghcr.io/faktenforum/mcp-{name}` |
+| **5. Remote hosted** | HTTPS service (e.g. GitHub, Mapbox); no container | ❌ | ❌ | N/A |
 
-1. **Self-written MCP server** (TypeScript/Node.js): Full NPM package in `packages/mcp-{name}/`, custom Dockerfile, GitHub Actions workflow. Examples: `mcp-calculator`, `mcp-image-gen`.
-2. **External published Docker image**: Use existing image directly, no package/Dockerfile needed. May require `command` override or custom healthcheck. Examples: `mcp-firecrawl`, `mcp-weather`.
-3. **External submodule with modifications**: Git submodule in `dev/{name}-mcp/`, build from submodule Dockerfile. Examples: `mcp-openstreetmap`.
-4. **External/remote hosted MCP server**: Remote hosted service accessible via HTTPS, no Docker setup required. Examples: GitHub MCP (`api.githubcopilot.com`), Mapbox MCP (`mcp.mapbox.com`). **See `@.cursor/rules/create-external-mcp.mdc` for this pattern.**
+**Common steps for patterns 1–4 (Docker-based):** Docker Compose base + extension files, env examples, LibreChat config (`allowedDomains`, `mcpServers`), icon asset.
 
-**Common steps for patterns 1-3 (Docker-based):**
-- Docker Compose base file (`docker-compose.mcp-{name}.yml`)
-- Extension files (`docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, `docker-compose.dev.yml`)
-- Environment variables (`env.local.example`, `env.prod.example`, `env.dev.example`)
-- LibreChat configuration (`librechat.yaml`: `mcpSettings.allowedDomains`, `mcpServers`)
-- Icon asset (`packages/librechat-init/assets/mcp-{name}-icon.svg`)
+**Common steps for pattern 5 (remote):** LibreChat config (with external domain + `headers`), env examples (API token only), icon asset. No Docker Compose.
 
-**Common steps for pattern 4 (external/remote):**
-- LibreChat configuration (`librechat.yaml`: `mcpSettings.allowedDomains`, `mcpServers`)
-- Environment variables (`env.local.example`, `env.prod.example`, `env.dev.example`)
-- Icon asset (`packages/librechat-init/assets/mcp-{name}-icon.svg`)
-- **No Docker Compose files needed**
+---
 
 ## Pattern 1: Self-Written MCP Server
 
+We implement the server in this repo: NPM package, our Dockerfile, our GitHub Actions workflow.
+
 ### 1.1 NPM Package Structure
+
 Create `packages/mcp-{name}/`:
+
 - `package.json`: `@ai-chat-interface/mcp-{name}`, `type: "module"`, dependencies: `@modelcontextprotocol/sdk`, `zod`, `express`, `pino`, `dotenv`, `"start": "./src/server.ts"` script
 - **After dependencies**: Run `npx npm-check-updates -u`, then `npm install`
 - **Executable**: `chmod +x ./src/server.ts` (required for `"start": "./src/server.ts"`)
@@ -46,18 +56,22 @@ Create `packages/mcp-{name}/`:
 - `.dockerignore`, `.gitignore`: Standard Node.js patterns
 
 ### 1.2 Docker Compose Base File
+
 Create `docker-compose.mcp-{name}.yml`:
+
 - Service: `mcp-{name}`
-- **Fallback image**: Base image (e.g., `node:24-alpine`) - used if build fails or for testing without build
+- **Fallback image**: Base image (e.g. `node:24-alpine`) – used if build fails or for testing without build
 - Networks: `app-net` only (internal service, **no Traefik**)
 - Environment: `PORT`, `LOG_LEVEL`, optional `API_KEYS`
-- Expose port (no publish) - internal access only
+- Expose port (no publish) – internal access only
 - Healthcheck: HTTP GET `/health`, interval 30s, timeout 10s, retries 3, start_period 40s
 - Resource limits: 0.5 CPU, 256M memory
 - **Note**: Extension files with `build` sections MUST override with unique image name to prevent Docker layering issues
 
 ### 1.3 GitHub Actions Workflow
+
 Create `.github/workflows/build-mcp-{name}.yml` (see `@.cursor/rules/create-new-service.mdc` section 5):
+
 - Trigger: Push to `packages/mcp-{name}/**` or workflow file changes
 - Build context: `./packages/mcp-{name}`
 - Image: `ghcr.io/faktenforum/mcp-{name}`
@@ -65,15 +79,21 @@ Create `.github/workflows/build-mcp-{name}.yml` (see `@.cursor/rules/create-new-
 - Platform: `linux/amd64`
 - Cache: GitHub Actions cache
 
+---
+
 ## Pattern 2: External Published Docker Image
 
+We use an existing image from a registry. No package, no Dockerfile, no workflow in this repo.
+
 ### 2.1 Docker Compose Base File
+
 Create `docker-compose.mcp-{name}.yml`:
-- Service: `mcp-{name}`, image: External image (e.g., `ghcr.io/org/mcp-server:latest`, `dockerhub-user/image:tag`)
+
+- Service: `mcp-{name}`, image: External image (e.g. `ghcr.io/org/mcp-server:latest`, `dockerhub-user/image:tag`)
 - Networks: `app-net` only (internal service, **no Traefik**)
-- Environment: Map required env vars (e.g., `PORT`, `API_KEY`, `HTTP_STREAMABLE_SERVER: "true"`)
-- **Command override** (if needed): Override for streamable-http mode (Python example: `["sh", "-c", "uv run python -m module --mode streamable-http --host 0.0.0.0 --port $${MCP_NAME_PORT:-3000}"]`)
-- Expose port (no publish) - internal access only
+- Environment: Map required env vars (e.g. `PORT`, `API_KEY`, `HTTP_STREAMABLE_SERVER: "true"`)
+- **Command override** (if needed): Override for streamable-http mode (e.g. Python: `["sh", "-c", "uv run python -m module --mode streamable-http --host 0.0.0.0 --port $${MCP_NAME_PORT:-3000}"]`)
+- Expose port (no publish) – internal access only
 - **Healthcheck** (interval 30s, timeout 10s, retries 3, start_period 40s):
   - **HTTP endpoint** (preferred): `test: ["CMD", "node", "-e", "require('http').get('http://localhost:PORT/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]`
   - **Socket check** (fallback): `test: ["CMD-SHELL", "python -c 'import socket; s=socket.socket(); s.settimeout(1); result=s.connect_ex((\"localhost\", PORT)); s.close(); exit(0 if result == 0 else 1)'"]`
@@ -81,86 +101,199 @@ Create `docker-compose.mcp-{name}.yml`:
 - Logging: json-file driver, max-size 10m, max-file 3, compress true
 
 ### 2.2 Extension Files
+
 In `docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, `docker-compose.dev.yml`:
+
 - Extend base service: `extends: { file: docker-compose.mcp-{name}.yml, service: mcp-{name} }`
 - Add `env_file: .env.local` (local files only)
 - Add `container_name: ${STACK_NAME:-prod}-mcp-{name}` (prod only)
-- **No build section** - uses external image directly
+- **No build section** – uses external image directly
 - **Note**: If overriding with build, always set unique `image:` name different from base image
 
-### 2.3 No Package/Workflow Needed
-- No NPM package structure required
+### 2.3 No Package/Workflow
+
+- No NPM package
 - No GitHub Actions workflow (image maintained externally)
-- No Dockerfile (uses external image)
+- No Dockerfile
 
-## Pattern 3: External Submodule with Modifications
+---
 
-For **fork submodules where we build and publish the image**, follow `@.cursor/rules/build-deploy-fork-images.mdc`: base compose uses registry image only; local stacks override with build from submodule; prod/Portainer use registry image; CI workflow builds and pushes on submodule changes.
+## Pattern 3: External Submodule (Upstream, No Fork)
+
+We add the **upstream** MCP repo as a git submodule in `dev/`. We use **their** published image (or build from submodule for local dev only). We do **not** fork and do **not** publish an image to our registry.
 
 ### 3.1 Git Submodule Setup
-Add submodule to `dev/{name}-mcp/` or `dev/{name}-mcp-server/` (e.g. `dev/docs-mcp-server`, `dev/db-timetable-mcp`):
-- Add to `.gitmodules`: `path`, `url` (fork if applicable), `branch`
+
+- Add submodule to `dev/{name}-mcp/` or `dev/{name}-mcp-server/` pointing to **upstream** repo URL
+- Add to `.gitmodules`: `path`, `url` (upstream), `branch`
 - Initialize: `git submodule update --init --recursive dev/<path>`
-- Update `dev/README.md`. For fork sync: add entry in `scripts/submodules-upstream.yaml`; see `@.cursor/rules/forked-submodules.mdc`
+- Update `dev/README.md`
 
 ### 3.2 Docker Compose Base File
+
 Create `docker-compose.mcp-{name}.yml`:
-- Service: `mcp-{name}`, **image**: `ghcr.io/faktenforum/mcp-{name}:latest`, **container_name**: `mcp-{name}`. **No** `build` section in base (Portainer/prod pull from registry; local stacks override with build).
+
+- Service: `mcp-{name}`, **image**: Upstream image (e.g. `ghcr.io/upstream-org/mcp-{name}:latest`)
 - Networks: `app-net` only (internal service, **no Traefik**)
 - Environment: `PORT`, other required vars
-- Expose port (no publish) - internal access only
-- **Healthcheck** (interval 30s, timeout 10s, retries 3, start_period 40s): Socket check (if no HTTP endpoint) or HTTP check (if available)
+- Expose port (no publish) – internal access only
+- **Healthcheck** (interval 30s, timeout 10s, retries 3, start_period 40s): HTTP endpoint preferred, socket check fallback
 - Resource limits: 0.5 CPU, 256M memory
 - Logging: json-file driver, max-size 10m, max-file 3, compress true
 
 ### 3.3 Extension Files
-- **Local / local-dev** (`docker-compose.local.yml`, `docker-compose.local-dev.yml`): Extend base; add `image: ghcr.io/faktenforum/mcp-{name}:latest` and `build: { context: ./dev/{name}-mcp, dockerfile: Dockerfile }` so the image is built from the submodule and tagged for local use. Add `env_file: .env.local`, ports for IDE.
-- **Prod / dev** (`docker-compose.prod.yml`, `docker-compose.dev.yml`): Extend base; set `container_name: ${STACK_NAME:-prod}-mcp-{name}`; override **image** to `ghcr.io/faktenforum/mcp-{name}:latest` (prod) or `:dev` (dev). **No** build section — use registry image only.
 
-### 3.4 GitHub Actions Workflow (when we build and publish)
+- **Local / local-dev**: Extend base; optionally override with `build: { context: ./dev/{name}-mcp, dockerfile: Dockerfile }` and unique `image:` for local builds from submodule. Add `env_file: .env.local`, ports for IDE.
+- **Prod / dev**: Extend base; set `container_name: ${STACK_NAME:-prod}-mcp-{name}`; **no** build – use upstream image only.
+
+### 3.4 No Workflow
+
+- No GitHub Actions workflow (we do not publish; upstream maintains the image)
+
+---
+
+## Pattern 4: External Submodule (Fork)
+
+We use **our fork** of an external repo as a submodule in `dev/`, build from it, and publish to `ghcr.io/faktenforum`. Follow `@.cursor/rules/build-deploy-fork-images.mdc`: base compose uses registry image only; local stacks may override with build from submodule; prod/Portainer use our registry image; CI workflow builds and pushes on submodule changes.
+
+### 4.1 Git Submodule Setup
+
+- Add submodule to `dev/{name}-mcp/` or `dev/{name}-mcp-server/` (e.g. `dev/docs-mcp-server`, `dev/db-timetable-mcp`)
+- Add to `.gitmodules`: `path`, `url` (Faktenforum fork), `branch`
+- Initialize: `git submodule update --init --recursive dev/<path>`
+- Update `dev/README.md`. For fork sync: add entry in `scripts/submodules-upstream.yaml`; see `@.cursor/rules/forked-submodules.mdc`
+
+### 4.2 Docker Compose Base File
+
+Create `docker-compose.mcp-{name}.yml`:
+
+- Service: `mcp-{name}`, **image**: `ghcr.io/faktenforum/mcp-{name}:latest`, **container_name**: `mcp-{name}`. **No** `build` section in base (Portainer/prod pull from registry; local stacks override with build).
+- Networks: `app-net` only (internal service, **no Traefik**)
+- Environment: `PORT`, other required vars
+- Expose port (no publish) – internal access only
+- **Healthcheck** (interval 30s, timeout 10s, retries 3, start_period 40s): Socket check (if no HTTP endpoint) or HTTP check (if available)
+- Resource limits: 0.5 CPU, 256M memory
+- Logging: json-file driver, max-size 10m, max-file 3, compress true
+
+### 4.3 Extension Files
+
+- **Local / local-dev** (`docker-compose.local.yml`, `docker-compose.local-dev.yml`): Extend base; add `image: ghcr.io/faktenforum/mcp-{name}:latest` and `build: { context: ./dev/{name}-mcp, dockerfile: Dockerfile }` so the image is built from the submodule and tagged for local use. Add `env_file: .env.local`, ports for IDE.
+- **Prod / dev** (`docker-compose.prod.yml`, `docker-compose.dev.yml`): Extend base; set `container_name: ${STACK_NAME:-prod}-mcp-{name}`; override **image** to `ghcr.io/faktenforum/mcp-{name}:latest` (prod) or `:dev` (dev). **No** build section – use registry image only.
+
+### 4.4 GitHub Actions Workflow (When We Build and Publish)
+
 When we build and publish the image from the fork submodule, add `.github/workflows/build-mcp-{name}.yml`. See `@.cursor/rules/build-deploy-fork-images.mdc` for trigger paths, build context (`./dev/{name}-mcp`), and push to `ghcr.io/faktenforum/mcp-{name}` (tags: `latest`, `dev`, branch). If the submodule is only used locally and we do not publish an image, omit the workflow.
 
-## Common Steps (All Patterns)
+---
 
-### Extension Files & Environment Variables
-Follow `@.cursor/rules/create-new-service.mdc` sections 2-3, MCP-specific: **No Traefik labels** (internal only, Docker network access). Extension files: `docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, `docker-compose.dev.yml`. Environment pattern: `MCP_{NAME}_PORT=3000`, `MCP_{NAME}_LOG_LEVEL=info`, optional `MCP_{NAME}_API_KEYS` (comma-separated). Add to all three: `env.local.example`, `env.prod.example`, `env.dev.example`.
+## Pattern 5: External/Remote Hosted MCP Server
 
-**IDE testing setup:** In `docker-compose.local.yml`, add `ports: ["127.0.0.1:{PORT}:{PORT}"]` with comment `# Cursor IDE – local only` to expose MCP server to IDE. Add entry to `.cursor/mcp.json`: `"{name}": { "url": "http://localhost:{PORT}/mcp" }`. See `@.cursor/rules/debug-test-internal-mcp.mdc` for testing workflow.
+The MCP server is a **remote service over HTTPS** (e.g. GitHub MCP, Mapbox). No Docker, no submodule, no package in this repo.
 
-### LibreChat Configuration
+**Characteristics:**
+
+- No Docker Compose, no package, no workflow
+- HTTPS URL; add **external domain** to `mcpSettings.allowedDomains` for SSRF protection
+- Authentication via headers (e.g. Bearer token)
+
+### 5.1 LibreChat Configuration
+
 Update `packages/librechat-init/config/librechat.yaml`:
 
-**Add to `mcpSettings.allowedDomains`:** `- 'mcp-{name}'  # MCP {Name} service (Docker network)`
+**Add to `mcpSettings.allowedDomains`** (exact domain, no wildcard):
 
-**Add to `mcpServers` (include title, description, iconPath):**
+```yaml
+mcpSettings:
+  allowedDomains:
+    - 'mcp.{name}.com'   # {Name} MCP Server (remote hosted)
+```
+
+**Add to `mcpServers`:**
+
+```yaml
+mcpServers:
+  {name}:
+    type: streamable-http
+    url: https://mcp.{name}.com/mcp
+    title: {Display Name}
+    description: {Brief, user-friendly description}
+    iconPath: /images/mcp-{name}-icon.svg
+    headers:
+      Authorization: "Bearer ${MCP_{NAME}_ACCESS_TOKEN}"
+      # Optional: e.g. X-MCP-Readonly: "true"
+    initTimeout: 120000
+    chatMenu: false
+    startup: true
+    serverInstructions: true
+```
+
+Use exact domain in `allowedDomains`. Authentication: Bearer token (common), or `X-API-Key`, or other headers as required by the service.
+
+### 5.2 Environment Variables
+
+Add to `env.local.example`, `env.prod.example`, `env.dev.example`:
+
+```bash
+# {Name} MCP Server (Remote)
+# Get token from: https://account.{name}.com/access-tokens/
+# Required scopes: …
+# Optional scopes: …
+MCP_{NAME}_ACCESS_TOKEN=…
+```
+
+Match the variable name used in `librechat.yaml` headers. Document where to get the token and required/optional scopes.
+
+### 5.3 Icon Asset
+
+Create `packages/librechat-init/assets/mcp-{name}-icon.svg` (24x24 SVG, Lucide-compatible, name `mcp-{name}-icon.svg`). Icons are copied to `/images/` by `librechat-init`; no code changes. After icon changes: rebuild `librechat-init` and restart stack.
+
+### 5.4 What Is Not Needed
+
+- No Docker Compose or extension file updates
+- No NPM package, Dockerfile, GitHub Actions workflow, submodule, healthcheck, port exposure
+
+---
+
+## Common Steps (Patterns 1–4: Docker-Based)
+
+### Extension Files & Environment Variables
+
+Follow `@.cursor/rules/create-new-service.mdc` sections 2–3. MCP-specific: **No Traefik labels** (internal only). Extension files: `docker-compose.local.yml`, `docker-compose.local-dev.yml`, `docker-compose.prod.yml`, `docker-compose.dev.yml`. Environment pattern: `MCP_{NAME}_PORT=3000`, `MCP_{NAME}_LOG_LEVEL=info`, optional `MCP_{NAME}_API_KEYS`. Add to `env.local.example`, `env.prod.example`, `env.dev.example`.
+
+**IDE testing:** In `docker-compose.local.yml`, add `ports: ["127.0.0.1:{PORT}:{PORT}"]` with comment `# Cursor IDE – local only`. Add entry to `.cursor/mcp.json`: `"{name}": { "url": "http://localhost:{PORT}/mcp" }`. See `@.cursor/rules/debug-test-internal-mcp.mdc` for testing.
+
+### LibreChat Configuration (Docker-Based)
+
+Update `packages/librechat-init/config/librechat.yaml`:
+
+**Add to `mcpSettings.allowedDomains`:** `- 'mcp-{name}'  # MCP {Name} service (Docker network)`  
+
+**Add to `mcpServers`:**
+
 ```yaml
 mcpServers:
   {name}:
     type: streamable-http
     url: http://mcp-{name}:{PORT}/mcp
-    title: {Display Name}  # Human-readable title shown in LibreChat UI
-    description: {Brief, user-friendly description}  # Keep short (truncated in UI), avoid technical terms
-    iconPath: /images/mcp-{name}-icon.svg  # Path relative to LibreChat's public images directory
+    title: {Display Name}
+    description: {Brief, user-friendly description}
+    iconPath: /images/mcp-{name}-icon.svg
     initTimeout: 120000
-    chatMenu: true  # Show in chat dropdown (or false for agents only)
-    startup: true   # Auto-start with LibreChat
-    serverInstructions: true  # Include server instructions
+    chatMenu: true   # or false for agents only
+    startup: true
+    serverInstructions: true
 ```
 
-**Description guidelines:** Keep short (UI truncates), user-friendly language (end users, not developers), avoid technical terms ("MCP Server", "API", "endpoint"), focus on what tool does. Example: "Mathematische Berechnungen und Rechenoperationen" not "MCP Server für mathematische Berechnungen".
+**Description:** Short, user-facing; avoid jargon ("MCP Server", "API", "endpoint"); focus on what the tool does.
 
-### MCP Server UI Assets (Icon)
-**Icon setup:**
-1. Create `packages/librechat-init/assets/mcp-{name}-icon.svg` (24x24 SVG, Lucide-compatible, naming: `mcp-{name}-icon.svg` must match pattern)
-2. No code changes: `librechat-init/src/init.ts` automatically copies all `mcp-*-icon.svg` files from `/app/assets/` to `/images/` during initialization
+### MCP Server UI Assets (Icon) – All Patterns
 
-**Why:** Icons must be browser-accessible (LibreChat web UI), but MCP servers are internal-only. `librechat-init` copies to `/images/` volume served by LibreChat's static route. No Traefik exposure needed. Works in local dev and Portainer/production.
+1. Create `packages/librechat-init/assets/mcp-{name}-icon.svg` (24x24 SVG, Lucide-compatible; name must match `mcp-{name}-icon.svg`).
+2. `librechat-init` copies `mcp-*-icon.svg` from `/app/assets/` to `/images/`; no code changes.
+3. After icon changes: rebuild `librechat-init` and restart stack (local: `npm run build:local` or `npm run build:local librechat-init`; prod: redeploy/rebuild).
 
-**After icon changes:** Rebuild `librechat-init` and restart stack:
-- Local: `npm run build:local` (or `npm run build:local librechat-init`)
-- Production/Portainer: Redeploy from Git (auto-rebuild) or manual rebuild
+### Server Implementation Pattern (Pattern 1 Only)
 
-### Server Implementation Pattern (Self-Written Only)
 ```typescript
 // Session management
 const transports = new Map<string, StreamableHTTPServerTransport>();
@@ -188,27 +321,26 @@ app.get('/health', (req, res) => {
 ```
 
 ### Documentation & Naming
-Follow `@.cursor/rules/create-new-service.mdc` sections 8 and 10, plus MCP-specific:
-- Package name (self-written only): `@ai-chat-interface/mcp-{name}` (kebab-case)
+
+- Package name (Pattern 1 only): `@ai-chat-interface/mcp-{name}` (kebab-case)
 - LibreChat server key: `{name}` (camelCase or kebab-case)
 - Environment prefix: `MCP_{NAME}` (UPPER_SNAKE_CASE)
-- Create `packages/mcp-{name}/README.md` (self-written only): Tool descriptions, development setup
+- Create `packages/mcp-{name}/README.md` (Pattern 1 only): Tool descriptions, development setup
 
 ### Testing
-**Self-written servers:** Follow `@.cursor/rules/create-new-service.mdc` section 11, plus MCP-specific:
-- Local dev: `npm run dev:local` (loads `.env.local` from root) or `npm run dev` (container env)
-- Integration test: `npm run test:integration:local` (loads `.env.local`) or `npm run test:integration` (container env)
-- HTTP test: `npm run test:http:local` (loads `.env.local`) or `npm run test:http` (container env)
-- **Test path fix**: In `test/integration.ts`, use `join(__dirname, '../../..')` for `WORKSPACE_ROOT` (3 levels up from test/ to workspace root)
 
-**All patterns:** LibreChat testing - check agent configuration, test tools in chat, verify MCP server appears in UI.
+**Pattern 1:** Local dev: `npm run dev:local` or `npm run dev`; integration: `npm run test:integration:local` / `npm run test:integration`; HTTP: `npm run test:http:local` / `npm run test:http`. In `test/integration.ts`, use `join(__dirname, '../../..')` for `WORKSPACE_ROOT`.
+
+**All patterns:** Verify in LibreChat UI (agent config, chat menu if enabled) and test tools in a conversation.
+
+---
 
 ## Key Differences from Regular Services
-- **No Traefik**: Internal only, accessed via Docker network (`app-net` only, no `traefik-net`)
+
+- **No Traefik**: Internal only (`app-net` only, no `traefik-net`)
 - **Port**: Expose only, never publish
-- **TypeScript direct execution** (self-written only): No build step, use `--experimental-strip-types`
-- **Session management** (self-written only): Required for streamable-http transport
-- **Health endpoint**: Required for Docker healthchecks (HTTP endpoint preferred, socket check fallback)
-- **LibreChat config**: Must add to `mcpSettings.allowedDomains` and `mcpServers` with `title`, `description`, `iconPath`
-- **Icon serving**: Icons served via LibreChat's `/images/` route (copied by `librechat-init`), not directly by MCP server
-- **UI assets**: Title, description, and icon configured in `librechat.yaml`, not in MCP server code
+- **TypeScript direct execution** (Pattern 1 only): No build step, use `--experimental-strip-types`
+- **Session management** (Pattern 1 only): Required for streamable-http transport
+- **Health endpoint**: Required for Docker healthchecks (HTTP preferred, socket check fallback)
+- **LibreChat**: Always add `mcpSettings.allowedDomains` and `mcpServers` with `title`, `description`, `iconPath`
+- **Icons**: Served via LibreChat `/images/` (copied by `librechat-init`), not by the MCP server

@@ -7,7 +7,7 @@ description: Building and deploying Docker images from fork submodules (local bu
 
 Use when a service runs from a **fork submodule** and we **build and publish** its image. Local stacks build from the submodule; Portainer/prod use the registry image.
 
-**Related:** `@.cursor/rules/forked-submodules.mdc`, `@.cursor/rules/create-new-mcp.mdc` Pattern 3.
+**Related:** `@.cursor/rules/forked-submodules.mdc`, `@.cursor/rules/create-new-mcp.mdc` Pattern 4 (External submodule, fork).
 
 ## When this applies
 

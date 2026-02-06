@@ -9,8 +9,7 @@ Cursor Rules are workspace-level instructions that guide AI agents. All rule fil
 | Rule | Purpose |
 |------|---------|
 | `create-new-service.mdc` | Integrate new Docker services into the stack |
-| `create-new-mcp.mdc` | Integrate new MCP servers (Docker) |
-| `create-external-mcp.mdc` | Integrate external/remote MCP servers (no Docker) |
+| `create-new-mcp.mdc` | Integrate new MCP servers (self-written, external image, submodule upstream/fork, or remote hosted) |
 | `debug-test-internal-mcp.mdc` | Debug and test internal MCPs from Cursor IDE (editing `packages/mcp-*/**`) |
 | `forked-submodules.mdc` | Work with Faktenforum fork submodules (upstream sync, PR workflow) |
 | `build-deploy-fork-images.mdc` | Build and deploy Docker images from fork submodules (local build, Portainer registry image) |
