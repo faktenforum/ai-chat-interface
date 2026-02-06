@@ -751,8 +751,8 @@ mcpServers:
   docs:
     type: streamable-http
     url: http://mcp-docs:6280/mcp
-    title: Grounded Docs
-    description: Aktuelle Dokumentation durchsuchen – Websites, GitHub, npm, lokale Dateien
+    title: Dokumentation durchsuchen
+    description: Öffentlich verfügbare Dokumentation durchsuchen
     iconPath: /images/mcp-docs-icon.svg
     initTimeout: 120000
     chatMenu: true
@@ -778,7 +778,7 @@ mcpServers:
     description: Aktuelle Fahrpläne, Stationssuche und Zugverbindungen der Deutschen Bahn
     iconPath: /images/mcp-db-timetable-icon.svg
     initTimeout: 120000
-    chatMenu: false
+    chatMenu: true
     startup: true
     serverInstructions: true
 
@@ -831,13 +831,13 @@ mcpServers:
     type: streamable-http
     url: https://api.githubcopilot.com/mcp/
     title: GitHub
-    description: Repository-Verwaltung, Issues, Pull Requests und Code-Analyse
+    description: Repositories, Issues, Pull Requests und Code-Analyse
     iconPath: /images/mcp-github-icon.svg
     headers:
       Authorization: "Bearer ${MCP_GITHUB_PAT}"
       X-MCP-Readonly: "true"
     initTimeout: 120000
-    chatMenu: false
+    chatMenu: true
     startup: true
     serverInstructions: true
 
@@ -851,7 +851,7 @@ mcpServers:
       Authorization: "Bearer ${MCP_MAPBOX_ACCESS_TOKEN}"
     initTimeout: 120000
     timeout: 150000
-    chatMenu: false
+    chatMenu: true
     startup: true
     serverInstructions: true
 
