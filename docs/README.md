@@ -28,7 +28,7 @@ They are baked into the init image and written into the config volume at startup
 - **[YTPTube Cleanup](YTPTUBE_CLEANUP.md)** - Where archive and downloads live; how to clean for fresh tests
 - **[MCP YouTube Transcript](MCP_YOUTUBE_TRANSCRIPT.md)** - YouTube Transcript MCP (video URL → transcript via youtube-transcript-api)
 - **[MCP Grounded Docs](MCP_DOCS.md)** - Grounded Docs MCP (documentation index; optional embeddings)
-- **MCP Chefkoch** - Recipes from chefkoch.de: `get_recipe`, `search_recipes`, `get_random_recipe`, `get_daily_recipes`. Env: `MCP_CHEFKOCH_PORT` (3014), `MCP_CHEFKOCH_LOG_LEVEL`. Internal only (no Traefik). Package: [`packages/mcp-chefkoch/`](../packages/mcp-chefkoch/).
+- **[MCP Chefkoch](MCP_CHEFKOCH.md)** – Recipes from chefkoch.de (get_recipe, search_recipes, get_random_recipe, get_daily_recipes). Internal only.
 - **[Webshare Proxy](WEBSHARE_PROXY.md)** - Fixed proxy URL setup (Rotating/Backbone) for mcp-ytptube and mcp-youtube-transcript
 
 ## Deployment
