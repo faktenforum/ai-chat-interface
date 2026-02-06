@@ -856,16 +856,16 @@ mcpServers:
     serverInstructions: true
 
   # Web scraping (scrape, search, map, crawl, extract). Not shown in chat dropdown; available for agents.
-  firecrawl:
-    type: streamable-http
-    url: http://mcp-firecrawl:3003/mcp
-    title: Web Scraping
-    description: Webseiten scrapen, durchsuchen und analysieren
-    iconPath: /images/mcp-firecrawl-icon.svg
-    initTimeout: 120000
-    chatMenu: false
-    startup: false
-    serverInstructions: true
+  # firecrawl:
+  #   type: streamable-http
+  #   url: http://mcp-firecrawl:3003/mcp
+  #   title: Web Scraping
+  #   description: Webseiten scrapen, durchsuchen und analysieren
+  #   iconPath: /images/mcp-firecrawl-icon.svg
+  #   initTimeout: 120000
+  #   chatMenu: false
+  #   startup: false
+  #   serverInstructions: true
 
 # n8n MCP Server Integration (Future - disabled)
 # To integrate n8n workflows with LibreChat Agents via MCP:
