@@ -97,22 +97,24 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 
 ### MCP Server Availability Matrix
 
-| MCP Server | Description | Hosting | Local | Production | Internal Only |
-|------------|-------------|---------|-------|------------|---------------|
-| **Calculator** | Mathematical calculations for agents | Internal Docker | ❌ | ❌ | ✅ |
-| **Image Generation** | Image generation via OpenRouter API | Internal Docker | ❌ | ❌ | ✅ |
-| **OpenStreetMap** | Geo search, routing, location info | Internal Docker | ❌ | ❌ | ✅ |
-| **Weather** | Weather, air quality, timezone tools | Internal Docker | ❌ | ❌ | ✅ |
-| **Playwright** | Browser automation, page interaction | Internal Docker | ❌ | ❌ | ✅ |
-| **DB Timetable** | Deutsche Bahn schedules, stations, routes | Internal Docker | ❌ | ❌ | ✅ |
-| **StackOverflow** | Programming Q&A and debugging | Internal Docker | ❌ | ❌ | ✅ |
-| **npm Search** | npm package search | Internal Docker | ❌ | ❌ | ✅ |
-| **YTPTube** | Video URLs → transcripts (YTPTube + optional transcription API) | Internal Docker | ❌ | ❌ | ✅ |
-| **YouTube Transcript** | YouTube video URL → transcript (youtube-transcript-api) | Internal Docker | ❌ | ❌ | ✅ |
-| **Grounded Docs** | Documentation index (websites, GitHub, npm, local files); optional semantic search via embeddings | Internal Docker | ❌ | ❌ | ✅ |
+Internal Docker MCP servers are exposed on localhost when running the stack locally so they can be used directly from Cursor for testing (see `.cursor/mcp.json`).
+
+| MCP Server | Description | Hosting | Local (Cursor / localhost) | Production | Internal Only |
+|------------|-------------|---------|----------------------------|------------|---------------|
+| **Calculator** | Mathematical calculations for agents | Internal Docker | ✅ | ❌ | ✅ |
+| **Image Generation** | Image generation via OpenRouter API | Internal Docker | ✅ | ❌ | ✅ |
+| **OpenStreetMap** | Geo search, routing, location info | Internal Docker | ✅ | ❌ | ✅ |
+| **Weather** | Weather, air quality, timezone tools | Internal Docker | ✅ | ❌ | ✅ |
+| **Playwright** | Browser automation, page interaction | Internal Docker | ✅ | ❌ | ✅ |
+| **DB Timetable** | Deutsche Bahn schedules, stations, routes | Internal Docker | ✅ | ❌ | ✅ |
+| **StackOverflow** | Programming Q&A and debugging | Internal Docker | ✅ | ❌ | ✅ |
+| **npm Search** | npm package search | Internal Docker | ✅ | ❌ | ✅ |
+| **YTPTube** | Video URLs → transcripts (YTPTube + optional transcription API) | Internal Docker | ✅ | ❌ | ✅ |
+| **YouTube Transcript** | YouTube video URL → transcript (youtube-transcript-api) | Internal Docker | ✅ | ❌ | ✅ |
+| **Grounded Docs** | Documentation index (websites, GitHub, npm, local files); optional semantic search via embeddings | Internal Docker | ✅ | ❌ | ✅ |
 | **GitHub** | Repos, issues, PRs, code search | Remote (`api.githubcopilot.com`) | ❌ | ❌ | N/A (external) |
 | **Mapbox** | Geo search, routing, geocoding, maps | Remote (`mcp.mapbox.com`) | ❌ | ❌ | N/A (external) |
-| **Firecrawl** | Web scraping tools for agents | Internal Docker | ❌ | ❌ | ✅ (chatMenu: false; agents only) |
+| **Firecrawl** | Web scraping tools for agents | Internal Docker | ✅ | ❌ | ✅ (chatMenu: false; agents only) |
 
 ### MCP Server Details
 
