@@ -692,6 +692,7 @@ mcpSettings:
     - 'mcp-ytptube'             # MCP YTPTube (YTPTube + Scaleway STT)
     - 'mcp-youtube-transcript'  # MCP YouTube Transcript (youtube-transcript-api)
     - 'mcp-docs'                # MCP Docs (Grounded Docs) service (Docker network)
+    - 'mcp-chefkoch'            # MCP Chefkoch service (Docker network)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     - 'mcp.mapbox.com'           # Mapbox MCP Server (remote hosted)
     # - '*.example.com'           # Wildcard subdomain
@@ -799,6 +800,17 @@ mcpServers:
     title: npm Suche
     description: npm-Pakete durchsuchen und finden
     iconPath: /images/mcp-npm-search-icon.svg
+    initTimeout: 120000
+    chatMenu: false
+    startup: true
+    serverInstructions: true
+
+  chefkoch:
+    type: streamable-http
+    url: http://mcp-chefkoch:3014/mcp
+    title: Rezepte
+    description: Rezepte von Chefkoch.de suchen und anzeigen
+    iconPath: /images/mcp-chefkoch-icon.svg
     initTimeout: 120000
     chatMenu: false
     startup: true

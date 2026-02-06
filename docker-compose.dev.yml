@@ -210,6 +210,12 @@ services:
     image: ghcr.io/faktenforum/mcp-npm-search:dev
     # No Traefik labels - internal service only
 
+  mcp-chefkoch:
+    extends: { file: docker-compose.mcp-chefkoch.yml, service: mcp-chefkoch }
+    container_name: ${STACK_NAME:-prod}-mcp-chefkoch
+    image: ghcr.io/faktenforum/mcp-chefkoch:dev
+    # No Traefik labels - internal service only
+
   # YTPTube - download-only exposed via Traefik (only /api/download); Web UI and rest of API internal
   ytptube:
     extends: { file: docker-compose.ytptube.yml, service: ytptube }

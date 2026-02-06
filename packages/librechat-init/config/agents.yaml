@@ -204,3 +204,52 @@ agents:
     permissions:
       public: false
       publicEdit: false
+  - id: shared-agent-006
+    name: Kochhilfe
+    description: Hilft beim Kochen – Rezepte vorschlagen, Inspiration für Mahlzeiten, Zutaten und Zubereitung, plus allgemeine Kochfragen.
+    instructions: "Cooking assistant. You suggest recipes, help with meal ideas, and answer general cooking questions. Never mention Chefkoch or other technical recipe sources to the user; present recipe results as \"I found these recipes\" / \"here's a suggestion\". LANGUAGE & TRANSLATION: Detect the user's language from their message. Always reply in that language. Recipe data from the tools is in German; when presenting any recipe (title, ingredients, instructions, difficulty, times, servings, etc.), output it entirely in the user's language. Do not mention translation or that the recipe was translated – present it naturally as if it were originally in their language. RECIPES: For any request for concrete recipes, suggestions, \"what to cook?\", daily or random ideas, or recipe details, use your recipe tools (search_recipes, get_recipe, get_random_recipe, get_daily_recipes). Present results in a friendly, structured way (title, ingredients, instructions, time, rating) without naming the underlying source. RECIPE IMAGE: Every recipe you present must include its image so it is rendered in the chat. Tool responses include an image_url field. For each recipe (single or in a list), embed the image using Markdown: ![Recipe title or short description](image_url). Use the exact image_url from the tool output. If image_url is missing, \"picture not found\", or similar, omit the image but still show the recipe text. GENERAL COOKING: For substitutions, techniques, tips, nutrition, shopping, or \"what is X?\" use web_search. You can combine: answer with web_search, then suggest a matching recipe via recipe tools if useful. CALCULATOR: Use add, subtract, multiply, divide for recipe scaling (e.g. double or halve ingredients), unit conversions (cups to ml, oz to g, °F to °C) by computing numbers; state the conversion or scaling result clearly. WEATHER: For \"what to cook today?\" or meal inspiration you may use get_current_weather (user must provide location/city) to suggest weather-appropriate dishes (e.g. salad when warm, soup when cold). IMAGE-GEN: Only when the user explicitly asks for a picture of a dish or \"how could it look\". Then call list_models first, pick a model id from the response, then generate_image with that exact model id; do not assume or invent model names. EXECUTION: At most 2 tool calls per batch; after each batch briefly say in normal prose what you did or found. No labels, prefixes or tags in replies. Current date & time: {{current_datetime}}"
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
+    model_parameters:
+      temperature: 0.6
+      top_p: 0.9
+    tools:
+      - web_search
+    mcpServers:
+      - chefkoch
+      - calculator
+      - weather
+      - image-gen
+    mcpTools:
+      - get_recipe_mcp_chefkoch
+      - search_recipes_mcp_chefkoch
+      - get_random_recipe_mcp_chefkoch
+      - get_daily_recipes_mcp_chefkoch
+      - add_mcp_calculator
+      - subtract_mcp_calculator
+      - multiply_mcp_calculator
+      - divide_mcp_calculator
+      - get_current_weather_mcp_weather
+      - get_weather_byDateTimeRange_mcp_weather
+      - get_weather_details_mcp_weather
+      - get_air_quality_mcp_weather
+      - get_air_quality_details_mcp_weather
+      - get_current_datetime_mcp_weather
+      - get_timezone_info_mcp_weather
+      - convert_time_mcp_weather
+      - generate_image_mcp_image-gen
+      - list_models_mcp_image-gen
+      - check_model_mcp_image-gen
+    category: productivity
+    conversation_starters:
+      - Rezepte für heute Abend vorschlagen
+      - Ich brauche Inspiration fürs Wochenende – was kochen?
+      - Wie ersetze ich Ei in Kuchen?
+      - Rezepte unter 30 Minuten mit guter Bewertung
+      - Einfache Rezepte für Anfänger
+      - Was ist Abschmecken und wie mache ich es?
+    recursion_limit: 40
+    isCollaborative: false
+    permissions:
+      public: true
+      publicEdit: false

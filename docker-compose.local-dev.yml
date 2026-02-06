@@ -310,6 +310,16 @@ services:
       - "127.0.0.1:3009:3009"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
+  mcp-chefkoch:
+    extends: { file: docker-compose.mcp-chefkoch.yml, service: mcp-chefkoch }
+    env_file: .env.local
+    build:
+      context: ./packages/mcp-chefkoch
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${MCP_CHEFKOCH_PORT:-3014}:${MCP_CHEFKOCH_PORT:-3014}"  # Cursor IDE – local only
+    # No Traefik labels - internal service only
+
   # Additional Services
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }
