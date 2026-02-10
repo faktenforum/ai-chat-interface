@@ -1,10 +1,6 @@
 # MCP Linux Server
 
-Per-user isolated Linux terminal environment with persistent git workspaces.
-
-## Overview
-
-Each LibreChat user gets a dedicated Linux account inside a Docker container (Ubuntu 24.04). The MCP server manages accounts automatically based on the `X-User-Email` header. Users have their own home directory, bash history, SSH config, and git-backed workspaces.
+Per-user isolated Linux terminal environment with persistent git workspaces, file upload/download, and structured file reading.
 
 ## Architecture
 
@@ -13,9 +9,7 @@ Each LibreChat user gets a dedicated Linux account inside a Docker container (Ub
 - **IPC** between server and workers via Unix sockets
 - **Persistent volumes**: `/home` (user data), `/app/data` (user mapping DB)
 
-## User Naming
-
-`lc_` + email local part (sanitized). Example: `pascal.garber@correctiv.org` → `lc_pascal_garber`.
+User naming: `lc_` + email local part (sanitized). Example: `pascal.garber@correctiv.org` → `lc_pascal_garber`.
 
 ## Tools
 
@@ -43,6 +37,35 @@ Each LibreChat user gets a dedicated Linux account inside a Docker container (Ub
 | `reset_account` | Wipe and re-create home |
 | `get_system_info` | Available runtime versions |
 
+### File Upload
+| Tool | Description |
+|------|-------------|
+| `create_upload_session` | Generate unique upload URL; user opens it in browser |
+| `list_upload_sessions` | List active/all upload sessions |
+| `close_upload_session` | Revoke an upload session |
+
+Sessions are token-based, single-use (auto-close after upload), and time-limited (default 15 min). Uploaded files land in `~/workspaces/{workspace}/uploads/`.
+
+### File Download
+| Tool | Description |
+|------|-------------|
+| `create_download_link` | Generate temporary download URL for a workspace file |
+| `list_download_links` | List active/all download links |
+| `close_download_link` | Revoke a download link |
+
+Links are token-based, single-use (auto-close after download), and time-limited (default 60 min). Files are streamed from their original location.
+
+### File Reading
+| Tool | Description |
+|------|-------------|
+| `read_workspace_file` | Read file as structured MCP content (text, image, audio) |
+
+Returns text files inline, images/audio as base64. Large or binary files automatically get a download link instead. Limits: text 1 MB, binary 10 MB.
+
+### MCP Resources
+
+Resource template `workspace://{workspace}/{+path}` exposes workspace files as navigable MCP resources (list + read).
+
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -51,14 +74,23 @@ Each LibreChat user gets a dedicated Linux account inside a Docker container (Ub
 | `MCP_LINUX_LOG_LEVEL` | `info` | Log level |
 | `MCP_LINUX_WORKER_IDLE_TIMEOUT` | `1800000` | Worker idle timeout (ms) |
 | `MCP_LINUX_GIT_SSH_KEY` | *(empty)* | Base64-encoded SSH private key for GitHub machine user |
+| `MCP_LINUX_UPLOAD_BASE_URL` | `http://localhost:3015` | Public base URL for upload links |
+| `MCP_LINUX_UPLOAD_MAX_FILE_SIZE_MB` | `100` | Max upload file size (MB) |
+| `MCP_LINUX_UPLOAD_SESSION_TIMEOUT_MIN` | `15` | Upload session expiry (min) |
+| `MCP_LINUX_DOWNLOAD_BASE_URL` | *(falls back to upload URL)* | Public base URL for download links |
+| `MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN` | `60` | Download link expiry (min) |
+
+## Traefik Routing
+
+Upload and download routes are exposed publicly via Traefik (`/upload/*`, `/download/*`). The MCP endpoint (`/mcp`) remains internal (Docker network only). Production base URLs must point to the public Traefik host (e.g. `https://mcp-linux.faktenforum.org`).
 
 ## Git Access
 
-Optional: set `MCP_LINUX_GIT_SSH_KEY` to a base64-encoded ed25519 private key from a GitHub machine user (e.g. `faktenforum-agent`). The key is written to each user's `~/.ssh/` on account creation. Add the machine user as collaborator to repos the agent should access.
+Optional: set `MCP_LINUX_GIT_SSH_KEY` to a base64-encoded ed25519 private key from a GitHub machine user. The key is written to each user's `~/.ssh/` on account creation.
 
 ## Pre-installed Runtimes
 
-Node.js 24, Python 3, Git, Bash, ripgrep, tree, jq, build-essential, openssh-client. Users can install additional tools locally (nvm, pip --user, Deno, Bun).
+Node.js 24, Python 3, Git, Bash, ripgrep, tree, jq, build-essential, openssh-client.
 
 ## Docker
 

@@ -223,7 +223,23 @@ services:
     volumes:
       - mcp_linux_homes:/home
       - mcp_linux_data:/app/data
-    # No Traefik labels - internal service only
+    networks:
+      - app-net
+      - traefik-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=loadbalancer-net"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/upload`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.service=${STACK_NAME:-prod}-mcp-linux"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/download`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.service=${STACK_NAME:-prod}-mcp-linux"
+      - "traefik.http.services.${STACK_NAME:-prod}-mcp-linux.loadbalancer.server.port=3015"
 
   # YTPTube - download-only exposed via Traefik (only /api/download); Web UI and rest of API internal
   ytptube:

@@ -97,26 +97,26 @@ MCP (Model Context Protocol) servers provide tools for LibreChat agents. All MCP
 
 ### MCP Server Availability Matrix
 
-Internal Docker MCP servers are exposed on localhost when running the stack locally so they can be used directly from Cursor for testing (see `.cursor/mcp.json`).
+Internal Docker MCP servers are exposed on localhost when running the stack locally so they can be used directly from Cursor for testing (see `.cursor/mcp.json`). The `/mcp` endpoint is always internal (Docker network only). Some servers expose additional routes publicly via Traefik.
 
-| MCP Server | Description | Hosting | Local (Cursor / localhost) | Production | Internal Only |
-|------------|-------------|---------|----------------------------|------------|---------------|
-| **Calculator** | Mathematical calculations for agents | Internal Docker | ✅ | ❌ | ✅ |
-| **Image Generation** | Image generation via OpenRouter API | Internal Docker | ✅ | ❌ | ✅ |
-| **OpenStreetMap** | Geo search, routing, location info | Internal Docker | ✅ | ❌ | ✅ |
-| **Weather** | Weather, air quality, timezone tools | Internal Docker | ✅ | ❌ | ✅ |
-| **Playwright** | Browser automation, page interaction | Internal Docker | ✅ | ❌ | ✅ |
-| **DB Timetable** | Deutsche Bahn schedules, stations, routes | Internal Docker | ✅ | ❌ | ✅ |
-| **StackOverflow** | Programming Q&A and debugging | Internal Docker | ✅ | ❌ | ✅ |
-| **npm Search** | npm package search | Internal Docker | ✅ | ❌ | ✅ |
-| **Chefkoch** | Recipes from chefkoch.de (search, get recipe, random, daily) | Internal Docker | ✅ | ❌ | ✅ |
-| **Linux** | Per-user isolated Linux terminal with persistent git workspaces | Internal Docker | ✅ | ❌ | ✅ |
-| **YTPTube** | Video URLs → transcripts (YTPTube + optional transcription API) | Internal Docker | ✅ | ❌ | ✅ |
-| **YouTube Transcript** | YouTube video URL → transcript (youtube-transcript-api) | Internal Docker | ✅ | ❌ | ✅ |
-| **Grounded Docs** | Documentation index (websites, GitHub, npm, local files); optional semantic search via embeddings | Internal Docker | ✅ | ❌ | ✅ |
-| **GitHub** | Repos, issues, PRs, code search | Remote (`api.githubcopilot.com`) | ❌ | ❌ | N/A (external) |
-| **Mapbox** | Geo search, routing, geocoding, maps | Remote (`mcp.mapbox.com`) | ❌ | ❌ | N/A (external) |
-| **Firecrawl** | Web scraping tools for agents | Internal Docker | ✅ | ❌ | ✅ (chatMenu: false; agents only) |
+| MCP Server | Hosting | Port | MCP Endpoint (internal) | Public Routes (via Traefik) | Local (Cursor) |
+|------------|---------|------|-------------------------|-----------------------------|----------------|
+| **Calculator** | Internal Docker | 3012 | `http://mcp-calculator:3012/mcp` | — | ✅ `localhost:3012` |
+| **Image Generation** | Internal Docker | 3013 | `http://mcp-image-gen:3013/mcp` | — | ✅ `localhost:3013` |
+| **OpenStreetMap** | Internal Docker | 3004 | `http://mcp-openstreetmap:3004/mcp` | — | ✅ `localhost:3004` |
+| **Weather** | Internal Docker | 3005 | `http://mcp-weather:3005/mcp` | — | ✅ `localhost:3005` |
+| **Playwright** | Internal Docker | 3006 | `http://mcp-playwright:3006/mcp` | — | ✅ `localhost:3006` |
+| **DB Timetable** | Internal Docker | 3007 | `http://mcp-db-timetable:3007/mcp` | — | ✅ `localhost:3007` |
+| **StackOverflow** | Internal Docker | 3008 | `http://mcp-stackoverflow:3008/mcp` | — | ✅ `localhost:3008` |
+| **npm Search** | Internal Docker | 3009 | `http://mcp-npm-search:3009/mcp` | — | ✅ `localhost:3009` |
+| **Chefkoch** | Internal Docker | 3014 | `http://mcp-chefkoch:3014/mcp` | — | ✅ `localhost:3014` |
+| **Linux** | Internal Docker | 3015 | `http://mcp-linux:3015/mcp` | ✅ `https://mcp-linux.{DOMAIN}/upload/*`, `/download/*` | ✅ `localhost:3015` |
+| **YTPTube** | Internal Docker | 3010 | `http://mcp-ytptube:3010/mcp` | — | ✅ `localhost:3010` |
+| **YouTube Transcript** | Internal Docker | 3011 | `http://mcp-youtube-transcript:3011/mcp` | — | ✅ `localhost:3011` |
+| **Grounded Docs** | Internal Docker | 6280 | `http://mcp-docs:6280/mcp` | — | ✅ `localhost:6280` |
+| **Firecrawl** | Internal Docker | 3003 | `http://mcp-firecrawl:3003/mcp` | — | ✅ `localhost:3003` |
+| **GitHub** | Remote | — | `https://api.githubcopilot.com/mcp/` | N/A (external) | — |
+| **Mapbox** | Remote | — | `https://mcp.mapbox.com/mcp` | N/A (external) | — |
 
 ### MCP Server Details
 
@@ -138,7 +138,7 @@ Internal Docker MCP servers are exposed on localhost when running the stack loca
 
 **Chefkoch** — Recipes from chefkoch.de. Tools: `get_recipe`, `search_recipes`, `get_random_recipe`, `get_daily_recipes`. Network: `app-net`. URL: `http://mcp-chefkoch:3014/mcp`. Env: `MCP_CHEFKOCH_PORT` (3014), `MCP_CHEFKOCH_LOG_LEVEL`. [MCP Chefkoch](MCP_CHEFKOCH.md)
 
-**Linux** — Per-user isolated Linux terminal environment with persistent git workspaces and multi-language runtimes. Tools: `execute_command`, `read_terminal_output`, `write_terminal`, `list_terminals`, `kill_terminal`, `list_workspaces`, `create_workspace`, `delete_workspace`, `get_workspace_status`, `get_account_info`, `reset_account`, `get_system_info`. Network: `app-net`. URL: `http://mcp-linux:3015/mcp`. Env: `MCP_LINUX_PORT` (3015), `MCP_LINUX_LOG_LEVEL`, `MCP_LINUX_WORKER_IDLE_TIMEOUT`, `MCP_LINUX_GIT_SSH_KEY`. Volumes: `mcp_linux_homes`, `mcp_linux_data`. [MCP Linux](MCP_LINUX.md)
+**Linux** — Per-user isolated Linux terminal with persistent git workspaces, file upload/download, and structured file reading. Tools: `execute_command`, `read_terminal_output`, `write_terminal`, `list_terminals`, `kill_terminal`, `list_workspaces`, `create_workspace`, `delete_workspace`, `get_workspace_status`, `get_account_info`, `reset_account`, `get_system_info`, `create_upload_session`, `list_upload_sessions`, `close_upload_session`, `create_download_link`, `list_download_links`, `close_download_link`, `read_workspace_file`. Network: `app-net`. URL: `http://mcp-linux:3015/mcp`. Env: `MCP_LINUX_PORT` (3015), `MCP_LINUX_LOG_LEVEL`, `MCP_LINUX_WORKER_IDLE_TIMEOUT`, `MCP_LINUX_GIT_SSH_KEY`, `MCP_LINUX_UPLOAD_BASE_URL`, `MCP_LINUX_DOWNLOAD_BASE_URL`. Volumes: `mcp_linux_homes`, `mcp_linux_data`. Traefik: `/upload/*` and `/download/*` exposed publicly. [MCP Linux](MCP_LINUX.md)
 
 **YTPTube** — Media URL → transcript or download link. Tools: `request_transcript`, `get_status`, `request_download_link`, `get_media_info`, `get_thumbnail_url`, `list_recent_downloads`. Optional: `TRANSCRIPTION_BASE_URL` + `TRANSCRIPTION_API_KEY` for audio transcription; omit for platform-subtitles-only. Network: `app-net`. URL: `http://mcp-ytptube:3010/mcp`. [MCP YTPTube](MCP_YTPTUBE.md)
 

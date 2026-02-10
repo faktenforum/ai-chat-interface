@@ -14,7 +14,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { logger } from '../utils/logger.ts';
 import type { UserManager } from '../user-manager.ts';
-import { sessionEmailMap } from '../tools/workspace.ts';
+import { resolveEmail } from '../tools/helpers.ts';
 
 /** Extensions treated as text (return as text resource) */
 const TEXT_EXTENSIONS = new Set([
@@ -254,19 +254,3 @@ export function registerWorkspaceResources(
   );
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function resolveEmail(extra: unknown): string {
-  const ctx = extra as Record<string, unknown> | undefined;
-
-  if (ctx?.sessionId && typeof ctx.sessionId === 'string') {
-    const email = sessionEmailMap.get(ctx.sessionId);
-    if (email) return email;
-  }
-
-  if (ctx && typeof (ctx as Record<string, unknown>).email === 'string') {
-    return (ctx as Record<string, unknown>).email as string;
-  }
-
-  throw new Error('User email not found in request context. Ensure X-User-Email header is sent.');
-}

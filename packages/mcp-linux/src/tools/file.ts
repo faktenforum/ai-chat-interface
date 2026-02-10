@@ -9,10 +9,9 @@
 import { readFileSync, statSync } from 'node:fs';
 import { join, resolve, extname } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { logger } from '../utils/logger.ts';
 import type { UserManager } from '../user-manager.ts';
 import type { DownloadManager } from '../download/download-manager.ts';
-import { sessionEmailMap } from './workspace.ts';
+import { resolveEmail, errorResult } from './helpers.ts';
 import { ReadWorkspaceFileSchema } from '../schemas/file.schema.ts';
 
 /** Maximum text file size to inline (1 MB) */
@@ -204,25 +203,3 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-function resolveEmail(extra: unknown): string {
-  const ctx = extra as Record<string, unknown> | undefined;
-
-  if (ctx?.sessionId && typeof ctx.sessionId === 'string') {
-    const email = sessionEmailMap.get(ctx.sessionId);
-    if (email) return email;
-  }
-
-  if (ctx && typeof (ctx as Record<string, unknown>).email === 'string') {
-    return (ctx as Record<string, unknown>).email as string;
-  }
-
-  throw new Error('User email not found in request context. Ensure X-User-Email header is sent.');
-}
-
-function errorResult(error: unknown): { content: Array<{ type: 'text'; text: string }>; isError: true } {
-  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error);
-  return {
-    content: [{ type: 'text', text: `Error: ${message}` }],
-    isError: true,
-  };
-}
