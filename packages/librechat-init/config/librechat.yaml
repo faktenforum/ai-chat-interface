@@ -820,8 +820,8 @@ mcpServers:
   linux:
     type: streamable-http
     url: http://mcp-linux:3015/mcp
-    title: Linux Terminal
-    description: Isolated Linux terminal environment with persistent workspaces, git, and multi-language runtime support
+    title: Linux Arbeitsumgebung
+    description: Isolierte Linux-Umgebung mit Terminal, Datei-Upload/-Download, Git und Workspaces
     iconPath: /images/mcp-linux-icon.svg
     initTimeout: 120000
     timeout: 120000

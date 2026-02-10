@@ -25,9 +25,14 @@ import { registerWorkspaceTools, sessionEmailMap } from './tools/workspace.ts';
 import { registerTerminalTools } from './tools/terminal.ts';
 import { registerAccountTools } from './tools/account.ts';
 import { registerUploadTools } from './tools/upload.ts';
+import { registerDownloadTools } from './tools/download.ts';
+import { registerFileTools } from './tools/file.ts';
 import { registerPrompts } from './prompts/index.ts';
+import { registerWorkspaceResources } from './resources/workspace-resources.ts';
 import { UploadManager } from './upload/upload-manager.ts';
 import { setupUploadRoutes } from './upload/upload-routes.ts';
+import { DownloadManager } from './download/download-manager.ts';
+import { setupDownloadRoutes } from './download/download-routes.ts';
 
 const PORT = parseInt(process.env.PORT || '3015', 10);
 const SERVER_NAME = 'mcp-linux-server';
@@ -43,6 +48,10 @@ const uploadManager = new UploadManager({
   baseUrl: process.env.MCP_LINUX_UPLOAD_BASE_URL || `http://localhost:${PORT}`,
   defaultMaxFileSizeMb: parseInt(process.env.MCP_LINUX_UPLOAD_MAX_FILE_SIZE_MB || '100', 10),
   defaultSessionTimeoutMin: parseInt(process.env.MCP_LINUX_UPLOAD_SESSION_TIMEOUT_MIN || '15', 10),
+});
+const downloadManager = new DownloadManager({
+  baseUrl: process.env.MCP_LINUX_DOWNLOAD_BASE_URL || process.env.MCP_LINUX_UPLOAD_BASE_URL || `http://localhost:${PORT}`,
+  defaultSessionTimeoutMin: parseInt(process.env.MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN || '60', 10),
 });
 
 /**
@@ -83,7 +92,21 @@ File Upload:
 - Uploaded files are saved to ~/workspaces/{workspace}/uploads/
 - Upload sessions auto-close after successful upload and expire after 15 minutes by default
 - IMPORTANT: Always check list_upload_sessions for stale open sessions and warn the user about them
-- Close unnecessary sessions with close_upload_session to maintain security`,
+- Close unnecessary sessions with close_upload_session to maintain security
+
+File Download:
+- Use create_download_link to generate a temporary download URL for any workspace file
+- Share the URL with the user so they can download files via their browser
+- Download links are single-use and expire after 60 minutes by default
+- IMPORTANT: Always check list_download_links for stale open links and close unused ones
+- Close unnecessary links with close_download_link to maintain security
+
+Reading Files:
+- Use read_workspace_file to read a file and get its contents as structured content
+- Text files (.txt, .csv, .json, .py, .js, etc.) are returned inline as text
+- Images (.png, .jpg, .gif, .webp) are returned as base64 image content
+- Audio files (.wav, .mp3, .ogg) are returned as base64 audio content
+- Large or binary files automatically get a download link instead`,
     },
   );
 
@@ -92,6 +115,11 @@ File Upload:
   registerTerminalTools(server, userManager, workerManager);
   registerAccountTools(server, userManager, workerManager);
   registerUploadTools(server, userManager, uploadManager);
+  registerDownloadTools(server, userManager, downloadManager);
+  registerFileTools(server, userManager, downloadManager);
+
+  // Register resources
+  registerWorkspaceResources(server, userManager);
 
   // Register prompts
   registerPrompts(server);
@@ -144,6 +172,9 @@ function createApp(): express.Application {
   // Upload routes (before MCP endpoints, no JSON body parsing needed for multipart)
   setupUploadRoutes(app, uploadManager, userManager);
 
+  // Download routes (file streaming)
+  setupDownloadRoutes(app, downloadManager);
+
   // User-context extraction middleware: maps session ID to user email
   app.use('/mcp', (req, _res, next) => {
     const userContext = extractUserContext(req.headers);
@@ -187,13 +218,15 @@ async function main(): Promise<void> {
 
     setupGracefulShutdown(server, transports, logger);
 
-    // Also clean up workers and upload manager on shutdown
+    // Also clean up workers, upload manager, and download manager on shutdown
     process.on('SIGTERM', async () => {
       uploadManager.dispose();
+      downloadManager.dispose();
       await workerManager.shutdownAll();
     });
     process.on('SIGINT', async () => {
       uploadManager.dispose();
+      downloadManager.dispose();
       await workerManager.shutdownAll();
     });
   } catch (error) {

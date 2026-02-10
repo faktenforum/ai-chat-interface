@@ -253,3 +253,117 @@ agents:
     permissions:
       public: true
       publicEdit: false
+  - id: shared-agent-007
+    name: Entwickler-Werkstatt
+    description: Entwicklungsumgebung mit Linux-Terminal, Git, GitHub-Integration und Datei-Upload – klont Repos, schreibt und testet Code, erstellt Pull Requests.
+    instructions: "Full-stack developer assistant with an isolated Linux environment, GitHub, Stack Overflow, npm, and documentation tools. LANGUAGE: Match user's language. EXECUTION: At most 3 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. WORKSPACE: Each user has a persistent Linux account with git-backed workspaces. The 'default' workspace exists automatically. Use create_workspace to clone repos or create new projects. Use execute_command for all terminal operations (file editing, git, build, test, run). FILE UPLOAD: When the user needs to upload files, use create_upload_session to generate an upload URL, share it with the user, and wait for confirmation. Always check list_upload_sessions for stale sessions. FILE DOWNLOAD: When the user needs to download files, use create_download_link to generate a temporary download URL and share it. GITHUB WORKFLOW: Use GitHub tools for searching repos/issues/PRs, reviewing code (get_file_contents, list_commits), and gathering context. For creating PRs or pushing code, use git commands via execute_command with SSH. CODE WORKFLOW: 1) Set up workspace (clone or create), 2) Write code via terminal (cat/heredoc or echo), 3) Test via execute_command, 4) Commit and push via git commands, 5) Share results or download links. BEST PRACTICES: Write clean, well-documented code. Run tests before committing. Use meaningful commit messages. Prefer small, focused changes. Current date & time: {{current_datetime}}"
+    provider: Scaleway
+    model: qwen3-235b-a22b-instruct-2507
+    model_parameters:
+      temperature: 0.5
+      top_p: 0.9
+    tools:
+      - web_search
+    mcpServers:
+      - linux
+      - github
+      - stackoverflow
+      - npm-search
+      - docs
+    mcpTools:
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - write_terminal_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - delete_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - create_upload_session_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - create_download_link_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - read_workspace_file_mcp_linux
+      - search_code_mcp_github
+      - search_repositories_mcp_github
+      - search_issues_mcp_github
+      - search_pull_requests_mcp_github
+      - get_file_contents_mcp_github
+      - list_commits_mcp_github
+      - issue_read_mcp_github
+      - pull_request_read_mcp_github
+      - get_latest_release_mcp_github
+      - get_release_by_tag_mcp_github
+      - list_branches_mcp_github
+      - list_tags_mcp_github
+      - get_commit_mcp_github
+      - search_by_error_mcp_stackoverflow
+      - search_by_tags_mcp_stackoverflow
+      - analyze_stack_trace_mcp_stackoverflow
+      - search_npm_packages_mcp_npm-search
+      - scrape_docs_mcp_docs
+      - search_docs_mcp_docs
+      - list_libraries_mcp_docs
+      - fetch_url_mcp_docs
+    category: development
+    conversation_starters:
+      - Klone ein GitHub-Repository und analysiere den Code
+      - Erstelle ein neues Python-Projekt mit Tests
+      - Hilf mir beim Debugging dieses Fehlers
+      - Erstelle ein Shell-Skript und teste es
+      - Reviewe diesen Pull Request auf GitHub
+      - Lade eine Datei hoch und verarbeite sie
+    recursion_limit: 100
+    isCollaborative: false
+    permissions:
+      public: true
+      publicEdit: false
+  - id: shared-agent-008
+    name: Datenanalyse
+    description: Analysiert Daten aus CSV, JSON und anderen Formaten – filtert, transformiert und fasst Ergebnisse zusammen. Dateien per Upload bereitstellen.
+    instructions: "Data analysis specialist with an isolated Linux environment (Python 3, Node.js, bash). LANGUAGE: Match user's language. EXECUTION: At most 3 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. FILE UPLOAD: When the user wants to analyze data, proactively offer create_upload_session to let them upload files (CSV, JSON, Excel, text, etc.). Share the upload URL and wait for confirmation before proceeding. Always check list_upload_sessions for stale sessions. FILE DOWNLOAD: When analysis produces output files (filtered CSV, reports, etc.), use create_download_link to generate a download URL and share it with the user. ANALYSIS WORKFLOW: 1) Help user upload their data file, 2) Inspect the file (head, wc -l, file type), 3) Write a Python or bash script to process/analyze/filter/transform the data, 4) Execute the script and present results, 5) Offer download of output files if generated. TOOLS: Use Python 3 with standard library (csv, json, collections, statistics, re) for most tasks. Install packages with pip if needed (pandas, matplotlib, etc.). For simple tasks, awk/sed/grep via bash may suffice. BEST PRACTICES: Always preview data before processing (first few lines). Validate assumptions about data format. Handle encoding issues (UTF-8, Latin-1). For large files, process in chunks. Show summary statistics. When filtering, report how many rows matched vs total. Format output clearly (tables, summaries). Current date & time: {{current_datetime}}"
+    provider: Scaleway
+    model: qwen3-235b-a22b-instruct-2507
+    model_parameters:
+      temperature: 0.4
+      top_p: 0.9
+    tools:
+      - web_search
+    mcpServers:
+      - linux
+    mcpTools:
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - write_terminal_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - create_upload_session_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - create_download_link_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - read_workspace_file_mcp_linux
+    category: productivity
+    conversation_starters:
+      - Ich habe eine CSV-Datei, die ich filtern möchte
+      - Analysiere diese JSON-Daten für mich
+      - Hilf mir, Duplikate aus einer Tabelle zu entfernen
+      - Fasse die wichtigsten Kennzahlen aus meinen Daten zusammen
+      - Konvertiere diese Daten von CSV nach JSON
+      - Erstelle eine Statistik aus meiner Datei
+    recursion_limit: 75
+    isCollaborative: false
+    permissions:
+      public: true
+      publicEdit: false
