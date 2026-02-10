@@ -693,6 +693,7 @@ mcpSettings:
     - 'mcp-youtube-transcript'  # MCP YouTube Transcript (youtube-transcript-api)
     - 'mcp-docs'                # MCP Docs (Grounded Docs) service (Docker network)
     - 'mcp-chefkoch'            # MCP Chefkoch service (Docker network)
+    - 'mcp-linux'                # MCP Linux service (Docker network)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     - 'mcp.mapbox.com'           # Mapbox MCP Server (remote hosted)
     # - '*.example.com'           # Wildcard subdomain
@@ -815,6 +816,22 @@ mcpServers:
     chatMenu: false
     startup: true
     serverInstructions: true
+
+  linux:
+    type: streamable-http
+    url: http://mcp-linux:3015/mcp
+    title: Linux Terminal
+    description: Isolated Linux terminal environment with persistent workspaces, git, and multi-language runtime support
+    iconPath: /images/mcp-linux-icon.svg
+    initTimeout: 120000
+    timeout: 120000
+    chatMenu: false
+    startup: true
+    serverInstructions: true
+    headers:
+      X-User-ID: '{{LIBRECHAT_USER_ID}}'
+      X-User-Username: '{{LIBRECHAT_USER_USERNAME}}'
+      X-User-Email: '{{LIBRECHAT_USER_EMAIL}}'
 
   ytptube:
     type: streamable-http

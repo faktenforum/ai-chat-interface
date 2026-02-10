@@ -208,6 +208,15 @@ services:
     image: ghcr.io/faktenforum/mcp-chefkoch:latest
     # No Traefik labels - internal service only
 
+  mcp-linux:
+    extends: { file: docker-compose.mcp-linux.yml, service: mcp-linux }
+    container_name: ${STACK_NAME:-prod}-mcp-linux
+    image: ghcr.io/faktenforum/mcp-linux:latest
+    volumes:
+      - mcp_linux_homes:/home
+      - mcp_linux_data:/app/data
+    # No Traefik labels - internal service only
+
   # YTPTube - download-only exposed via Traefik (only /api/download); Web UI and rest of API internal
   ytptube:
     extends: { file: docker-compose.ytptube.yml, service: ytptube }
@@ -278,3 +287,7 @@ volumes:
     name: ${STACK_NAME:-prod}-mcp-docs-data
   docs-mcp-config:
     name: ${STACK_NAME:-prod}-mcp-docs-config
+  mcp_linux_homes:
+    name: ${STACK_NAME:-prod}-mcp-linux-homes
+  mcp_linux_data:
+    name: ${STACK_NAME:-prod}-mcp-linux-data

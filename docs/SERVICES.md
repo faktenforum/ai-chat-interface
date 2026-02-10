@@ -110,6 +110,7 @@ Internal Docker MCP servers are exposed on localhost when running the stack loca
 | **StackOverflow** | Programming Q&A and debugging | Internal Docker | ✅ | ❌ | ✅ |
 | **npm Search** | npm package search | Internal Docker | ✅ | ❌ | ✅ |
 | **Chefkoch** | Recipes from chefkoch.de (search, get recipe, random, daily) | Internal Docker | ✅ | ❌ | ✅ |
+| **Linux** | Per-user isolated Linux terminal with persistent git workspaces | Internal Docker | ✅ | ❌ | ✅ |
 | **YTPTube** | Video URLs → transcripts (YTPTube + optional transcription API) | Internal Docker | ✅ | ❌ | ✅ |
 | **YouTube Transcript** | YouTube video URL → transcript (youtube-transcript-api) | Internal Docker | ✅ | ❌ | ✅ |
 | **Grounded Docs** | Documentation index (websites, GitHub, npm, local files); optional semantic search via embeddings | Internal Docker | ✅ | ❌ | ✅ |
@@ -137,6 +138,8 @@ Internal Docker MCP servers are exposed on localhost when running the stack loca
 
 **Chefkoch** — Recipes from chefkoch.de. Tools: `get_recipe`, `search_recipes`, `get_random_recipe`, `get_daily_recipes`. Network: `app-net`. URL: `http://mcp-chefkoch:3014/mcp`. Env: `MCP_CHEFKOCH_PORT` (3014), `MCP_CHEFKOCH_LOG_LEVEL`. [MCP Chefkoch](MCP_CHEFKOCH.md)
 
+**Linux** — Per-user isolated Linux terminal environment with persistent git workspaces and multi-language runtimes. Tools: `execute_command`, `read_terminal_output`, `write_terminal`, `list_terminals`, `kill_terminal`, `list_workspaces`, `create_workspace`, `delete_workspace`, `get_workspace_status`, `get_account_info`, `reset_account`, `get_system_info`. Network: `app-net`. URL: `http://mcp-linux:3015/mcp`. Env: `MCP_LINUX_PORT` (3015), `MCP_LINUX_LOG_LEVEL`, `MCP_LINUX_WORKER_IDLE_TIMEOUT`, `MCP_LINUX_GIT_SSH_KEY`. Volumes: `mcp_linux_homes`, `mcp_linux_data`. [MCP Linux](MCP_LINUX.md)
+
 **YTPTube** — Media URL → transcript or download link. Tools: `request_transcript`, `get_status`, `request_download_link`, `get_media_info`, `get_thumbnail_url`, `list_recent_downloads`. Optional: `TRANSCRIPTION_BASE_URL` + `TRANSCRIPTION_API_KEY` for audio transcription; omit for platform-subtitles-only. Network: `app-net`. URL: `http://mcp-ytptube:3010/mcp`. [MCP YTPTube](MCP_YTPTUBE.md)
 
 **YouTube Transcript** — YouTube video URL → transcript via youtube-transcript-api. Tools: `get_transcript`, `get_timed_transcript`, `get_video_info`. Network: `app-net`. URL: `http://mcp-youtube-transcript:3011/mcp`. [MCP YouTube Transcript](MCP_YOUTUBE_TRANSCRIPT.md)
@@ -151,7 +154,7 @@ Internal Docker MCP servers are exposed on localhost when running the stack loca
 
 ### Testing internal MCPs from Cursor IDE
 
-When using the **local** stack (`docker-compose -f docker-compose.local.yml …` or `-f docker-compose.local-dev.yml`), internal MCP servers are bound to `127.0.0.1:PORT` and are **not** exposed in production or Portainer. Calculator, image-gen and chefkoch use the same port internally and on the host: **3012**, **3013** and **3014** by default (`MCP_CALCULATOR_PORT`, `MCP_IMAGE_GEN_PORT`, `MCP_CHEFKOCH_PORT`) so they don’t clash with other projects using 3000–3002; `.cursor/mcp.json` uses these ports. To test them from the Cursor code assistant:
+When using the **local** stack (`docker-compose -f docker-compose.local.yml …` or `-f docker-compose.local-dev.yml`), internal MCP servers are bound to `127.0.0.1:PORT` and are **not** exposed in production or Portainer. Calculator, image-gen, chefkoch and linux use the same port internally and on the host: **3012**, **3013**, **3014** and **3015** by default (`MCP_CALCULATOR_PORT`, `MCP_IMAGE_GEN_PORT`, `MCP_CHEFKOCH_PORT`, `MCP_LINUX_PORT`) so they don’t clash with other projects using 3000–3002; `.cursor/mcp.json` uses these ports. To test them from the Cursor code assistant:
 
 1. **Start the MCP servers** so something is listening on the ports used in `.cursor/mcp.json`:
    - Full stack: `docker compose -f docker-compose.local.yml up -d` (or `docker-compose.local-dev.yml`).
@@ -172,7 +175,7 @@ When using the **local** stack (`docker-compose -f docker-compose.local.yml …`
 
 2. **`app-net`** (Bridge)
    - LibreChat and related services: LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API, n8n, n8n-init, n8n PostgreSQL, YTPTube
-   - All internal MCP servers: mcp-calculator, mcp-image-gen, mcp-openstreetmap, mcp-weather, mcp-playwright, mcp-db-timetable, mcp-stackoverflow, mcp-npm-search, mcp-chefkoch, mcp-ytptube, mcp-docs, mcp-firecrawl (when enabled)
+   - All internal MCP servers: mcp-calculator, mcp-image-gen, mcp-openstreetmap, mcp-weather, mcp-playwright, mcp-db-timetable, mcp-stackoverflow, mcp-npm-search, mcp-chefkoch, mcp-linux, mcp-ytptube, mcp-docs, mcp-firecrawl (when enabled)
 
 3. **`firecrawl-network`** (Bridge)
    - Firecrawl only: firecrawl-api, playwright-service, redis, nuq-postgres, rabbitmq
