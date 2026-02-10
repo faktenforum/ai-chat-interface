@@ -292,6 +292,118 @@ export class LibreChatAPIClient {
       permissions
     );
   }
+
+  // ========================================================================
+  // Prompt Group Methods
+  // ========================================================================
+
+  /**
+   * Creates a new prompt group with an initial production prompt.
+   */
+  async createPromptGroup(
+    payload: CreatePromptGroupPayload,
+    userId: string
+  ): Promise<CreatePromptGroupResponse> {
+    const result = await this.request<CreatePromptGroupResponse>(
+      'POST',
+      '/api/prompts',
+      userId,
+      payload,
+      false
+    );
+    if (!result) {
+      throw new Error('Unexpected null response from createPromptGroup');
+    }
+    return result;
+  }
+
+  /**
+   * Gets all prompt groups accessible to the user.
+   */
+  async getAllPromptGroups(userId: string): Promise<PromptGroupListEntry[]> {
+    const result = await this.request<PromptGroupListEntry[]>(
+      'GET',
+      '/api/prompts/all',
+      userId,
+      undefined,
+      false
+    );
+    return result ?? [];
+  }
+
+  /**
+   * Finds a prompt group by exact name. Returns null if not found.
+   */
+  async findPromptGroupByName(
+    name: string,
+    userId: string
+  ): Promise<PromptGroupListEntry | null> {
+    try {
+      const groups = await this.getAllPromptGroups(userId);
+      return (
+        groups.find(
+          (group) => group.name?.toLowerCase() === name.toLowerCase()
+        ) ?? null
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Updates prompt group metadata (name, oneliner, category, command).
+   */
+  async updatePromptGroupMetadata(
+    groupId: string,
+    payload: UpdatePromptGroupPayload,
+    userId: string
+  ): Promise<PromptGroupListEntry> {
+    const result = await this.request<PromptGroupListEntry>(
+      'PATCH',
+      `/api/prompts/groups/${groupId}`,
+      userId,
+      payload,
+      false
+    );
+    if (!result) {
+      throw new Error('Unexpected null response from updatePromptGroupMetadata');
+    }
+    return result;
+  }
+
+  /**
+   * Adds a new prompt version to an existing group.
+   */
+  async addPromptToGroup(
+    groupId: string,
+    prompt: PromptContent,
+    userId: string
+  ): Promise<CreatePromptGroupResponse> {
+    const result = await this.request<CreatePromptGroupResponse>(
+      'POST',
+      `/api/prompts/groups/${groupId}/prompts`,
+      userId,
+      { prompt },
+      false
+    );
+    if (!result) {
+      throw new Error('Unexpected null response from addPromptToGroup');
+    }
+    return result;
+  }
+
+  /**
+   * Makes a specific prompt the production version for its group.
+   */
+  async makePromptProduction(promptId: string, userId: string): Promise<void> {
+    await this.request<unknown>(
+      'PATCH',
+      `/api/prompts/${promptId}/tags/production`,
+      userId,
+      undefined,
+      false
+    );
+  }
 }
 
 /**
@@ -415,4 +527,73 @@ export interface AgentListResponse {
   has_more?: boolean;
   first_id?: string | null;
   last_id?: string | null;
+}
+
+// ============================================================================
+// Prompt Types
+// ============================================================================
+
+/**
+ * Prompt text content for create/add operations.
+ */
+export interface PromptContent {
+  prompt: string;
+  type: 'text' | 'chat';
+}
+
+/**
+ * Payload for creating a new prompt group with an initial prompt.
+ */
+export interface CreatePromptGroupPayload {
+  prompt: PromptContent;
+  group: {
+    name: string;
+    category?: string;
+    oneliner?: string;
+    command?: string;
+  };
+}
+
+/**
+ * Response from prompt group creation or prompt addition.
+ */
+export interface CreatePromptGroupResponse {
+  prompt: {
+    _id: string;
+    groupId: string;
+    prompt: string;
+    type: 'text' | 'chat';
+    author: string;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+  group?: PromptGroupListEntry;
+}
+
+/**
+ * Prompt group as returned by GET /api/prompts/all.
+ */
+export interface PromptGroupListEntry {
+  _id: string;
+  name: string;
+  oneliner?: string;
+  category?: string;
+  command?: string;
+  author?: string;
+  authorName?: string;
+  productionPrompt?: {
+    prompt?: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * Allowed fields for prompt group metadata updates (PATCH).
+ */
+export interface UpdatePromptGroupPayload {
+  name?: string;
+  oneliner?: string;
+  category?: string;
+  command?: string | null;
 }

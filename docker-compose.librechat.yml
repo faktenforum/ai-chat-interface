@@ -58,7 +58,7 @@ services:
         condition: service_healthy
     networks:
       - app-net
-    command: ["node", "--experimental-strip-types", "--no-warnings", "src/init-agents-only.ts"]
+    command: ["node", "--experimental-strip-types", "--no-warnings", "src/init-post.ts"]
 
   api:
     container_name: LibreChat

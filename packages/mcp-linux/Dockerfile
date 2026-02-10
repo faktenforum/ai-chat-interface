@@ -2,7 +2,7 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# System packages: user management, shells, dev tools, runtimes
+# System packages: user management, shells, dev tools, runtimes, plotting (matplotlib headless)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     curl \
@@ -21,6 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     less \
     vim-tiny \
+    fontconfig \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 24 via NodeSource

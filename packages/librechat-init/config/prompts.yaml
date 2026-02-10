@@ -1,0 +1,13 @@
+# Shared prompt templates for LibreChat.
+# Each entry creates a reusable prompt group accessible via the Prompts panel or slash commands.
+# Private prompts (e.g. with API keys in the text) go in prompts.private.yaml (git-ignored).
+#
+# Fields:
+#   name     (required) - Display name in the prompt list
+#   prompt   (required) - The prompt text (supports {{variables}} like {{current_date}}, {{current_user}})
+#   type     (optional) - "text" (default) or "chat"
+#   category (optional) - Category for filtering in the UI
+#   oneliner (optional) - Short description shown in the prompt list
+#   command  (optional) - Slash command trigger (lowercase a-z, 0-9, hyphens only)
+
+prompts: []

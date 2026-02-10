@@ -25,6 +25,12 @@ export const PUBLIC_AGENTS_FALLBACK = '../config/agents.yaml';
 export const PRIVATE_AGENTS_PATH = join(CONFIG_SOURCE_DIR, 'agents.private.yaml');
 export const PRIVATE_AGENTS_FALLBACK = '../config/agents.private.yaml';
 
+export const PUBLIC_PROMPTS_PATH = join(CONFIG_SOURCE_DIR, 'prompts.yaml');
+export const PUBLIC_PROMPTS_FALLBACK = '../config/prompts.yaml';
+
+export const PRIVATE_PROMPTS_PATH = join(CONFIG_SOURCE_DIR, 'prompts.private.yaml');
+export const PRIVATE_PROMPTS_FALLBACK = '../config/prompts.private.yaml';
+
 // ============================================================================
 // MCP Configuration
 // ============================================================================

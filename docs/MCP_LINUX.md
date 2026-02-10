@@ -90,7 +90,7 @@ Optional: set `MCP_LINUX_GIT_SSH_KEY` to a base64-encoded ed25519 private key fr
 
 ## Pre-installed Runtimes
 
-Node.js 24, Python 3, Git, Bash, ripgrep, tree, jq, build-essential, openssh-client.
+Node.js 24, Python 3, Git, Bash, ripgrep, tree, jq, build-essential, openssh-client. For headless plotting (e.g. Datenanalyse agent): fontconfig, fonts-dejavu-core. See [MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md) for CSV→chart workflow and example Python script.
 
 ## Docker
 

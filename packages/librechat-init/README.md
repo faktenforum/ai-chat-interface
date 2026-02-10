@@ -5,7 +5,7 @@ Initialization services for LibreChat configuration and agent setup.
 ## Services
 
 - **librechat-init**: Pre-API initialization (config, permissions, roles)
-- **librechat-post-init**: Post-API initialization (agents)
+- **librechat-post-init**: Post-API initialization (agents, prompts)
 
 ## Configuration
 
@@ -66,6 +66,30 @@ agents:
 - `permissions.publicEdit`: Public EDIT (requires `isCollaborative: true`)
 
 **System User Priority:** `LIBRECHAT_DEFAULT_ADMINS` → first admin → first user
+
+### Prompts
+
+**Files:** `config/prompts.yaml` (public), `config/prompts.private.yaml` (private)
+
+```yaml
+prompts:
+  - name: Kurzrecherche
+    prompt: "Recherchiere die neuesten seriösen Quellen zu: {{thema}}. Max. 3 Quellen, mit URL."
+    type: text
+    category: recherche
+    oneliner: Quick research with sources
+    command: kurzrecherche
+```
+
+**Fields:**
+- `name` (required): Display name in the prompt list; used for create-or-update matching
+- `prompt` (required): Prompt text; supports `{{current_date}}`, `{{current_user}}`, and custom `{{variables}}`
+- `type`: `text` (default) or `chat`
+- `category`: Category for filtering in the UI
+- `oneliner`: Short description shown in the prompt list
+- `command`: Slash command trigger (lowercase `a-z`, `0-9`, hyphens only)
+
+**Behaviour:** Applied by `librechat-post-init` after the API is up. Matching is by `name` (case-insensitive): existing groups are updated; new ones are created. Prompt text changes create a new version and set it as production.
 
 ### Environment Variables
 
