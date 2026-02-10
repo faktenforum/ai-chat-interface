@@ -39,6 +39,8 @@ RUN npm install --production --silent && npm cache clean --force
 COPY tsconfig.json ./
 COPY src ./src
 COPY assets ./assets
+COPY views ./views
+COPY public ./public
 
 # Create persistent data directories
 RUN mkdir -p /app/data /run/mcp-workers

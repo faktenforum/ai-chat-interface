@@ -1,6 +1,6 @@
 services:
   mcp-linux:
-    # Internal service only - not exposed via Traefik
+    # MCP endpoint is internal only; upload routes exposed via Traefik
     # Build overridden in docker-compose.local.yml and docker-compose.local-dev.yml; prod pulls from registry
     image: ghcr.io/faktenforum/mcp-linux:latest
     container_name: mcp-linux
@@ -11,8 +11,18 @@ services:
       LOG_LEVEL: ${MCP_LINUX_LOG_LEVEL:-info}
       WORKER_IDLE_TIMEOUT: ${MCP_LINUX_WORKER_IDLE_TIMEOUT:-1800000}
       GIT_SSH_KEY: ${MCP_LINUX_GIT_SSH_KEY:-}
+      MCP_LINUX_UPLOAD_BASE_URL: ${MCP_LINUX_UPLOAD_BASE_URL:-}
+      MCP_LINUX_UPLOAD_MAX_FILE_SIZE_MB: ${MCP_LINUX_UPLOAD_MAX_FILE_SIZE_MB:-100}
+      MCP_LINUX_UPLOAD_SESSION_TIMEOUT_MIN: ${MCP_LINUX_UPLOAD_SESSION_TIMEOUT_MIN:-15}
     expose:
       - "3015"
+    labels:
+      - "traefik.enable=true"
+      # Only expose /upload/* routes publicly (MCP endpoint stays internal)
+      - "traefik.http.routers.mcp-linux-upload.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/upload`)"
+      - "traefik.http.routers.mcp-linux-upload.entrypoints=websecure"
+      - "traefik.http.routers.mcp-linux-upload.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mcp-linux-upload.loadbalancer.server.port=3015"
     volumes:
       - mcp_linux_homes:/home
       - mcp_linux_data:/app/data

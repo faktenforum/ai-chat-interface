@@ -10,18 +10,21 @@
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.25.3",
-    "zod": "^4.3.6",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "busboy": "^1.6.0",
+    "dotenv": "^17.2.4",
     "express": "^5.2.1",
-    "pino": "^10.3.0",
-    "dotenv": "^17.2.3",
-    "node-pty": "^1.0.0"
+    "node-pty": "^1.1.0",
+    "pino": "^10.3.1",
+    "pug": "^3.0.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/busboy": "^1.5.4",
     "@types/express": "^5.0.6",
-    "@types/node": "^25.0.10",
-    "typescript": "^5.9.3",
-    "tsx": "^4.21.0"
+    "@types/node": "^25.2.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=22.0.0"

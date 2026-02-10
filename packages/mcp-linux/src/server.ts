@@ -12,6 +12,7 @@
 
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'url';
 import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -23,7 +24,10 @@ import { WorkerManager } from './worker-manager.ts';
 import { registerWorkspaceTools, sessionEmailMap } from './tools/workspace.ts';
 import { registerTerminalTools } from './tools/terminal.ts';
 import { registerAccountTools } from './tools/account.ts';
+import { registerUploadTools } from './tools/upload.ts';
 import { registerPrompts } from './prompts/index.ts';
+import { UploadManager } from './upload/upload-manager.ts';
+import { setupUploadRoutes } from './upload/upload-routes.ts';
 
 const PORT = parseInt(process.env.PORT || '3015', 10);
 const SERVER_NAME = 'mcp-linux-server';
@@ -35,6 +39,11 @@ const transports = new Map<string, StreamableHTTPServerTransport>();
 // Shared managers (singleton per container)
 const userManager = new UserManager();
 const workerManager = new WorkerManager(userManager);
+const uploadManager = new UploadManager({
+  baseUrl: process.env.MCP_LINUX_UPLOAD_BASE_URL || `http://localhost:${PORT}`,
+  defaultMaxFileSizeMb: parseInt(process.env.MCP_LINUX_UPLOAD_MAX_FILE_SIZE_MB || '100', 10),
+  defaultSessionTimeoutMin: parseInt(process.env.MCP_LINUX_UPLOAD_SESSION_TIMEOUT_MIN || '15', 10),
+});
 
 /**
  * Creates and configures the MCP server with all tool and prompt registrations
@@ -66,7 +75,15 @@ Usage guidelines:
 - File operations, search, and git are all done via the terminal
 - Each terminal response includes workspace git metadata (branch, dirty status)
 - Use get_workspace_status for detailed git status information
-- Users can install additional tools in their home (nvm, pip --user, etc.)`,
+- Users can install additional tools in their home (nvm, pip --user, etc.)
+
+File Upload:
+- Use create_upload_session to generate a unique upload URL for the user
+- Share the URL with the user so they can upload files via their browser
+- Uploaded files are saved to ~/workspaces/{workspace}/uploads/
+- Upload sessions auto-close after successful upload and expire after 15 minutes by default
+- IMPORTANT: Always check list_upload_sessions for stale open sessions and warn the user about them
+- Close unnecessary sessions with close_upload_session to maintain security`,
     },
   );
 
@@ -74,6 +91,7 @@ Usage guidelines:
   registerWorkspaceTools(server, userManager, workerManager);
   registerTerminalTools(server, userManager, workerManager);
   registerAccountTools(server, userManager, workerManager);
+  registerUploadTools(server, userManager, uploadManager);
 
   // Register prompts
   registerPrompts(server);
@@ -114,6 +132,17 @@ function createApp(): express.Application {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
   app.disable('x-powered-by');
+
+  // Pug template engine for upload pages
+  const appRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+  app.set('views', join(appRoot, 'views'));
+  app.set('view engine', 'pug');
+
+  // Static files (CSS, JS) for upload pages
+  app.use(express.static(join(appRoot, 'public')));
+
+  // Upload routes (before MCP endpoints, no JSON body parsing needed for multipart)
+  setupUploadRoutes(app, uploadManager, userManager);
 
   // User-context extraction middleware: maps session ID to user email
   app.use('/mcp', (req, _res, next) => {
@@ -158,11 +187,13 @@ async function main(): Promise<void> {
 
     setupGracefulShutdown(server, transports, logger);
 
-    // Also clean up workers on shutdown
+    // Also clean up workers and upload manager on shutdown
     process.on('SIGTERM', async () => {
+      uploadManager.dispose();
       await workerManager.shutdownAll();
     });
     process.on('SIGINT', async () => {
+      uploadManager.dispose();
       await workerManager.shutdownAll();
     });
   } catch (error) {
