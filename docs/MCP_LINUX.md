@@ -92,6 +92,12 @@ Optional: set `MCP_LINUX_GIT_SSH_KEY` to a base64-encoded ed25519 private key fr
 
 Node.js 24, Python 3, Git, Bash, ripgrep, tree, jq, build-essential, openssh-client. For headless plotting (e.g. Datenanalyse agent): fontconfig, fonts-dejavu-core. See [MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md) for CSV→chart workflow and example Python script.
 
+Media conversion and document tools (no LibreOffice/texlive):
+- **FFmpeg** — audio/video conversion (MP3, OGG, FLAC, OPUS, MP4, WEBM, etc.)
+- **ImageMagick** — image conversion and manipulation (PNG, JPG, WEBP, GIF, TIFF, SVG, PDF, etc.)
+- **Pandoc** — markup document conversion (Markdown, HTML, ODT, DOCX, EPUB, RST)
+- **Typst** — modern PDF/document engine (markup-based typesetting, single binary)
+
 ## Docker
 
 - Image: `ghcr.io/faktenforum/mcp-linux`

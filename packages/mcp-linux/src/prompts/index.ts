@@ -12,6 +12,8 @@ import { GIT_WORKFLOW_PROMPT } from './git-workflow.ts';
 import { RUNTIME_MANAGEMENT_PROMPT } from './runtime-management.ts';
 import { WORKSPACE_SETUP_PROMPT } from './workspace-setup.ts';
 import { DATA_ANALYSIS_PROMPT } from './data-analysis.ts';
+import { FILE_CONVERSION_PROMPT } from './file-conversion.ts';
+import { DOCUMENT_CREATION_PROMPT } from './document-creation.ts';
 
 const ALL_PROMPTS = [
   FILE_OPERATIONS_PROMPT,
@@ -20,6 +22,8 @@ const ALL_PROMPTS = [
   RUNTIME_MANAGEMENT_PROMPT,
   WORKSPACE_SETUP_PROMPT,
   DATA_ANALYSIS_PROMPT,
+  FILE_CONVERSION_PROMPT,
+  DOCUMENT_CREATION_PROMPT,
 ];
 
 /**

@@ -25,6 +25,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
+# Media conversion and document tools (headless, no LibreOffice/texlive)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    imagemagick \
+    pandoc \
+    && rm -rf /var/lib/apt/lists/*
+
+# ImageMagick: allow PDF read/write (disabled by default security policy)
+RUN if [ -f /etc/ImageMagick-6/policy.xml ]; then \
+      sed -i 's/<policy domain="coder" rights="none" pattern="PDF"/<policy domain="coder" rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml; \
+    fi
+
+# Typst: install latest release binary (lightweight PDF/document engine)
+RUN TYPST_VERSION=$(curl -sL https://api.github.com/repos/typst/typst/releases/latest | jq -r .tag_name) \
+    && curl -sL "https://github.com/typst/typst/releases/download/${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz" \
+    | tar -xJ --strip-components=1 -C /usr/local/bin/ --wildcards '*/typst'
+
 # Install Node.js 24 via NodeSource
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
