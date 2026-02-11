@@ -87,7 +87,7 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 
 **YTPTube** — yt-dlp Web UI; queues downloads. MCP YTPTube uses it for audio/transcripts. Network: `app-net` + `traefik-net` (prod/dev: download-only router `PathPrefix(/api/download)` at `https://ytptube.{DOMAIN}/api/download/*`); local/local-dev: full host `http://ytptube.{DOMAIN}`. Image: `ghcr.io/arabcoders/ytptube:latest`
 
-**Firecrawl Internal Services** — playwright-service (browser automation), redis (cache/queue), nuq-postgres (database). Network: `firecrawl-network` only (firecrawl-api also has `traefik-net` and `app-net`).
+**Firecrawl Internal Services** — playwright-service (browser automation), redis (cache/queue), nuq-postgres (database), rabbitmq (message queue). Network: `firecrawl-network` only (firecrawl-api also has `traefik-net` and `app-net`). If Docker returns 502 when creating `firecrawl-rabbitmq`, reduce startup load: increase Docker resources or start infra first (`redis`, `nuq-postgres`, `rabbitmq`, `playwright-service`), then the rest.
 
 ---
 

@@ -346,6 +346,7 @@ volumes:
   docs-mcp-data:
   docs-mcp-config:
   firecrawl_pgdata:
+  firecrawl_rabbitmq_data:
   librechat-config:
   mongodata:
   mongoconfig:

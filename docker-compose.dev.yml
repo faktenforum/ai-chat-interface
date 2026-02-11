@@ -295,6 +295,8 @@ volumes:
     name: ${STACK_NAME:-prod}-mongoconfig
   firecrawl_pgdata:
     name: ${STACK_NAME:-prod}-firecrawl-pgdata
+  firecrawl_rabbitmq_data:
+    name: ${STACK_NAME:-prod}-firecrawl-rabbitmq-data
   pgdata2:
     name: ${STACK_NAME:-prod}-pgdata2
   librechat-config:
