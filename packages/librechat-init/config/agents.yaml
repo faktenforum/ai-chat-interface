@@ -18,6 +18,15 @@ agents:
       - Suche nach Studien zu erneuerbaren Energien
       - Vergleiche Berichterstattung verschiedener Quellen zu einem aktuellen Thema
       - Recherchiere die neuesten Entwicklungen bei Solarstrom
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to the general assistant to start a new task or get routed to a different specialist"
+      - agent: shared-agent-008
+        description: "Transfer to data analyst for statistical analysis, charts, or visualization of collected data"
+        prompt: "Summarize the research findings and describe what data analysis or visualization is needed"
+      - agent: shared-agent-010
+        description: "Transfer to document creator for a professional report, summary, or PDF from research results"
+        prompt: "Summarize the research findings and describe what kind of document should be created"
     recursion_limit: 50
     isCollaborative: false
     permissions:
@@ -45,6 +54,9 @@ agents:
       - Zeige mir verschiedene Stile für Porträts
       - Generiere ein abstraktes Kunstwerk
       - Erstelle ein Bild eines Cafés in Paris
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to the general assistant to start a new task or get routed to a different specialist"
     recursion_limit: 25
     isCollaborative: false
     permissions:
@@ -106,6 +118,9 @@ agents:
       - Finde einen Treffpunkt für drei Personen in Berlin
       - Erstelle eine Karte mit der Route von Hamburg nach Bremen
       - Wie wird das Wetter morgen in München?
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to the general assistant to start a new task or get routed to a different specialist"
     recursion_limit: 40
     isCollaborative: false
     permissions:
@@ -181,6 +196,12 @@ agents:
       - Suche auf Stack Overflow nach Lösungen für TypeScript-Typfehler
       - Dokumentation zu Vue durchsuchen
       - Neue Library-Dokumentation indizieren (z. B. Vue oder TypeScript)
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to the general assistant to start a new task or get routed to a different specialist"
+      - agent: shared-agent-007
+        description: "Transfer to the full development environment for multi-file projects, repo cloning, testing, or PR creation"
+        prompt: "Describe the development task, relevant code context, and what needs to be done in the full environment"
     recursion_limit: 75
     isCollaborative: false
     permissions:
@@ -217,6 +238,12 @@ agents:
       - "Video-Infos zu https://www.dailymotion.com/video/xczg00"
       - "Thumbnail zu https://vimeo.com/76979871"
       - "Status zu diesem Video: https://www.pbs.org/video/how-fantasy-reflects-our-world-picecq/"
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to the general assistant to start a new task or get routed to a different specialist"
+      - agent: shared-agent-009
+        description: "Transfer to file converter for converting downloaded audio/video to another format"
+        prompt: "Describe the media file (format, source URL, workspace path if downloaded) and the desired output format"
     recursion_limit: 40
     isCollaborative: false
     permissions:
@@ -266,6 +293,9 @@ agents:
       - Rezepte unter 30 Minuten mit guter Bewertung
       - Einfache Rezepte für Anfänger
       - Was ist Abschmecken und wie mache ich es?
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to the general assistant to start a new task or get routed to a different specialist"
     recursion_limit: 40
     isCollaborative: false
     permissions:
@@ -337,6 +367,9 @@ agents:
       - Erstelle ein Shell-Skript und teste es
       - Reviewe diesen Pull Request auf GitHub
       - Lade eine Datei hoch und verarbeite sie
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to the general assistant to start a new task or get routed to a different specialist"
     recursion_limit: 100
     isCollaborative: false
     permissions:
@@ -382,6 +415,12 @@ agents:
       - Fasse die wichtigsten Kennzahlen aus meinen Daten zusammen
       - Konvertiere diese Daten von CSV nach JSON
       - Erstelle eine Statistik aus meiner Datei
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to the general assistant to start a new task or get routed to a different specialist"
+      - agent: shared-agent-010
+        description: "Transfer to document creator for a professional report or PDF from analysis results"
+        prompt: "Summarize the analysis results, key findings, and describe what kind of report or document should be created"
     recursion_limit: 75
     isCollaborative: false
     permissions:
@@ -424,6 +463,9 @@ agents:
       - Ändere die Auflösung meines Videos
       - WAV nach FLAC konvertieren
       - Konvertiere mein Dokument in ein anderes Format
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to the general assistant to start a new task or get routed to a different specialist"
     recursion_limit: 50
     isCollaborative: false
     permissions:
@@ -467,7 +509,60 @@ agents:
       - Erstelle ein PDF-Dokument mit ...
       - Erstelle eine Vorlage für Geschäftsbriefe
       - Konvertiere meinen Text in ein professionelles PDF
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to the general assistant to start a new task or get routed to a different specialist"
+      - agent: shared-agent-009
+        description: "Transfer to file converter for converting the created document to another format (e.g. PDF to image, audio extraction)"
+        prompt: "Describe the document (file path in workspace, format) and the desired output format for conversion"
     recursion_limit: 75
+    isCollaborative: false
+    permissions:
+      public: true
+      publicEdit: false
+  - id: shared-agent-011
+    name: Starter
+    description: Allgemeiner Assistent – erkennt automatisch, welcher Spezialist am besten passt, und leitet die Anfrage weiter.
+    instructions: "General router agent. You do NOT answer questions yourself. Your sole purpose is to identify the user's need and hand off to the right specialist agent. Available specialists (mention by name when handing off): Recherche-Assistent (research, fact-finding, web search), Bildgenerierungs-Assistent (AI image generation from text descriptions), Reise- und Standort-Assistent (travel planning, maps, routes, weather), Entwickler-Support (developer Q&A, quick code fixes, Stack Overflow, npm), Kochhilfe (recipes, cooking tips, meal inspiration), Entwickler-Werkstatt (full Linux dev environment: run code, clone repos, create PRs), Datenanalyse (CSV/JSON analysis, charts, data visualization), Dateikonverter (image/audio/video/document format conversion), Dokumenten-Ersteller (professional PDFs, letters, reports, invoices via Typst/Pandoc). If the user's request clearly matches one specialist, hand off immediately. If unclear which specialist fits, ask one clarifying question — then hand off. NEVER attempt to answer the question yourself. Match user language."
+    provider: Scaleway
+    model: qwen3-235b-a22b-instruct-2507
+    model_parameters:
+      temperature: 0.3
+      top_p: 0.9
+    handoffs:
+      - agent: shared-agent-001
+        description: "Transfer to research assistant for fact-finding, information gathering, and web research"
+        prompt: "Summarize what the user wants researched, including specific topics, questions, or sources to check"
+      - agent: shared-agent-002
+        description: "Transfer to image generator for creating AI-generated images from text descriptions"
+        prompt: "Describe the image the user wants: subject, style, mood, colors, and any specific requirements"
+      - agent: shared-agent-003
+        description: "Transfer to travel and location assistant for route planning, maps, weather, POI search, and public transport"
+        prompt: "Summarize the user's travel or location query, including origin, destination, preferences, or area of interest"
+      - agent: shared-agent-004
+        description: "Transfer to developer support for coding Q&A, debugging, error analysis, package search, and documentation lookup"
+        prompt: "Summarize the user's development question, including language/framework, error messages, or what they're trying to achieve"
+      - agent: shared-agent-006
+        description: "Transfer to cooking assistant for recipes, meal inspiration, cooking tips, and ingredient substitutions"
+        prompt: "Describe what cooking help the user needs: recipe type, ingredients, dietary requirements, or cooking question"
+      - agent: shared-agent-007
+        description: "Transfer to full development environment for running code, cloning repos, multi-file projects, testing, and PR creation"
+        prompt: "Describe the development task: what project, language, what needs to be built or fixed, and any repo URLs"
+      - agent: shared-agent-008
+        description: "Transfer to data analyst for CSV/JSON analysis, statistical summaries, charts, and data visualization"
+        prompt: "Describe the data analysis task: what data the user has, what insights or charts they need"
+      - agent: shared-agent-009
+        description: "Transfer to file converter for image, audio, video, and document format conversion (ImageMagick, FFmpeg, Pandoc)"
+        prompt: "Describe the conversion needed: source format, target format, and any quality or size requirements"
+      - agent: shared-agent-010
+        description: "Transfer to document creator for professional PDFs, letters, reports, invoices, and CVs (Typst/Pandoc)"
+        prompt: "Describe the document the user wants: type (letter, report, invoice, CV), content, style, and language"
+    category: general
+    conversation_starters:
+      - Ich brauche Hilfe bei ...
+      - Was kannst du alles?
+      - Welcher Assistent passt zu meiner Aufgabe?
+    recursion_limit: 25
     isCollaborative: false
     permissions:
       public: true
