@@ -10,7 +10,18 @@ One GitHub account for (1) Git in MCP Linux (SSH key in each user's `~/.ssh/`) a
    ssh-keygen -t ed25519 -C "bot@example.com" -f ~/.ssh/github_machine_user -N ""
    base64 -w0 ~/.ssh/github_machine_user   # output → MCP_LINUX_GIT_SSH_KEY
    ```
-3. **PAT** — Same account: Settings → Developer settings → Personal access tokens. Fine-grained: Contents, Pull requests, Issues (Read and write), Metadata (Read). Classic: `repo`, `read:org`, `write:discussion` for reviews.
+3. **PAT** — Same account: Settings → Developer settings → Personal access tokens. Use **fine-grained**; repository access = All repositories (or select org/repos). Permissions:
+
+| Permission | Access | Used for |
+|------------|--------|----------|
+| **Metadata** | Read-only | Required. Search repos, list branches/tags/commits, get_file_contents, get_commit. |
+| **Contents** | Read and write | create_or_update_file, delete_file, push_files, create_branch. |
+| **Issues** | Read and write | create_issue, issue_read, issue_write, add_issue_comment, list_issues. |
+| **Pull requests** | Read and write | create/read/update/merge PR, create_review, review comments. |
+
+Optional (if shown in PAT UI): **Releases** Read-only (list_releases, get_latest_release, get_release_by_tag); **Discussions** Read and write (only for repo Discussions). Without Releases, release-read tools may fail; core workflows need only the four above.
+
+**Classic PAT:** Scopes `repo`, `read:org`. Optional: `read:user` (search_users, get_me), `user:email` (resolve email), `write:discussion`, `read:project`. Token prefix: classic `ghp_`, fine-grained `github_pat_`.
 
 ## Integrate in the stack
 

@@ -612,7 +612,6 @@ modelSpecs:
         maxContextTokens: 1000000
         maxOutputTokens: 64000
 
-
     - name: "claude-sonnet-4.5"
       label: "Claude Sonnet 4.5"
       description: "Top-Performance Modell für komplexe Aufgaben, Programmierung und Reasoning. 200K Context, 64K Output. Unterstützt Vision. Closed Source (Anthropic)."

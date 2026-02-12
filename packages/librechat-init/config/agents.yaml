@@ -374,23 +374,47 @@ agents:
     mcpServers:
       - github
       - linux
+    # GitHub MCP: read/list + write (issues, PRs, review, branch, file, repo, Copilot). Names _mcp_github; unknown tools ignored.
     mcpTools:
       - search_code_mcp_github
       - search_repositories_mcp_github
       - search_issues_mcp_github
       - search_pull_requests_mcp_github
+      - search_users_mcp_github
       - get_file_contents_mcp_github
-      - list_commits_mcp_github
-      - issue_read_mcp_github
-      - pull_request_read_mcp_github
+      - get_commit_mcp_github
       - get_latest_release_mcp_github
       - get_release_by_tag_mcp_github
+      - get_label_mcp_github
+      - get_me_mcp_github
+      - issue_read_mcp_github
+      - pull_request_read_mcp_github
+      - list_commits_mcp_github
       - list_branches_mcp_github
       - list_tags_mcp_github
-      - get_commit_mcp_github
+      - list_pull_requests_mcp_github
+      - list_issues_mcp_github
+      - list_releases_mcp_github
+      - list_issue_types_mcp_github
       - create_issue_mcp_github
       - create_pull_request_mcp_github
       - create_review_mcp_github
+      - pull_request_review_write_mcp_github
+      - add_comment_to_pending_review_mcp_github
+      - add_issue_comment_mcp_github
+      - issue_write_mcp_github
+      - update_pull_request_mcp_github
+      - update_pull_request_branch_mcp_github
+      - create_branch_mcp_github
+      - merge_pull_request_mcp_github
+      - create_or_update_file_mcp_github
+      - delete_file_mcp_github
+      - push_files_mcp_github
+      - fork_repository_mcp_github
+      - create_repository_mcp_github
+      - assign_copilot_to_issue_mcp_github
+      - request_copilot_review_mcp_github
+      - sub_issue_write_mcp_github
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
       - list_workspaces_mcp_linux

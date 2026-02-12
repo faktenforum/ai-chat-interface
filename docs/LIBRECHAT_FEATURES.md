@@ -170,6 +170,8 @@ Compose sets `LIBRECHAT_ENV` per stack (local: `local`, dev: `dev`, prod: `prod`
 - **`modelSpecs.prioritize: false`** — avoids API warning when using a default spec with `interface.presets: true`.
 - **Post-init:** Replaces config IDs in `preset.agent_id` with real API agent IDs in the runtime config. **Restart the API** after post-init so the client sees Assistenten and the default correctly.
 
+**Assistenten group missing:** Client shows agent presets only when `preset.agent_id` matches an API agent ID. If the config still has config IDs (e.g. `shared-agent-011`), run post-init (logs: “Patched N modelSpec(s) with real agent IDs”), then restart the API. Require: `LIBRECHAT_JWT_SECRET` set, API reachable at `LIBRECHAT_API_URL`.
+
 ### Endpoints Configuration
 
 **Lines 77-101:** OpenRouter endpoint
