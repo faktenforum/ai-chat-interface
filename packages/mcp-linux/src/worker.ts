@@ -373,6 +373,10 @@ const handlers: Record<string, Handler> = {
 
     if (gitUrl) {
       // Clone from remote
+      if (gitUrl.startsWith('-')) {
+        throw new Error('Git URL cannot start with -');
+      }
+
       if (branch.startsWith('-')) {
         throw new Error('Branch name cannot start with -');
       }

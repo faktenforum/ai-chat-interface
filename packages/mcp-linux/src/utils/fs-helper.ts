@@ -5,7 +5,7 @@
  */
 
 import { join, resolve } from 'node:path';
-import { statSync } from 'node:fs';
+import { statSync, realpathSync } from 'node:fs';
 import { validateWorkspaceName } from './security.ts';
 
 /**
@@ -29,6 +29,22 @@ export function resolveSafePath(username: string, workspace: string, relativePat
   // Security: ensure path is within the workspace
   if (!absolutePath.startsWith(workspaceRoot + '/') && absolutePath !== workspaceRoot) {
     throw new Error('Path traversal denied: file_path must be within the workspace');
+  }
+
+  // Security: prevent symlink traversal (if file exists)
+  try {
+    // Resolve real paths for both workspace root and target file
+    const realWorkspaceRoot = realpathSync(workspaceRoot);
+    const realPath = realpathSync(absolutePath);
+
+    if (!realPath.startsWith(realWorkspaceRoot + '/') && realPath !== realWorkspaceRoot) {
+      throw new Error('Path traversal denied: symlink targets outside workspace');
+    }
+  } catch (error: any) {
+    // Ignore ENOENT (file not found) - caller will handle if needed
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
   }
 
   return absolutePath;
