@@ -12,6 +12,11 @@ Universal ──► Entwickler-Router ──► Code-Recherche | Entwickler | Co
 
 Specialists do **not** hand off back to the router; they hand off to Universal or to other specialists.
 
+**Recursion limit (Max Agent Steps):**
+- One limit applies to the **entire** run (all agents in the chain); taken from the **first** agent (the one the user started with).
+- Each step = one LLM call, tool call, or handoff. Stop = agent returns a final response with no further tools/handoffs; else `GRAPH_RECURSION_LIMIT`.
+- Dev agents: 100–120 so workflows with many file/git/GitHub steps complete. Universal 100, Entwickler-Router 120.
+
 ## Agents
 
 | Agent | ID | Provider | Model | Tools | Role |
@@ -31,8 +36,10 @@ No automatic chains. All transitions between specialists are via explicit handof
 
 Each specialist can hand off to Universal and to 2–3 relevant specialists (e.g. Entwickler → Code-Recherche, GitHub-Assistent). Specialists do **not** hand off back to Entwickler-Router. All agents with handoffs have a **HANDOFF** instruction: they must **call the handoff/transfer tool** (not just write a message) and pass context in the tool's instructions parameter.
 
-- **Entwickler → Code-Refactorer**: To polish or restructure implemented code (readability, structure, tests, style).
-- **Code-Refactorer → Entwickler**: To implement missing code, tests, or new behavior identified during refactoring.
+- **Entwickler → Code-Refactorer**: Polish or restructure code (readability, structure, tests, style).
+- **Code-Refactorer → Entwickler**: Implement missing code, tests, or behavior found during refactoring.
+- **Code-Refactorer → Code-Reviewer**: Read PR/review comments and fix issues (Code-Refactorer has no GitHub API).
+- **Feedback-Assistent → GitHub-Assistent**: Create issue (title + body in English); → Code-Recherche (similar issues); → Entwickler-Router (user wants to fix).
 
 ## Code review flow
 
@@ -43,6 +50,10 @@ Each specialist can hand off to Universal and to 2–3 relevant specialists (e.g
 Optional handoffs: Code-Reviewer → Code-Recherche (codebase context) or → Entwickler (fix issues).
 
 **GitHub content:** GitHub-Assistent posts all review bodies, inline comments, and issue/PR text in **English** (per agent instructions).
+
+## Feedback / Bug reports
+
+**Feedback-Assistent** (`shared-agent-feedback`): Report chat-interface bugs. Understands description → structured issue (title, steps, expected/actual, environment) → hand off to **GitHub-Assistent** (issue in English). Optional: **Code-Recherche** (similar issues), **Entwickler-Router** (user wants to fix). Entry: Universal or preset “Feedback / Fehler melden”.
 
 ## GitHub tools
 

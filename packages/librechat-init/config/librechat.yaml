@@ -411,6 +411,16 @@ modelSpecs:
         endpointType: "agents"
         agent_id: "shared-agent-code-reviewer"
 
+    - name: "agent-feedback"
+      label: "Feedback / Fehler melden"
+      description: "Fehler im Chat-Interface melden – versteht die Beschreibung, bereitet sie auf und erstellt ein GitHub-Issue."
+      group: "Assistenten"
+      order: 10
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-feedback"
+
     # - name: "agent-video-transkripte"
     #   label: "Video-Transkripte"
     #   description: "Transkripte, Metadaten, Thumbnails und Download-Links für Video-URLs (YouTube, Instagram, TikTok u. a.)."

@@ -9,7 +9,7 @@ The project’s LibreChat setup is defined in the **librechat-init** config; the
 | File | Purpose |
 |------|---------|
 | **[`packages/librechat-init/config/librechat.yaml`](../packages/librechat-init/config/librechat.yaml)** | LibreChat settings: endpoints, model specs, MCP servers, interface, memory, OCR, etc. |
-| **[`packages/librechat-init/config/agents.yaml`](../packages/librechat-init/config/agents.yaml)** | Shared agents (Recherche, Bildgenerierung, Universal, Entwickler-Router + dev specialists) and their tools. |
+| **[`packages/librechat-init/config/agents.yaml`](../packages/librechat-init/config/agents.yaml)** | Shared agents (Recherche, Bildgenerierung, Universal, Entwickler-Router, Feedback-Assistent, dev specialists) and their tools. |
 | **[`packages/librechat-init/config/roles.yaml`](../packages/librechat-init/config/roles.yaml)** | Roles and permissions (who can use which agents/features). |
 
 They are baked into the init image and written into the config volume at startup. See [LibreChat Features](LIBRECHAT_FEATURES.md) for details.

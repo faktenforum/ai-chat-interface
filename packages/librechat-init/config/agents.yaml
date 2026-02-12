@@ -163,7 +163,8 @@ agents:
         prompt: "Provide the PR URL and any specific review focus areas"
       - agent: shared-agent-011
         description: "Return to the general assistant for non-development tasks"
-    recursion_limit: 15
+    # Router→specialist + many tool steps; limit from first agent applies to whole run
+    recursion_limit: 120
     isCollaborative: true
     permissions:
       public: true
@@ -241,7 +242,8 @@ agents:
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for creating PRs, issues, or posting reviews"
         prompt: "Describe the GitHub action needed based on the research"
-    recursion_limit: 75
+    # Dev: many read ops (docs, GitHub, workspace)
+    recursion_limit: 100
     isCollaborative: true
     permissions:
       public: true
@@ -298,7 +300,8 @@ agents:
       - agent: shared-agent-code-refactorer
         description: "Transfer to code refactorer to polish or restructure the implemented code"
         prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
-    recursion_limit: 100
+    # Dev: implement/fix, many file and terminal ops
+    recursion_limit: 120
     isCollaborative: true
     permissions:
       public: true
@@ -358,7 +361,8 @@ agents:
       - agent: shared-agent-code-reviewer
         description: "Transfer to code reviewer to read a PR and its review comments, then analyze or fix the mentioned issues"
         prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
-    recursion_limit: 75
+    # Dev: refactor, tests, many file reads
+    recursion_limit: 100
     isCollaborative: true
     permissions:
       public: true
@@ -445,7 +449,8 @@ agents:
       - agent: shared-agent-code-reviewer
         description: "Transfer to code reviewer for analyzing a PR"
         prompt: "Provide the PR URL and context for review"
-    recursion_limit: 75
+    # Dev: GitHub API + git, many file/API ops
+    recursion_limit: 100
     isCollaborative: true
     permissions:
       public: true
@@ -499,7 +504,43 @@ agents:
       - agent: shared-agent-developer
         description: "Transfer to developer to fix the issues found in the review"
         prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
-    recursion_limit: 75
+    # Dev: PR review — file reads, diff, GitHub API, push
+    recursion_limit: 100
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+
+  - id: shared-agent-feedback
+    name: Feedback-Assistent
+    description: Meldet Fehler im Chat-Interface – versteht Fehlerbeschreibungen, bereitet sie auf und erstellt ein GitHub-Issue.
+    instructions: "HANDOFF: Call only lc_transfer_to_<agentId>; put context in instructions param. Chat text does not trigger transfer. Role: Bug reporter for chat interface. Understand error (what happened, steps, expected vs actual, environment); 1–2 clarifying questions if needed. Prepare structured issue: title, description, steps to reproduce, expected/actual, environment. GitHub content in English. Hand off to GitHub-Assistent with issue title, body (English), repo (e.g. faktenforum/ai-chat-interface). Hand off to Code-Recherche for similar-issue search; to Entwickler-Router if user wants to fix, not just report. web_search for error messages if helpful. Execution: ≤2 tool calls/batch; brief prose. Chat language: match user; handoff issue text: English. {{current_datetime}}"
+    provider: Scaleway
+    model: mistral-small-3.2-24b-instruct-2506
+    model_parameters:
+      temperature: 0.4
+      top_p: 0.9
+    tools:
+      - web_search
+    mcpServers: []
+    category: general
+    conversation_starters:
+      - Ich möchte einen Fehler im Chat melden
+      - Beim letzten Aufruf ist etwas schiefgelaufen – hier die Beschreibung
+      - Wie kann ich einen Bug reporten?
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to the general assistant for non-development tasks"
+      - agent: shared-agent-github
+        description: "Create the issue with prepared title and body (English)"
+        prompt: "Create GitHub issue: repo (e.g. faktenforum/ai-chat-interface), title, body in English (description, steps, expected/actual, environment)."
+      - agent: shared-agent-code-researcher
+        description: "Search similar issues or technical context before finalizing"
+        prompt: "Search similar bugs/docs: error message, component, or context to improve the issue."
+      - agent: shared-agent-developer-router
+        description: "User wants to fix the bug, not only report"
+        prompt: "User wants to fix the reported bug; summarize error and what they need (debug, fix)."
+    recursion_limit: 50
     isCollaborative: true
     permissions:
       public: true
@@ -747,12 +788,14 @@ agents:
   - id: shared-agent-011
     name: Universal
     description: Allgemeiner Assistent – erkennt automatisch, welcher Spezialist am besten passt, und leitet die Anfrage weiter.
-    instructions: "HANDOFF: Call only the handoff tool lc_transfer_to_<agentId> for your target (no generic 'transfer' tool). Put user request/summary in the tool's instructions param. Chat text does not trigger transfer. Role: General router — do not answer; only route. Specialists: Recherche-Assistent (research, web search), Bildgenerierungs-Assistent (image gen), Reise- und Standort-Assistent (travel, maps, weather), Entwickler-Router (all dev: code, GitHub, PR reviews), Kochhilfe (recipes), Datenanalyse (CSV/charts), Dateikonverter (format conversion), Dokumenten-Ersteller (PDF, letters, invoices). Rules: dev tasks → Entwickler-Router not Recherche; clear match → transfer immediately; unclear → one question then transfer. Language: match user."
+    instructions: "HANDOFF: Call only the handoff tool lc_transfer_to_<agentId> for your target (no generic 'transfer' tool). Put user request/summary in the tool's instructions param. Chat text does not trigger transfer. Role: General router — do not answer; only route. Specialists: Recherche-Assistent (research, web search), Bildgenerierungs-Assistent (image gen), Reise- und Standort-Assistent (travel, maps, weather), Entwickler-Router (all dev: code, GitHub, PR reviews), Feedback-Assistent (report bugs/errors in chat interface → prepare and create GitHub issue), Kochhilfe (recipes), Datenanalyse (CSV/charts), Dateikonverter (format conversion), Dokumenten-Ersteller (PDF, letters, invoices). Rules: dev tasks → Entwickler-Router not Recherche; bug/error report for chat interface → Feedback-Assistent; clear match → transfer immediately; unclear → one question then transfer. Language: match user."
     provider: Scaleway
     model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
       temperature: 0.3
       top_p: 0.9
+    # Global limit for whole run when user starts here (e.g. Universal→Router→specialist)
+    recursion_limit: 100
     handoffs:
       - agent: shared-agent-001
         description: "Transfer to research assistant for fact-finding, information gathering, and web research"
@@ -766,6 +809,9 @@ agents:
       - agent: shared-agent-developer-router
         description: "Transfer to developer router for all development tasks: coding, debugging, implementation, refactoring, GitHub operations, PR reviews"
         prompt: "Summarize the user's development request, including language/framework, error messages, repo URLs, or what they're trying to achieve"
+      - agent: shared-agent-feedback
+        description: "Transfer to feedback assistant for reporting bugs or errors in the chat interface (prepare and create GitHub issue)"
+        prompt: "The user wants to report a bug or error in the chat interface; include their description and any details they gave"
       - agent: shared-agent-006
         description: "Transfer to cooking assistant for recipes, meal inspiration, cooking tips, and ingredient substitutions"
         prompt: "Describe what cooking help the user needs: recipe type, ingredients, dietary requirements, or cooking question"
@@ -783,7 +829,6 @@ agents:
       - Ich brauche Hilfe bei ...
       - Was kannst du alles?
       - Welcher Assistent passt zu meiner Aufgabe?
-    recursion_limit: 25
     isCollaborative: true
     permissions:
       public: true
