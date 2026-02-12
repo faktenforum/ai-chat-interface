@@ -8,6 +8,7 @@
 
 import { readFileSync, statSync } from 'node:fs';
 import { join, resolve, extname } from 'node:path';
+import { validateWorkspaceName } from '../utils/security.ts';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { UserManager } from '../user-manager.ts';
 import type { DownloadManager } from '../download/download-manager.ts';
@@ -86,6 +87,8 @@ export function registerFileTools(
     async (args, extra) => {
       try {
         const email = resolveEmail(extra);
+        const wsError = validateWorkspaceName(args.workspace);
+        if (wsError) throw new Error(wsError);
         const mapping = await userManager.ensureUser(email);
 
         const workspaceRoot = join('/home', mapping.username, 'workspaces', args.workspace);

@@ -10,6 +10,7 @@
 import { randomUUID } from 'node:crypto';
 import { statSync } from 'node:fs';
 import { basename, extname, join, resolve } from 'node:path';
+import { validateWorkspaceName } from '../utils/security.ts';
 import { logger } from '../utils/logger.ts';
 
 /** Download session state */
@@ -130,6 +131,9 @@ export class DownloadManager {
     expiresInMinutes?: number,
   ): { token: string; url: string; session: DownloadSessionInfo } {
     // Resolve and validate the file path
+    const wsError = validateWorkspaceName(workspace);
+    if (wsError) throw new Error(wsError);
+
     const workspaceRoot = join('/home', username, 'workspaces', workspace);
     const absolutePath = resolve(workspaceRoot, filePath);
 

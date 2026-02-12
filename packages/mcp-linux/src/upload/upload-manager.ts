@@ -9,6 +9,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { logger } from '../utils/logger.ts';
+import { validateWorkspaceName } from '../utils/security.ts';
 
 /** Information about a successfully uploaded file */
 export interface UploadedFileInfo {
@@ -88,6 +89,11 @@ export class UploadManager {
     const now = new Date();
     const expiresInMinutes = options.expiresInMinutes ?? this.defaultSessionTimeoutMin;
     const maxFileSizeMb = options.maxFileSizeMb ?? this.defaultMaxFileSizeMb;
+
+    if (options.workspace) {
+      const wsError = validateWorkspaceName(options.workspace);
+      if (wsError) throw new Error(wsError);
+    }
 
     const session: UploadSession = {
       token,

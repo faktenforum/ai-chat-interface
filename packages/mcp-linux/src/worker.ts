@@ -13,7 +13,7 @@
 import { createServer, type Socket } from 'node:net';
 import { existsSync, mkdirSync, readdirSync, statSync, rmSync, unlinkSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { getDefaultGitIdentity, shellEscapeSingleQuoted } from './utils/git-config.ts';
 
@@ -362,10 +362,14 @@ const handlers: Record<string, Handler> = {
 
     if (gitUrl) {
       // Clone from remote
-      execSync(
-        `git clone --branch "${branch}" "${gitUrl}" "${wsPath}"`,
-        { stdio: 'pipe', timeout: 120000 },
-      );
+      const result = spawnSync('git', ['clone', '--branch', branch, gitUrl, wsPath], {
+        stdio: 'pipe',
+        timeout: 120000,
+        encoding: 'utf-8',
+      });
+      if (result.status !== 0) {
+        throw new Error(`Git clone failed: ${result.stderr}`);
+      }
     } else {
       // Create empty repo
       mkdirSync(wsPath, { recursive: true });

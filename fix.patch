@@ -1,0 +1,114 @@
+From 91db9912e3d7612ae320450a58dc5a6999ca1440 Mon Sep 17 00:00:00 2001
+From: "Pascal Garber (AI)" <pascal.garber@correctiv.org>
+Date: Thu, 12 Feb 2026 15:53:42 +0000
+Subject: [PATCH] fix: address security vulnerabilities (path traversal,
+ command injection)
+
+---
+ .../mcp-linux/src/download/download-manager.ts     |  4 ++++
+ packages/mcp-linux/src/tools/file.ts               |  3 +++
+ packages/mcp-linux/src/upload/upload-manager.ts    |  6 ++++++
+ packages/mcp-linux/src/worker.ts                   | 14 +++++++++-----
+ 4 files changed, 22 insertions(+), 5 deletions(-)
+
+diff --git a/packages/mcp-linux/src/download/download-manager.ts b/packages/mcp-linux/src/download/download-manager.ts
+index 2054059..29b9051 100644
+--- a/packages/mcp-linux/src/download/download-manager.ts
++++ b/packages/mcp-linux/src/download/download-manager.ts
+@@ -10,6 +10,7 @@
+ import { randomUUID } from 'node:crypto';
+ import { statSync } from 'node:fs';
+ import { basename, extname, join, resolve } from 'node:path';
++import { validateWorkspaceName } from '../utils/security.ts';
+ import { logger } from '../utils/logger.ts';
+ 
+ /** Download session state */
+@@ -130,6 +131,9 @@ export class DownloadManager {
+     expiresInMinutes?: number,
+   ): { token: string; url: string; session: DownloadSessionInfo } {
+     // Resolve and validate the file path
++    const wsError = validateWorkspaceName(workspace);
++    if (wsError) throw new Error(wsError);
++
+     const workspaceRoot = join('/home', username, 'workspaces', workspace);
+     const absolutePath = resolve(workspaceRoot, filePath);
+ 
+diff --git a/packages/mcp-linux/src/tools/file.ts b/packages/mcp-linux/src/tools/file.ts
+index 67e9657..2a07f10 100644
+--- a/packages/mcp-linux/src/tools/file.ts
++++ b/packages/mcp-linux/src/tools/file.ts
+@@ -8,6 +8,7 @@
+ 
+ import { readFileSync, statSync } from 'node:fs';
+ import { join, resolve, extname } from 'node:path';
++import { validateWorkspaceName } from '../utils/security.ts';
+ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+ import type { UserManager } from '../user-manager.ts';
+ import type { DownloadManager } from '../download/download-manager.ts';
+@@ -86,6 +87,8 @@ export function registerFileTools(
+     async (args, extra) => {
+       try {
+         const email = resolveEmail(extra);
++        const wsError = validateWorkspaceName(args.workspace);
++        if (wsError) throw new Error(wsError);
+         const mapping = await userManager.ensureUser(email);
+ 
+         const workspaceRoot = join('/home', mapping.username, 'workspaces', args.workspace);
+diff --git a/packages/mcp-linux/src/upload/upload-manager.ts b/packages/mcp-linux/src/upload/upload-manager.ts
+index c429818..f9732aa 100644
+--- a/packages/mcp-linux/src/upload/upload-manager.ts
++++ b/packages/mcp-linux/src/upload/upload-manager.ts
+@@ -9,6 +9,7 @@
+ 
+ import { randomUUID } from 'node:crypto';
+ import { logger } from '../utils/logger.ts';
++import { validateWorkspaceName } from '../utils/security.ts';
+ 
+ /** Information about a successfully uploaded file */
+ export interface UploadedFileInfo {
+@@ -89,6 +90,11 @@ export class UploadManager {
+     const expiresInMinutes = options.expiresInMinutes ?? this.defaultSessionTimeoutMin;
+     const maxFileSizeMb = options.maxFileSizeMb ?? this.defaultMaxFileSizeMb;
+ 
++    if (options.workspace) {
++      const wsError = validateWorkspaceName(options.workspace);
++      if (wsError) throw new Error(wsError);
++    }
++
+     const session: UploadSession = {
+       token,
+       email,
+diff --git a/packages/mcp-linux/src/worker.ts b/packages/mcp-linux/src/worker.ts
+index 209dacf..a50b615 100755
+--- a/packages/mcp-linux/src/worker.ts
++++ b/packages/mcp-linux/src/worker.ts
+@@ -13,7 +13,7 @@
+ import { createServer, type Socket } from 'node:net';
+ import { existsSync, mkdirSync, readdirSync, statSync, rmSync, unlinkSync } from 'node:fs';
+ import { join, resolve, dirname } from 'node:path';
+-import { execSync } from 'node:child_process';
++import { execSync, spawnSync } from 'node:child_process';
+ import { randomUUID } from 'node:crypto';
+ import { getDefaultGitIdentity, shellEscapeSingleQuoted } from './utils/git-config.ts';
+ 
+@@ -362,10 +362,14 @@ const handlers: Record<string, Handler> = {
+ 
+     if (gitUrl) {
+       // Clone from remote
+-      execSync(
+-        `git clone --branch "${branch}" "${gitUrl}" "${wsPath}"`,
+-        { stdio: 'pipe', timeout: 120000 },
+-      );
++      const result = spawnSync('git', ['clone', '--branch', branch, gitUrl, wsPath], {
++        stdio: 'pipe',
++        timeout: 120000,
++        encoding: 'utf-8',
++      });
++      if (result.status !== 0) {
++        throw new Error(`Git clone failed: ${result.stderr}`);
++      }
+     } else {
+       // Create empty repo
+       mkdirSync(wsPath, { recursive: true });
+-- 
+2.43.0
