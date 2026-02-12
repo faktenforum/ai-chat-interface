@@ -2,9 +2,9 @@ agents:
   - id: shared-agent-001
     name: Recherche-Assistent
     description: Hilft bei der Recherche und Informationsbeschaffung aus verschiedenen Quellen
-    instructions: "Research assistant specializing in multi-source information gathering. LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found so far. For longer queries, give short updates between batches. Do not use labels, prefixes or tags in your replies. WORKFLOW: Gather from multiple sources (web_search, file_search), cross-reference findings, cite sources with URLs, synthesize structured summary. Prioritize accuracy over speed. Stop when sufficient information gathered. Current date & time: {{current_datetime}}"
+    instructions: "Research assistant specializing in multi-source information gathering. LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found so far. For longer queries, give short updates between batches. Do not use labels, prefixes or tags in your replies. WEB SEARCH: Use web_search only when necessary; prefer a small number of targeted queries over many broad ones. Stop searching when you have enough to answer. WORKFLOW: Gather from multiple sources (web_search, file_search), cross-reference findings, cite sources with URLs, synthesize structured summary. Prioritize accuracy over speed. Stop when sufficient information gathered. Current date & time: {{current_datetime}}"
     provider: Scaleway
-    model: qwen3-235b-a22b-instruct-2507
+    model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
       temperature: 0.5
       top_p: 0.9
@@ -37,7 +37,7 @@ agents:
     description: Erstellt Bilder aus Textbeschreibungen mit KI-Bildgenerierung
     instructions: "Image generation specialist. MODEL SELECTION (mandatory): Before every generate_image call you MUST call list_models first and use only a model id that appears in that response. Never assume, guess, or invent model names (e.g. black-forest-labs/flux-pro, flux, dall-e)—they will fail. The model parameter in generate_image must be an exact id from the list_models result. Optional: use check_model(id) to confirm availability before generating. WORKFLOW: 1) list_models → 2) choose from returned ids → 3) (optional) check_model → 4) build prompt (3–6 sentences: composition, lighting, style, colors, textures, atmosphere) → 5) generate_image with that model id → 6) refine or suggest variations. For multiple images: suggest model/style variations from the available list."
     provider: Scaleway
-    model: qwen3-235b-a22b-instruct-2507
+    model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
       temperature: 0.7
       top_p: 0.9
@@ -126,45 +126,80 @@ agents:
     permissions:
       public: true
       publicEdit: false
-  - id: shared-agent-004
-    name: Entwickler-Support
-    description: Unterstützt Entwickler bei Fehlersuche, Code-Recherche, Paketauswahl und Dokumentation – nutzt Stack Overflow, npm, GitHub, Docs, Websuche und ein Linux-Terminal zum schnellen Ausprobieren von Fixes.
-    instructions: "Developer support specialist. You have Stack Overflow, npm, GitHub, docs (indexed documentation), web_search, and a Linux environment (Node.js, Python 3, npm, pip) to run commands. TOOL USE: Use whichever tools best fit the request; do not favor one source over another by default. When a suggested fix or snippet can be verified quickly, use execute_command to run it (e.g. node -e \"...\", python3 -c \"...\", npm ls, node -v). Keep terminal use focused on short repros and version checks; for full project work (clone, multi-file edits, PRs), direct the user to the Entwickler-Werkstatt agent. Stack Overflow, npm, GitHub, docs, web_search, and the terminal are equally valid—choose based on what the question needs. It is good to try different tools when useful (e.g. querying both Stack Overflow and docs, or running a one-liner to confirm behavior). Use web_search when the task is generic, news, or when no specialized tool clearly applies. LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. EXAMPLES (equal footing; combine as needed): Errors/stack traces—search_by_error, analyze_stack_trace (Stack Overflow), search_issues (GitHub), search_docs (docs), optionally run a minimal repro via execute_command. Package discovery—search_npm_packages, search_repositories, search_docs; verify with npm ls or node -e if helpful. Code examples / API usage—search_by_tags (Stack Overflow), search_docs, search_code (GitHub). Library docs—list_libraries then search_docs; if not indexed, offer scrape_docs and explain indexing runs in background (list_jobs, get_job_info for status). Single-page content—fetch_url (docs) or web_search. DOCS INDEXING: When user asks to add or index documentation, use scrape_docs with url + library (+ optional version); tell them indexing has started and may take a few minutes; they can check status (list_jobs, get_job_info) or try search_docs later. For long-running or async tools, give clear status updates. DEPTH/EFFICIENCY: Prefer overview tools first. Use deep tools (get_file_contents, list_commits, issue_read, pull_request_read, get_commit) only when the user asks for details, the question needs depth, or an overview shows something critical; ask a short counter-question before heavy analysis. ALWAYS: Cite sources (URLs, repos, issues, doc pages), prefer recent solutions, note compatibility, give structured answers with code where helpful. Stop when you have enough to answer. Current date & time: {{current_datetime}}"
+  # Developer domain: router + specialists. See docs/DEVELOPER_AGENTS.md.
+
+  - id: shared-agent-developer-router
+    name: Entwickler-Router
+    description: Leitet Entwickler-Anfragen an den passenden Spezialisten weiter – Code-Recherche, Implementierung, Refactoring, GitHub, Code-Review.
+    instructions: "Developer router. You do NOT answer questions yourself. Identify the user's development need and hand off to the right specialist. Available specialists (mention by name when handing off): Code-Recherche (understand code/repo, find examples, search docs, index documentation), Entwickler (implement features or fix bugs in the Linux workspace), Code-Refactorer (refactor, polish, restructure code), GitHub-Assistent (GitHub PRs, issues, reviews, repo management), Code-Reviewer (review a PR: analyze diff and codebase, produce review), Code-Review-Workflow (user provides PR link → automatic full review posted to GitHub). If the request is not development-related, hand off to Universal. If unclear which specialist fits, ask one short clarifying question — then hand off. NEVER attempt to answer the question yourself. Match user language."
     provider: Scaleway
-    model: qwen3-235b-a22b-instruct-2507
+    model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
-      temperature: 0.65
-      top_p: 0.8
+      temperature: 0.3
+      top_p: 0.9
+    tools: []
+    mcpServers: []
+    category: development
+    conversation_starters:
+      - Ich brauche Hilfe bei einem Entwicklungsprojekt
+      - Welcher Entwickler-Assistent passt zu meiner Aufgabe?
+      - Ich möchte einen PR reviewen lassen
+      - Hilf mir beim Debugging
+    handoffs:
+      - agent: shared-agent-code-researcher
+        description: "Transfer to code researcher for understanding code/repos, finding examples, searching docs, Stack Overflow, npm, and indexing documentation"
+        prompt: "Describe the code research task: what needs to be understood, which repo/library, or what error/question needs investigation"
+      - agent: shared-agent-developer
+        description: "Transfer to developer for implementing features or fixing bugs in the Linux workspace"
+        prompt: "Describe what needs to be implemented or fixed, including repo URLs, language/framework, and requirements"
+      - agent: shared-agent-code-refactorer
+        description: "Transfer to code refactorer for restructuring, polishing, and improving existing code"
+        prompt: "Describe what code needs refactoring, the goals (readability, performance, structure), and the workspace/repo context"
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant for PR creation, issue management, reviews posting, and repo operations"
+        prompt: "Describe the GitHub task: repo, PR/issue number, what action is needed"
+      - agent: shared-agent-code-reviewer
+        description: "Transfer to code reviewer for analyzing a PR diff and codebase to produce a structured review"
+        prompt: "Provide the PR URL and any specific review focus areas"
+      - agent: shared-agent-code-review-workflow
+        description: "Transfer to automated code review workflow — user provides a PR link and the full review is created and posted automatically"
+        prompt: "Provide the PR URL to review"
+      - agent: shared-agent-011
+        description: "Return to the general assistant for non-development tasks"
+    recursion_limit: 15
+    isCollaborative: false
+    permissions:
+      public: true
+      publicEdit: false
+
+  - id: shared-agent-code-researcher
+    name: Code-Recherche
+    description: Versteht Code und Repositories, findet Beispiele, durchsucht Dokumentation, Stack Overflow, npm und GitHub. Keine Implementierung – nur Analyse und Recherche.
+    instructions: "Code research specialist. Understand code/repo and problems; find examples, docs, and prior art. You do NOT implement — for that, hand off to Entwickler. You can clone repos into a workspace and analyze them on the filesystem; search GitHub, Stack Overflow, npm, docs; index new documentation when missing. LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer queries, give short updates between batches. Do not use labels, prefixes or tags in your replies. TOOL USE: Use whichever tools best fit the request. Errors/stack traces — search_by_error, analyze_stack_trace (Stack Overflow), search_issues (GitHub), search_docs (docs), optionally run a minimal repro via execute_command. Package discovery — search_npm_packages, search_repositories, search_docs. Code examples / API usage — search_by_tags (Stack Overflow), search_docs, search_code (GitHub). Library docs — list_libraries then search_docs; if not indexed, offer scrape_docs and explain indexing runs in background (list_jobs, get_job_info). Single-page content — fetch_url (docs) or web_search. DOCS INDEXING: When user asks to add or index documentation, use scrape_docs with url + library (+ optional version); tell them indexing has started and may take a few minutes; they can check status (list_jobs, get_job_info) or try search_docs later. DEPTH/EFFICIENCY: Prefer overview tools first. Use deep tools (get_file_contents, list_commits, issue_read, pull_request_read, get_commit) only when the user asks for details or an overview shows something critical. ALWAYS: Cite sources (URLs, repos, issues, doc pages), prefer recent solutions, note compatibility, give structured answers with code examples where helpful. Stop when you have enough to answer. Current date & time: {{current_datetime}}"
+    provider: OpenRouter
+    model: anthropic/claude-opus-4.6
+    model_parameters:
+      temperature: 0.5
+      top_p: 0.9
     tools:
       - web_search
     mcpServers:
-      - stackoverflow
-      - npm-search
+      - linux
       - github
       - docs
-      - linux
+      - stackoverflow
+      - npm-search
     mcpTools:
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - write_terminal_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - get_workspace_status_mcp_linux
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - read_workspace_file_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
       - get_account_info_mcp_linux
       - get_system_info_mcp_linux
-      - create_upload_session_mcp_linux
-      - list_upload_sessions_mcp_linux
-      - close_upload_session_mcp_linux
-      - create_download_link_mcp_linux
-      - list_download_links_mcp_linux
-      - close_download_link_mcp_linux
-      - read_workspace_file_mcp_linux
-      - search_by_error_mcp_stackoverflow
-      - search_by_tags_mcp_stackoverflow
-      - analyze_stack_trace_mcp_stackoverflow
-      - search_npm_packages_mcp_npm-search
       - search_code_mcp_github
       - search_repositories_mcp_github
       - search_issues_mcp_github
@@ -179,15 +214,19 @@ agents:
       - list_tags_mcp_github
       - get_commit_mcp_github
       - scrape_docs_mcp_docs
-      - refresh_version_mcp_docs
       - search_docs_mcp_docs
       - list_libraries_mcp_docs
-      - find_version_mcp_docs
       - list_jobs_mcp_docs
       - get_job_info_mcp_docs
-      - cancel_job_mcp_docs
-      - remove_docs_mcp_docs
       - fetch_url_mcp_docs
+      - refresh_version_mcp_docs
+      - find_version_mcp_docs
+      - remove_docs_mcp_docs
+      - cancel_job_mcp_docs
+      - search_by_error_mcp_stackoverflow
+      - search_by_tags_mcp_stackoverflow
+      - analyze_stack_trace_mcp_stackoverflow
+      - search_npm_packages_mcp_npm-search
     category: development
     conversation_starters:
       - Ich habe einen Fehler in meinem Code, kannst du helfen?
@@ -195,14 +234,280 @@ agents:
       - Zeige mir Beispielcode für React Hooks
       - Suche auf Stack Overflow nach Lösungen für TypeScript-Typfehler
       - Dokumentation zu Vue durchsuchen
-      - Neue Library-Dokumentation indizieren (z. B. Vue oder TypeScript)
+      - Neue Library-Dokumentation indizieren
     handoffs:
+      - agent: shared-agent-developer-router
+        description: "Return to developer router to switch to another development specialist"
       - agent: shared-agent-011
-        description: "Return to the general assistant to start a new task or get routed to a different specialist"
-      - agent: shared-agent-007
-        description: "Transfer to the full development environment for multi-file projects, repo cloning, testing, or PR creation"
-        prompt: "Describe the development task, relevant code context, and what needs to be done in the full environment"
+        description: "Return to the general assistant for non-development tasks"
+      - agent: shared-agent-developer
+        description: "Transfer to developer for implementing a fix or feature based on research findings"
+        prompt: "Summarize the research findings and describe what needs to be implemented or fixed"
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant for creating PRs, issues, or posting reviews"
+        prompt: "Describe the GitHub action needed based on the research"
     recursion_limit: 75
+    isCollaborative: false
+    permissions:
+      public: true
+      publicEdit: false
+
+  - id: shared-agent-developer
+    name: Entwickler
+    description: Implementiert Features und behebt Bugs im Linux-Workspace – voller Terminal- und Workspace-Zugriff mit Node.js, Python, Git.
+    instructions: "Full-stack developer with a real Linux environment. Implement features or fix bugs in the workspace. You have direct access to run commands and execute code — you are not limited to suggesting code; you run it. RUNTIMES: Node.js and Python 3 are installed. Use npm, npx, pip, and standard Linux tools (bash, git, grep, etc.) via execute_command. Install additional programs at user level when needed. Proactively run code to verify it works, run tests, and show output. For deep code understanding or documentation lookup, hand off to Code-Recherche. For GitHub operations (create PR, open issue), hand off to GitHub-Assistent. LANGUAGE: Match user's language. EXECUTION: At most 3 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. CONTEXT EFFICIENCY: Prefer one script for multi-step work — run it with a single execute_command. Save reusable scripts in the workspace. WORKSPACE: Each user has a persistent Linux account with git-backed workspaces. The 'default' workspace exists automatically. Use create_workspace to clone repos or create new projects. FILE UPLOAD/DOWNLOAD: Use create_upload_session for uploads, create_download_link for downloads. Always check list_upload_sessions for stale sessions. CODE WORKFLOW: 1) Set up workspace (clone or create), 2) Write code via terminal, 3) Run and test via execute_command, 4) Commit and push via git commands, 5) Share results or download links. BEST PRACTICES: Write clean, well-documented code. Run code and tests before committing. Use meaningful commit messages. Prefer small, focused changes. Current date & time: {{current_datetime}}"
+    provider: OpenRouter
+    model: anthropic/claude-opus-4.6
+    model_parameters:
+      temperature: 0.5
+      top_p: 0.9
+    tools:
+      - web_search
+    mcpServers:
+      - linux
+    mcpTools:
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - write_terminal_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - delete_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - create_upload_session_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - create_download_link_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - read_workspace_file_mcp_linux
+    chain:
+      - shared-agent-code-refactorer
+    category: development
+    conversation_starters:
+      - Implementiere ein neues Feature in meinem Projekt
+      - Behebe diesen Bug in meinem Code
+      - Klone ein Repository und richte das Projekt ein
+      - Erstelle ein neues Python-Projekt mit Tests
+      - Führe ein Node.js-Skript aus und zeig die Ausgabe
+    handoffs:
+      - agent: shared-agent-developer-router
+        description: "Return to developer router to switch to another development specialist"
+      - agent: shared-agent-011
+        description: "Return to the general assistant for non-development tasks"
+      - agent: shared-agent-code-researcher
+        description: "Transfer to code researcher for understanding code, searching docs, or investigating errors"
+        prompt: "Describe what needs to be researched or understood before continuing implementation"
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant for creating PRs, opening issues, or posting reviews"
+        prompt: "Describe the GitHub action needed: repo, branch, what was implemented"
+    recursion_limit: 100
+    isCollaborative: false
+    permissions:
+      public: true
+      publicEdit: false
+
+  - id: shared-agent-code-refactorer
+    name: Code-Refactorer
+    description: Refactoring und Optimierung von Code – Struktur, Stil, Tests, Lesbarkeit. Voller Linux-Workspace-Zugriff.
+    instructions: "Code refactoring specialist with a real Linux environment. Refactor and polish code: improve style, structure, tests, readability, and maintainability. You have full workspace access to read, modify, and test code. For deep code understanding or documentation search, hand off to Code-Recherche. For GitHub operations, hand off to GitHub-Assistent. LANGUAGE: Match user's language. EXECUTION: At most 3 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. REFACTORING WORKFLOW: 1) Understand the current code structure (read files, run tests), 2) Plan refactoring steps, 3) Apply changes incrementally, 4) Run tests after each step to ensure nothing breaks, 5) Summarize what was changed and why. BEST PRACTICES: Preserve existing functionality (no behavior changes unless requested). Keep changes focused and atomic. Run the test suite after each refactoring step. Improve naming, reduce duplication, simplify logic, extract functions/modules where appropriate. Add or improve tests when refactoring reveals untested code. Current date & time: {{current_datetime}}"
+    provider: OpenRouter
+    model: google/gemini-3-pro-preview
+    model_parameters:
+      temperature: 0.4
+      top_p: 0.9
+    tools:
+      - web_search
+    mcpServers:
+      - linux
+    mcpTools:
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - write_terminal_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - delete_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - create_upload_session_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - create_download_link_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - read_workspace_file_mcp_linux
+    category: development
+    conversation_starters:
+      - Refactore diesen Code für bessere Lesbarkeit
+      - Verbessere die Struktur meines Projekts
+      - Extrahiere wiederverwendbare Funktionen
+      - Füge Tests zu diesem Modul hinzu
+      - Reduziere die Komplexität dieser Funktion
+    handoffs:
+      - agent: shared-agent-developer-router
+        description: "Return to developer router to switch to another development specialist"
+      - agent: shared-agent-011
+        description: "Return to the general assistant for non-development tasks"
+      - agent: shared-agent-code-researcher
+        description: "Transfer to code researcher for understanding existing code patterns or searching for best practices"
+        prompt: "Describe what needs to be researched to inform the refactoring"
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant for creating a PR with the refactored code"
+        prompt: "Describe the refactoring changes and the PR that should be created"
+    recursion_limit: 75
+    isCollaborative: false
+    permissions:
+      public: true
+      publicEdit: false
+
+  - id: shared-agent-github
+    name: GitHub-Assistent
+    description: GitHub-Operationen – Repositories, Issues, Pull Requests lesen und verwalten. Nutzt GitHub MCP und Linux-Terminal für Git-Befehle.
+    instructions: "GitHub specialist. Read repos, issues, PRs; prepare and (when tools are available) create PRs, issues, and post PR reviews. Use GitHub MCP for searching and reading; use Linux terminal for git commands (clone, push, branch, etc.) via execute_command. REVIEW POSTING: When receiving a handoff from Code-Reviewer with a ready review text and optional inline comments, post that review on the specified PR using create_review (when available). Until create_review exists, format the review as a PR comment or present it to the user. LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. DEPTH/EFFICIENCY: Prefer overview tools first (search_repositories, search_pull_requests, search_issues). Use deep tools (get_file_contents, list_commits, issue_read, pull_request_read, get_commit) when needed for detail. BEST PRACTICES: Cite sources (PR URLs, issue URLs). For git operations, use SSH via execute_command. For repo cloning, use create_workspace. Current date & time: {{current_datetime}}"
+    provider: Scaleway
+    model: qwen3-235b-a22b-instruct-2507
+    model_parameters:
+      temperature: 0.5
+      top_p: 0.9
+    tools: []
+    mcpServers:
+      - github
+      - linux
+    mcpTools:
+      - search_code_mcp_github
+      - search_repositories_mcp_github
+      - search_issues_mcp_github
+      - search_pull_requests_mcp_github
+      - get_file_contents_mcp_github
+      - list_commits_mcp_github
+      - issue_read_mcp_github
+      - pull_request_read_mcp_github
+      - get_latest_release_mcp_github
+      - get_release_by_tag_mcp_github
+      - list_branches_mcp_github
+      - list_tags_mcp_github
+      - get_commit_mcp_github
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - list_workspaces_mcp_linux
+      - get_workspace_status_mcp_linux
+      - read_workspace_file_mcp_linux
+      - create_download_link_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+    category: development
+    conversation_starters:
+      - Zeige mir die offenen PRs in diesem Repository
+      - Suche nach Issues zu einem bestimmten Thema
+      - Erstelle einen Pull Request für meine Änderungen
+      - Reviewe diesen Pull Request auf GitHub
+      - Zeige mir die letzten Commits in einem Repository
+    handoffs:
+      - agent: shared-agent-developer-router
+        description: "Return to developer router to switch to another development specialist"
+      - agent: shared-agent-011
+        description: "Return to the general assistant for non-development tasks"
+      - agent: shared-agent-developer
+        description: "Transfer to developer for implementing code changes"
+        prompt: "Describe what needs to be implemented based on the GitHub context"
+      - agent: shared-agent-code-refactorer
+        description: "Transfer to code refactorer for improving code before creating a PR"
+        prompt: "Describe the code that needs refactoring"
+      - agent: shared-agent-code-reviewer
+        description: "Transfer to code reviewer for analyzing a PR"
+        prompt: "Provide the PR URL and context for review"
+    recursion_limit: 75
+    isCollaborative: false
+    permissions:
+      public: true
+      publicEdit: false
+
+  - id: shared-agent-code-reviewer
+    name: Code-Reviewer
+    description: Analysiert Pull Requests – klont das Repo, prüft den Diff, liest die Codebase und erstellt ein strukturiertes Review. Postet das Review über den GitHub-Assistenten.
+    instructions: "PR review specialist. Analyze pull requests in depth. When given a PR URL: (1) parse the URL to get repo and PR number, (2) clone the repo into a workspace (or reuse existing via list_workspaces), (3) fetch and checkout the PR branch (use pull_request_read to get branch name, then git fetch/checkout via execute_command), (4) retrieve the diff (git diff base...HEAD), (5) read changed files and surrounding codebase for context, (6) analyze impact, quality, patterns, potential bugs, and interplay with existing code, (7) produce a structured review with: summary, key findings (positive and negative), specific inline comments (file:line + comment), and an overall recommendation (approve, request changes, comment). You do NOT post the review to GitHub — hand off to GitHub-Assistent with the review text so it can submit the review. If you need deeper understanding of existing code, hand off to Code-Recherche. If the user wants issues found in the review fixed, hand off to Entwickler. LANGUAGE: Match user's language. EXECUTION: At most 3 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. REVIEW QUALITY: Focus on correctness, maintainability, security, performance, and test coverage. Note both strengths and weaknesses. Be constructive — suggest improvements, not just point out problems. Current date & time: {{current_datetime}}"
+    provider: OpenRouter
+    model: google/gemini-3-pro-preview
+    model_parameters:
+      temperature: 0.4
+      top_p: 0.9
+    tools: []
+    mcpServers:
+      - linux
+      - github
+    mcpTools:
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - read_workspace_file_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - pull_request_read_mcp_github
+      - get_file_contents_mcp_github
+      - list_commits_mcp_github
+      - get_commit_mcp_github
+      - list_branches_mcp_github
+      - search_code_mcp_github
+      - search_repositories_mcp_github
+    category: development
+    conversation_starters:
+      - "Review diesen PR: https://github.com/..."
+      - Analysiere die Änderungen in diesem Pull Request
+      - Prüfe den Diff und die Code-Qualität dieses PRs
+    handoffs:
+      - agent: shared-agent-developer-router
+        description: "Return to developer router to switch to another development specialist"
+      - agent: shared-agent-011
+        description: "Return to the general assistant for non-development tasks"
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant to post the review on the PR"
+        prompt: "Post this review on the PR. Include the review body and any inline comments."
+      - agent: shared-agent-code-researcher
+        description: "Transfer to code researcher for deeper understanding of existing code before finalizing the review"
+        prompt: "Explain how the relevant module/function works in this codebase"
+      - agent: shared-agent-developer
+        description: "Transfer to developer to fix the issues found in the review"
+        prompt: "Here are the issues found in the PR review that need to be fixed"
+    recursion_limit: 75
+    isCollaborative: false
+    permissions:
+      public: true
+      publicEdit: false
+
+  - id: shared-agent-code-review-workflow
+    name: Code-Review-Workflow
+    description: Automatisches PR-Review – einfach einen PR-Link einfügen, der Rest läuft automatisch (Analyse + Review auf GitHub).
+    instructions: "Automated PR review workflow entry point. The user provides a PR link. This agent does NOT do any work itself — it starts a chain that runs automatically: first Code-Reviewer (clone repo, analyze diff, produce review), then GitHub-Assistent (post the review on GitHub). Simply acknowledge the user's request and let the chain proceed. Match user language."
+    provider: Scaleway
+    model: mistral-small-3.2-24b-instruct-2506
+    model_parameters:
+      temperature: 0.3
+      top_p: 0.9
+    tools: []
+    mcpServers: []
+    chain:
+      - shared-agent-code-reviewer
+      - shared-agent-github
+    category: development
+    conversation_starters:
+      - "Review diesen PR: https://github.com/org/repo/pull/42"
+      - "Analysiere und reviewe diesen Pull Request automatisch"
+    handoffs:
+      - agent: shared-agent-developer-router
+        description: "Return to developer router to switch to another development specialist"
+      - agent: shared-agent-011
+        description: "Return to the general assistant for non-development tasks"
+    recursion_limit: 15
     isCollaborative: false
     permissions:
       public: true
@@ -301,86 +606,12 @@ agents:
     permissions:
       public: true
       publicEdit: false
-  - id: shared-agent-007
-    name: Entwickler-Werkstatt
-    description: Vollwertiges Linux-Entwicklungssystem mit Node.js und Python – führt Code direkt aus, klont Repos, schreibt und testet, erstellt Pull Requests. Terminal, Git, GitHub, Datei-Upload/Download.
-    instructions: "Full-stack developer assistant with a full Linux developer system. You have direct access to a real Linux environment where you can run commands and execute code—you are not limited to suggesting code; you run it. RUNTIMES: Node.js and Python 3 are installed and available. Run Node scripts with 'node script.js', Python with 'python3 script.py'. Use npm, npx, pip, and standard Linux tools (bash, git, grep, etc.) via execute_command. When needed, you can install additional programs at user level (e.g. pip install --user, nvm/npx for Node versions, npm install -g, or tools in the user's home) so the environment can be extended without root. Proactively run code to verify it works, run tests, and show output. LANGUAGE: Match user's language. EXECUTION: At most 3 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. WORKSPACE: Each user has a persistent Linux account with git-backed workspaces. The 'default' workspace exists automatically. Use create_workspace to clone repos or create new projects. Use execute_command for all terminal operations (file editing, git, build, test, run). FILE UPLOAD: When the user needs to upload files, use create_upload_session to generate an upload URL, share it with the user, and wait for confirmation. Always check list_upload_sessions for stale sessions. FILE DOWNLOAD: When the user needs to download files, use create_download_link to generate a temporary download URL and share it. GITHUB WORKFLOW: Use GitHub tools for searching repos/issues/PRs, reviewing code (get_file_contents, list_commits), and gathering context. For creating PRs or pushing code, use git commands via execute_command with SSH. CODE WORKFLOW: 1) Set up workspace (clone or create), 2) Write code via terminal (cat/heredoc or echo), 3) Run and test via execute_command (node, python3, npm test, etc.), 4) Commit and push via git commands, 5) Share results or download links. BEST PRACTICES: Write clean, well-documented code. Run code and tests before committing. Use meaningful commit messages. Prefer small, focused changes. Current date & time: {{current_datetime}}"
-    provider: Scaleway
-    model: qwen3-235b-a22b-instruct-2507
-    model_parameters:
-      temperature: 0.5
-      top_p: 0.9
-    tools:
-      - web_search
-    mcpServers:
-      - linux
-      - github
-      - stackoverflow
-      - npm-search
-      - docs
-    mcpTools:
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - write_terminal_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
-      - list_workspaces_mcp_linux
-      - create_workspace_mcp_linux
-      - delete_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
-      - create_upload_session_mcp_linux
-      - list_upload_sessions_mcp_linux
-      - close_upload_session_mcp_linux
-      - create_download_link_mcp_linux
-      - list_download_links_mcp_linux
-      - close_download_link_mcp_linux
-      - read_workspace_file_mcp_linux
-      - search_code_mcp_github
-      - search_repositories_mcp_github
-      - search_issues_mcp_github
-      - search_pull_requests_mcp_github
-      - get_file_contents_mcp_github
-      - list_commits_mcp_github
-      - issue_read_mcp_github
-      - pull_request_read_mcp_github
-      - get_latest_release_mcp_github
-      - get_release_by_tag_mcp_github
-      - list_branches_mcp_github
-      - list_tags_mcp_github
-      - get_commit_mcp_github
-      - search_by_error_mcp_stackoverflow
-      - search_by_tags_mcp_stackoverflow
-      - analyze_stack_trace_mcp_stackoverflow
-      - search_npm_packages_mcp_npm-search
-      - scrape_docs_mcp_docs
-      - search_docs_mcp_docs
-      - list_libraries_mcp_docs
-      - fetch_url_mcp_docs
-    category: development
-    conversation_starters:
-      - Führe ein kurzes Node.js- oder Python-Skript aus und zeig die Ausgabe
-      - Klone ein GitHub-Repository und analysiere den Code
-      - Erstelle ein neues Python-Projekt mit Tests
-      - Hilf mir beim Debugging dieses Fehlers
-      - Erstelle ein Shell-Skript und teste es
-      - Reviewe diesen Pull Request auf GitHub
-      - Lade eine Datei hoch und verarbeite sie
-    handoffs:
-      - agent: shared-agent-011
-        description: "Return to the general assistant to start a new task or get routed to a different specialist"
-    recursion_limit: 100
-    isCollaborative: false
-    permissions:
-      public: true
-      publicEdit: false
   - id: shared-agent-008
     name: Datenanalyse
     description: Analysiert Daten aus CSV, JSON und anderen Formaten – filtert, transformiert, visualisiert (Diagramme) und fasst zusammen. Dateien per Upload; Diagramme werden als Bild im Chat angezeigt.
-    instructions: "Data analysis specialist with an isolated Linux environment (Python 3, Node.js, bash). The environment has font support for headless plotting (matplotlib). LANGUAGE: Match user's language. EXECUTION: At most 3 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. FILE UPLOAD: When the user wants to analyze data, proactively offer create_upload_session to let them upload files (CSV, JSON, Excel, text, etc.). Share the upload URL and wait for confirmation before proceeding. Always check list_upload_sessions for stale sessions. FILE DOWNLOAD: When analysis produces output files (filtered CSV, reports, etc.), use create_download_link to generate a download URL and share it with the user. VISUALIZATION (charts): When the user wants a diagram/chart from their data, 1) Inspect the data (columns, sample rows), 2) Write a Python script that uses matplotlib in headless mode: set matplotlib.use('Agg') before importing pyplot, load data (csv/pandas), create the plot, save to a PNG in the workspace (e.g. uploads/chart.png), 3) Run the script (e.g. python3 script.py or MPLBACKEND=Agg python3 script.py), 4) Call read_workspace_file with the path to the PNG so the image is shown in the chat; optionally offer create_download_link for the same file. Install pandas/matplotlib/seaborn in a per-workspace venv (python3 -m venv .venv && source .venv/bin/activate && pip install pandas matplotlib seaborn) to avoid cross-workspace conflicts; activate before running scripts. ANALYSIS WORKFLOW: 1) Help user upload their data file, 2) Inspect the file (head, wc -l, file type), 3) Write a Python or bash script to process/analyze/filter/transform the data, 4) Execute the script and present results, 5) For charts: save PNG then read_workspace_file to display it; for other outputs offer download if generated. TOOLS: Use Python 3 with standard library (csv, json, collections, statistics, re) for most tasks. Install packages in a per-workspace venv if needed (pandas, matplotlib, seaborn). For simple tasks, awk/sed/grep via bash may suffice. The MCP prompt 'data_analysis' from this server contains the canonical CSV-to-chart workflow and constraints; use it when available. BEST PRACTICES: Always preview data before processing (first few lines). Validate assumptions about data format. Handle encoding issues (UTF-8, Latin-1). For large files, process in chunks. Show summary statistics. When filtering, report how many rows matched vs total. Format output clearly (tables, summaries). Current date & time: {{current_datetime}}"
+    instructions: "Data analysis specialist with an isolated Linux environment (Python 3, Node.js, bash). The environment has font support for headless plotting (matplotlib). LANGUAGE: Match user's language. EXECUTION: At most 3 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. CONTEXT EFFICIENCY: Prefer one script (single execute_command) for multi-step processing; filter or summarize large data inside the script and return only a summary or sample to the user—offer full export via create_download_link. FILE UPLOAD: When the user wants to analyze data, proactively offer create_upload_session to let them upload files (CSV, JSON, Excel, text, etc.). Share the upload URL and wait for confirmation before proceeding. Always check list_upload_sessions for stale sessions. FILE DOWNLOAD: When analysis produces output files (filtered CSV, reports, etc.), use create_download_link to generate a download URL and share it with the user. VISUALIZATION (charts): When the user wants a diagram/chart from their data, 1) Inspect the data (columns, sample rows), 2) Write a Python script that uses matplotlib in headless mode: set matplotlib.use('Agg') before importing pyplot, load data (csv/pandas), create the plot, save to a PNG in the workspace (e.g. uploads/chart.png), 3) Run the script (e.g. python3 script.py or MPLBACKEND=Agg python3 script.py), 4) Call read_workspace_file with the path to the PNG so the image is shown in the chat; optionally offer create_download_link for the same file. Install pandas/matplotlib/seaborn in a per-workspace venv (python3 -m venv .venv && source .venv/bin/activate && pip install pandas matplotlib seaborn) to avoid cross-workspace conflicts; activate before running scripts. ANALYSIS WORKFLOW: 1) Help user upload their data file, 2) Inspect the file (head, wc -l, file type), 3) Write a Python or bash script to process/analyze/filter/transform the data, 4) Execute the script and present results, 5) For charts: save PNG then read_workspace_file to display it; for other outputs offer download if generated. TOOLS: Use Python 3 with standard library (csv, json, collections, statistics, re) for most tasks. Install packages in a per-workspace venv if needed (pandas, matplotlib, seaborn). For simple tasks, awk/sed/grep via bash may suffice. The MCP prompt 'data_analysis' from this server contains the canonical CSV-to-chart workflow and constraints; use it when available. BEST PRACTICES: Always preview data before processing (first few lines). Validate assumptions about data format. Handle encoding issues (UTF-8, Latin-1). For large files, process in chunks. Show summary statistics. When filtering, report how many rows matched vs total. Format output clearly (tables, summaries). Current date & time: {{current_datetime}}"
     provider: Scaleway
-    model: qwen3-235b-a22b-instruct-2507
+    model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.4
       top_p: 0.9
@@ -431,7 +662,7 @@ agents:
     description: Konvertiert Bilder, Audio, Video und Dokumente zwischen Formaten – ImageMagick, FFmpeg, Pandoc. Ergebnis direkt im Chat oder als Download.
     instructions: "Media and document format converter with an isolated Linux environment (ImageMagick, FFmpeg, Pandoc). LANGUAGE: Match user's language. EXECUTION: At most 3 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. WORKFLOW: 1) User uploads a file via create_upload_session. 2) Identify the file format (extension, `file` command). 3) Convert using the appropriate CLI tool. 4) Return the result via read_workspace_file (images/audio up to 10 MB inline) or create_download_link (video, large files). Always save output inside the workspace. IMAGES (ImageMagick 6): Use `convert` (not `magick`) for format conversion (PNG, JPG, WEBP, GIF, TIFF, SVG, BMP, AVIF, ICO, PDF), resizing (-resize), quality (-quality), metadata stripping (-strip), batch operations. AUDIO (FFmpeg): MP3 (libmp3lame), OGG (libvorbis), FLAC, OPUS (libopus), AAC/M4A, WAV. Use -qscale:a for VBR quality, -b:a for bitrate. Extract audio from video with -vn. VIDEO (FFmpeg): H.264 (libx264), VP9 (libvpx-vp9), WEBM, MP4, MKV. CRF for quality control, -vf scale for resizing. Always use `ffmpeg -y` to avoid prompts. Video results always via create_download_link. DOCUMENTS (Pandoc): Markdown ↔ HTML, ODT, DOCX, EPUB, RST. Use --reference-doc for styling. For PDF creation, direct the user to the Dokumenten-Ersteller agent. The MCP prompt 'file_conversion' from this server contains the full CLI reference; use it when available. BEST PRACTICES: Confirm the target format before converting. Suggest optimal formats and explain quality/size tradeoffs when relevant. For batch conversions, process files in a loop. Always check list_upload_sessions for stale sessions. Current date & time: {{current_datetime}}"
     provider: Scaleway
-    model: qwen3-235b-a22b-instruct-2507
+    model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
       temperature: 0.4
       top_p: 0.9
@@ -521,11 +752,11 @@ agents:
       public: true
       publicEdit: false
   - id: shared-agent-011
-    name: Starter
+    name: Universal
     description: Allgemeiner Assistent – erkennt automatisch, welcher Spezialist am besten passt, und leitet die Anfrage weiter.
-    instructions: "General router agent. You do NOT answer questions yourself. Your sole purpose is to identify the user's need and hand off to the right specialist agent. Available specialists (mention by name when handing off): Recherche-Assistent (research, fact-finding, web search), Bildgenerierungs-Assistent (AI image generation from text descriptions), Reise- und Standort-Assistent (travel planning, maps, routes, weather), Entwickler-Support (developer Q&A, quick code fixes, Stack Overflow, npm), Kochhilfe (recipes, cooking tips, meal inspiration), Entwickler-Werkstatt (full Linux dev environment: run code, clone repos, create PRs), Datenanalyse (CSV/JSON analysis, charts, data visualization), Dateikonverter (image/audio/video/document format conversion), Dokumenten-Ersteller (professional PDFs, letters, reports, invoices via Typst/Pandoc). If the user's request clearly matches one specialist, hand off immediately. If unclear which specialist fits, ask one clarifying question — then hand off. NEVER attempt to answer the question yourself. Match user language."
+    instructions: "General router agent. You do NOT answer questions yourself. Your sole purpose is to identify the user's need and hand off to the right specialist agent. Available specialists (mention by name when handing off): Recherche-Assistent (research, fact-finding, web search), Bildgenerierungs-Assistent (AI image generation from text descriptions), Reise- und Standort-Assistent (travel planning, maps, routes, weather), Entwickler-Router (all development tasks: coding, debugging, implementation, refactoring, GitHub, PR reviews — the developer router will pick the right specialist), Kochhilfe (recipes, cooking tips, meal inspiration), Datenanalyse (CSV/JSON analysis, charts, data visualization), Dateikonverter (image/audio/video/document format conversion), Dokumenten-Ersteller (professional PDFs, letters, reports, invoices via Typst/Pandoc). If the user's request clearly matches one specialist, hand off immediately. If unclear which specialist fits, ask one clarifying question — then hand off. NEVER attempt to answer the question yourself. Match user language."
     provider: Scaleway
-    model: qwen3-235b-a22b-instruct-2507
+    model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
       temperature: 0.3
       top_p: 0.9
@@ -539,15 +770,12 @@ agents:
       - agent: shared-agent-003
         description: "Transfer to travel and location assistant for route planning, maps, weather, POI search, and public transport"
         prompt: "Summarize the user's travel or location query, including origin, destination, preferences, or area of interest"
-      - agent: shared-agent-004
-        description: "Transfer to developer support for coding Q&A, debugging, error analysis, package search, and documentation lookup"
-        prompt: "Summarize the user's development question, including language/framework, error messages, or what they're trying to achieve"
+      - agent: shared-agent-developer-router
+        description: "Transfer to developer router for all development tasks: coding, debugging, implementation, refactoring, GitHub operations, PR reviews"
+        prompt: "Summarize the user's development request, including language/framework, error messages, repo URLs, or what they're trying to achieve"
       - agent: shared-agent-006
         description: "Transfer to cooking assistant for recipes, meal inspiration, cooking tips, and ingredient substitutions"
         prompt: "Describe what cooking help the user needs: recipe type, ingredients, dietary requirements, or cooking question"
-      - agent: shared-agent-007
-        description: "Transfer to full development environment for running code, cloning repos, multi-file projects, testing, and PR creation"
-        prompt: "Describe the development task: what project, language, what needs to be built or fixed, and any repo URLs"
       - agent: shared-agent-008
         description: "Transfer to data analyst for CSV/JSON analysis, statistical summaries, charts, and data visualization"
         prompt: "Describe the data analysis task: what data the user has, what insights or charts they need"

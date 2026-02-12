@@ -110,9 +110,12 @@ endpoints:
         # Focus on top-performance proprietary models for special use cases
         # Note: Open Source models should use Scaleway (Europa) for better privacy
         default: [
+          "anthropic/claude-opus-4.6",        # Strongest coding/agent model (1M Context)
           "anthropic/claude-sonnet-4.5",      # Top proprietary model (Vision, 200K Context)
           "openai/gpt-5.2",                   # Latest GPT-5 series (Vision, 400K Context)
           "google/gemini-2.5-flash-lite",    # Google's lightweight reasoning model (Vision)
+          "google/gemini-3-flash-preview",   # Google Gemini 3 Flash (Preview from Google)
+          "google/gemini-3-pro-preview",     # Google Gemini 3 Pro (Preview from Google)
           "mistralai/mistral-large-2411",     # European premium option (French)
           "glm/glm-4.7"                       # Advanced reasoning model
         ]
@@ -150,6 +153,7 @@ endpoints:
           "qwen3-235b-a22b-instruct-2507",    # Chat - Generally Available
           "mistral-small-3.2-24b-instruct-2506", # Chat, Vision - Generally Available
           "gpt-oss-120b",                      # Chat - Generally Available
+          "gemma-3-27b-it",                   # Chat, Vision - Exception: Google preview
           "qwen3-coder-30b-a3b-instruct",     # Chat (Code) - Generally Available
           "pixtral-12b-2409",                 # Chat, Vision - Generally Available
           "qwen3-embedding-8b",               # Embeddings - Generally Available
@@ -238,7 +242,15 @@ endpoints:
 #
 # DETAILLIERTE MODELL-ANALYSE (OpenRouter Premium):
 #
-# 1. claude-sonnet-4.5 (Anthropic)
+# 1. claude-opus-4.6 (Anthropic) — NEU
+#    - Context: 1M (größter Context bei Anthropic), Output: 64K
+#    - License: Closed Source (Proprietary)
+#    - Use Case: Coding, Agents, lange Workflows, komplexe Refactors
+#    - Vision: Ja
+#    - Pricing: $5/M input, $25/M output tokens
+#    - Besonderheit: Stärkstes Anthropic-Modell, optimiert für Agenten und ganze Codebases
+#
+# 2. claude-sonnet-4.5 (Anthropic)
 #    - Context: 200K, Output: 64K
 #    - License: Closed Source (Proprietary)
 #    - Use Case: Top-Performance für komplexe Aufgaben, Programmierung, Reasoning
@@ -246,43 +258,47 @@ endpoints:
 #    - Pricing: $3/M input, $15/M output tokens
 #    - Besonderheit: Exzellentes Reasoning, sehr gute Code-Generierung
 #
-# 2. openai/gpt-5.2 (OpenAI)
-#    - Context: 400K (größter Context!), Output: 128K
+# 3. openai/gpt-5.2 (OpenAI)
+#    - Context: 400K, Output: 128K
 #    - License: Closed Source (Proprietary)
 #    - Use Case: Top-Performance, Dynamic Reasoning, komplexe Problemlösung
 #    - Vision: Ja
 #    - Pricing: $1.25/M input, $10/M output tokens
 #    - Besonderheit: ~80% weniger Halluzinationen als o3, 74.9% SWE-Bench accuracy
-#    - Hinweis: Erfordert eigenen OpenAI API Key
 #
-# 3. google/gemini-2.5-flash-lite (Google)
+# 4. google/gemini-2.5-flash-lite (Google)
 #    - Context: Variabel, Output: Variabel
 #    - License: Closed Source (Proprietary)
 #    - Use Case: Schnell und kostengünstig, gute Qualität
 #    - Vision: Ja
 #    - Besonderheit: Optimiert für Geschwindigkeit bei guter Qualität
 #
-# 4. mistralai/mistral-large-2411 (Mistral)
-#    - Context: Variabel, Output: Variabel
+# 5. mistralai/mistral-large-2411 (Mistral)
+#    - Context: 256K, Output: 8K
 #    - License: Closed Source (Proprietary)
 #    - Use Case: Premium-Modell, europäisches Unternehmen
 #    - Besonderheit: Französisches Unternehmen, beliebt bei europäischen Nutzern
 #
-# 5. glm/glm-4.7 (Z.AI)
-#    - Context: Variabel, Output: Variabel
+# 6. glm/glm-4.7 (Z.AI)
+#    - Context: 203K, Output: 65K
 #    - License: Closed Source (Proprietary)
 #    - Use Case: Exzellentes logisches Denken, komplexe Reasoning-Aufgaben
 #    - Besonderheit: Fortgeschrittenes Sprachverständnis
+#
+# Exception (Preview from vendor, not provider — included explicitly):
+# - gemma-3-27b-it (Scaleway) — Google Gemma 3 27B
+# - google/gemini-3-flash-preview, google/gemini-3-pro-preview (OpenRouter) — Google Gemini 3
 #
 # EMPFEHLUNGEN NACH ANWENDUNGSFALL:
 # ----------------------------------
 # Datenschutzkritisch → Scaleway Modelle (Europa, Open Source)
 #   - Allgemein: mistral-small-3.2-24b (kosteneffektiv, Vision)
 #   - Komplex: llama-3.3-70b oder qwen3-235b
-#   - Code: qwen3-coder-30b
+#   - Code: devstral-2-123b oder qwen3-coder-30b
 #   - Vision: pixtral-12b oder mistral-small-3.2-24b
 #
 # Top Performance benötigt → Premium-Modelle (OpenRouter)
+#   - Best Coding/Agents: claude-opus-4.6 (1M Context)
 #   - Best Overall: claude-sonnet-4.5
 #   - Largest Context: openai/gpt-5.2 (400K)
 #   - Fast & Cheap: google/gemini-2.5-flash-lite
@@ -312,7 +328,7 @@ modelSpecs:
 
     - name: "scaleway-gemma-3-27b"
       label: "Gemma 3 27B"
-      description: "Kompaktes Chat- und Vision-Modell (Google). 40K Context, 8K Output. Gut für Bildanalyse und allgemeine Aufgaben. Gemma License, derzeit Preview bei Scaleway."
+      description: "Kompaktes Chat- und Vision-Modell (Google). 40K Context, 8K Output. Gut für Bildanalyse und allgemeine Aufgaben. Gemma License. Exception: Google-preview; in Scaleway-Katalog als Chat+Vision gelistet."
       group: "Empfohlen: Europa & Open Source"
       order: 2
       vision: true
@@ -430,12 +446,25 @@ modelSpecs:
     # Diese Modelle sind Closed Source oder erfordern spezielle Zugänge
     # Hosted über OpenRouter (USA), daher nur für nicht-datenschutzkritische Aufgaben
     # Token limits: OpenRouter API / provider docs (context_length, max_completion_tokens)
-    - name: "claude-opus-4.5"
-      label: "Claude Opus 4.5"
-      description: "Anthropics leistungsstärkstes Modell. Optimiert für komplexe Software-Engineering-, Agent- und Reasoning-Aufgaben. 200K Context, 64K Output. Vision, erweiterte Tool-Nutzung. Closed Source (Anthropic)."
+    - name: "claude-opus-4.6"
+      label: "Claude Opus 4.6"
+      description: "Anthropics stärkstes Modell für Coding, Agents und lange Workflows. 1M Context, 64K Output. Vision, erweiterte Tool-Nutzung. Closed Source (Anthropic)."
       group: "Premium-Modelle"
       groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvdC1pY29uIGx1Y2lkZS1ib3QiPjxwYXRoIGQ9Ik0xMiA4VjRIOCIvPjxyZWN0IHdpZHRoPSIxNiIgaGVpZ2h0PSIxMiIgeD0iNCIgeT0iOCIgcng9IjIiLz48cGF0aCBkPSJNMiAxNGgyIi8+PHBhdGggZD0iTTIwIDE0aDIiLz48cGF0aCBkPSJNMTUgMTN2MiIvPjxwYXRoIGQ9Ik05IDEzdjIiLz48L3N2Zz4="
       order: 1
+      vision: true
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "anthropic/claude-opus-4.6"
+        maxContextTokens: 1000000
+        maxOutputTokens: 64000
+
+    - name: "claude-opus-4.5"
+      label: "Claude Opus 4.5"
+      description: "Anthropics vorheriges Top-Modell. Optimiert für komplexe Software-Engineering-, Agent- und Reasoning-Aufgaben. 200K Context, 64K Output. Vision, erweiterte Tool-Nutzung. Closed Source (Anthropic)."
+      group: "Premium-Modelle"
+      order: 2
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -448,7 +477,7 @@ modelSpecs:
       label: "Claude Sonnet 4.5"
       description: "Top-Performance Modell für komplexe Aufgaben, Programmierung und Reasoning. 200K Context, 64K Output. Unterstützt Vision. Closed Source (Anthropic)."
       group: "Premium-Modelle"
-      order: 2
+      order: 3
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -461,7 +490,7 @@ modelSpecs:
       label: "DeepSeek V3.2"
       description: "Starkes Reasoning- und Tool-Use-Modell. 164K Context, 65K Output. Gutes Preis-Leistungs-Verhältnis für Coding und mehrstufige Aufgaben. Open Weights (DeepSeek)."
       group: "Premium-Modelle"
-      order: 3
+      order: 4
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
@@ -473,7 +502,7 @@ modelSpecs:
       label: "Gemini 2.5 Flash Lite"
       description: "Schnell und kostengünstig. Optimiert für schnelle Antworten bei guter Qualität. Unterstützt Vision. Closed Source (Google)."
       group: "Premium-Modelle"
-      order: 4
+      order: 5
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -482,11 +511,24 @@ modelSpecs:
         maxContextTokens: 1048576
         maxOutputTokens: 65536
 
-    - name: "google-gemini-3-pro-preview"
-      label: "Gemini 3 Pro Preview"
-      description: "Googles aktuelles Spitzenmodell. 1M Context, Text/Image/Audio/Video. Starke Multimodal- und Reasoning-Fähigkeiten, Agent-Coding. Closed Source (Google)."
+    - name: "google-gemini-3-flash-preview"
+      label: "Gemini 3 Flash (Preview)"
+      description: "Googles schnelles Gemini-3-Modell (Preview). Gute Balance aus Geschwindigkeit und Qualität. Exception: Preview-Label von Google, nicht vom Provider. Über OpenRouter."
       group: "Premium-Modelle"
-      order: 5
+      order: 6
+      vision: true
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "google/gemini-3-flash-preview"
+        maxContextTokens: 1048576
+        maxOutputTokens: 65536
+
+    - name: "google-gemini-3-pro-preview"
+      label: "Gemini 3 Pro (Preview)"
+      description: "Googles leistungsstarkes Gemini-3-Modell (Preview). Für anspruchsvolle Aufgaben und Reasoning. Exception: Preview-Label von Google, nicht vom Provider. Über OpenRouter."
+      group: "Premium-Modelle"
+      order: 7
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -499,7 +541,7 @@ modelSpecs:
       label: "GLM 4.7"
       description: "Fortgeschrittenes Modell mit exzellentem logischen Denken. Sehr gut für komplexe Aufgaben und Reasoning. 203K Context, 65K Output. Closed Source (Z.AI)."
       group: "Premium-Modelle"
-      order: 6
+      order: 8
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
@@ -511,7 +553,7 @@ modelSpecs:
       label: "GPT-5.2"
       description: "OpenAI's neuestes Top-Modell. 400K Context, 128K Output. Dynamic Reasoning, ~80% weniger Halluzinationen als o3. Unterstützt Vision. Closed Source (OpenAI)."
       group: "Premium-Modelle"
-      order: 7
+      order: 9
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -524,7 +566,7 @@ modelSpecs:
       label: "GPT-5.2 Pro"
       description: "OpenAI's leistungsstärkstes Modell für anspruchsvolle Reasoning- und Agent-Aufgaben. 400K Context, 128K Output. Starke Verbesserungen bei Coding und Langkontext. Vision. Closed Source (OpenAI)."
       group: "Premium-Modelle"
-      order: 8
+      order: 10
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -537,7 +579,7 @@ modelSpecs:
       label: "Mistral Large 2411"
       description: "Premium-Modell von Mistral (französisches Unternehmen). Sehr beliebt bei europäischen Nutzern. Gute Balance aus Performance und Datenschutz. 256K Context, 8K Output."
       group: "Premium-Modelle"
-      order: 9
+      order: 11
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
@@ -549,7 +591,7 @@ modelSpecs:
       label: "Mistral Large 3 2512"
       description: "Mistrals aktuellstes Großmodell (675B MoE, 41B aktiv). 262K Context. Text + Vision. Apache 2.0. Gute Option für Europa-relevante Premium-Aufgaben."
       group: "Premium-Modelle"
-      order: 10
+      order: 12
       vision: true
       preset:
         endpoint: "OpenRouter"

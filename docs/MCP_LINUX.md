@@ -66,6 +66,10 @@ Returns text files inline, images/audio as base64. Large or binary files automat
 
 Resource template `workspace://{workspace}/{+path}` exposes workspace files as navigable MCP resources (list + read).
 
+### State and reusable scripts
+
+Workspaces are persistent. Agents can save scripts (e.g. under `scripts/` in a workspace) and run them again in later turns. See [MCP Code Execution Insights](MCP_CODE_EXECUTION_INSIGHTS.md) for context-efficiency guidance (batch work in code, filter before return).
+
 ## Environment Variables
 
 | Variable | Default | Description |
