@@ -15,7 +15,8 @@ import { existsSync, mkdirSync, readdirSync, statSync, rmSync, unlinkSync } from
 import { join, resolve, dirname } from 'node:path';
 import { execSync, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { getDefaultGitIdentity, shellEscapeSingleQuoted } from './utils/git-config.ts';
+import { getDefaultGitIdentity } from './utils/git-config.ts';
+import { validateWorkspaceName } from './utils/security.ts';
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -117,11 +118,19 @@ async function createTerminal(workspace: string, terminalId?: string): Promise<s
 // ── Workspace Operations ─────────────────────────────────────────────────────
 
 function resolveWorkspacePath(workspace: string): string {
+  const error = validateWorkspaceName(workspace);
+  if (error) {
+    throw new Error(error);
+  }
   return join(workspacesDir, workspace);
 }
 
 function getGitMetadata(workspace: string): { branch: string; dirty: boolean } {
-  const cwd = resolveWorkspacePath(workspace);
+  // Validate workspace name to prevent path traversal
+  const error = validateWorkspaceName(workspace);
+  if (error) return { branch: 'main', dirty: false };
+
+  const cwd = join(workspacesDir, workspace);
   let branch = 'main';
   let dirty = false;
 
@@ -350,11 +359,13 @@ const handlers: Record<string, Handler> = {
     const gitUrl = params.git_url as string | undefined;
     const branch = (params.branch as string) || 'main';
 
-    if (!name || name === '.' || name === '..') {
-      throw new Error('Invalid workspace name');
+    // Validate name strictly
+    const wsError = validateWorkspaceName(name);
+    if (wsError) {
+      throw new Error(wsError);
     }
 
-    const wsPath = resolveWorkspacePath(name);
+    const wsPath = join(workspacesDir, name);
 
     if (existsSync(wsPath)) {
       throw new Error(`Workspace "${name}" already exists`);
@@ -362,6 +373,10 @@ const handlers: Record<string, Handler> = {
 
     if (gitUrl) {
       // Clone from remote
+      if (branch.startsWith('-')) {
+        throw new Error('Branch name cannot start with -');
+      }
+
       const result = spawnSync('git', ['clone', '--branch', branch, gitUrl, wsPath], {
         stdio: 'pipe',
         timeout: 120000,
@@ -374,12 +389,15 @@ const handlers: Record<string, Handler> = {
       // Create empty repo
       mkdirSync(wsPath, { recursive: true });
       const { name: gitName, email: gitEmail } = getDefaultGitIdentity();
-      const emailEsc = shellEscapeSingleQuoted(gitEmail);
-      const nameEsc = shellEscapeSingleQuoted(gitName);
-      execSync(
-        `cd "${wsPath}" && git init -b "${branch}" && git config user.email '${emailEsc}' && git config user.name '${nameEsc}'`,
-        { stdio: 'pipe' },
-      );
+      
+      if (branch.startsWith('-')) {
+        throw new Error('Branch name cannot start with -');
+      }
+
+      // Use spawnSync for safety instead of execSync with shell string
+      spawnSync('git', ['init', '-b', branch], { cwd: wsPath, stdio: 'ignore' });
+      spawnSync('git', ['config', 'user.email', gitEmail], { cwd: wsPath, stdio: 'ignore' });
+      spawnSync('git', ['config', 'user.name', gitName], { cwd: wsPath, stdio: 'ignore' });
     }
 
     const meta = getGitMetadata(name);
