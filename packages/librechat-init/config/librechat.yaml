@@ -906,7 +906,6 @@ mcpServers:
     iconPath: /images/mcp-github-icon.svg
     headers:
       Authorization: "Bearer ${MCP_GITHUB_PAT}"
-      X-MCP-Readonly: "true"
     initTimeout: 120000
     chatMenu: true
     startup: true

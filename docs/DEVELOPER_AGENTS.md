@@ -18,7 +18,7 @@ Universal ──► Entwickler-Router ──► Code-Recherche | Entwickler | Co
 | **Code-Recherche** | `shared-agent-code-researcher` | OpenRouter | anthropic/claude-opus-4.6 | ~35 (Linux subset, GitHub, Docs, SO, npm, web_search) | Understand code, find examples, search docs. No implementation. |
 | **Entwickler** | `shared-agent-developer` | OpenRouter | anthropic/claude-opus-4.6 | 18 (Linux full, web_search) | Implement, fix bugs. Chain → Code-Refactorer. |
 | **Code-Refactorer** | `shared-agent-code-refactorer` | OpenRouter | google/gemini-3-pro-preview | 18 (Linux full, web_search) | Refactor, polish, restructure. |
-| **GitHub-Assistent** | `shared-agent-github` | Scaleway | qwen3-235b | ~21 (GitHub read, Linux minimal) | PRs, issues, post reviews. |
+| **GitHub-Assistent** | `shared-agent-github` | Scaleway | qwen3-235b | ~24 (GitHub read+write, Linux minimal) | PRs, issues, create PR/issue/review. |
 | **Code-Reviewer** | `shared-agent-code-reviewer` | OpenRouter | google/gemini-3-pro-preview | ~18 (Linux subset, GitHub read) | Analyze PR diff + codebase, produce review. |
 | **Code-Review-Workflow** | `shared-agent-code-review-workflow` | Scaleway | mistral-small-3.2-24b | None (chain) | PR link → auto review on GitHub. |
 
@@ -41,7 +41,7 @@ Optional: Code-Reviewer → Code-Recherche (deeper codebase understanding) or �
 
 ## GitHub write tools
 
-GitHub MCP is read-only. When `create_issue`, `create_pull_request`, `create_review` exist, add them **only to GitHub-Assistent**.
+GitHub MCP has write access. Write tools (`create_issue`, `create_pull_request`, `create_review`) are assigned **only to GitHub-Assistent**; other developer agents keep read-only or no GitHub write.
 
 ## Config
 

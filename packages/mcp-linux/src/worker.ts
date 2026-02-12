@@ -15,6 +15,7 @@ import { existsSync, mkdirSync, readdirSync, statSync, rmSync, unlinkSync } from
 import { join, resolve, dirname } from 'node:path';
 import { execSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { getDefaultGitIdentity, shellEscapeSingleQuoted } from './utils/git-config.ts';
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -368,8 +369,11 @@ const handlers: Record<string, Handler> = {
     } else {
       // Create empty repo
       mkdirSync(wsPath, { recursive: true });
+      const { name: gitName, email: gitEmail } = getDefaultGitIdentity();
+      const emailEsc = shellEscapeSingleQuoted(gitEmail);
+      const nameEsc = shellEscapeSingleQuoted(gitName);
       execSync(
-        `cd "${wsPath}" && git init -b "${branch}" && git config user.email "agent@faktenforum.org" && git config user.name "Faktenforum Agent"`,
+        `cd "${wsPath}" && git init -b "${branch}" && git config user.email '${emailEsc}' && git config user.name '${nameEsc}'`,
         { stdio: 'pipe' },
       );
     }

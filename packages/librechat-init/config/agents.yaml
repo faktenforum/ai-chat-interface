@@ -369,7 +369,7 @@ agents:
   - id: shared-agent-github
     name: GitHub-Assistent
     description: GitHub-Operationen – Repositories, Issues, Pull Requests lesen und verwalten. Nutzt GitHub MCP und Linux-Terminal für Git-Befehle.
-    instructions: "GitHub specialist. Read repos, issues, PRs; prepare and (when tools are available) create PRs, issues, and post PR reviews. Use GitHub MCP for searching and reading; use Linux terminal for git commands (clone, push, branch, etc.) via execute_command. REVIEW POSTING: When receiving a handoff from Code-Reviewer with a ready review text and optional inline comments, post that review on the specified PR using create_review (when available). Until create_review exists, format the review as a PR comment or present it to the user. LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. DEPTH/EFFICIENCY: Prefer overview tools first (search_repositories, search_pull_requests, search_issues). Use deep tools (get_file_contents, list_commits, issue_read, pull_request_read, get_commit) when needed for detail. BEST PRACTICES: Cite sources (PR URLs, issue URLs). For git operations, use SSH via execute_command. For repo cloning, use create_workspace. Current date & time: {{current_datetime}}"
+    instructions: "GitHub specialist. Read repos, issues, PRs; create issues, open PRs, and post PR reviews via GitHub MCP tools. Use GitHub MCP for searching, reading, and writing (create_issue, create_pull_request, create_review); use Linux terminal for git commands (clone, push, branch, etc.) via execute_command. REVIEW POSTING: When receiving a handoff from Code-Reviewer with a ready review text and optional inline comments, post that review on the specified PR using create_review. LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. DEPTH/EFFICIENCY: Prefer overview tools first (search_repositories, search_pull_requests, search_issues). Use deep tools (get_file_contents, list_commits, issue_read, pull_request_read, get_commit) when needed for detail. BEST PRACTICES: Cite sources (PR URLs, issue URLs). For git operations, use SSH via execute_command. For repo cloning, use create_workspace. Current date & time: {{current_datetime}}"
     provider: Scaleway
     model: qwen3-235b-a22b-instruct-2507
     model_parameters:
@@ -393,6 +393,9 @@ agents:
       - list_branches_mcp_github
       - list_tags_mcp_github
       - get_commit_mcp_github
+      - create_issue_mcp_github
+      - create_pull_request_mcp_github
+      - create_review_mcp_github
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
       - list_workspaces_mcp_linux

@@ -15,6 +15,7 @@ import { join } from 'node:path';
 import { logger } from './utils/logger.ts';
 import { UserCreationError } from './utils/errors.ts';
 import { deriveUsername, addUsernameSuffix } from './utils/security.ts';
+import { getDefaultGitIdentity, shellEscapeSingleQuoted } from './utils/git-config.ts';
 
 const DATA_DIR = '/app/data';
 const USERS_FILE = join(DATA_DIR, 'users.json');
@@ -137,8 +138,11 @@ export class UserManager {
     if (!existsSync(defaultDir)) {
       mkdirSync(defaultDir, { recursive: true });
       try {
+        const { name, email } = getDefaultGitIdentity();
+        const emailEsc = shellEscapeSingleQuoted(email);
+        const nameEsc = shellEscapeSingleQuoted(name);
         execSync(
-          `cd "${defaultDir}" && git init -b main && git config user.email "agent@faktenforum.org" && git config user.name "Faktenforum Agent"`,
+          `cd "${defaultDir}" && git init -b main && git config user.email '${emailEsc}' && git config user.name '${nameEsc}'`,
           { stdio: 'pipe', env: { ...process.env, HOME: `/home/${username}` } },
         );
       } catch (error) {
