@@ -307,7 +307,160 @@ endpoints:
 #
 # ==========================================
 modelSpecs:
+  prioritize: false  # avoids API warning when default spec + interface.presets are both enabled
   list:
+    # Assistenten: agent specs; post-init patches preset.agent_id to real API id — restart API to apply. Universal = default.
+    - name: "universal-agent"
+      label: "Universal"
+      description: "Allgemeiner Assistent – erkennt automatisch den passenden Spezialisten und leitet weiter."
+      group: "Assistenten"
+      order: 0
+      default: true
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-011"
+
+    - name: "agent-recherche"
+      label: "Recherche-Assistent"
+      description: "Hilft bei der Recherche und Informationsbeschaffung aus verschiedenen Quellen"
+      group: "Assistenten"
+      order: 1
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-001"
+
+    - name: "agent-bildgenerierung"
+      label: "Bildgenerierungs-Assistent"
+      description: "Erstellt Bilder aus Textbeschreibungen mit KI-Bildgenerierung"
+      group: "Assistenten"
+      order: 2
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-002"
+
+    - name: "agent-reise"
+      label: "Reise- und Standort-Assistent"
+      description: "Hilft bei Reiseplanung, Standortsuche, Routenplanung und kombiniert geografische Informationen mit Wetterdaten"
+      group: "Assistenten"
+      order: 3
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-003"
+
+    - name: "agent-entwickler-router"
+      label: "Entwickler-Router"
+      description: "Leitet Entwickler-Anfragen an den passenden Spezialisten weiter – Code-Recherche, Implementierung, Refactoring, GitHub, Code-Review."
+      group: "Assistenten"
+      order: 4
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-developer-router"
+
+    - name: "agent-code-recherche"
+      label: "Code-Recherche"
+      description: "Versteht Code und Repositories, findet Beispiele, durchsucht Dokumentation, Stack Overflow, npm und GitHub. Keine Implementierung – nur Analyse und Recherche."
+      group: "Assistenten"
+      order: 5
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-code-researcher"
+
+    - name: "agent-entwickler"
+      label: "Entwickler"
+      description: "Implementiert Features und behebt Bugs im Linux-Workspace – voller Terminal- und Workspace-Zugriff mit Node.js, Python, Git."
+      group: "Assistenten"
+      order: 6
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-developer"
+
+    - name: "agent-code-refactorer"
+      label: "Code-Refactorer"
+      description: "Refactoring und Optimierung von Code – Struktur, Stil, Tests, Lesbarkeit. Voller Linux-Workspace-Zugriff."
+      group: "Assistenten"
+      order: 7
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-code-refactorer"
+
+    - name: "agent-github"
+      label: "GitHub-Assistent"
+      description: "GitHub-Operationen – Repositories, Issues, Pull Requests lesen und verwalten. Nutzt GitHub MCP und Linux-Terminal für Git-Befehle."
+      group: "Assistenten"
+      order: 8
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-github"
+
+    - name: "agent-code-reviewer"
+      label: "Code-Reviewer"
+      description: "Analysiert Pull Requests – klont das Repo, prüft den Diff, liest die Codebase und erstellt ein strukturiertes Review. Postet das Review bei Bedarf über den GitHub-Assistenten."
+      group: "Assistenten"
+      order: 9
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-code-reviewer"
+
+    # - name: "agent-video-transkripte"
+    #   label: "Video-Transkripte"
+    #   description: "Transkripte, Metadaten, Thumbnails und Download-Links für Video-URLs (YouTube, Instagram, TikTok u. a.)."
+    #   group: "Assistenten"
+    #   order: 10
+    #   preset:
+    #     endpoint: "agents"
+    #     endpointType: "agents"
+    #     agent_id: "shared-agent-005"
+
+    - name: "agent-kochhilfe"
+      label: "Kochhilfe"
+      description: "Hilft beim Kochen – Rezepte vorschlagen, Inspiration für Mahlzeiten, Zutaten und Zubereitung, plus allgemeine Kochfragen."
+      group: "Assistenten"
+      order: 11
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-006"
+
+    - name: "agent-datenanalyse"
+      label: "Datenanalyse"
+      description: "Analysiert Daten aus CSV, JSON und anderen Formaten – filtert, transformiert, visualisiert (Diagramme) und fasst zusammen."
+      group: "Assistenten"
+      order: 12
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-008"
+
+    - name: "agent-dateikonverter"
+      label: "Dateikonverter"
+      description: "Konvertiert Bilder, Audio, Video und Dokumente zwischen Formaten – ImageMagick, FFmpeg, Pandoc. Ergebnis direkt im Chat oder als Download."
+      group: "Assistenten"
+      order: 13
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-009"
+
+    - name: "agent-dokumenten-ersteller"
+      label: "Dokumenten-Ersteller"
+      description: "Erstellt professionelle Dokumente – Briefe, Berichte, Rechnungen, Lebensläufe, Vorlagen. Erzeugt PDF (Typst) oder editierbare Formate (ODT/DOCX via Pandoc)."
+      group: "Assistenten"
+      order: 14
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-010"
+
     # ==========================================
     # Empfohlen: Europa & Open Source (Scaleway) – alphabetisch nach Label
     # ==========================================
@@ -382,7 +535,6 @@ modelSpecs:
       group: "Empfohlen: Europa & Open Source"
       order: 6
       vision: true
-      default: true
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
@@ -460,18 +612,6 @@ modelSpecs:
         maxContextTokens: 1000000
         maxOutputTokens: 64000
 
-    - name: "claude-opus-4.5"
-      label: "Claude Opus 4.5"
-      description: "Anthropics vorheriges Top-Modell. Optimiert für komplexe Software-Engineering-, Agent- und Reasoning-Aufgaben. 200K Context, 64K Output. Vision, erweiterte Tool-Nutzung. Closed Source (Anthropic)."
-      group: "Premium-Modelle"
-      order: 2
-      vision: true
-      preset:
-        endpoint: "OpenRouter"
-        endpointType: "custom"
-        model: "anthropic/claude-opus-4.5"
-        maxContextTokens: 200000
-        maxOutputTokens: 64000
 
     - name: "claude-sonnet-4.5"
       label: "Claude Sonnet 4.5"

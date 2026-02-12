@@ -164,6 +164,12 @@ Visibility is controlled by **environment override files** via `modelSpecs.added
 
 Compose sets `LIBRECHAT_ENV` per stack (local: `local`, dev: `dev`, prod: `prod`). To change behaviour, edit the corresponding override file under `packages/librechat-init/config/` (rebuild init image for prod/dev, or use the config mount for local).
 
+### Default model and agent modelSpecs
+
+- **Default spec:** Universal agent (`shared-agent-011`). All agents from `agents.yaml` are in `modelSpecs.list` (group "Assistenten").
+- **`modelSpecs.prioritize: false`** — avoids API warning when using a default spec with `interface.presets: true`.
+- **Post-init:** Replaces config IDs in `preset.agent_id` with real API agent IDs in the runtime config. **Restart the API** after post-init so the client sees Assistenten and the default correctly.
+
 ### Endpoints Configuration
 
 **Lines 77-101:** OpenRouter endpoint

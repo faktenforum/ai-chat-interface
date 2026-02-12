@@ -28,10 +28,10 @@ agents:
         description: "Transfer to document creator for a professional report, summary, or PDF from research results"
         prompt: "Summarize the research findings and describe what kind of document should be created"
     recursion_limit: 50
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
   - id: shared-agent-002
     name: Bildgenerierungs-Assistent
     description: Erstellt Bilder aus Textbeschreibungen mit KI-Bildgenerierung
@@ -58,10 +58,10 @@ agents:
       - agent: shared-agent-011
         description: "Return to the general assistant to start a new task or get routed to a different specialist"
     recursion_limit: 25
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
   - id: shared-agent-003
     name: Reise- und Standort-Assistent
     description: Hilft bei Reiseplanung, Standortsuche, Routenplanung und kombiniert geografische Informationen mit Wetterdaten
@@ -122,16 +122,16 @@ agents:
       - agent: shared-agent-011
         description: "Return to the general assistant to start a new task or get routed to a different specialist"
     recursion_limit: 40
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
   # Developer domain: router + specialists. See docs/DEVELOPER_AGENTS.md.
 
   - id: shared-agent-developer-router
     name: Entwickler-Router
     description: Leitet Entwickler-Anfragen an den passenden Spezialisten weiter – Code-Recherche, Implementierung, Refactoring, GitHub, Code-Review.
-    instructions: "Developer router. You do NOT answer questions yourself. Identify the user's development need and hand off to the right specialist. Available specialists (mention by name when handing off): Code-Recherche (understand code/repo, find examples, search docs, index documentation), Entwickler (implement features or fix bugs in the Linux workspace), Code-Refactorer (refactor, polish, restructure code), GitHub-Assistent (GitHub PRs, issues, reviews, repo management), Code-Reviewer (review a PR: analyze diff and codebase, produce review), Code-Review-Workflow (user provides PR link → automatic full review posted to GitHub). If the request is not development-related, hand off to Universal. If unclear which specialist fits, ask one short clarifying question — then hand off. NEVER attempt to answer the question yourself. Match user language."
+    instructions: "Developer router. You do NOT answer questions yourself. Identify the user's development need and hand off to the right specialist. Available specialists (mention by name when handing off): Code-Recherche (understand code/repo, find examples, search docs, index documentation), Entwickler (implement features or fix bugs in the Linux workspace), Code-Refactorer (refactor, polish, restructure code), GitHub-Assistent (GitHub PRs, issues, reviews, repo management), Code-Reviewer (single entry for PR reviews: clones repo, analyzes diff and codebase via Linux MCP, produces review; can hand off to GitHub-Assistent to post the review on GitHub when the user requests it). For 'implement this', 'fix this bug', or 'add this feature' hand off to Entwickler. Use Code-Recherche only for understanding code, searching docs, or investigating errors before implementation. If the request is not development-related, hand off to Universal. If unclear which specialist fits, ask one short clarifying question — then hand off. NEVER attempt to answer the question yourself. Match user language."
     provider: Scaleway
     model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
@@ -159,18 +159,15 @@ agents:
         description: "Transfer to GitHub assistant for PR creation, issue management, reviews posting, and repo operations"
         prompt: "Describe the GitHub task: repo, PR/issue number, what action is needed"
       - agent: shared-agent-code-reviewer
-        description: "Transfer to code reviewer for analyzing a PR diff and codebase to produce a structured review"
+        description: "Transfer to code reviewer for analyzing a PR (clones repo, analyzes via Linux MCP); reviewer can hand off to GitHub-Assistent to post the review when the user requests it"
         prompt: "Provide the PR URL and any specific review focus areas"
-      - agent: shared-agent-code-review-workflow
-        description: "Transfer to automated code review workflow — user provides a PR link and the full review is created and posted automatically"
-        prompt: "Provide the PR URL to review"
       - agent: shared-agent-011
         description: "Return to the general assistant for non-development tasks"
     recursion_limit: 15
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
 
   - id: shared-agent-code-researcher
     name: Code-Recherche
@@ -236,8 +233,6 @@ agents:
       - Dokumentation zu Vue durchsuchen
       - Neue Library-Dokumentation indizieren
     handoffs:
-      - agent: shared-agent-developer-router
-        description: "Return to developer router to switch to another development specialist"
       - agent: shared-agent-011
         description: "Return to the general assistant for non-development tasks"
       - agent: shared-agent-developer
@@ -247,10 +242,10 @@ agents:
         description: "Transfer to GitHub assistant for creating PRs, issues, or posting reviews"
         prompt: "Describe the GitHub action needed based on the research"
     recursion_limit: 75
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
 
   - id: shared-agent-developer
     name: Entwickler
@@ -284,8 +279,6 @@ agents:
       - list_download_links_mcp_linux
       - close_download_link_mcp_linux
       - read_workspace_file_mcp_linux
-    chain:
-      - shared-agent-code-refactorer
     category: development
     conversation_starters:
       - Implementiere ein neues Feature in meinem Projekt
@@ -294,8 +287,6 @@ agents:
       - Erstelle ein neues Python-Projekt mit Tests
       - Führe ein Node.js-Skript aus und zeig die Ausgabe
     handoffs:
-      - agent: shared-agent-developer-router
-        description: "Return to developer router to switch to another development specialist"
       - agent: shared-agent-011
         description: "Return to the general assistant for non-development tasks"
       - agent: shared-agent-code-researcher
@@ -304,11 +295,14 @@ agents:
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for creating PRs, opening issues, or posting reviews"
         prompt: "Describe the GitHub action needed: repo, branch, what was implemented"
+      - agent: shared-agent-code-refactorer
+        description: "Transfer to code refactorer to polish or restructure the implemented code"
+        prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
     recursion_limit: 100
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
 
   - id: shared-agent-code-refactorer
     name: Code-Refactorer
@@ -350,8 +344,6 @@ agents:
       - Füge Tests zu diesem Modul hinzu
       - Reduziere die Komplexität dieser Funktion
     handoffs:
-      - agent: shared-agent-developer-router
-        description: "Return to developer router to switch to another development specialist"
       - agent: shared-agent-011
         description: "Return to the general assistant for non-development tasks"
       - agent: shared-agent-code-researcher
@@ -360,11 +352,14 @@ agents:
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for creating a PR with the refactored code"
         prompt: "Describe the refactoring changes and the PR that should be created"
+      - agent: shared-agent-developer
+        description: "Transfer to developer to implement missing code, tests, or new behavior identified during refactoring"
+        prompt: "Describe what needs to be implemented (e.g. missing tests, new logic) and the workspace/repo context"
     recursion_limit: 75
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
 
   - id: shared-agent-github
     name: GitHub-Assistent
@@ -412,8 +407,6 @@ agents:
       - Reviewe diesen Pull Request auf GitHub
       - Zeige mir die letzten Commits in einem Repository
     handoffs:
-      - agent: shared-agent-developer-router
-        description: "Return to developer router to switch to another development specialist"
       - agent: shared-agent-011
         description: "Return to the general assistant for non-development tasks"
       - agent: shared-agent-developer
@@ -426,15 +419,15 @@ agents:
         description: "Transfer to code reviewer for analyzing a PR"
         prompt: "Provide the PR URL and context for review"
     recursion_limit: 75
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
 
   - id: shared-agent-code-reviewer
     name: Code-Reviewer
-    description: Analysiert Pull Requests – klont das Repo, prüft den Diff, liest die Codebase und erstellt ein strukturiertes Review. Postet das Review über den GitHub-Assistenten.
-    instructions: "PR review specialist. Analyze pull requests in depth. When given a PR URL: (1) parse the URL to get repo and PR number, (2) clone the repo into a workspace (or reuse existing via list_workspaces), (3) fetch and checkout the PR branch (use pull_request_read to get branch name, then git fetch/checkout via execute_command), (4) retrieve the diff (git diff base...HEAD), (5) read changed files and surrounding codebase for context, (6) analyze impact, quality, patterns, potential bugs, and interplay with existing code, (7) produce a structured review with: summary, key findings (positive and negative), specific inline comments (file:line + comment), and an overall recommendation (approve, request changes, comment). You do NOT post the review to GitHub — hand off to GitHub-Assistent with the review text so it can submit the review. If you need deeper understanding of existing code, hand off to Code-Recherche. If the user wants issues found in the review fixed, hand off to Entwickler. LANGUAGE: Match user's language. EXECUTION: At most 3 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. REVIEW QUALITY: Focus on correctness, maintainability, security, performance, and test coverage. Note both strengths and weaknesses. Be constructive — suggest improvements, not just point out problems. Current date & time: {{current_datetime}}"
+    description: Analysiert Pull Requests – klont das Repo, prüft den Diff, liest die Codebase und erstellt ein strukturiertes Review. Postet das Review bei Bedarf über den GitHub-Assistenten.
+    instructions: "PR review specialist. Analyze pull requests in depth. When given a PR URL: (1) parse the URL to get repo and PR number, (2) call pull_request_read to get head ref (branch), base ref (e.g. main), and repo clone URL, (3) create a workspace with create_workspace (git_url = repo clone URL, branch = head ref) so the PR branch is checked out — or reuse an existing workspace and checkout the PR branch via execute_command, (4) in that workspace run 'git fetch origin <base_ref>' (e.g. origin/main) so the base exists locally, then 'git diff origin/<base_ref>...HEAD --stat' and optionally 'git diff origin/<base_ref>...HEAD -- <path>' for the diff, (5) read changed files with read_workspace_file and surrounding codebase for context, (6) analyze impact, quality, patterns, potential bugs, and interplay with existing code, (7) produce a structured review with: summary, key findings (positive and negative), specific inline comments (file:line + comment), and an overall recommendation (approve, request changes, comment). You do NOT post the review to GitHub yourself. Only hand off to GitHub-Assistent to post the review when the user has explicitly asked for the review to be posted on GitHub; otherwise present the full review in the conversation. When handing off for posting, pass the full review body and any inline comments. If you need deeper understanding of existing code, hand off to Code-Recherche. If the user wants issues found in the review fixed, hand off to Entwickler. LANGUAGE: Match user's language. EXECUTION: At most 3 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. REVIEW QUALITY: Focus on correctness, maintainability, security, performance, and test coverage. Note both strengths and weaknesses. Be constructive — suggest improvements, not just point out problems. Current date & time: {{current_datetime}}"
     provider: OpenRouter
     model: google/gemini-3-pro-preview
     model_parameters:
@@ -468,12 +461,10 @@ agents:
       - Analysiere die Änderungen in diesem Pull Request
       - Prüfe den Diff und die Code-Qualität dieses PRs
     handoffs:
-      - agent: shared-agent-developer-router
-        description: "Return to developer router to switch to another development specialist"
       - agent: shared-agent-011
         description: "Return to the general assistant for non-development tasks"
       - agent: shared-agent-github
-        description: "Transfer to GitHub assistant to post the review on the PR"
+        description: "Transfer to GitHub assistant to post the review on the PR (only when the user requested posting)"
         prompt: "Post this review on the PR. Include the review body and any inline comments."
       - agent: shared-agent-code-researcher
         description: "Transfer to code researcher for deeper understanding of existing code before finalizing the review"
@@ -482,39 +473,11 @@ agents:
         description: "Transfer to developer to fix the issues found in the review"
         prompt: "Here are the issues found in the PR review that need to be fixed"
     recursion_limit: 75
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
 
-  - id: shared-agent-code-review-workflow
-    name: Code-Review-Workflow
-    description: Automatisches PR-Review – einfach einen PR-Link einfügen, der Rest läuft automatisch (Analyse + Review auf GitHub).
-    instructions: "Automated PR review workflow entry point. The user provides a PR link. This agent does NOT do any work itself — it starts a chain that runs automatically: first Code-Reviewer (clone repo, analyze diff, produce review), then GitHub-Assistent (post the review on GitHub). Simply acknowledge the user's request and let the chain proceed. Match user language."
-    provider: Scaleway
-    model: mistral-small-3.2-24b-instruct-2506
-    model_parameters:
-      temperature: 0.3
-      top_p: 0.9
-    tools: []
-    mcpServers: []
-    chain:
-      - shared-agent-code-reviewer
-      - shared-agent-github
-    category: development
-    conversation_starters:
-      - "Review diesen PR: https://github.com/org/repo/pull/42"
-      - "Analysiere und reviewe diesen Pull Request automatisch"
-    handoffs:
-      - agent: shared-agent-developer-router
-        description: "Return to developer router to switch to another development specialist"
-      - agent: shared-agent-011
-        description: "Return to the general assistant for non-development tasks"
-    recursion_limit: 15
-    isCollaborative: false
-    permissions:
-      public: true
-      publicEdit: false
   # Video-Transkripte: public false until server-side access is reliable (proxy/geo). See docs/wip/YTPTUBE_FUTURE_WORK.md.
   # Model: llama-3.3-70b has 100K context (vs Qwen3 36K cap in UI) to handle large cookie pastes.
   - id: shared-agent-005
@@ -608,7 +571,7 @@ agents:
     isCollaborative: false
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
   - id: shared-agent-008
     name: Datenanalyse
     description: Analysiert Daten aus CSV, JSON und anderen Formaten – filtert, transformiert, visualisiert (Diagramme) und fasst zusammen. Dateien per Upload; Diagramme werden als Bild im Chat angezeigt.
@@ -659,7 +622,7 @@ agents:
     isCollaborative: false
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
   - id: shared-agent-009
     name: Dateikonverter
     description: Konvertiert Bilder, Audio, Video und Dokumente zwischen Formaten – ImageMagick, FFmpeg, Pandoc. Ergebnis direkt im Chat oder als Download.
@@ -701,10 +664,10 @@ agents:
       - agent: shared-agent-011
         description: "Return to the general assistant to start a new task or get routed to a different specialist"
     recursion_limit: 50
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
   - id: shared-agent-010
     name: Dokumenten-Ersteller
     description: Erstellt professionelle Dokumente – Briefe, Berichte, Rechnungen, Lebensläufe, Vorlagen. Erzeugt PDF (Typst) oder editierbare Formate (ODT/DOCX via Pandoc). Ergebnis als Download.
@@ -750,14 +713,14 @@ agents:
         description: "Transfer to file converter for converting the created document to another format (e.g. PDF to image, audio extraction)"
         prompt: "Describe the document (file path in workspace, format) and the desired output format for conversion"
     recursion_limit: 75
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
   - id: shared-agent-011
     name: Universal
     description: Allgemeiner Assistent – erkennt automatisch, welcher Spezialist am besten passt, und leitet die Anfrage weiter.
-    instructions: "General router agent. You do NOT answer questions yourself. Your sole purpose is to identify the user's need and hand off to the right specialist agent. Available specialists (mention by name when handing off): Recherche-Assistent (research, fact-finding, web search), Bildgenerierungs-Assistent (AI image generation from text descriptions), Reise- und Standort-Assistent (travel planning, maps, routes, weather), Entwickler-Router (all development tasks: coding, debugging, implementation, refactoring, GitHub, PR reviews — the developer router will pick the right specialist), Kochhilfe (recipes, cooking tips, meal inspiration), Datenanalyse (CSV/JSON analysis, charts, data visualization), Dateikonverter (image/audio/video/document format conversion), Dokumenten-Ersteller (professional PDFs, letters, reports, invoices via Typst/Pandoc). If the user's request clearly matches one specialist, hand off immediately. If unclear which specialist fits, ask one clarifying question — then hand off. NEVER attempt to answer the question yourself. Match user language."
+    instructions: "General router agent. You do NOT answer questions yourself. Your sole purpose is to identify the user's need and hand off to the right specialist agent. Available specialists (mention by name when handing off): Recherche-Assistent (research, fact-finding, web search), Bildgenerierungs-Assistent (AI image generation from text descriptions), Reise- und Standort-Assistent (travel planning, maps, routes, weather), Entwickler-Router (all development tasks: coding, debugging, implementation, refactoring, GitHub, PR reviews — the developer router will pick the right specialist), Kochhilfe (recipes, cooking tips, meal inspiration), Datenanalyse (CSV/JSON analysis, charts, data visualization), Dateikonverter (image/audio/video/document format conversion), Dokumenten-Ersteller (professional PDFs, letters, reports, invoices via Typst/Pandoc). If the request is clearly about software development (code, repo, PR, bug, feature, refactoring), hand off to Entwickler-Router; do not choose Recherche-Assistent for code-related tasks. If the user's request clearly matches one specialist, hand off immediately. If unclear which specialist fits, ask one clarifying question — then hand off. NEVER attempt to answer the question yourself. Match user language."
     provider: Scaleway
     model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
@@ -794,7 +757,7 @@ agents:
       - Was kannst du alles?
       - Welcher Assistent passt zu meiner Aufgabe?
     recursion_limit: 25
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true

@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { connectToMongoDB, disconnectFromMongoDB, User } from './utils/mongodb.ts';
 import { loadOptionalConfigFile, getSystemUserId } from './utils/config.ts';
 import {
@@ -9,6 +11,7 @@ import {
   type PermissionUpdate,
 } from './lib/librechat-api-client.ts';
 import {
+  CONFIG_TARGET,
   PUBLIC_AGENTS_PATH,
   PUBLIC_AGENTS_FALLBACK,
   PRIVATE_AGENTS_PATH,
@@ -359,6 +362,42 @@ function resolveAgentReferences(
 }
 
 /**
+ * Replaces config IDs in modelSpecs preset.agent_id with real API agent IDs in the runtime config.
+ * Required so the client's agentsMap filter matches and Assistenten group / default spec work.
+ */
+function patchModelSpecAgentIds(configPath: string, idMap: Map<string, string>): void {
+  if (!existsSync(configPath)) {
+    console.log(`  ℹ Config file not found (${configPath}), skipping modelSpec agent_id patch`);
+    return;
+  }
+  try {
+    const raw = readFileSync(configPath, 'utf-8');
+    const config = parseYaml(raw) as { modelSpecs?: { list?: Array<{ preset?: { agent_id?: string } }> } };
+    const list = config?.modelSpecs?.list;
+    if (!list?.length) {
+      return;
+    }
+    let patched = 0;
+    for (const spec of list) {
+      const aid = spec.preset?.agent_id;
+      if (aid && idMap.has(aid)) {
+        spec.preset!.agent_id = idMap.get(aid)!;
+        patched++;
+      }
+    }
+    if (patched > 0) {
+      writeFileSync(configPath, stringifyYaml(config), 'utf-8');
+      console.log(`  ✓ Patched ${patched} modelSpec(s) with real agent IDs. Restart the API to apply.`);
+    }
+  } catch (err) {
+    console.error(
+      '  ⚠ Failed to patch config agent IDs:',
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+}
+
+/**
  * Initializes agents from configuration files.
  * Creates or updates agents in LibreChat and sets their permissions.
  */
@@ -491,6 +530,10 @@ export async function initializeAgents(): Promise<void> {
     }
     if (agentsWithRefs.length > 0) {
       console.log(`  - Handoffs/chains resolved: ${agentsWithRefs.length}`);
+    }
+
+    if (idMap.size > 0) {
+      patchModelSpecAgentIds(CONFIG_TARGET, idMap);
     }
   } catch (error) {
     console.error('✗ Error during agent initialization:', error);

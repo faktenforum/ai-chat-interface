@@ -43,7 +43,7 @@ They are baked into the init image and written into the config volume at startup
 
 ## Development
 
-- **[Developer Agents](DEVELOPER_AGENTS.md)** - Developer domain: router, specialists, chains, code review workflow
+- **[Developer Agents](DEVELOPER_AGENTS.md)** - Developer domain: router, specialists, handoffs, code review (Code-Reviewer + GitHub-Assistent)
 - **[Development Guide](DEVELOPMENT.md)** - Git submodules and development stack
 - **[Testing internal MCPs from Cursor](SERVICES.md#testing-internal-mcps-from-cursor-ide)** - Use local-stack MCPs from Cursor IDE for testing
 - **[LibreChat Testing](LIBRECHAT_TESTING.md)** - Running LibreChat unit and E2E tests using the dedicated test stack

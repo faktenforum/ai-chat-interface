@@ -49,6 +49,7 @@ services:
       LIBRECHAT_JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
       JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
     volumes:
+      - librechat-config:/app/config
       - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
     depends_on:

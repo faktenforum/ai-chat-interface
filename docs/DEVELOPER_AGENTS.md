@@ -6,9 +6,11 @@ Development requests are routed by **Entwickler-Router** to task-specific specia
 
 ```
 Universal ──► Entwickler-Router ──► Code-Recherche | Entwickler | Code-Refactorer
-                                 ──► GitHub-Assistent | Code-Reviewer | Code-Review-Workflow
+                                 ──► GitHub-Assistent | Code-Reviewer
                                  ──► Universal (back)
 ```
+
+Specialists do **not** hand off back to the router; they hand off to Universal or to other specialists.
 
 ## Agents
 
@@ -16,28 +18,29 @@ Universal ──► Entwickler-Router ──► Code-Recherche | Entwickler | Co
 |-------|----|----------|-------|-------|------|
 | **Entwickler-Router** | `shared-agent-developer-router` | Scaleway | mistral-small-3.2-24b | None | Route to specialist |
 | **Code-Recherche** | `shared-agent-code-researcher` | OpenRouter | anthropic/claude-opus-4.6 | ~35 (Linux subset, GitHub, Docs, SO, npm, web_search) | Understand code, find examples, search docs. No implementation. |
-| **Entwickler** | `shared-agent-developer` | OpenRouter | anthropic/claude-opus-4.6 | 18 (Linux full, web_search) | Implement, fix bugs. Chain → Code-Refactorer. |
+| **Entwickler** | `shared-agent-developer` | OpenRouter | anthropic/claude-opus-4.6 | 18 (Linux full, web_search) | Implement, fix bugs. |
 | **Code-Refactorer** | `shared-agent-code-refactorer` | OpenRouter | google/gemini-3-pro-preview | 18 (Linux full, web_search) | Refactor, polish, restructure. |
 | **GitHub-Assistent** | `shared-agent-github` | Scaleway | qwen3-235b | ~24 (GitHub read+write, Linux minimal) | PRs, issues, create PR/issue/review. |
-| **Code-Reviewer** | `shared-agent-code-reviewer` | OpenRouter | google/gemini-3-pro-preview | ~18 (Linux subset, GitHub read) | Analyze PR diff + codebase, produce review. |
-| **Code-Review-Workflow** | `shared-agent-code-review-workflow` | Scaleway | mistral-small-3.2-24b | None (chain) | PR link → auto review on GitHub. |
+| **Code-Reviewer** | `shared-agent-code-reviewer` | OpenRouter | google/gemini-3-pro-preview | ~18 (Linux subset, GitHub read) | Single entry for PR reviews: clone repo, analyze via Linux MCP, produce review; hand off to GitHub-Assistent to post on GitHub when the user requests it. |
 
 ## Chains
 
-- **Entwickler → Code-Refactorer**: After implementation, Code-Refactorer runs automatically.
-- **Code-Review-Workflow → Code-Reviewer → GitHub-Assistent**: User pastes PR link → review analyzed → posted by GitHub-Assistent.
+No automatic chains. All transitions between specialists are via explicit handoffs.
 
 ## Handoffs
 
-Each specialist can hand off to Entwickler-Router, Universal, and 2–3 relevant specialists (e.g. Entwickler → Code-Recherche, GitHub-Assistent). Each agent stays at 4–5 handoffs.
+Each specialist can hand off to Universal and to 2–3 relevant specialists (e.g. Entwickler → Code-Recherche, GitHub-Assistent). Specialists do **not** hand off back to Entwickler-Router.
+
+- **Entwickler → Code-Refactorer**: To polish or restructure implemented code (readability, structure, tests, style).
+- **Code-Refactorer → Entwickler**: To implement missing code, tests, or new behavior identified during refactoring.
 
 ## Code review flow
 
-1. User provides PR URL (Code-Review-Workflow or Code-Reviewer).
-2. **Code-Reviewer**: Parse URL → clone → checkout PR branch → `git diff` → read changed files + context → analyze → structured review (summary + optional inline comments).
-3. **GitHub-Assistent**: Receives review (chain or handoff) → posts on PR when `create_review` is available.
+1. User provides PR URL to **Code-Reviewer** (via router or by selecting the agent).
+2. **Code-Reviewer**: `pull_request_read` → head/base ref and repo URL; `create_workspace` (git_url, branch = head ref) → in workspace: `git fetch origin <base_ref>`, `git diff origin/<base_ref>...HEAD`; `read_workspace_file` for changed files and context → analyze → structured review (summary + optional inline comments).
+3. To post on GitHub: **Code-Reviewer** hands off to **GitHub-Assistent** with review body and inline comments; GitHub-Assistent uses `create_review`.
 
-Optional: Code-Reviewer → Code-Recherche (deeper codebase understanding) or → Entwickler (fix issues found).
+Optional handoffs: Code-Reviewer → Code-Recherche (codebase context) or → Entwickler (fix issues).
 
 ## GitHub write tools
 
