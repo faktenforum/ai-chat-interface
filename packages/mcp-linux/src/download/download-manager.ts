@@ -9,9 +9,9 @@
 
 import { randomUUID } from 'node:crypto';
 import { statSync } from 'node:fs';
-import { basename, extname, join, resolve } from 'node:path';
-import { validateWorkspaceName } from '../utils/security.ts';
+import { basename, extname } from 'node:path';
 import { logger } from '../utils/logger.ts';
+import { resolveSafePath, ensureFileExists } from '../utils/fs-helper.ts';
 
 /** Download session state */
 export type DownloadSessionStatus = 'active' | 'downloaded' | 'expired' | 'closed';
@@ -131,29 +131,10 @@ export class DownloadManager {
     expiresInMinutes?: number,
   ): { token: string; url: string; session: DownloadSessionInfo } {
     // Resolve and validate the file path
-    const wsError = validateWorkspaceName(workspace);
-    if (wsError) throw new Error(wsError);
+    const absolutePath = resolveSafePath(username, workspace, filePath);
+    ensureFileExists(absolutePath);
 
-    const workspaceRoot = join('/home', username, 'workspaces', workspace);
-    const absolutePath = resolve(workspaceRoot, filePath);
-
-    // Security: ensure the resolved path is within the workspace
-    if (!absolutePath.startsWith(workspaceRoot + '/') && absolutePath !== workspaceRoot) {
-      throw new Error(`Path traversal denied: file_path must be within the workspace`);
-    }
-
-    // Check file exists and get size
-    let stat;
-    try {
-      stat = statSync(absolutePath);
-    } catch {
-      throw new Error(`File not found: ${filePath} in workspace "${workspace}"`);
-    }
-
-    if (!stat.isFile()) {
-      throw new Error(`Not a file: ${filePath} (is it a directory?)`);
-    }
-
+    const stat = statSync(absolutePath);
     const token = randomUUID();
     const now = new Date();
     const timeout = expiresInMinutes ?? this.defaultSessionTimeoutMin;

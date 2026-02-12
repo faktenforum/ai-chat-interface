@@ -7,13 +7,13 @@
  */
 
 import { readFileSync, statSync } from 'node:fs';
-import { join, resolve, extname } from 'node:path';
-import { validateWorkspaceName } from '../utils/security.ts';
+import { extname } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { UserManager } from '../user-manager.ts';
 import type { DownloadManager } from '../download/download-manager.ts';
 import { resolveEmail, errorResult } from './helpers.ts';
 import { ReadWorkspaceFileSchema } from '../schemas/file.schema.ts';
+import { resolveSafePath, ensureFileExists } from '../utils/fs-helper.ts';
 
 /** Maximum text file size to inline (1 MB) */
 const MAX_TEXT_SIZE = 1 * 1024 * 1024;
@@ -87,30 +87,12 @@ export function registerFileTools(
     async (args, extra) => {
       try {
         const email = resolveEmail(extra);
-        const wsError = validateWorkspaceName(args.workspace);
-        if (wsError) throw new Error(wsError);
         const mapping = await userManager.ensureUser(email);
 
-        const workspaceRoot = join('/home', mapping.username, 'workspaces', args.workspace);
-        const absolutePath = resolve(workspaceRoot, args.file_path);
+        const absolutePath = resolveSafePath(mapping.username, args.workspace, args.file_path);
+        ensureFileExists(absolutePath);
 
-        // Security: ensure path is within the workspace
-        if (!absolutePath.startsWith(workspaceRoot + '/') && absolutePath !== workspaceRoot) {
-          throw new Error('Path traversal denied: file_path must be within the workspace');
-        }
-
-        // Check file exists
-        let stat;
-        try {
-          stat = statSync(absolutePath);
-        } catch {
-          throw new Error(`File not found: ${args.file_path} in workspace "${args.workspace}"`);
-        }
-
-        if (!stat.isFile()) {
-          throw new Error(`Not a file: ${args.file_path} (is it a directory?)`);
-        }
-
+        const stat = statSync(absolutePath);
         const ext = extname(absolutePath).toLowerCase();
         const fileSize = stat.size;
 
@@ -205,4 +187,3 @@ function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
-

@@ -9,7 +9,7 @@
  * - Restores users on container restart / image upgrade
  */
 
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
 import { logger } from './utils/logger.ts';
@@ -47,7 +47,28 @@ export class UserManager {
     try {
       if (existsSync(USERS_FILE)) {
         const data = readFileSync(USERS_FILE, 'utf-8');
-        return JSON.parse(data) as UserMappingDB;
+        const db = JSON.parse(data) as UserMappingDB;
+        
+        // Validate loaded data to prevent injection from tampered file
+        if (db && typeof db === 'object') {
+          if (typeof db.nextUid !== 'number') db.nextUid = BASE_UID;
+          if (!db.users || typeof db.users !== 'object') db.users = {};
+          
+          for (const key in db.users) {
+            const u = db.users[key];
+            if (!u || typeof u.username !== 'string' || typeof u.uid !== 'number') {
+              logger.warn({ key }, 'Invalid user entry in DB, removing');
+              delete db.users[key];
+              continue;
+            }
+            // Strict username validation (alphanumeric + underscore)
+            if (!/^[a-z0-9_]+$/.test(u.username)) {
+               logger.warn({ username: u.username }, 'Invalid username in DB, removing');
+               delete db.users[key];
+            }
+          }
+          return db;
+        }
       }
     } catch (error) {
       logger.error({ error }, 'Failed to load user mapping, starting fresh');
@@ -72,8 +93,9 @@ export class UserManager {
    */
   private linuxUserExists(username: string): boolean {
     try {
-      execSync(`id "${username}"`, { stdio: 'pipe' });
-      return true;
+      // Use spawnSync to avoid shell
+      const result = spawnSync('id', [username], { stdio: 'ignore' });
+      return result.status === 0;
     } catch {
       return false;
     }
@@ -111,17 +133,26 @@ export class UserManager {
    */
   private createLinuxUser(username: string, uid: number): void {
     try {
-      execSync(
-        `useradd -m -s /bin/bash -u ${uid} -d /home/${username} "${username}"`,
-        { stdio: 'pipe' },
-      );
+      // Use spawnSync for safety
+      const result = spawnSync('useradd', [
+        '-m',
+        '-s', '/bin/bash',
+        '-u', uid.toString(),
+        '-d', `/home/${username}`,
+        username
+      ], { stdio: 'pipe' });
+
+      if (result.status !== 0) {
+        // User may already exist (e.g., from a previous container with the same volume)
+        if (this.linuxUserExists(username)) {
+          logger.info({ username }, 'Linux user already exists, skipping creation');
+          return;
+        }
+        throw new Error(result.stderr.toString());
+      }
+      
       logger.info({ username, uid }, 'Created Linux user');
     } catch (error) {
-      // User may already exist (e.g., from a previous container with the same volume)
-      if (this.linuxUserExists(username)) {
-        logger.info({ username }, 'Linux user already exists, skipping creation');
-        return;
-      }
       throw new UserCreationError(
         `Failed to create Linux user ${username}: ${error instanceof Error ? error.message : String(error)}`,
       );
@@ -141,6 +172,8 @@ export class UserManager {
         const { name, email } = getDefaultGitIdentity();
         const emailEsc = shellEscapeSingleQuoted(email);
         const nameEsc = shellEscapeSingleQuoted(name);
+        
+        // We use execSync here because of the chained commands and cd, but inputs are escaped
         execSync(
           `cd "${defaultDir}" && git init -b main && git config user.email '${emailEsc}' && git config user.name '${nameEsc}'`,
           { stdio: 'pipe', env: { ...process.env, HOME: `/home/${username}` } },
@@ -150,7 +183,7 @@ export class UserManager {
       }
       // Ensure ownership
       try {
-        execSync(`chown -R "${username}:${username}" "${workspacesDir}"`, { stdio: 'pipe' });
+        spawnSync('chown', ['-R', `${username}:${username}`, workspacesDir], { stdio: 'ignore' });
       } catch {
         // Non-critical
       }
@@ -188,7 +221,7 @@ export class UserManager {
 
       // Set ownership and ensure strict permissions (SSH rejects key if group/other can read)
       chmodSync(sshDir, 0o700);
-      execSync(`chown -R "${username}:${username}" "${sshDir}"`, { stdio: 'pipe' });
+      spawnSync('chown', ['-R', `${username}:${username}`, sshDir], { stdio: 'ignore' });
       chmodSync(keyPath, 0o600);
       chmodSync(configPath, 0o644);
 
@@ -251,11 +284,12 @@ export class UserManager {
 
     try {
       // Remove home contents but keep the directory
-      execSync(`rm -rf ${homeDir}/.* ${homeDir}/* 2>/dev/null || true`, { stdio: 'pipe' });
+      // Use spawnSync for safety
+      spawnSync('find', [homeDir, '-mindepth', '1', '-delete'], { stdio: 'ignore' });
 
       // Re-create from skel
       execSync(`cp -rT /etc/skel "${homeDir}"`, { stdio: 'pipe' });
-      execSync(`chown -R "${username}:${username}" "${homeDir}"`, { stdio: 'pipe' });
+      spawnSync('chown', ['-R', `${username}:${username}`, homeDir], { stdio: 'ignore' });
 
       // Re-create default workspace and SSH key
       this.setupDefaultWorkspace(username);
@@ -285,7 +319,10 @@ export class UserManager {
     const homeDir = `/home/${mapping.username}`;
     let diskUsage = 'unknown';
     try {
-      diskUsage = execSync(`du -sh "${homeDir}" 2>/dev/null | cut -f1`, { encoding: 'utf-8' }).trim();
+      const res = spawnSync('du', ['-sh', homeDir], { encoding: 'utf-8' });
+      if (res.status === 0) {
+        diskUsage = res.stdout.split('\t')[0].trim();
+      }
     } catch {
       // Non-critical
     }
