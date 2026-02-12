@@ -6,11 +6,19 @@
 
 export const FILE_OPERATIONS_PROMPT = {
   name: 'file_operations',
-  description: 'Examples of terminal commands for file operations (read, write, copy, move, delete, permissions)',
+  description: 'When to use terminal vs. read_workspace_file for reading; terminal command examples for file operations (read, write, copy, move, delete, permissions)',
   content: `# File Operations via Terminal
 
 All file operations are done through the terminal using standard Linux commands.
 Commands execute relative to the active workspace directory.
+
+## Reading file contents: terminal vs. read_workspace_file
+
+- **Terminal (one script, fewer tool calls):** When you need many small text files, run a single \`execute_command\` that outputs them (e.g. \`for f in file1 file2; do echo "=== $f ==="; cat "$f"; done\`). Use for exploratory reading of multiple small text files.
+- **read_workspace_file tool:** Use when you need:
+  - Images or audio (returned as structured content for display/playback)
+  - Large or binary files (tool returns a download link instead of dumping content)
+  - A single file and you want workspace-scoped path resolution and clear errors
 
 ## Reading Files
 \`\`\`bash
