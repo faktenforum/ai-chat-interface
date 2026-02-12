@@ -186,9 +186,11 @@ export class UserManager {
 `;
       writeFileSync(configPath, sshConfig, { mode: 0o644 });
 
-      // Set ownership
+      // Set ownership and ensure strict permissions (SSH rejects key if group/other can read)
       chmodSync(sshDir, 0o700);
       execSync(`chown -R "${username}:${username}" "${sshDir}"`, { stdio: 'pipe' });
+      chmodSync(keyPath, 0o600);
+      chmodSync(configPath, 0o644);
 
       logger.info({ username }, 'SSH key configured for git access');
     } catch (error) {
