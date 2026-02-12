@@ -34,7 +34,9 @@ No automatic chains. All transitions between specialists are via explicit handof
 
 ## Handoffs
 
-Each specialist can hand off to Universal and to 2–3 relevant specialists (e.g. Entwickler → Code-Recherche, GitHub-Assistent). Specialists do **not** hand off back to Entwickler-Router. All agents with handoffs have a **HANDOFF** instruction: they must **call the handoff/transfer tool** (not just write a message) and pass context in the tool's instructions parameter.
+Each specialist can hand off to Universal and to 2–3 relevant specialists (e.g. Entwickler → Code-Recherche, GitHub-Assistent). Specialists do **not** hand off back to Entwickler-Router. Handoff: call the transfer tool (runtime name `lc_transfer_to_<api_id>`), pass context in the **instructions** parameter. Universal has no GitHub tools; for bug reports only hand off to Feedback-Assistent.
+
+**Loops:** Universal asks once when unclear then transfers; specialists return to Universal only when task done, user asks for another assistant, or request is clearly out of domain—not when merely ambiguous.
 
 - **Entwickler → Code-Refactorer**: Polish or restructure code (readability, structure, tests, style).
 - **Code-Refactorer → Entwickler**: Implement missing code, tests, or behavior found during refactoring.
@@ -53,7 +55,7 @@ Optional handoffs: Code-Reviewer → Code-Recherche (codebase context) or → En
 
 ## Feedback / Bug reports
 
-**Feedback-Assistent** (`shared-agent-feedback`): Report chat-interface bugs. Understands description → structured issue (title, steps, expected/actual, environment) → hand off to **GitHub-Assistent** (issue in English). Optional: **Code-Recherche** (similar issues), **Entwickler-Router** (user wants to fix). Entry: Universal or preset “Feedback / Fehler melden”.
+**Feedback-Assistent** (`shared-agent-feedback`): Chat-interface bug reports. Repo always **faktenforum/ai-chat-interface**. No GitHub tools → hand off to **GitHub-Assistent** (title + body in English). On create_issue error, GitHub-Assistent reports the error. Optional: **Code-Recherche** (similar issues), **Entwickler-Router** (user wants to fix). Entry: Universal or preset “Feedback / Fehler melden”.
 
 ## GitHub tools
 
