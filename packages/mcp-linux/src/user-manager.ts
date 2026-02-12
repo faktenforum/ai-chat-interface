@@ -171,8 +171,9 @@ export class UserManager {
     try {
       mkdirSync(sshDir, { recursive: true });
 
-      // Decode and write the private key
-      const keyContent = Buffer.from(sshKeyBase64, 'base64').toString('utf-8');
+      // Decode and write the private key (strip all whitespace so multi-line env values decode fully)
+      const base64Normalized = sshKeyBase64.replace(/\s+/g, '');
+      const keyContent = Buffer.from(base64Normalized, 'base64').toString('utf-8');
       writeFileSync(keyPath, keyContent, { mode: 0o600 });
 
       // Write SSH config
