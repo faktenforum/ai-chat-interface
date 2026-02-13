@@ -4,8 +4,10 @@
 
 import { z } from 'zod';
 
+const WorkspaceNameSchema = z.string().regex(/^[a-z0-9._-]+$/i, "Invalid workspace name: alphanumeric, dot, underscore, hyphen only").max(128);
+
 export const CreateUploadSessionSchema = z.object({
-  workspace: z.string().default('default').describe('Workspace name (default: "default")'),
+  workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
   expires_in_minutes: z
     .number()
     .min(1)

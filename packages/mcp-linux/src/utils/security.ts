@@ -77,11 +77,32 @@ export function validateWorkspaceName(name: string): string | null {
   if (name === '.' || name === '..') {
     return 'Workspace name cannot be . or ..';
   }
-  if (name.includes('/') || name.includes('\\')) {
-    return 'Workspace name cannot contain path separators';
-  }
   if (name.length > 128) {
     return 'Workspace name too long (max 128 characters)';
+  }
+  // Strict validation: only alphanumeric, dot, underscore, hyphen
+  if (!/^[a-z0-9._-]+$/i.test(name)) {
+    return 'Workspace name can only contain alphanumeric characters, dots, underscores, and hyphens';
+  }
+  return null;
+}
+
+/**
+ * Validates that a terminal ID is acceptable.
+ *
+ * @param id - Terminal ID to validate
+ * @returns Error message if invalid, null if valid
+ */
+export function validateTerminalId(id: string): string | null {
+  if (!id || id.trim().length === 0) {
+    return 'Terminal ID cannot be empty';
+  }
+  if (id.length > 64) {
+    return 'Terminal ID too long (max 64 characters)';
+  }
+  // Strict validation: only alphanumeric, underscore, hyphen
+  if (!/^[a-z0-9_-]+$/i.test(id)) {
+    return 'Terminal ID can only contain alphanumeric characters, underscores, and hyphens';
   }
   return null;
 }

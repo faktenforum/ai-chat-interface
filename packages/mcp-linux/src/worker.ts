@@ -16,7 +16,7 @@ import { join, resolve, dirname, relative } from 'node:path';
 import { execSync, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { getDefaultGitIdentity } from './utils/git-config.ts';
-import { validateWorkspaceName } from './utils/security.ts';
+import { validateWorkspaceName, validateTerminalId } from './utils/security.ts';
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -65,6 +65,13 @@ async function getPty(): Promise<typeof import('node-pty')> {
 async function createTerminal(workspace: string, terminalId?: string): Promise<string> {
   const pty = await getPty();
   const id = terminalId || randomUUID().slice(0, 8);
+  
+  // Validate ID if provided
+  if (terminalId) {
+    const error = validateTerminalId(terminalId);
+    if (error) throw new Error(error);
+  }
+
   const cwd = resolveWorkspacePath(workspace);
 
   if (!existsSync(cwd)) {
@@ -179,6 +186,11 @@ const handlers: Record<string, Handler> = {
     const timeoutMs = (params.timeout_ms as number) || 30000;
     let terminalId = params.terminal_id as string | undefined;
 
+    if (terminalId) {
+      const error = validateTerminalId(terminalId);
+      if (error) throw new Error(error);
+    }
+
     const workspaceRoot = resolveWorkspacePath(workspace);
     const quotedRoot = '"' + escapeForDoubleQuotedShell(workspaceRoot) + '"';
     const wrappedCommand =
@@ -264,6 +276,9 @@ const handlers: Record<string, Handler> = {
     const offset = (params.offset as number) || 0;
     const length = (params.length as number) || undefined;
 
+    const error = validateTerminalId(terminalId);
+    if (error) throw new Error(error);
+
     const session = terminals.get(terminalId);
     if (!session) {
       throw new Error(`Terminal ${terminalId} not found`);
@@ -285,6 +300,9 @@ const handlers: Record<string, Handler> = {
     const terminalId = params.terminal_id as string;
     const input = params.input as string;
     const timeoutMs = (params.timeout_ms as number) || 5000;
+
+    const error = validateTerminalId(terminalId);
+    if (error) throw new Error(error);
 
     const session = terminals.get(terminalId);
     if (!session) {
@@ -342,6 +360,9 @@ const handlers: Record<string, Handler> = {
 
   async kill_terminal(params) {
     const terminalId = params.terminal_id as string;
+    const error = validateTerminalId(terminalId);
+    if (error) throw new Error(error);
+
     const session = terminals.get(terminalId);
     if (!session) {
       throw new Error(`Terminal ${terminalId} not found`);
@@ -366,6 +387,10 @@ const handlers: Record<string, Handler> = {
       if (!entry.isDirectory()) continue;
 
       const wsPath = join(workspacesDir, entry.name);
+      
+      // Skip invalid workspace names (e.g. hidden files)
+      if (validateWorkspaceName(entry.name)) continue;
+
       const meta = getGitMetadata(entry.name);
 
       let remoteUrl = '';
