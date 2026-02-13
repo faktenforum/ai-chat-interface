@@ -24,6 +24,7 @@ They are baked into the init image and written into the config volume at startup
 - **[Services](SERVICES.md)** - Services and MCP services overview, network architecture
 - **[Administration](ADMINISTRATION.md)** - User management and administration
 - **[LibreChat Features](LIBRECHAT_FEATURES.md)** - LibreChat configuration and features
+- **[LibreChat group icons](LIBRECHAT_GROUP_ICONS.md)** - Model-spec group icons, colors, theme tips
 - **[MCP YTPTube](MCP_YTPTUBE.md)** - YTPTube MCP (media URL → transcript or download). Status and [future work](wip/YTPTUBE_FUTURE_WORK.md) (production proxy, FlareSolverr).
 - **[YTPTube Cleanup](YTPTUBE_CLEANUP.md)** - Where archive and downloads live; how to clean for fresh tests
 - **[MCP YouTube Transcript](MCP_YOUTUBE_TRANSCRIPT.md)** - YouTube Transcript MCP (video URL → transcript via youtube-transcript-api)

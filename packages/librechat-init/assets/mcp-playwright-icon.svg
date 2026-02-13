@@ -1,1 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-monitor-play"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+<svg class="lucide lucide-monitor-play" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" version="1.1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+ <rect x="2" y="3" width="20" height="14" rx="2"/>
+ <path d="m8 21h8"/>
+ <path d="m12 17v4"/>
+ <polygon transform="translate(0,-2)" points="10 16 10 8 16 12"/>
+</svg>

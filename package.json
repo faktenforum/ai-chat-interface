@@ -38,8 +38,10 @@
         "test:librechat:unit": "cd dev/librechat && npm run test:all",
         "test:librechat:e2e": "cd dev/librechat && npm run e2e",
         "test:librechat:link-agents": "(cd dev/agents && npm run build && npm link) && (cd dev/librechat && npm link @librechat/agents)",
-        "test:librechat:unlink-agents": "(cd dev/librechat && npm unlink @librechat/agents && npm install)"
-    },
+        "test:librechat:unlink-agents": "(cd dev/librechat && npm unlink @librechat/agents && npm install)",
+        "icons:variants": "./scripts/generate-icon-variants.ts",
+        "icons:variants:list": "./scripts/generate-icon-variants.ts --list-variants"
+},
     "license": "MIT",
     "devDependencies": {
         "@inquirer/prompts": "^8.2.0",
