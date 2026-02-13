@@ -40,6 +40,8 @@ roles:
 
 **Files:** `config/agents.yaml` (public), `config/agents.private.yaml` (private)
 
+Each agent can use inline `instructions` or reference a file via **`instructionsFile`** (filename only, e.g. `shared-agent-001-instructions.md`). Files are loaded from `config/agent-instructions/`; naming convention: `{agent-id}-instructions.md`. If `instructionsFile` is set, its content (trimmed) is used and any inline `instructions` is ignored.
+
 ```yaml
 agents:
   - name: Research Assistant

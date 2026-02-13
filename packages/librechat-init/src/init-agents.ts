@@ -16,6 +16,7 @@ import {
   PUBLIC_AGENTS_FALLBACK,
   PRIVATE_AGENTS_PATH,
   PRIVATE_AGENTS_FALLBACK,
+  AGENT_INSTRUCTIONS_DIR,
   ACCESS_ROLE_VIEWER,
   ACCESS_ROLE_EDITOR,
   ACCESS_ROLE_OWNER,
@@ -24,6 +25,10 @@ import {
   MCP_ALL,
   DEFAULT_API_URL,
 } from './utils/constants.ts';
+import { join, relative, resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
  * Agent configuration from JSON files.
@@ -33,6 +38,8 @@ interface AgentConfig {
   name: string;
   description?: string;
   instructions?: string;
+  /** Filename in agent-instructions/ to load instructions from (takes precedence over instructions). */
+  instructionsFile?: string;
   provider: string;
   model: string;
   model_parameters?: Record<string, unknown>;
@@ -200,6 +207,46 @@ function buildPermissions(agentConfig: AgentConfig, ownerUserId: string): Permis
     public: isPublic,
     publicAccessRoleId: publicRoleId,
   };
+}
+
+/**
+ * Resolves instructions for one agent: from file if instructionsFile is set, else from instructions.
+ * Validates that the file path stays under instructionsDir. Mutates agentConfig.instructions.
+ */
+function resolveAgentInstructions(
+  agentConfig: AgentConfig,
+  instructionsDir: string
+): void {
+  if (!agentConfig.instructionsFile) {
+    return;
+  }
+  const base = resolve(instructionsDir);
+  const resolvedPath = resolve(base, agentConfig.instructionsFile);
+  const rel = relative(base, resolvedPath);
+  if (rel.startsWith('..') || rel === '..') {
+    throw new Error(
+      `instructionsFile "${agentConfig.instructionsFile}" must not escape agent-instructions directory (agent: ${agentConfig.name})`
+    );
+  }
+  if (!existsSync(resolvedPath)) {
+    throw new Error(
+      `instructionsFile not found: ${resolvedPath} (agent: ${agentConfig.name})`
+    );
+  }
+  const content = readFileSync(resolvedPath, 'utf-8');
+  agentConfig.instructions = content.trim();
+}
+
+/**
+ * Resolves instructions for all agents (loads from file when instructionsFile is set).
+ */
+function resolveAllAgentInstructions(
+  agents: AgentConfig[],
+  instructionsDir: string
+): void {
+  for (const agent of agents) {
+    resolveAgentInstructions(agent, instructionsDir);
+  }
 }
 
 /**
@@ -409,6 +456,11 @@ export async function initializeAgents(): Promise<void> {
       console.log('ℹ No agents configured - skipping agent initialization');
       return;
     }
+
+    const instructionsDir = existsSync(AGENT_INSTRUCTIONS_DIR)
+      ? AGENT_INSTRUCTIONS_DIR
+      : join(__dirname, '..', 'config', 'agent-instructions');
+    resolveAllAgentInstructions(allAgents, instructionsDir);
 
     const apiURL = process.env.LIBRECHAT_API_URL || DEFAULT_API_URL;
     const jwtSecret = process.env.LIBRECHAT_JWT_SECRET || process.env.JWT_SECRET;

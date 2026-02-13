@@ -75,5 +75,6 @@ Only tools the GitHub MCP server actually provides are exposed; unknown names in
 ## Config
 
 - Agents: [`packages/librechat-init/config/agents.yaml`](../packages/librechat-init/config/agents.yaml)
+- Agent instructions: [`packages/librechat-init/config/agent-instructions/`](../packages/librechat-init/config/agent-instructions/) — one `.md` file per agent, referenced in `agents.yaml` via `instructionsFile` (e.g. `shared-agent-developer-instructions.md`). Naming: `{agent-id}-instructions.md`.
 - Models: [`packages/librechat-init/config/librechat.yaml`](../packages/librechat-init/config/librechat.yaml)
 - Init: [`packages/librechat-init/src/init-agents.ts`](../packages/librechat-init/src/init-agents.ts)

@@ -25,6 +25,9 @@ export const PUBLIC_AGENTS_FALLBACK = '../config/agents.yaml';
 export const PRIVATE_AGENTS_PATH = join(CONFIG_SOURCE_DIR, 'agents.private.yaml');
 export const PRIVATE_AGENTS_FALLBACK = '../config/agents.private.yaml';
 
+/** Directory for agent instruction .md files (referenced by instructionsFile in agents.yaml). */
+export const AGENT_INSTRUCTIONS_DIR = join(CONFIG_SOURCE_DIR, 'agent-instructions');
+
 export const PUBLIC_PROMPTS_PATH = join(CONFIG_SOURCE_DIR, 'prompts.yaml');
 export const PUBLIC_PROMPTS_FALLBACK = '../config/prompts.yaml';
 

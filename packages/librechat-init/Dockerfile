@@ -19,6 +19,7 @@ RUN mkdir -p /app/data && \
     (cp /app/config/librechat.prod.yaml /app/data/librechat.prod.yaml 2>/dev/null || true) && \
     (cp /app/config/agents.yaml /app/data/agents.yaml 2>/dev/null || echo "agents.yaml not found, skipping") && \
     (cp /app/config/agents.private.yaml /app/data/agents.private.yaml 2>/dev/null || echo "agents.private.yaml not found, skipping") && \
+    (cp -r /app/config/agent-instructions /app/data/agent-instructions 2>/dev/null || echo "agent-instructions not found, skipping") && \
     (cp /app/config/prompts.yaml /app/data/prompts.yaml 2>/dev/null || echo "prompts.yaml not found, skipping") && \
     (cp /app/config/prompts.private.yaml /app/data/prompts.private.yaml 2>/dev/null || echo "prompts.private.yaml not found, skipping")
 
