@@ -177,7 +177,7 @@ endpoints:
 # MODELL-ANALYSE UND GRUPPIERUNG
 # ==========================================
 #
-# GRUPPE 1: "Empfohlen: Europa & Open Source" (Scaleway)
+# GRUPPE 1: "Europa & Open Source" (Scaleway)
 # ------------------------------------------
 # Alle Modelle in dieser Gruppe sind:
 # - Open Source (Apache-2.0, Llama Community, MIT, etc.)
@@ -475,14 +475,14 @@ modelSpecs:
         agent_id: "shared-agent-010"
 
     # ==========================================
-    # Empfohlen: Europa & Open Source (Scaleway) – alphabetisch nach Label
+    # Europa & Open Source (Scaleway) – alphabetisch nach Label
     # ==========================================
     # Alle Modelle: Open Source, Europa-gehostet, DSGVO-konform
     # Token limits: Scaleway Generative APIs + Managed Inference model catalog (Oct 2025)
     - name: "scaleway-devstral-2-123b"
       label: "Devstral 2 123B"
       description: "Coding- und Agent-Modell (Mistral). 200K Context, 8K Output. Ideal für Code, Tools und Software-Agents. Modified MIT."
-      group: "Empfohlen: Europa & Open Source"
+      group: "Europa & Open Source"
       # Bot icon (green-600 #059669): Open Source / automation; good contrast in light and dark
       groupIcon: "/images/group-europa.svg"
       order: 1
@@ -496,7 +496,7 @@ modelSpecs:
     - name: "scaleway-gemma-3-27b"
       label: "Gemma 3 27B"
       description: "Kompaktes Chat- und Vision-Modell (Google). 40K Context, 8K Output. Gut für Bildanalyse und allgemeine Aufgaben. Gemma License. Exception: Google-preview; in Scaleway-Katalog als Chat+Vision gelistet."
-      group: "Empfohlen: Europa & Open Source"
+      group: "Europa & Open Source"
       order: 2
       vision: true
       preset:
@@ -509,7 +509,7 @@ modelSpecs:
     - name: "scaleway-gpt-oss-120b"
       label: "GPT-OSS 120B"
       description: "Großes Modell für komplexe Aufgaben. 128K Context, 8K Output. Apache-2.0 License."
-      group: "Empfohlen: Europa & Open Source"
+      group: "Europa & Open Source"
       order: 3
       preset:
         endpoint: "Scaleway"
@@ -521,7 +521,7 @@ modelSpecs:
     - name: "scaleway-holo2-30b"
       label: "Holo2 30B"
       description: "Chat- und Vision-Modell mit Fokus auf GUI-Analyse (Browser, Software-Oberflächen). 22K Context, 8K Output. CC-BY-NC-4.0; Nutzung über Scaleway erlaubt. Zum Testen von UI/UX-Verständnis."
-      group: "Empfohlen: Europa & Open Source"
+      group: "Europa & Open Source"
       order: 4
       vision: true
       preset:
@@ -534,7 +534,7 @@ modelSpecs:
     - name: "scaleway-llama-3.3-70b"
       label: "Llama 3.3 70B"
       description: "Meta's neuestes Modell. 100K Context, 4K Output. Sehr gut für allgemeine Gespräche und Aufgaben. Llama 3.3 Community License. Empfohlen von Scaleway."
-      group: "Empfohlen: Europa & Open Source"
+      group: "Europa & Open Source"
       order: 5
       preset:
         endpoint: "Scaleway"
@@ -546,7 +546,7 @@ modelSpecs:
     - name: "scaleway-mistral-small-3.2"
       label: "Mistral Small 3.2 24B"
       description: "Kosteneffektiv (3-6x günstiger als 70B Modelle). 128K Context, 8K Output. Unterstützt Chat und Vision. Apache-2.0 License. Empfohlen von Scaleway als Einstiegsmodell."
-      group: "Empfohlen: Europa & Open Source"
+      group: "Europa & Open Source"
       order: 6
       vision: true
       preset:
@@ -559,7 +559,7 @@ modelSpecs:
     - name: "scaleway-pixtral-12b"
       label: "Pixtral 12B"
       description: "Spezialisiert auf Bildverständnis und Chat. 128K Context, 4K Output. Unterstützt Bilder bis 32M Pixel. Apache-2.0 License."
-      group: "Empfohlen: Europa & Open Source"
+      group: "Europa & Open Source"
       order: 7
       vision: true
       preset:
@@ -572,7 +572,7 @@ modelSpecs:
     - name: "scaleway-qwen3-235b"
       label: "Qwen3 235B"
       description: "Sehr großes Modell (235B Parameter). 250K Context, 8K Output. Optimal für komplexe Aufgaben und lange Kontexte. Apache-2.0 License."
-      group: "Empfohlen: Europa & Open Source"
+      group: "Europa & Open Source"
       order: 8
       preset:
         endpoint: "Scaleway"
@@ -584,7 +584,7 @@ modelSpecs:
     - name: "scaleway-qwen3-coder-30b"
       label: "Qwen3 Coder 30B"
       description: "Spezialisiert auf Programmierung und Code-Generierung. 128K Context, 8K Output. Apache-2.0 License."
-      group: "Empfohlen: Europa & Open Source"
+      group: "Europa & Open Source"
       order: 9
       preset:
         endpoint: "Scaleway"
@@ -596,7 +596,7 @@ modelSpecs:
     - name: "scaleway-voxtral-small-24b"
       label: "Voxtral Small 24B"
       description: "Chat- und Audio-Modell (Mistral). 32K Context, 8K Output. Transkription und Verstehen von Audio (WAV, MP3), mehrsprachig. Apache-2.0 License. Zum Testen der Audio-Fähigkeiten."
-      group: "Empfohlen: Europa & Open Source"
+      group: "Europa & Open Source"
       order: 10
       preset:
         endpoint: "Scaleway"

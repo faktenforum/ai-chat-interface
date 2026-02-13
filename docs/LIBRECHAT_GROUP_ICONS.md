@@ -9,7 +9,7 @@ Group icons in `librechat.yaml` (modelSpecs list) can be:
 
 | Group | Icon | Stroke color | Rationale |
 |-------|------|--------------|-----------|
-| Empfohlen: Europa & Open Source | Bot | `#059669` (green-600) | Open source / automation; good contrast both themes |
+| Europa & Open Source | Bot | `#059669` (green-600) | Open source / automation; good contrast both themes |
 | Premium-Modelle | Lock | `#d97706` (amber-600) | Proprietary / not open source |
 | Assistenten | Bot-message-square | `#ab68ff` (brand-purple) | Matches LibreChat brand |
 
