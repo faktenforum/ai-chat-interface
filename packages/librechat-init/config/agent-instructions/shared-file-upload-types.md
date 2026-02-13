@@ -13,3 +13,5 @@ Sync this guidance into shared-agent-011, 008, 009, 010, developer when updating
 **MCP Linux download:** Results (charts, converted files, exports) → `create_download_link` so the user can download from the workspace.
 
 **Workspace handoff:** Handing off to another Linux-workplace agent → include workspace name in handoff instructions. Receiving a handoff → use workspace from instructions for all `execute_command` and `read_workspace_file` calls.
+
+**Plan and tasks:** After receiving a handoff, call `get_workspace_status` for that workspace and follow `plan` and `tasks`. When handing off, update plan/tasks with `set_workspace_plan` and pass workspace name in handoff instructions.

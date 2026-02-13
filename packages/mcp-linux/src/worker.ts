@@ -11,7 +11,7 @@
  */
 
 import { createServer, type Socket } from 'node:net';
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, rmSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, statSync, rmSync, unlinkSync } from 'node:fs';
 import { join, resolve, dirname, relative } from 'node:path';
 import { execSync, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -130,6 +130,51 @@ function resolveWorkspacePath(workspace: string): string {
     throw new Error(error);
   }
   return join(workspacesDir, workspace);
+}
+
+const PLAN_DIR = '.mcp-linux';
+const PLAN_FILENAME = 'plan.json';
+
+interface PlanData {
+  plan: string | null;
+  tasks: Array<{ title: string; done: boolean }>;
+}
+
+function getPlanPath(workspace: string): string {
+  const wsPath = resolveWorkspacePath(workspace);
+  return join(wsPath, PLAN_DIR, PLAN_FILENAME);
+}
+
+function readPlanFile(workspace: string): PlanData {
+  const path = getPlanPath(workspace);
+  if (!existsSync(path)) {
+    return { plan: null, tasks: [] };
+  }
+  try {
+    const raw = readFileSync(path, 'utf-8');
+    const data = JSON.parse(raw) as unknown;
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      const obj = data as Record<string, unknown>;
+      const plan = typeof obj.plan === 'string' ? obj.plan : obj.plan === null ? null : null;
+      const tasks = Array.isArray(obj.tasks)
+        ? (obj.tasks as unknown[]).filter(
+            (t): t is { title: string; done: boolean } =>
+              t && typeof t === 'object' && typeof (t as Record<string, unknown>).title === 'string',
+          ).map((t) => ({ title: (t as { title: string; done?: boolean }).title, done: (t as { title: string; done?: boolean }).done === true }))
+        : [];
+      return { plan, tasks };
+    }
+  } catch {
+    /* parse or read error */
+  }
+  return { plan: null, tasks: [] };
+}
+
+function writePlanFile(workspace: string, data: PlanData): void {
+  const wsPath = resolveWorkspacePath(workspace);
+  const dir = join(wsPath, PLAN_DIR);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, PLAN_FILENAME), JSON.stringify(data, null, 2), 'utf-8');
 }
 
 /**
@@ -556,6 +601,8 @@ const handlers: Record<string, Handler> = {
       behind = parseInt(parts[1] || '0', 10);
     }
 
+    const { plan, tasks } = readPlanFile(workspace);
+
     return {
       workspace,
       branch: meta.branch,
@@ -566,7 +613,35 @@ const handlers: Record<string, Handler> = {
       untracked,
       ahead,
       behind,
+      plan,
+      tasks,
     };
+  },
+
+  async set_workspace_plan(params) {
+    const workspace = (params.workspace as string) || 'default';
+    const wsPath = resolveWorkspacePath(workspace);
+
+    if (!existsSync(wsPath)) {
+      throw new Error(`Workspace "${workspace}" does not exist`);
+    }
+
+    const current = readPlanFile(workspace);
+    const planProvided = params.plan !== undefined && params.plan !== null;
+    const tasksProvided = params.tasks !== undefined && Array.isArray(params.tasks);
+
+    const nextPlan = planProvided ? (params.plan as string) : current.plan;
+    const nextTasks = tasksProvided
+      ? (params.tasks as Array<{ title: string; done?: boolean }>).map((t) => ({
+          title: String(t.title),
+          done: t.done === true,
+        }))
+      : current.tasks;
+
+    const data: PlanData = { plan: nextPlan, tasks: nextTasks };
+    writePlanFile(workspace, data);
+
+    return { plan: data.plan, tasks: data.tasks };
   },
 
   // Account Tools ─────────────────────────────────────────────────────────────

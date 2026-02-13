@@ -143,6 +143,7 @@ agents:
     mcpTools:
       - list_workspaces_mcp_linux
       - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
     category: development
     conversation_starters:
       - Ich brauche Hilfe bei einem Entwicklungsprojekt
@@ -195,6 +196,7 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
       - read_workspace_file_mcp_linux
@@ -276,6 +278,7 @@ agents:
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
       - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
       - get_account_info_mcp_linux
       - get_system_info_mcp_linux
       - create_upload_session_mcp_linux
@@ -334,6 +337,7 @@ agents:
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
       - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
       - get_account_info_mcp_linux
       - get_system_info_mcp_linux
       - create_upload_session_mcp_linux
@@ -430,6 +434,7 @@ agents:
       - read_terminal_output_mcp_linux
       - list_workspaces_mcp_linux
       - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
       - read_workspace_file_mcp_linux
       - create_download_link_mcp_linux
       - list_terminals_mcp_linux
@@ -477,6 +482,7 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
       - read_workspace_file_mcp_linux
@@ -666,6 +672,7 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
       - get_account_info_mcp_linux
       - get_system_info_mcp_linux
       - create_upload_session_mcp_linux
@@ -715,6 +722,7 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
       - get_account_info_mcp_linux
       - get_system_info_mcp_linux
       - create_upload_session_mcp_linux
@@ -760,6 +768,7 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
       - get_account_info_mcp_linux
       - get_system_info_mcp_linux
       - create_upload_session_mcp_linux
@@ -805,6 +814,7 @@ agents:
     mcpTools:
       - list_upload_sessions_mcp_linux
       - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
       - create_upload_session_mcp_linux
     handoffs:
       - agent: shared-agent-001

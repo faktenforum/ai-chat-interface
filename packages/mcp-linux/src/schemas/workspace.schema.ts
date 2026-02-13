@@ -22,3 +22,12 @@ export const DeleteWorkspaceSchema = z.object({
 export const GetWorkspaceStatusSchema = z.object({
   workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
 });
+
+export const SetWorkspacePlanSchema = z.object({
+  workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
+  plan: z.string().optional().describe('Goal or context for this workspace (replaces existing plan when provided)'),
+  tasks: z.array(z.object({
+    title: z.string().describe('Task title'),
+    done: z.boolean().optional().describe('Whether the task is done (default: false)'),
+  })).optional().describe('Task list (replaces existing tasks when provided)'),
+});

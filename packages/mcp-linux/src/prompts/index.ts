@@ -8,9 +8,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { FILE_OPERATIONS_PROMPT } from './file-operations.ts';
 import { SEARCH_FILES_PROMPT } from './search.ts';
-import { GIT_WORKFLOW_PROMPT } from './git-workflow.ts';
+import { WORKSPACES_PROMPT } from './workspaces.ts';
 import { RUNTIME_MANAGEMENT_PROMPT } from './runtime-management.ts';
-import { WORKSPACE_SETUP_PROMPT } from './workspace-setup.ts';
 import { DATA_ANALYSIS_PROMPT } from './data-analysis.ts';
 import { FILE_CONVERSION_PROMPT } from './file-conversion.ts';
 import { DOCUMENT_CREATION_PROMPT } from './document-creation.ts';
@@ -18,9 +17,8 @@ import { DOCUMENT_CREATION_PROMPT } from './document-creation.ts';
 const ALL_PROMPTS = [
   FILE_OPERATIONS_PROMPT,
   SEARCH_FILES_PROMPT,
-  GIT_WORKFLOW_PROMPT,
+  WORKSPACES_PROMPT,
   RUNTIME_MANAGEMENT_PROMPT,
-  WORKSPACE_SETUP_PROMPT,
   DATA_ANALYSIS_PROMPT,
   FILE_CONVERSION_PROMPT,
   DOCUMENT_CREATION_PROMPT,

@@ -16,6 +16,7 @@ import {
   CreateWorkspaceSchema,
   DeleteWorkspaceSchema,
   GetWorkspaceStatusSchema,
+  SetWorkspacePlanSchema,
 } from '../schemas/workspace.schema.ts';
 
 /**
@@ -127,7 +128,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'get_workspace_status',
     {
-      description: 'Get detailed git status of a workspace: branch, staged/unstaged/untracked files, ahead/behind counts, remote URL',
+      description: 'Get detailed git status of a workspace: branch, staged/unstaged/untracked files, ahead/behind counts, remote URL. Includes plan and tasks (for handoffs).',
       inputSchema: GetWorkspaceStatusSchema.shape,
     },
     async (args, extra) => {
@@ -138,6 +139,36 @@ export function registerWorkspaceTools(
           method: 'get_workspace_status',
           params: {
             workspace: args.workspace,
+          },
+        });
+
+        if (response.error) {
+          return errorResult(response.error);
+        }
+
+        return { content: [{ type: 'text', text: JSON.stringify(response.result, null, 2) }] };
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    'set_workspace_plan',
+    {
+      description: 'Set or update the workspace plan and/or tasks for handoffs. Optional plan (goal/context); optional tasks (list of { title, done }). Replaces plan or tasks when provided. Used so the next agent can continue from get_workspace_status.',
+      inputSchema: SetWorkspacePlanSchema.shape,
+    },
+    async (args, extra) => {
+      try {
+        const email = resolveEmail(extra);
+        const response = await workerManager.sendRequest(email, {
+          id: randomUUID(),
+          method: 'set_workspace_plan',
+          params: {
+            workspace: args.workspace,
+            plan: args.plan,
+            tasks: args.tasks,
           },
         });
 
