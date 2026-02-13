@@ -1,6 +1,9 @@
 # LibreChat model-spec group icons
 
-Group icons in `librechat.yaml` (modelSpecs list) use inline SVG data URIs. Icons are rendered as `<img src="...">`, so **`currentColor` does not apply** — use explicit hex stroke/fill for light and dark theme.
+Group icons in `librechat.yaml` (modelSpecs list) can be:
+
+- **Data URI** — inline SVG (e.g. `data:image/svg+xml;base64,...`). Rendered as `<img src="...">`, so `currentColor` does not apply; use explicit hex stroke/fill for light and dark theme.
+- **Path** — use `groupIcon: "/images/<filename>.svg"`. Put the SVG in `packages/librechat-init/assets/`; the init copies all `.svg` files from assets to `/images/` at startup.
 
 ## Current assignment
 
@@ -31,6 +34,15 @@ From `dev/librechat/client/src/style.css` — use these for new group icons so t
 ## Assets
 
 - **Assistenten**: Source SVG is `assets/bot-message-square.svg`. The group icon in config uses the same path data with `stroke="#ab68ff"`. To change the icon, edit the asset and regenerate the base64 data URI (e.g. `Buffer.from(svgString).toString('base64')`).
+
+## Using icon path instead of data URI
+
+To use a file-based icon:
+
+1. Add the SVG to `packages/librechat-init/assets/` (e.g. `group-europa.svg`, `scaleway.svg`).
+2. In `librechat.yaml`, set `groupIcon: "/images/group-europa.svg"` or for custom endpoints `iconURL: "/images/scaleway.svg"` (path under `/images/`, filename matches the asset).
+
+The init script copies all `.svg` files from assets to `/images/`. Custom endpoints only support the key `iconURL`, not `iconPath`; use `iconURL` with the path value.
 
 ## Regenerating a data URI
 

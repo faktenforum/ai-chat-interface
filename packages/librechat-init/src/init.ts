@@ -11,7 +11,6 @@ import {
   CONFIG_DIR,
   ASSETS_DIR,
   IMAGES_DIR,
-  MCP_ICON_PATTERN,
   INIT_TIME_ENV_VARS,
 } from './utils/constants.ts';
 
@@ -82,7 +81,7 @@ async function main() {
       throw new Error(`Config file not found: ${CONFIG_SOURCE}`);
     }
 
-    console.log('\n[2/4] Copying MCP icons...');
+    console.log('\n[2/4] Copying MCP and group icons...');
     if (!existsSync(IMAGES_DIR)) {
       mkdirSync(IMAGES_DIR, { recursive: true });
       console.log('✓ Created images directory');
@@ -90,10 +89,10 @@ async function main() {
 
     if (existsSync(ASSETS_DIR)) {
       const assets = readdirSync(ASSETS_DIR);
-      const iconFiles = assets.filter((file) => MCP_ICON_PATTERN.test(file));
-      
+      const iconFiles = assets.filter((file) => file.endsWith('.svg'));
+
       if (iconFiles.length === 0) {
-        console.log('⚠ No MCP icons found in assets directory (optional)');
+        console.log('⚠ No SVG icons found in assets directory (optional)');
       } else {
         for (const iconFile of iconFiles) {
           const sourcePath = join(ASSETS_DIR, iconFile);

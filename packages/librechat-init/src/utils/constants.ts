@@ -38,7 +38,7 @@ export const PRIVATE_PROMPTS_FALLBACK = '../config/prompts.private.yaml';
 // MCP Configuration
 // ============================================================================
 
-/** Pattern for MCP icon SVG files. */
+/** Pattern for MCP icon SVG files (for reference; init copies all .svg from assets). */
 export const MCP_ICON_PATTERN = /^mcp-.*-icon\.svg$/;
 
 /** Delimiter used in MCP tool names (format: toolName_mcp_serverName). */
