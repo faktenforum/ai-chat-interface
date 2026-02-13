@@ -16,7 +16,7 @@ User naming: `lc_` + email local part (sanitized). Example: `pascal.garber@corre
 ### Terminal
 | Tool | Description |
 |------|-------------|
-| `execute_command` | Run shell command in workspace context |
+| `execute_command` | Run shell command in workspace context. Commands always run in the given workspace (start in workspace root); response includes `workspace`, `cwd`, and optionally `cwd_relative_to_workspace`. Paths in the command and in `read_workspace_file` / `create_download_link` are relative to the workspace root—use the same relative path for script output and file tools. |
 | `read_terminal_output` | Read output from active terminal |
 | `write_terminal` | Send input to terminal (interactive/REPL) |
 | `list_terminals` | List active sessions |
@@ -41,7 +41,7 @@ User naming: `lc_` + email local part (sanitized). Example: `pascal.garber@corre
 | Tool | Description |
 |------|-------------|
 | `create_upload_session` | Generate unique upload URL; user opens it in browser |
-| `list_upload_sessions` | List active/all upload sessions |
+| `list_upload_sessions` | List all upload sessions by default (active, completed, expired, closed). Completed sessions include `uploaded_file` (name, size, path) for use with `read_workspace_file`. |
 | `close_upload_session` | Revoke an upload session |
 
 Sessions are token-based, single-use (auto-close after upload), and time-limited (default 15 min). Uploaded files land in `~/workspaces/{workspace}/uploads/`.

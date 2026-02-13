@@ -138,7 +138,11 @@ agents:
       temperature: 0.3
       top_p: 0.9
     tools: []
-    mcpServers: []
+    mcpServers:
+      - linux
+    mcpTools:
+      - list_workspaces_mcp_linux
+      - get_workspace_status_mcp_linux
     category: development
     conversation_starters:
       - Ich brauche Hilfe bei einem Entwicklungsprojekt
@@ -796,6 +800,12 @@ agents:
       top_p: 0.9
     # Global limit for whole run when user starts here (e.g. Universal→Router→specialist)
     recursion_limit: 100
+    mcpServers:
+      - linux
+    mcpTools:
+      - list_upload_sessions_mcp_linux
+      - get_workspace_status_mcp_linux
+      - create_upload_session_mcp_linux
     handoffs:
       - agent: shared-agent-001
         description: "Transfer to research assistant for fact-finding, information gathering, and web research"
@@ -816,8 +826,8 @@ agents:
         description: "Transfer to cooking assistant for recipes, meal inspiration, cooking tips, and ingredient substitutions"
         prompt: "Describe what cooking help the user needs: recipe type, ingredients, dietary requirements, or cooking question"
       - agent: shared-agent-008
-        description: "Transfer to data analyst for CSV/JSON analysis, statistical summaries, charts, and data visualization"
-        prompt: "Describe the data analysis task: what data the user has, what insights or charts they need"
+        description: "Transfer to data analyst for CSV/JSON analysis, charts, data visualization; they will provide an upload link for the user's file (MCP Linux) if needed"
+        prompt: "Describe the data analysis task: user has or will upload data; analyst will provide upload link and then analyze/visualize"
       - agent: shared-agent-009
         description: "Transfer to file converter for image, audio, video, and document format conversion (ImageMagick, FFmpeg, Pandoc)"
         prompt: "Describe the conversion needed: source format, target format, and any quality or size requirements"

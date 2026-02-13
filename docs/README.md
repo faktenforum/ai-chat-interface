@@ -33,6 +33,7 @@ They are baked into the init image and written into the config volume at startup
 - **[GitHub Machine User](GITHUB_MACHINE_USER.md)** – Shared GitHub identity for MCP Linux (SSH) and GitHub MCP (PAT).
 - **[MCP Code Execution Insights](MCP_CODE_EXECUTION_INSIGHTS.md)** – Insights from Anthropic’s “Code execution with MCP” article applied to our Linux MCP server and agents.
 - **[MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md)** – CSV/JSON analysis and chart generation (Datenanalyse agent): workflow, example Python script, image return via read_workspace_file.
+- **[Agent file upload guidance](AGENT_FILE_UPLOAD.md)** – LibreChat upload options (Upload to Provider, Upload as Text), MCP Linux upload/download, when to recommend which, workspace handoff.
 - **[Webshare Proxy](WEBSHARE_PROXY.md)** - Fixed proxy URL setup (Rotating/Backbone) for mcp-ytptube and mcp-youtube-transcript
 
 ## Deployment

@@ -11,8 +11,8 @@
  */
 
 import { createServer, type Socket } from 'node:net';
-import { existsSync, mkdirSync, readdirSync, statSync, rmSync, unlinkSync } from 'node:fs';
-import { join, resolve, dirname } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, rmSync, unlinkSync } from 'node:fs';
+import { join, resolve, dirname, relative } from 'node:path';
 import { execSync, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { getDefaultGitIdentity } from './utils/git-config.ts';
@@ -125,6 +125,13 @@ function resolveWorkspacePath(workspace: string): string {
   return join(workspacesDir, workspace);
 }
 
+/**
+ * Escapes a path for use inside double-quoted shell string (escape \ and ").
+ */
+function escapeForDoubleQuotedShell(path: string): string {
+  return path.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 function getGitMetadata(workspace: string): { branch: string; dirty: boolean } {
   // Validate workspace name to prevent path traversal
   const error = validateWorkspaceName(workspace);
@@ -167,10 +174,17 @@ const handlers: Record<string, Handler> = {
   // Terminal Tools ─────────────────────────────────────────────────────────────
 
   async execute_command(params) {
-    const command = params.command as string;
+    const rawCommand = (params.command as string) || '';
     const workspace = (params.workspace as string) || 'default';
     const timeoutMs = (params.timeout_ms as number) || 30000;
     let terminalId = params.terminal_id as string | undefined;
+
+    const workspaceRoot = resolveWorkspacePath(workspace);
+    const quotedRoot = '"' + escapeForDoubleQuotedShell(workspaceRoot) + '"';
+    const wrappedCommand =
+      rawCommand.trim() === ''
+        ? `cd ${quotedRoot}`
+        : `cd ${quotedRoot} && ${rawCommand}`;
 
     // Create or reuse terminal
     if (terminalId && terminals.has(terminalId)) {
@@ -182,42 +196,65 @@ const handlers: Record<string, Handler> = {
     const session = terminals.get(terminalId)!;
     const outputBefore = session.output.length;
 
-    // Write command + Enter
-    session.pty.write(command + '\n');
-
-    // Wait for output to settle (no new output for 500ms, or timeout)
-    let lastOutputLength = session.output.length;
-    const start = Date.now();
-    let settled = 0;
-
-    await new Promise<void>((resolve) => {
-      const check = () => {
-        if (Date.now() - start > timeoutMs) {
-          resolve();
-          return;
-        }
-        if (session.output.length !== lastOutputLength) {
-          lastOutputLength = session.output.length;
-          settled = 0;
-        } else {
-          settled += 100;
-        }
-        if (settled >= 500) {
-          resolve();
-          return;
-        }
+    const waitSettle = async (): Promise<void> => {
+      let lastOutputLength = session.output.length;
+      const start = Date.now();
+      let settled = 0;
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          if (Date.now() - start > timeoutMs) {
+            resolve();
+            return;
+          }
+          if (session.output.length !== lastOutputLength) {
+            lastOutputLength = session.output.length;
+            settled = 0;
+          } else {
+            settled += 100;
+          }
+          if (settled >= 500) {
+            resolve();
+            return;
+          }
+          setTimeout(check, 100);
+        };
         setTimeout(check, 100);
-      };
-      setTimeout(check, 100);
-    });
+      });
+    };
 
-    // Collect new output
+    // Run user command (always in workspace root)
+    session.pty.write(wrappedCommand + '\n');
+    await waitSettle();
+
     const newOutput = session.output.slice(outputBefore).join('');
+
+    // Get current working directory via temp file (no pollution of user output)
+    const cwdFile = join(homeDir, '.mcp_cwd_' + terminalId + '.txt');
+    const cwdCmd = `pwd > "${escapeForDoubleQuotedShell(cwdFile)}" 2>/dev/null\n`;
+    session.pty.write(cwdCmd);
+    await waitSettle();
+
+    let cwd = workspaceRoot;
+    try {
+      if (existsSync(cwdFile)) {
+        cwd = readFileSync(cwdFile, 'utf-8').trim() || workspaceRoot;
+        unlinkSync(cwdFile);
+      }
+    } catch {
+      // Keep workspaceRoot as fallback
+    }
+
+    const cwdRelative =
+      cwd === workspaceRoot ? '' : relative(workspaceRoot, cwd).replace(/^\//, '') || '';
+
     const meta = getGitMetadata(workspace);
 
     return {
       terminal_id: terminalId,
       output: newOutput,
+      workspace,
+      cwd,
+      cwd_relative_to_workspace: cwdRelative || undefined,
       ...meta,
     };
   },

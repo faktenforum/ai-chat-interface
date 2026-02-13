@@ -91,8 +91,8 @@ File Upload:
 - Share the URL with the user so they can upload files via their browser
 - Uploaded files are saved to ~/workspaces/{workspace}/uploads/
 - Upload sessions auto-close after successful upload and expire after 15 minutes by default
-- IMPORTANT: Always check list_upload_sessions for stale open sessions and warn the user about them
-- Close unnecessary sessions with close_upload_session to maintain security
+- User uploaded → list_upload_sessions (default all), find completed session with uploaded_file, then read_workspace_file(workspace, e.g. uploads/filename). Never read_workspace_file without path from list_upload_sessions when user just uploaded.
+- Close unnecessary active sessions with close_upload_session when appropriate (e.g. after explaining or when cleaning up)
 
 File Download:
 - Use create_download_link to generate a temporary download URL for any workspace file

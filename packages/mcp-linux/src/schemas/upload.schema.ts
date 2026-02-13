@@ -25,7 +25,12 @@ export const CreateUploadSessionSchema = z.object({
 });
 
 export const ListUploadSessionsSchema = z.object({
-  active_only: z.boolean().default(true).describe('Only show active sessions (default: true)'),
+  active_only: z
+    .boolean()
+    .default(false)
+    .describe(
+      'When false (default), all sessions are returned (active, completed, expired, closed). Completed sessions include uploaded_file (name, size, path) for use with read_workspace_file. Set true to list only active sessions (e.g. to close them).',
+    ),
 });
 
 export const CloseUploadSessionSchema = z.object({

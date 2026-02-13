@@ -1,5 +1,9 @@
 # MCP Linux – Data Analysis and Plotting
 
+## Workspace and paths
+
+`execute_command` always runs in the given workspace (each command starts in the workspace root) and returns `workspace`, `cwd` (current working directory after the command), and optionally `cwd_relative_to_workspace`. Paths in commands and in `read_workspace_file` / `create_download_link` are relative to the workspace root. Use the same relative path in the script (e.g. `savefig("chart.png")`) and for the file tools (`read_workspace_file(workspace, "chart.png")`).
+
 ## MCP Prompt (canonical source)
 
 The LLM-optimized workflow and constraints for data analysis and chart generation are in the MCP prompt **`data_analysis`**, registered by the mcp-linux server. Agents with access to the linux MCP can retrieve it via `list_prompts` / `get_prompt`.

@@ -21,7 +21,7 @@ Specialists do **not** hand off back to the router; they hand off to Universal o
 
 | Agent | ID | Provider | Model | Tools | Role |
 |-------|----|----------|-------|-------|------|
-| **Entwickler-Router** | `shared-agent-developer-router` | Scaleway | mistral-small-3.2-24b | None | Route to specialist |
+| **Entwickler-Router** | `shared-agent-developer-router` | Scaleway | mistral-small-3.2-24b | list_workspaces, get_workspace_status (MCP Linux) | Route to specialist; uses tools only to pass explicit workspace name in handoff. |
 | **Code-Recherche** | `shared-agent-code-researcher` | OpenRouter | anthropic/claude-opus-4.6 | ~35 (Linux subset, GitHub, Docs, SO, npm, web_search) | Understand code, find examples, search docs. No implementation. |
 | **Entwickler** | `shared-agent-developer` | OpenRouter | anthropic/claude-opus-4.6 | 18 (Linux full, web_search) | Implement, fix bugs. |
 | **Code-Refactorer** | `shared-agent-code-refactorer` | OpenRouter | google/gemini-3-pro-preview | 18 (Linux full, web_search) | Refactor, polish, restructure. |
@@ -71,6 +71,10 @@ GitHub-Assistent’s tools in `agents.yaml` (suffix `_mcp_github`):
 | Optional (if MCP provides) | assign_copilot_to_issue, request_copilot_review, sub_issue_write |
 
 Only tools the GitHub MCP server actually provides are exposed; unknown names in YAML are ignored. In the UI, tools may appear without the `_mcp_github` suffix—keep them enabled for GitHub-Assistent.
+
+## Troubleshooting
+
+**"400 Unexpected role 'user' after role 'tool'"** after a transfer (e.g. Universal → Datenanalyse right after the router ran `list_upload_sessions`): The API expects an assistant turn after a tool message, but the handoff logic was appending the handoff instructions as a user message. Fixed in **dev/agents** (`MultiAgentGraph.ts`): when the last message before the handoff is a tool message, handoff instructions are now injected into that tool message’s content instead of adding a separate user message. Ensure the agents submodule/image includes this fix.
 
 ## Config
 

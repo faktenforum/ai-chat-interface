@@ -25,10 +25,11 @@ export const DATA_ANALYSIS_PROMPT = {
    - Build plot (\`matplotlib\`, optionally \`seaborn\`).
    - Save to workspace path: \`plt.savefig("uploads/chart.png", dpi=120, bbox_inches="tight")\`.
 4. **Run** — \`python3 script.py\` (or \`MPLBACKEND=Agg python3 script.py\`).
-5. **Return image** — \`read_workspace_file(workspace, "uploads/chart.png")\` → image shown in chat. Optionally \`create_download_link\` for the same file.
+5. **Return image** — Use the **same** relative path as in \`savefig\` (e.g. \`chart.png\` or \`outputs/chart.png\`), not a different directory: \`read_workspace_file(workspace, "uploads/chart.png")\` → image shown in chat. Optionally \`create_download_link\` for the same path.
 
 ## Constraints
 
+- **Workspace = reference for all paths** — \`execute_command\` runs in the given workspace; paths in the script (e.g. in \`savefig\`) are relative to the workspace root. Use the **same** relative path for \`read_workspace_file(workspace, …)\` and \`create_download_link(workspace, …)\` (e.g. if you save to \`chart.png\`, use \`read_workspace_file(workspace, "chart.png")\`).
 - **Headless only** — always use the \`Agg\` backend; no display server available.
 - **Save inside workspace** — output path must be within the workspace so \`read_workspace_file\` can access it.
 - **Install deps in a venv** — create a virtual environment per workspace to avoid cross-workspace conflicts: \`python3 -m venv .venv && source .venv/bin/activate && pip install pandas matplotlib seaborn\`. Activate before running scripts: \`source .venv/bin/activate && python3 script.py\`.
@@ -57,7 +58,7 @@ fig.savefig("uploads/chart.png", dpi=120, bbox_inches="tight")
 plt.close()
 \`\`\`
 
-Then: \`read_workspace_file(workspace, "uploads/chart.png")\` to display in chat.
+Then: \`read_workspace_file(workspace, "uploads/chart.png")\` to display in chat. Use the same path in \`read_workspace_file\` as in \`savefig\`. The \`execute_command\` response includes \`cwd\`; when the script wrote to the current directory, the relative path for \`read_workspace_file\` is that filename (e.g. \`chart.png\` when in workspace root).
 
 ## Data Processing (non-chart)
 

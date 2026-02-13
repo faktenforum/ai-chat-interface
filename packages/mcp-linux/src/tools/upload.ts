@@ -67,8 +67,10 @@ export function registerUploadTools(
     'list_upload_sessions',
     {
       description:
-        'List upload sessions for the current user. By default shows only active sessions. ' +
-        'Use this to check for stale/open sessions that should be closed.',
+        'List upload sessions for the current user. By default returns all sessions (active, completed, expired, closed). ' +
+        'Completed sessions include uploaded_file with name, size, and path (e.g. ~/workspaces/{workspace}/uploads/{filename}). ' +
+        'When the user has uploaded a file: call this tool, find a session with status "completed" and uploaded_file, then use uploaded_file.path with read_workspace_file (path relative to workspace, e.g. uploads/filename.csv). ' +
+        'Use active_only: true only when explicitly checking for open sessions to close with close_upload_session.',
       inputSchema: ListUploadSessionsSchema.shape,
     },
     async (args, extra) => {
