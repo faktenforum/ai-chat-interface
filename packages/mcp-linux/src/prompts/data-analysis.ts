@@ -12,7 +12,7 @@ export const DATA_ANALYSIS_PROMPT = {
 
 ## Workflow: CSV/JSON → Chart Image
 
-1. **Upload** — \`create_upload_session\` → user uploads file → lands in \`uploads/\`.
+1. **Upload** — If you need a data file and \`list_upload_sessions\` shows no completed upload, **proactively** call \`create_upload_session\` (workspace default), share the upload URL with the user, and ask them to open it and upload their file. Do not only say "please upload the file" without providing the link. Once the user has uploaded (or a session shows completed), file lands in \`uploads/\`.
 2. **Inspect** — \`head uploads/data.csv\` or \`read_workspace_file\` to check columns, encoding, row count.
 3. **Script** — Write a Python script:
    - Set headless backend **before** importing pyplot:
@@ -29,6 +29,7 @@ export const DATA_ANALYSIS_PROMPT = {
 
 ## Constraints
 
+- **Provide upload link when data is missing** — If the user wants a chart or analysis and \`list_upload_sessions\` shows no completed upload, call \`create_upload_session\`, send the URL to the user, and ask them to upload; do not only say "please upload" without the link.
 - **Workspace = reference for all paths** — \`execute_command\` runs in the given workspace; paths in the script (e.g. in \`savefig\`) are relative to the workspace root. Use the **same** relative path for \`read_workspace_file(workspace, …)\` and \`create_download_link(workspace, …)\` (e.g. if you save to \`chart.png\`, use \`read_workspace_file(workspace, "chart.png")\`).
 - **Headless only** — always use the \`Agg\` backend; no display server available.
 - **Save inside workspace** — output path must be within the workspace so \`read_workspace_file\` can access it.
