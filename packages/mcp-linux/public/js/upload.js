@@ -38,6 +38,7 @@
 
   var selectedFile = null;
   var uploading = false;
+  var uploadComplete = false;
 
   // ── Expiry countdown ─────────────────────────────────────
 
@@ -160,6 +161,10 @@
   // ── Upload ───────────────────────────────────────────────
 
   uploadBtn.addEventListener('click', function () {
+    if (uploadComplete) {
+      window.close();
+      return;
+    }
     if (!selectedFile || uploading) return;
     uploading = true;
 
@@ -200,11 +205,16 @@
             'Upload successful',
             result.filename + ' (' + formatSize(result.size) + ') saved to ' + result.path,
           );
+          uploadComplete = true;
           uploadBtn.textContent = 'Done';
+          uploadBtn.disabled = false;
           dropzone.style.pointerEvents = 'none';
           dropzone.style.opacity = '0.5';
         } catch (e) {
           showStatus('success', 'Upload successful', '');
+          uploadComplete = true;
+          uploadBtn.textContent = 'Done';
+          uploadBtn.disabled = false;
         }
       } else {
         try {
