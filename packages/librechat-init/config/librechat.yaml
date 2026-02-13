@@ -243,10 +243,11 @@ endpoints:
 # DETAILLIERTE MODELL-ANALYSE (OpenRouter Premium):
 #
 # 1. claude-opus-4.6 (Anthropic) — NEU
-#    - Context: 1M (größter Context bei Anthropic), Output: 64K
+#    - Context: 1M (größter Context bei Anthropic), Output: 128K
 #    - License: Closed Source (Proprietary)
 #    - Use Case: Coding, Agents, lange Workflows, komplexe Refactors
 #    - Vision: Ja
+#    - Adaptive thinking: optional preset "effort" ("", "low", "medium", "high", "max")
 #    - Pricing: $5/M input, $25/M output tokens
 #    - Besonderheit: Stärkstes Anthropic-Modell, optimiert für Agenten und ganze Codebases
 #
@@ -280,7 +281,7 @@ endpoints:
 #    - Besonderheit: Französisches Unternehmen, beliebt bei europäischen Nutzern
 #
 # 6. glm/glm-4.7 (Z.AI)
-#    - Context: 203K, Output: 65K
+#    - Context: 200K, Output: 128K
 #    - License: Closed Source (Proprietary)
 #    - Use Case: Exzellentes logisches Denken, komplexe Reasoning-Aufgaben
 #    - Besonderheit: Fortgeschrittenes Sprachverständnis
@@ -610,7 +611,7 @@ modelSpecs:
     # Token limits: OpenRouter API / provider docs (context_length, max_completion_tokens)
     - name: "claude-opus-4.6"
       label: "Claude Opus 4.6"
-      description: "Anthropics stärkstes Modell für Coding, Agents und lange Workflows. 1M Context, 64K Output. Vision, erweiterte Tool-Nutzung. Closed Source (Anthropic)."
+      description: "Anthropics stärkstes Modell für Coding, Agents und lange Workflows. 1M Context, 128K Output. Vision, erweiterte Tool-Nutzung. Closed Source (Anthropic)."
       group: "Premium-Modelle"
       groupIcon: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvdC1pY29uIGx1Y2lkZS1ib3QiPjxwYXRoIGQ9Ik0xMiA4VjRIOCIvPjxyZWN0IHdpZHRoPSIxNiIgaGVpZ2h0PSIxMiIgeD0iNCIgeT0iOCIgcng9IjIiLz48cGF0aCBkPSJNMiAxNGgyIi8+PHBhdGggZD0iTTIwIDE0aDIiLz48cGF0aCBkPSJNMTUgMTN2MiIvPjxwYXRoIGQ9Ik05IDEzdjIiLz48L3N2Zz4="
       order: 1
@@ -620,7 +621,9 @@ modelSpecs:
         endpointType: "custom"
         model: "anthropic/claude-opus-4.6"
         maxContextTokens: 1000000
-        maxOutputTokens: 64000
+        maxOutputTokens: 128000
+        # effort: optional adaptive thinking (Opus 4.6); values: "" (auto), "low", "medium", "high", "max"
+        effort: ""
 
     - name: "claude-sonnet-4.5"
       label: "Claude Sonnet 4.5"
@@ -688,15 +691,15 @@ modelSpecs:
 
     - name: "z-ai-glm-4.7"
       label: "GLM 4.7"
-      description: "Fortgeschrittenes Modell mit exzellentem logischen Denken. Sehr gut für komplexe Aufgaben und Reasoning. 203K Context, 65K Output. Closed Source (Z.AI)."
+      description: "Fortgeschrittenes Modell mit exzellentem logischen Denken. Sehr gut für komplexe Aufgaben und Reasoning. 200K Context, 128K Output. Closed Source (Z.AI)."
       group: "Premium-Modelle"
       order: 8
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
         model: "glm/glm-4.7"
-        maxContextTokens: 202752
-        maxOutputTokens: 65535
+        maxContextTokens: 200000
+        maxOutputTokens: 128000
 
     - name: "openai-gpt5-2"
       label: "GPT-5.2"
