@@ -821,6 +821,50 @@ agents:
     permissions:
       public: true
       publicEdit: true
+  - id: shared-agent-linux-maintenance
+    name: Linux-Wartung
+    description: Verwaltung und Wartung des eigenen MCP-Linux-Accounts – Status, Bereinigung, Zurücksetzen, Workspace- und Session-Verwaltung.
+    instructionsFile: shared-agent-linux-maintenance-instructions.md
+    provider: Scaleway
+    model: mistral-small-3.2-24b-instruct-2506
+    model_parameters:
+      temperature: 0.3
+      top_p: 0.9
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
+    mcpServers:
+      - linux
+    mcpTools:
+      - list_workspaces_mcp_linux
+      - get_workspace_status_mcp_linux
+      - create_workspace_mcp_linux
+      - delete_workspace_mcp_linux
+      - clean_workspace_uploads_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - reset_account_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - read_workspace_file_mcp_linux
+    category: productivity
+    conversation_starters:
+      - Account-Status anzeigen
+      - Alte Uploads bereinigen
+      - Workspace löschen
+      - Linux-Account zurücksetzen
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal when task is done or request is outside maintenance (e.g. coding, documents). Do not hand back merely because the request is ambiguous; ask one short clarifying question."
+    recursion_limit: 50
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
   - id: shared-agent-011
     name: Universal
     description: Allgemeiner Assistent – erkennt automatisch, welcher Spezialist am besten passt, und leitet die Anfrage weiter.
@@ -869,6 +913,9 @@ agents:
       - agent: shared-agent-010
         description: "Transfer to document creator for professional PDFs, letters, reports, invoices, and CVs (Typst/Pandoc)"
         prompt: "Describe the document the user wants: type (letter, report, invoice, CV), content, style, and language"
+      - agent: shared-agent-linux-maintenance
+        description: "Transfer to Linux maintenance for MCP Linux account/workspace management: status, cleanup, reset, session and workspace administration"
+        prompt: "Summarize what the user wants: e.g. reset account, clean uploads, delete workspace, check disk usage, close stale sessions"
     category: general
     conversation_starters:
       - Ich brauche Hilfe bei ...

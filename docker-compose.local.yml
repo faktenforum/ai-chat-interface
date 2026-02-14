@@ -58,7 +58,10 @@ services:
   librechat-post-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-post-init }
     env_file: .env.local
+    # Mount host config so agent/prompt changes apply without image rebuild; post-init reads from /app/config-source when present.
     volumes:
+      - librechat-config:/app/config
+      - ./packages/librechat-init/config:/app/config-source:ro
       - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
 

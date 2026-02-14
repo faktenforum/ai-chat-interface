@@ -17,11 +17,20 @@ Init merges an override file onto the base `librechat.yaml` depending on `LIBREC
 
 ### Local dev: mount config (no image rebuild)
 
-When the host directory `config/` is mounted at `/app/config-source` (e.g. in `docker-compose.local-dev.yml` and `docker-compose.local.yml`), the init script reads from that path instead of the baked-in `/app/data`. Set `LIBRECHAT_ENV=local` so `librechat.local.yaml` is applied. After editing `librechat.yaml`, override files, `roles.yaml`, or `agents.yaml`, run init again and restart the API; no image rebuild needed.
+When the host directory `config/` is mounted at `/app/config-source` (e.g. in `docker-compose.local-dev.yml` and `docker-compose.local.yml`), the init script reads from that path instead of the baked-in `/app/data`. Set `LIBRECHAT_ENV=local` so `librechat.local.yaml` is applied. No image rebuild needed for config changes.
+
+After editing `librechat.yaml`, override files, or `roles.yaml`, run init and restart the API:
 
 ```bash
 docker compose -f docker-compose.local-dev.yml run --rm librechat-init
 docker compose -f docker-compose.local-dev.yml restart api
+```
+
+After editing `agents.yaml` or `agent-instructions/`, or `prompts.yaml`, run post-init so agents/prompts are synced to the API (post-init must have `config` mounted as `config-source`; then optionally restart the API):
+
+```bash
+docker compose -f docker-compose.local.yml --env-file .env.local run --rm librechat-post-init
+docker compose -f docker-compose.local.yml --env-file .env.local restart api
 ```
 
 ### Roles (`config/roles.yaml`)
