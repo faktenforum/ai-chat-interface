@@ -14,14 +14,16 @@ Each user has persistent **workspaces** under \`~/workspaces/\`. Each workspace 
 
 ## Plan and tasks (handoffs)
 
+**Recommended flow:** After a handoff → \`get_workspace_status(workspace)\` (workspace from handoff instructions; use \`default\` if none given). Need a workspace? → \`list_workspaces\` first. Before creating one → \`list_workspaces\` to avoid "already exists". When handing off → \`set_workspace_plan\` then handoff with workspace name in instructions.
+
 Workspaces can store a **plan** (goal/context) and **tasks** (concrete steps) so the next agent can continue the work.
 
-- **Read:** \`get_workspace_status\` returns \`plan\` and \`tasks\` in addition to git status. Each task has \`title\` and \`status\` (pending, in_progress, done, cancelled). When you **start** work or **receive a handoff**, call \`get_workspace_status\` for that workspace and follow the plan and tasks.
-- **Write:** \`set_workspace_plan\` sets \`plan\` and/or \`tasks\`. Each task: \`{ title, status? }\` (status: pending | in_progress | done | cancelled; default pending). When **handing off**, update plan/tasks and pass the workspace name in the handoff instructions.
+- **Read:** \`get_workspace_status\` returns \`plan\` and \`tasks\` plus git status. Each task has \`title\` and \`status\`. **Status:** pending (not started), in_progress (you are working on it), done (finished), cancelled (skipped or abandoned). When you **start** or **receive a handoff**, call \`get_workspace_status\` for that workspace and follow the plan and tasks.
+- **Write:** \`set_workspace_plan\` sets \`plan\` and/or \`tasks\` (you can update only plan, only tasks, or both). **Tasks:** Prefer an array of strings, e.g. \`["Step 1", "Step 2"]\` — each becomes a task with status pending. Or \`[{ title, status? }]\` for per-task status. When **handing off**, update plan/tasks and pass the workspace name in the handoff instructions.
 
 ## Creating a workspace
 
-Use the \`create_workspace\` tool:
+**Call \`list_workspaces\` first** to avoid creating a workspace that already exists. Then use \`create_workspace\`:
 - Empty repo: create_workspace(name: "my-project")
 - Clone: create_workspace(name: "my-project", git_url: "git@github.com:org/repo.git")
 
@@ -31,7 +33,7 @@ Use the \`create_workspace\` tool:
 **Python:** \`python3 -m venv .venv\`, \`source .venv/bin/activate\`, \`pip install -r requirements.txt\`, \`python3 -m pytest\`
 **General:** \`tree -L 2 -I node_modules\`, \`cat README.md\`, \`cat package.json | jq '.scripts'\`, \`du -sh *\`
 
-\`list_workspaces\` for overview (branch, dirty, remote_url, plan_preview). Use \`workspace\` in terminal/file tools; \`get_workspace_status(workspace)\` for full plan and tasks.
+\`list_workspaces\` first when you need an overview or before creating a workspace (branch, dirty, remote_url, plan_preview). Use \`workspace\` in terminal/file tools; \`get_workspace_status(workspace)\` for full plan and tasks. If no workspace is specified, use \`default\`.
 
 ## Git workflow (terminal)
 

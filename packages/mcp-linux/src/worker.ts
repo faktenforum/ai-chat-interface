@@ -495,7 +495,9 @@ const handlers: Record<string, Handler> = {
     const wsPath = join(workspacesDir, name);
 
     if (existsSync(wsPath)) {
-      throw new Error(`Workspace "${name}" already exists`);
+      throw new Error(
+        `Workspace "${name}" already exists. Call list_workspaces to see existing workspaces; use get_workspace_status("${name}") to continue in it.`,
+      );
     }
 
     if (gitUrl) {

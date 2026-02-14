@@ -43,7 +43,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'list_workspaces',
     {
-      description: 'List workspaces with git summary (branch, dirty, remote_url) and plan_preview. Use get_workspace_status(workspace) for full plan and tasks.',
+      description: 'Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use get_workspace_status(workspace) for full plan and tasks.',
       inputSchema: ListWorkspacesSchema.shape,
     },
     async (args, extra) => {
@@ -69,7 +69,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'create_workspace',
     {
-      description: 'Create a new workspace. Either an empty local git repo (default) or clone from a remote URL.',
+      description: 'Create a new workspace (empty repo or clone from git_url). Call list_workspaces first if unsure whether the name already exists.',
       inputSchema: CreateWorkspaceSchema.shape,
     },
     async (args, extra) => {
@@ -128,7 +128,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'get_workspace_status',
     {
-      description: 'Full git status plus plan and tasks (each task: title, status).',
+      description: 'Full git status plus plan and tasks (each task: title, status). Call after receiving a handoff (use workspace name from handoff instructions; default if none).',
       inputSchema: GetWorkspaceStatusSchema.shape,
     },
     async (args, extra) => {
@@ -156,7 +156,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'set_workspace_plan',
     {
-      description: 'Set plan and/or tasks for handoffs. Tasks: [{ title, status? }] or string[]; status: pending | in_progress | done | cancelled. Next agent reads via get_workspace_status.',
+      description: 'Set plan and/or tasks for handoffs (can update only plan, only tasks, or both). Tasks: prefer string[] e.g. ["Step 1","Step 2"]; or [{ title, status? }]. status: pending | in_progress | done | cancelled. Next agent reads via get_workspace_status.',
       inputSchema: SetWorkspacePlanSchema.shape,
     },
     async (args, extra) => {
