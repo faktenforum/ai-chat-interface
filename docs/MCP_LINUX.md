@@ -28,12 +28,17 @@ User naming: `lc_` + email local part (sanitized). Example: `pascal.garber@corre
 | `list_workspaces` | Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use `get_workspace_status(workspace)` for full plan and tasks. |
 | `create_workspace` | Create workspace (empty or from git URL). Call list_workspaces first if unsure whether the name exists. |
 | `delete_workspace` | Delete workspace (not default) |
-| `get_workspace_status` | Full git status plus plan and tasks (each task: title, status). |
+| `get_workspace_status` | Full git status plus plan and tasks (each task: title, status). File lists may be truncated/collapsed (see **Status capping** below); use `staged_count`, `unstaged_count`, `untracked_count`, `truncated`. |
 | `set_workspace_plan` | Set plan and/or tasks. Tasks: `{ title, status? }` or string[]; status: pending, in_progress, done, cancelled. |
+| `clean_workspace_uploads` | Delete files in workspace `uploads/` older than N days (default 7; use 0 to delete all). Use to free space; uploads are ephemeral. |
 
 #### Plan and tasks
 
 Workspaces can store a **plan** (goal/context) and **tasks** (steps) so agents can pass context across handoffs. Stored in `.mcp-linux/plan.json` per workspace. Each task has `title` and `status` (pending | in_progress | done | cancelled). **Flow:** After a handoff use `get_workspace_status(workspace)` (workspace from instructions; use `default` if none). If there is no or empty plan/tasks, set an initial plan and tasks from the handoff then continue. Before creating a workspace call `list_workspaces` to avoid "already exists". When handing off call `set_workspace_plan` then pass the workspace name in handoff instructions: set completed tasks to `done`, next task to `in_progress` or `pending`, optionally update the plan summary. Prefer tasks as string array (e.g. `["Step 1", "Step 2"]`); or `[{ title, status? }]`.
+
+#### Status capping
+
+`get_workspace_status` returns bounded file lists to avoid context overflow: paths under bulk dirs (e.g. `uploads/`, `venv/`) are collapsed to one summary line per dir; remaining paths are capped per category. Response includes `staged_count`, `unstaged_count`, `untracked_count` and `truncated: true` when lists were reduced. For full details use `execute_command('git status')` or file tools with explicit paths. Prefer `read_workspace_file` with explicit paths (e.g. from `list_upload_sessions`) rather than relying on the full status payload.
 
 ### Account
 | Tool | Description |
@@ -49,7 +54,7 @@ Workspaces can store a **plan** (goal/context) and **tasks** (steps) so agents c
 | `list_upload_sessions` | List all upload sessions by default (active, completed, expired, closed). Completed sessions include `uploaded_file` (name, size, path) for use with `read_workspace_file`. |
 | `close_upload_session` | Revoke an upload session |
 
-Sessions are token-based, single-use (auto-close after upload), and time-limited (default 15 min). Uploaded files land in `~/workspaces/{workspace}/uploads/`.
+Sessions are token-based, single-use (auto-close after upload), and time-limited (default 15 min). Uploaded files land in `~/workspaces/{workspace}/uploads/`. **Uploads are ephemeral:** files in `uploads/` may be deleted by scheduled cleanup (see `MCP_LINUX_UPLOADS_MAX_AGE_DAYS`) or via `clean_workspace_uploads`. Move or download important outputs before they are purged.
 
 ### File Download
 | Tool | Description |
@@ -69,7 +74,7 @@ Returns text files inline, images/audio as base64. Large or binary files automat
 
 ### MCP Resources
 
-Resource template `workspace://{workspace}/{+path}` exposes workspace files as navigable MCP resources (list + read).
+Resource template `workspace://{workspace}/{+path}` exposes workspace files as navigable MCP resources (list + read). **List is limited to allowlisted dirs** (`uploads/`, `outputs/` by default) so only intentionally usable paths (user uploads, script outputs) appear; other workspace paths are not listed. Read access via resource or `read_workspace_file` still works for any path when given explicitly.
 
 ### State and reusable scripts
 
@@ -90,6 +95,10 @@ Workspaces are persistent. Agents can save scripts (e.g. under `scripts/` in a w
 | `MCP_LINUX_UPLOAD_SESSION_TIMEOUT_MIN` | `15` | Upload session expiry (min) |
 | `MCP_LINUX_DOWNLOAD_BASE_URL` | *(falls back to upload URL)* | Public base URL for download links |
 | `MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN` | `60` | Download link expiry (min) |
+| `MCP_LINUX_STATUS_MAX_FILES` | `50` | Max file entries per status category (staged/unstaged/untracked) before capping |
+| `MCP_LINUX_STATUS_COLLAPSE_DIRS` | `uploads,venv,.venv` | Comma-separated dirs whose paths are collapsed to one summary line in status |
+| `MCP_LINUX_RESOURCE_LIST_DIRS` | `uploads,outputs` | Comma-separated dirs listed in MCP resources (allowlist); only these appear in list |
+| `MCP_LINUX_UPLOADS_MAX_AGE_DAYS` | `0` (disabled) | If > 0, server runs daily cleanup of `uploads/` files older than N days |
 
 ## Traefik Routing
 
@@ -99,6 +108,7 @@ Upload and download routes are exposed publicly via Traefik (`/upload/*`, `/down
 
 - **SSH**: Optional `MCP_LINUX_GIT_SSH_KEY` (base64 ed25519 private key) → written to each user's `~/.ssh/` on account creation. Use same account as `MCP_GITHUB_PAT` (see [GitHub Machine User](GITHUB_MACHINE_USER.md)).
 - **Author**: Optional `MCP_LINUX_GIT_USER_NAME` / `MCP_LINUX_GIT_USER_EMAIL` set default `git config user.name` and `user.email` for new and default workspaces. Empty = built-in fallback (Correctiv Team Digital Bot).
+- **Default .gitignore**: When a workspace is created (empty or default), a minimal `.gitignore` is added if missing (`uploads/`, `venv/`, `.venv/`) so git does not report hundreds of ephemeral files in status.
 
 ## Pre-installed Runtimes
 

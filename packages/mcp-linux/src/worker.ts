@@ -228,6 +228,126 @@ function getGitMetadata(workspace: string): { branch: string; dirty: boolean } {
   return { branch, dirty };
 }
 
+const DEFAULT_STATUS_MAX_FILES = 50;
+const DEFAULT_STATUS_COLLAPSE_DIRS = 'uploads,venv,.venv';
+
+const DEFAULT_GITIGNORE = 'uploads/\nvenv/\n.venv/\n';
+
+function ensureDefaultGitignore(wsPath: string): void {
+  const gitignorePath = join(wsPath, '.gitignore');
+  if (existsSync(gitignorePath)) return;
+  try {
+    writeFileSync(gitignorePath, DEFAULT_GITIGNORE, 'utf-8');
+  } catch {
+    // Non-fatal
+  }
+}
+
+function getStatusLimitConfig(): { maxFiles: number; collapseDirs: Set<string> } {
+  const maxFiles = parseInt(process.env.MCP_LINUX_STATUS_MAX_FILES || '', 10);
+  const raw = process.env.MCP_LINUX_STATUS_COLLAPSE_DIRS ?? DEFAULT_STATUS_COLLAPSE_DIRS;
+  const collapseDirs = new Set(
+    raw.split(',').map((d) => d.trim().toLowerCase()).filter(Boolean),
+  );
+  return {
+    maxFiles: Number.isFinite(maxFiles) && maxFiles > 0 ? maxFiles : DEFAULT_STATUS_MAX_FILES,
+    collapseDirs,
+  };
+}
+
+/**
+ * Collapse paths under bulk dirs to a single summary line and cap total entries per category.
+ * Returns the reduced arrays plus counts and a truncated flag.
+ */
+function capAndCollapseStatusLists(
+  staged: string[],
+  unstaged: string[],
+  untracked: string[],
+): {
+  staged: string[];
+  unstaged: string[];
+  untracked: string[];
+  staged_count: number;
+  unstaged_count: number;
+  untracked_count: number;
+  truncated: boolean;
+} {
+  const { maxFiles, collapseDirs } = getStatusLimitConfig();
+
+  function processList(lines: string[]): { result: string[]; count: number } {
+    const count = lines.length;
+    const byDir = new Map<string, string[]>();
+    const other: string[] = [];
+    for (const line of lines) {
+      const pathPart = line.length >= 2 && line[1] === ' ' ? line.slice(2) : line;
+      const top = pathPart.split('/')[0];
+      const key = top.toLowerCase();
+      if (collapseDirs.has(key)) {
+        const list = byDir.get(top) ?? [];
+        list.push(line);
+        byDir.set(top, list);
+      } else {
+        other.push(line);
+      }
+    }
+    const result: string[] = [];
+    for (const [dirName, list] of byDir) {
+      result.push(`${dirName}/ (${list.length} files)`);
+    }
+    const cap = Math.max(0, maxFiles - result.length);
+    for (let i = 0; i < other.length && result.length < maxFiles; i++) {
+      result.push(other[i]);
+    }
+    return { result, count };
+  }
+
+  const stagedOut = processList(staged);
+  const unstagedOut = processList(unstaged);
+  const untrackedOut = processList(untracked);
+  const truncated =
+    stagedOut.count > stagedOut.result.length ||
+    unstagedOut.count > unstagedOut.result.length ||
+    untrackedOut.count > untrackedOut.result.length;
+
+  return {
+    staged: stagedOut.result,
+    unstaged: unstagedOut.result,
+    untracked: untrackedOut.result,
+    staged_count: stagedOut.count,
+    unstaged_count: unstagedOut.count,
+    untracked_count: untrackedOut.count,
+    truncated,
+  };
+}
+
+/**
+ * Deletes files in uploadsDir older than olderThanDays (0 = delete all).
+ * Removes empty subdirs. Returns number of files deleted.
+ */
+function purgeUploadsByAge(uploadsDir: string, olderThanDays: number): number {
+  const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
+  let deleted = 0;
+  const entries = readdirSync(uploadsDir, { withFileTypes: true });
+  for (const entry of entries) {
+    const full = join(uploadsDir, entry.name);
+    if (entry.isDirectory()) {
+      deleted += purgeUploadsByAge(full, olderThanDays);
+      try {
+        if (readdirSync(full).length === 0) rmSync(full, { recursive: true });
+      } catch { /* ignore */ }
+    } else {
+      try {
+        const mtime = statSync(full).mtimeMs;
+        if (olderThanDays === 0 || mtime < cutoff) {
+          unlinkSync(full);
+          deleted++;
+        }
+      } catch { /* ignore */ }
+    }
+  }
+  return deleted;
+}
+
 // ── Request Handlers ─────────────────────────────────────────────────────────
 
 type Handler = (params: Record<string, unknown>) => Promise<unknown>;
@@ -532,6 +652,7 @@ const handlers: Record<string, Handler> = {
       spawnSync('git', ['config', 'user.email', gitEmail], { cwd: wsPath, stdio: 'ignore' });
       spawnSync('git', ['config', 'user.name', gitName], { cwd: wsPath, stdio: 'ignore' });
     }
+    ensureDefaultGitignore(wsPath);
 
     const meta = getGitMetadata(name);
     return {
@@ -625,14 +746,20 @@ const handlers: Record<string, Handler> = {
 
     const { plan, tasks } = readPlanFile(workspace);
 
+    const capped = capAndCollapseStatusLists(staged, unstaged, untracked);
+
     return {
       workspace,
       branch: meta.branch,
       dirty: meta.dirty,
       remote_url: remoteUrl || null,
-      staged,
-      unstaged,
-      untracked,
+      staged: capped.staged,
+      unstaged: capped.unstaged,
+      untracked: capped.untracked,
+      staged_count: capped.staged_count,
+      unstaged_count: capped.unstaged_count,
+      untracked_count: capped.untracked_count,
+      truncated: capped.truncated,
       ahead,
       behind,
       plan,
@@ -664,6 +791,29 @@ const handlers: Record<string, Handler> = {
     writePlanFile(workspace, data);
 
     return { plan: data.plan, tasks: data.tasks };
+  },
+
+  async clean_workspace_uploads(params) {
+    const workspace = (params.workspace as string) || 'default';
+    const olderThanDays = typeof params.olderThanDays === 'number' ? params.olderThanDays : 7;
+    const uploadsDir = join(workspacesDir, workspace, 'uploads');
+    if (!existsSync(uploadsDir)) return { deleted: 0 };
+    return { deleted: purgeUploadsByAge(uploadsDir, olderThanDays) };
+  },
+
+  async clean_all_workspace_uploads(params) {
+    const olderThanDays = typeof params.olderThanDays === 'number' ? params.olderThanDays : 7;
+    let totalDeleted = 0;
+    if (!existsSync(workspacesDir)) return { deleted: 0 };
+    const entries = readdirSync(workspacesDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (validateWorkspaceName(entry.name)) continue;
+      const uploadsDir = join(workspacesDir, entry.name, 'uploads');
+      if (!existsSync(uploadsDir)) continue;
+      totalDeleted += purgeUploadsByAge(uploadsDir, olderThanDays);
+    }
+    return { deleted: totalDeleted };
   },
 
   // Account Tools ─────────────────────────────────────────────────────────────

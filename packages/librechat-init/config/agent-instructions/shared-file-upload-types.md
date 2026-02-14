@@ -8,7 +8,7 @@ Sync this guidance into shared-agent-011, 008, 009, 010, developer when updating
 
 **MCP Linux upload:** Specialist provides a link via `create_upload_session`; file lands in the Linux workspace. Recommend for data analysis, charts, format conversion, processing without full content in chat. "Diagram from CSV" or "upload for data" → hand off to Datenanalyse (or 009/010) to offer the link.
 
-**After user uploaded:** Call `list_upload_sessions` (default: all). Find session with `status: "completed"` and `uploaded_file`; then `read_workspace_file`(workspace, e.g. `uploads/<filename>`). Never call `read_workspace_file` without a path from `list_upload_sessions` when user just uploaded.
+**After user uploaded:** Call `list_upload_sessions` (default: all). Find session with `status: "completed"` and `uploaded_file`; then `read_workspace_file`(workspace, e.g. `uploads/<filename>`). Never call `read_workspace_file` without a path from `list_upload_sessions` when user just uploaded. Prefer explicit paths for reading; workspace status and resource list are summarized (uploads/outputs only in list). Uploads are ephemeral and may be cleaned; download or move important outputs.
 
 **MCP Linux download:** Results (charts, converted files, exports) → `create_download_link` so the user can download from the workspace.
 

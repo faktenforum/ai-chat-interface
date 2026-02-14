@@ -83,13 +83,13 @@ Usage guidelines:
 - Use workspace tools to manage projects (create from git clone or empty repo)
 - File operations, search, and git are all done via the terminal
 - Each terminal response includes workspace git metadata (branch, dirty status)
-- Use get_workspace_status for detailed git status information
+- Use get_workspace_status for detailed git status and plan/tasks; file lists may be summarized (staged_count, truncated). Prefer read_workspace_file with explicit paths.
 - Users can install additional tools in their home (nvm, pip --user, etc.)
 
 File Upload:
 - Use create_upload_session to generate a unique upload URL for the user
 - Share the URL with the user so they can upload files via their browser
-- Uploaded files are saved to ~/workspaces/{workspace}/uploads/
+- Uploaded files are saved to ~/workspaces/{workspace}/uploads/. Uploads are ephemeral (may be purged); use clean_workspace_uploads to free space or move/download important outputs.
 - Upload sessions auto-close after successful upload and expire after 15 minutes by default
 - User uploaded → list_upload_sessions (default all), find completed session with uploaded_file, then read_workspace_file(workspace, e.g. uploads/filename). Never read_workspace_file without path from list_upload_sessions when user just uploaded.
 - Close unnecessary active sessions with close_upload_session when appropriate (e.g. after explaining or when cleaning up)
@@ -210,6 +210,32 @@ async function main(): Promise<void> {
     // Restore existing users from persistent mapping on startup
     await userManager.restoreUsers();
     logger.info('User restoration complete');
+
+    // Optional: scheduled cleanup of uploads/ (MCP_LINUX_UPLOADS_MAX_AGE_DAYS > 0)
+    const uploadsMaxAgeDays = parseInt(process.env.MCP_LINUX_UPLOADS_MAX_AGE_DAYS || '0', 10);
+    if (uploadsMaxAgeDays > 0) {
+      const UPLOADS_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+      const cleanupTimer = setInterval(async () => {
+        const emails = userManager.listUserEmails();
+        for (const email of emails) {
+          try {
+            const res = await workerManager.sendRequest(email, {
+              id: randomUUID(),
+              method: 'clean_all_workspace_uploads',
+              params: { olderThanDays: uploadsMaxAgeDays },
+            });
+            if (res.error) continue;
+            const deleted = (res.result as { deleted?: number })?.deleted ?? 0;
+            if (deleted > 0) {
+              logger.info({ email, deleted }, 'Uploads cleanup');
+            }
+          } catch {
+            // Skip (e.g. worker not running)
+          }
+        }
+      }, UPLOADS_CLEANUP_INTERVAL_MS);
+      cleanupTimer.unref();
+    }
 
     const app = createApp();
     const server = app.listen(PORT, '0.0.0.0', () => {

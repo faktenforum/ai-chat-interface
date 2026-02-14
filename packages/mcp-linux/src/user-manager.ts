@@ -21,6 +21,8 @@ const DATA_DIR = '/app/data';
 const USERS_FILE = join(DATA_DIR, 'users.json');
 const BASE_UID = 2000;
 
+const DEFAULT_WORKSPACE_GITIGNORE = 'uploads/\nvenv/\n.venv/\n';
+
 export interface UserMapping {
   email: string;
   username: string;
@@ -178,6 +180,14 @@ export class UserManager {
           `cd "${defaultDir}" && git init -b main && git config user.email '${emailEsc}' && git config user.name '${nameEsc}'`,
           { stdio: 'pipe', env: { ...process.env, HOME: `/home/${username}` } },
         );
+        const gitignorePath = join(defaultDir, '.gitignore');
+        if (!existsSync(gitignorePath)) {
+          try {
+            writeFileSync(gitignorePath, DEFAULT_WORKSPACE_GITIGNORE, 'utf-8');
+          } catch {
+            // Non-fatal
+          }
+        }
       } catch (error) {
         logger.warn({ username, error }, 'Failed to init default workspace git repo');
       }
@@ -334,6 +344,13 @@ export class UserManager {
       diskUsage,
       createdAt: mapping.createdAt,
     };
+  }
+
+  /**
+   * Returns all registered user emails (for scheduled cleanup etc.)
+   */
+  listUserEmails(): string[] {
+    return Object.keys(this.db.users);
   }
 
   /**

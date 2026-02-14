@@ -12,7 +12,7 @@ export const DATA_ANALYSIS_PROMPT = {
 
 ## Workflow: CSV/JSON → Chart Image
 
-1. **Upload** — If you need a data file and \`list_upload_sessions\` shows no completed upload, **proactively** call \`create_upload_session\` (workspace default), share the upload URL with the user, and ask them to open it and upload their file. Do not only say "please upload the file" without providing the link. Once the user has uploaded (or a session shows completed), file lands in \`uploads/\`.
+1. **Upload** — If you need a data file and \`list_upload_sessions\` shows no completed upload, **proactively** call \`create_upload_session\` (workspace default), share the upload URL with the user, and ask them to open it and upload their file. Do not only say "please upload the file" without providing the link. Once the user has uploaded (or a session shows completed), file lands in \`uploads/\`. Uploads are ephemeral; move or download important outputs; \`clean_workspace_uploads\` can free space.
 2. **Inspect** — \`head uploads/data.csv\` or \`read_workspace_file\` to check columns, encoding, row count.
 3. **Script** — Write a Python script:
    - Set headless backend **before** importing pyplot:

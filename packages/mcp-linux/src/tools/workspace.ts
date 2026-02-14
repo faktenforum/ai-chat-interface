@@ -17,6 +17,7 @@ import {
   DeleteWorkspaceSchema,
   GetWorkspaceStatusSchema,
   SetWorkspacePlanSchema,
+  CleanWorkspaceUploadsSchema,
 } from '../schemas/workspace.schema.ts';
 
 /**
@@ -169,6 +170,35 @@ export function registerWorkspaceTools(
             workspace: args.workspace,
             plan: args.plan,
             tasks: args.tasks,
+          },
+        });
+
+        if (response.error) {
+          return errorResult(response.error);
+        }
+
+        return { content: [{ type: 'text', text: JSON.stringify(response.result, null, 2) }] };
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    'clean_workspace_uploads',
+    {
+      description: 'Delete files in workspace uploads/ older than N days. Use to free space; uploads/ is ephemeral. olderThanDays: default 7; use 0 to delete all.',
+      inputSchema: CleanWorkspaceUploadsSchema.shape,
+    },
+    async (args, extra) => {
+      try {
+        const email = resolveEmail(extra);
+        const response = await workerManager.sendRequest(email, {
+          id: randomUUID(),
+          method: 'clean_workspace_uploads',
+          params: {
+            workspace: args.workspace,
+            olderThanDays: args.olderThanDays,
           },
         });
 

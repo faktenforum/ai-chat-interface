@@ -29,6 +29,11 @@ export const GetWorkspaceStatusSchema = z.object({
   workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
 });
 
+export const CleanWorkspaceUploadsSchema = z.object({
+  workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
+  olderThanDays: z.number().int().min(0).optional().describe('Delete files in uploads/ older than this many days (default: 7). Use 0 to delete all.'),
+});
+
 const TaskStatusSchema = z.enum(TASK_STATUSES).describe('pending | in_progress | done | cancelled');
 
 const TaskItemSchema = z.object({

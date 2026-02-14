@@ -100,6 +100,8 @@ export class WorkerManager {
         LANG: 'en_US.UTF-8',
         NODE_ENV: process.env.NODE_ENV || 'production',
         LOG_LEVEL: process.env.LOG_LEVEL || 'info',
+        MCP_LINUX_STATUS_MAX_FILES: process.env.MCP_LINUX_STATUS_MAX_FILES ?? '',
+        MCP_LINUX_STATUS_COLLAPSE_DIRS: process.env.MCP_LINUX_STATUS_COLLAPSE_DIRS ?? '',
       },
     });
 

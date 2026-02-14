@@ -63,8 +63,20 @@ function guessMimeType(filename: string): string {
   return MIME_TYPES[ext] || 'application/octet-stream';
 }
 
+const DEFAULT_RESOURCE_LIST_DIRS = 'uploads,outputs';
+const RESOURCE_LIST_MAX_DEPTH = 2;
+const RESOURCE_LIST_MAX_ENTRIES_PER_DIR = 50;
+
+function getResourceListDirs(): string[] {
+  const raw = process.env.MCP_LINUX_RESOURCE_LIST_DIRS ?? DEFAULT_RESOURCE_LIST_DIRS;
+  return raw.split(',').map((d) => d.trim().toLowerCase()).filter(Boolean);
+}
+
+const SKIP_DIR_NAMES = new Set(['node_modules', 'venv', '.venv']);
+
 /**
  * Recursively list files in a directory (up to a depth limit and entry limit).
+ * Skips hidden, node_modules, venv, .venv.
  */
 function listFilesRecursive(
   dir: string,
@@ -87,8 +99,7 @@ function listFilesRecursive(
   for (const entry of entries) {
     if (results.length >= maxEntries) break;
 
-    // Skip hidden files/dirs and node_modules
-    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+    if (entry.name.startsWith('.') || SKIP_DIR_NAMES.has(entry.name)) continue;
 
     const fullPath = join(dir, entry.name);
 
@@ -142,17 +153,27 @@ export function registerWorkspaceResources(
         // Sort so 'default' comes first
         workspaces.sort((a, b) => (a === 'default' ? -1 : b === 'default' ? 1 : a.localeCompare(b)));
 
+        const allowedDirs = getResourceListDirs();
+
         for (const ws of workspaces) {
           const wsPath = join(workspacesRoot, ws);
-          const files = listFilesRecursive(wsPath, wsPath, 3, 200);
-
-          for (const file of files) {
-            resources.push({
-              uri: `workspace://${ws}/${file.relativePath}`,
-              name: `${ws}/${file.relativePath}`,
-              mimeType: file.mimeType,
-              description: `${file.size} bytes`,
-            });
+          for (const dirName of allowedDirs) {
+            const dirPath = join(wsPath, dirName);
+            if (!existsSync(dirPath) || !statSync(dirPath).isDirectory()) continue;
+            const files = listFilesRecursive(
+              dirPath,
+              wsPath,
+              RESOURCE_LIST_MAX_DEPTH,
+              RESOURCE_LIST_MAX_ENTRIES_PER_DIR,
+            );
+            for (const file of files) {
+              resources.push({
+                uri: `workspace://${ws}/${file.relativePath}`,
+                name: `${ws}/${file.relativePath}`,
+                mimeType: file.mimeType,
+                description: `${file.size} bytes`,
+              });
+            }
           }
         }
 
