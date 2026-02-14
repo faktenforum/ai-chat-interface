@@ -93,7 +93,7 @@ prompts:
 
 **Behaviour:** Applied by `librechat-post-init` after the API is up. Matching is by `name` (case-insensitive): existing groups are updated; new ones are created. Prompt text changes create a new version and set it as production.
 
-**ModelSpec agent IDs:** Post-init patches `/app/config/librechat.yaml` so each agent modelSpec's `preset.agent_id` (config ID) is replaced with the real API id; restart the API to apply. See [LibreChat Features](../docs/LIBRECHAT_FEATURES.md#default-model-and-agent-modelspecs).
+**ModelSpec agent IDs:** Post-init patches `librechat.yaml` and writes the config-ID → API-ID mapping to `agent-id-map.json` in the config volume. Init applies this map before the API starts, so restarts usually need no API restart. When you add a new agent, run post-init and restart the API once. The mapping file is per-environment (volume), not in the repo. See [LibreChat Features](../docs/LIBRECHAT_FEATURES.md#default-model-and-agent-modelspecs).
 
 ### Environment Variables
 

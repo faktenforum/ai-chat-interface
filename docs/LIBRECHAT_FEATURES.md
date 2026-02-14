@@ -168,7 +168,8 @@ Compose sets `LIBRECHAT_ENV` per stack (local: `local`, dev: `dev`, prod: `prod`
 
 - **Default spec:** Universal agent (`shared-agent-011`). All agents from `agents.yaml` are in `modelSpecs.list` (group "Assistenten").
 - **`modelSpecs.prioritize: false`** — avoids API warning when using a default spec with `interface.presets: true`.
-- **Post-init:** Replaces config IDs in `preset.agent_id` with real API agent IDs in the runtime config. **Restart the API** after post-init so the client sees Assistenten and the default correctly.
+- **Post-init:** Replaces config IDs in `preset.agent_id` with real API agent IDs and persists the mapping to `agent-id-map.json` in the config volume. **Init** applies this persisted map before the API starts, so on most restarts (when no new agents were added) the Assistenten group and default work without an API restart.
+- **When to restart the API:** Only when you add a new agent: run post-init, then restart the API once; the next startup will use the updated map. The mapping file is per-environment (config volume), not in the repo.
 
 **Assistenten group missing:** Client shows agent presets only when `preset.agent_id` matches an API agent ID. If the config still has config IDs (e.g. `shared-agent-011`), run post-init (logs: “Patched N modelSpec(s) with real agent IDs”), then restart the API. Require: `LIBRECHAT_JWT_SECRET` set, API reachable at `LIBRECHAT_API_URL`.
 
