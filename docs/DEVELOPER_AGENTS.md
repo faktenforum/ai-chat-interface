@@ -74,6 +74,8 @@ Only tools the GitHub MCP server actually provides are exposed; unknown names in
 
 ## Troubleshooting
 
+**"empty_messages" / "Message pruning removed all messages"** when using Scaleway (or other custom endpoints) for dev agents: Custom endpoints without `endpointTokenConfig` get a **18K context fallback**. Long chains (Universal → Router → Code-Refactorer/Code-Reviewer plus PR/commit data) exceed that; pruning then removes all messages. **Fix:** set `maxContextTokens` in each agent’s `model_parameters` in `agents.yaml` to the model’s real context (e.g. `200000` for Devstral 2 123B). See [AGENTS_CONTEXT_LIMIT](wip/AGENTS_CONTEXT_LIMIT.md) for the init/pruning flow.
+
 **"400 Unexpected role 'user' after role 'tool'"** after a transfer (e.g. Universal → Datenanalyse right after the router ran `list_upload_sessions`): The API expects an assistant turn after a tool message, but the handoff logic was appending the handoff instructions as a user message. Fixed in **dev/agents** (`MultiAgentGraph.ts`): when the last message before the handoff is a tool message, handoff instructions are now injected into that tool message’s content instead of adding a separate user message. Ensure the agents submodule/image includes this fix.
 
 ## Config

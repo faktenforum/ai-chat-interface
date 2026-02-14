@@ -8,6 +8,7 @@ agents:
     model_parameters:
       temperature: 0.5
       top_p: 0.9
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
     tools:
       - web_search
       - file_search
@@ -41,6 +42,7 @@ agents:
     model_parameters:
       temperature: 0.7
       top_p: 0.9
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
     tools: []
     mcpServers:
       - image-gen
@@ -71,6 +73,7 @@ agents:
     model_parameters:
       temperature: 0.7
       top_p: 0.8
+      maxContextTokens: 250000   # Qwen3 235B; Scaleway has no endpointTokenConfig
     tools: []
     mcpServers:
       - mapbox
@@ -137,6 +140,7 @@ agents:
     model_parameters:
       temperature: 0.3
       top_p: 0.9
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
     tools: []
     mcpServers:
       - linux
@@ -179,11 +183,14 @@ agents:
     name: Code-Recherche
     description: Versteht Code und Repositories, findet Beispiele, durchsucht Dokumentation, Stack Overflow, npm und GitHub. Keine Implementierung – nur Analyse und Recherche.
     instructionsFile: shared-agent-code-researcher-instructions.md
-    provider: OpenRouter
-    model: anthropic/claude-opus-4.6
+    # provider: OpenRouter
+    # model: anthropic/claude-opus-4.6
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.5
       top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B supports 200K; required for Scaleway (no endpointTokenConfig)
     tools:
       - web_search
     mcpServers:
@@ -259,11 +266,14 @@ agents:
     name: Entwickler
     description: Implementiert Features und behebt Bugs im Linux-Workspace – voller Terminal- und Workspace-Zugriff mit Node.js, Python, Git.
     instructionsFile: shared-agent-developer-instructions.md
-    provider: OpenRouter
-    model: anthropic/claude-opus-4.6
+    # provider: OpenRouter
+    # model: anthropic/claude-opus-4.6
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.5
       top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B supports 200K; required for Scaleway (no endpointTokenConfig)
     tools:
       - web_search
     mcpServers:
@@ -318,11 +328,14 @@ agents:
     name: Code-Refactorer
     description: Refactoring und Optimierung von Code – Struktur, Stil, Tests, Lesbarkeit. Voller Linux-Workspace-Zugriff.
     instructionsFile: shared-agent-code-refactorer-instructions.md
-    provider: OpenRouter
-    model: google/gemini-3-pro-preview
+    # provider: OpenRouter
+    # model: google/gemini-3-pro-preview
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.4
       top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B supports 200K; required for Scaleway (no endpointTokenConfig)
     tools:
       - web_search
     mcpServers:
@@ -385,6 +398,7 @@ agents:
     model_parameters:
       temperature: 0.5
       top_p: 0.9
+      maxContextTokens: 250000   # Qwen3 235B; Scaleway has no endpointTokenConfig
     tools: []
     mcpServers:
       - github
@@ -469,11 +483,14 @@ agents:
     name: Code-Reviewer
     description: Analysiert Pull Requests – klont das Repo, prüft den Diff, liest die Codebase und erstellt ein strukturiertes Review. Postet das Review bei Bedarf über den GitHub-Assistenten.
     instructionsFile: shared-agent-code-reviewer-instructions.md
-    provider: OpenRouter
-    model: google/gemini-3-pro-preview
+    # provider: OpenRouter
+    # model: google/gemini-3-pro-preview
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.4
       top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B supports 200K; required for Scaleway (no endpointTokenConfig)
     tools: []
     mcpServers:
       - linux
@@ -530,6 +547,7 @@ agents:
     model_parameters:
       temperature: 0.4
       top_p: 0.9
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
     tools:
       - web_search
     mcpServers: []
@@ -567,6 +585,7 @@ agents:
     model_parameters:
       temperature: 0.5
       top_p: 0.9
+      maxContextTokens: 100000   # Llama 3.3 70B; Scaleway has no endpointTokenConfig
     tools: []
     mcpServers:
       - ytptube
@@ -607,6 +626,7 @@ agents:
     model_parameters:
       temperature: 0.6
       top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
     tools:
       - web_search
     mcpServers:
@@ -659,6 +679,7 @@ agents:
     model_parameters:
       temperature: 0.4
       top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
     tools:
       - web_search
     mcpServers:
@@ -711,6 +732,7 @@ agents:
     model_parameters:
       temperature: 0.4
       top_p: 0.9
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
     mcpServers:
       - linux
     mcpTools:
@@ -757,6 +779,7 @@ agents:
     model_parameters:
       temperature: 0.5
       top_p: 0.9
+      maxContextTokens: 250000   # Qwen3 235B; Scaleway has no endpointTokenConfig
     mcpServers:
       - linux
     mcpTools:
@@ -807,6 +830,7 @@ agents:
     model_parameters:
       temperature: 0.3
       top_p: 0.9
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
     # Global limit for whole run when user starts here (e.g. Universal→Router→specialist)
     recursion_limit: 100
     mcpServers:
