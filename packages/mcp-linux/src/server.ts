@@ -83,7 +83,8 @@ Usage guidelines:
 - Use workspace tools to manage projects (create from git clone or empty repo)
 - File operations, search, and git are all done via the terminal
 - Each terminal response includes workspace git metadata (branch, dirty status)
-- Use get_workspace_status for detailed git status and plan/tasks; file lists may be summarized (staged_count, truncated). Prefer read_workspace_file with explicit paths.
+- list_workspaces = overview (all workspaces, branch, dirty, plan_preview). get_workspace_status(workspace) = full detail for one workspace (plan, tasks, git status). Use the latter after handoffs or when you need task-level context; use the former to choose or create a workspace.
+- get_workspace_status returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files.
 - Users can install additional tools in their home (nvm, pip --user, etc.)
 
 File Upload:
@@ -95,11 +96,9 @@ File Upload:
 - Close unnecessary active sessions with close_upload_session when appropriate (e.g. after explaining or when cleaning up)
 
 File Download:
-- Use create_download_link to generate a temporary download URL for any workspace file
-- Share the URL with the user so they can download files via their browser
-- Download links are single-use and expire after 60 minutes by default
-- IMPORTANT: Always check list_download_links for stale open links and close unused ones
-- Close unnecessary links with close_download_link to maintain security
+- Use create_download_link to generate a temporary download URL for any workspace file; share the URL with the user.
+- Download links are single-use and expire after 60 minutes by default.
+- Cleanup: Check list_download_links (e.g. after creating links or at end of task); close unused links with close_download_link to limit exposure and follow security practice.
 
 Reading Files:
 - Use read_workspace_file to read a file and get its contents as structured content

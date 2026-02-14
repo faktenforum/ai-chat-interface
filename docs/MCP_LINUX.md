@@ -32,6 +32,11 @@ User naming: `lc_` + email local part (sanitized). Example: `pascal.garber@corre
 | `set_workspace_plan` | Set plan and/or tasks. Tasks: `{ title, status? }` or string[]; status: pending, in_progress, done, cancelled. |
 | `clean_workspace_uploads` | Delete files in workspace `uploads/` older than N days (default 7; use 0 to delete all). Use to free space; uploads are ephemeral. |
 
+#### When to use list_workspaces vs get_workspace_status
+
+- **`list_workspaces`** — Overview only: all workspace names, branch, dirty flag, remote_url, short plan_preview. Use when: choosing or creating a workspace, checking if a name exists, or deciding which workspace to pass in a handoff.
+- **`get_workspace_status(workspace)`** — Full detail for **one** workspace: full plan, all tasks (title + status), git status (with capping). Use when: after a handoff (to read plan/tasks), before/after `set_workspace_plan`, or when you need task-level context. Do not use for "list all workspaces".
+
 #### Plan and tasks
 
 Workspaces can store a **plan** (goal/context) and **tasks** (steps) so agents can pass context across handoffs. Stored in `.mcp-linux/plan.json` per workspace. Each task has `title` and `status` (pending | in_progress | done | cancelled). **Flow:** After a handoff use `get_workspace_status(workspace)` (workspace from instructions; use `default` if none). If there is no or empty plan/tasks, set an initial plan and tasks from the handoff then continue. Before creating a workspace call `list_workspaces` to avoid "already exists". When handing off call `set_workspace_plan` then pass the workspace name in handoff instructions: set completed tasks to `done`, next task to `in_progress` or `pending`, optionally update the plan summary. Prefer tasks as string array (e.g. `["Step 1", "Step 2"]`); or `[{ title, status? }]`.
@@ -60,10 +65,10 @@ Sessions are token-based, single-use (auto-close after upload), and time-limited
 | Tool | Description |
 |------|-------------|
 | `create_download_link` | Generate temporary download URL for a workspace file |
-| `list_download_links` | List active/all download links |
-| `close_download_link` | Revoke a download link |
+| `list_download_links` | List active (or all) download links. Use to find stale links that should be closed. |
+| `close_download_link` | Revoke an active download link. Use to clean up after the user has downloaded or when links are no longer needed. |
 
-Links are token-based, single-use (auto-close after download), and time-limited (default 60 min). Files are streamed from their original location.
+Links are token-based, single-use (auto-close after download), and time-limited (default 60 min). Files are streamed from their original location. **Cleanup:** Periodically check `list_download_links` (e.g. after creating new links or at end of a task) and call `close_download_link` for links that are unused—keeps exposure minimal and follows security best practice.
 
 ### File Reading
 | Tool | Description |

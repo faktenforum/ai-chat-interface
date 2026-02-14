@@ -836,6 +836,7 @@ agents:
     mcpServers:
       - linux
     mcpTools:
+      - list_workspaces_mcp_linux
       - list_upload_sessions_mcp_linux
       - get_workspace_status_mcp_linux
       - set_workspace_plan_mcp_linux
