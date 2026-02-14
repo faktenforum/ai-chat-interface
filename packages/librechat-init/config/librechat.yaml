@@ -1023,7 +1023,7 @@ mcpServers:
     iconPath: /images/mcp-linux-icon.svg
     initTimeout: 120000
     timeout: 120000
-    chatMenu: false
+    chatMenu: true
     startup: true
     serverInstructions: true
     headers:
