@@ -13,6 +13,8 @@ const CONFIG_SOURCE_DIR = existsSync('/app/config-source/librechat.yaml')
 export const CONFIG_SOURCE = join(CONFIG_SOURCE_DIR, 'librechat.yaml');
 export const CONFIG_TARGET = '/app/config/librechat.yaml';
 export const CONFIG_DIR = '/app/config';
+/** Persisted config-ID → API agent-ID map (written by post-init, applied by init). Stored in config volume, per environment. */
+export const AGENT_ID_MAP_PATH = join(CONFIG_DIR, 'agent-id-map.json');
 export const ASSETS_DIR = '/app/assets';
 export const IMAGES_DIR = '/images';
 
@@ -25,11 +27,20 @@ export const PUBLIC_AGENTS_FALLBACK = '../config/agents.yaml';
 export const PRIVATE_AGENTS_PATH = join(CONFIG_SOURCE_DIR, 'agents.private.yaml');
 export const PRIVATE_AGENTS_FALLBACK = '../config/agents.private.yaml';
 
+/** Directory for agent instruction .md files (referenced by instructionsFile in agents.yaml). */
+export const AGENT_INSTRUCTIONS_DIR = join(CONFIG_SOURCE_DIR, 'agent-instructions');
+
+export const PUBLIC_PROMPTS_PATH = join(CONFIG_SOURCE_DIR, 'prompts.yaml');
+export const PUBLIC_PROMPTS_FALLBACK = '../config/prompts.yaml';
+
+export const PRIVATE_PROMPTS_PATH = join(CONFIG_SOURCE_DIR, 'prompts.private.yaml');
+export const PRIVATE_PROMPTS_FALLBACK = '../config/prompts.private.yaml';
+
 // ============================================================================
 // MCP Configuration
 // ============================================================================
 
-/** Pattern for MCP icon SVG files. */
+/** Pattern for MCP icon SVG files (for reference; init copies all .svg from assets). */
 export const MCP_ICON_PATTERN = /^mcp-.*-icon\.svg$/;
 
 /** Delimiter used in MCP tool names (format: toolName_mcp_serverName). */

@@ -9,7 +9,7 @@ The project’s LibreChat setup is defined in the **librechat-init** config; the
 | File | Purpose |
 |------|---------|
 | **[`packages/librechat-init/config/librechat.yaml`](../packages/librechat-init/config/librechat.yaml)** | LibreChat settings: endpoints, model specs, MCP servers, interface, memory, OCR, etc. |
-| **[`packages/librechat-init/config/agents.yaml`](../packages/librechat-init/config/agents.yaml)** | Shared agents (e.g. Recherche-Assistent, Bildgenerierungs-Assistent) and their tools. |
+| **[`packages/librechat-init/config/agents.yaml`](../packages/librechat-init/config/agents.yaml)** | Shared agents (Recherche, Bildgenerierung, Universal, Entwickler-Router, Feedback-Assistent, Linux-Wartung, dev specialists) and their tools. |
 | **[`packages/librechat-init/config/roles.yaml`](../packages/librechat-init/config/roles.yaml)** | Roles and permissions (who can use which agents/features). |
 
 They are baked into the init image and written into the config volume at startup. See [LibreChat Features](LIBRECHAT_FEATURES.md) for details.
@@ -24,11 +24,18 @@ They are baked into the init image and written into the config volume at startup
 - **[Services](SERVICES.md)** - Services and MCP services overview, network architecture
 - **[Administration](ADMINISTRATION.md)** - User management and administration
 - **[LibreChat Features](LIBRECHAT_FEATURES.md)** - LibreChat configuration and features
+- **[LibreChat group icons](LIBRECHAT_GROUP_ICONS.md)** - Model-spec group icons, colors, theme tips
+- **[Agent avatar prompts](AGENT_AVATAR_PROMPTS.md)** - Image-gen MCP prompts for round minimalist agent avatars
 - **[MCP YTPTube](MCP_YTPTUBE.md)** - YTPTube MCP (media URL → transcript or download). Status and [future work](wip/YTPTUBE_FUTURE_WORK.md) (production proxy, FlareSolverr).
 - **[YTPTube Cleanup](YTPTUBE_CLEANUP.md)** - Where archive and downloads live; how to clean for fresh tests
 - **[MCP YouTube Transcript](MCP_YOUTUBE_TRANSCRIPT.md)** - YouTube Transcript MCP (video URL → transcript via youtube-transcript-api)
 - **[MCP Grounded Docs](MCP_DOCS.md)** - Grounded Docs MCP (documentation index; optional embeddings)
 - **[MCP Chefkoch](MCP_CHEFKOCH.md)** – Recipes from chefkoch.de (get_recipe, search_recipes, get_random_recipe, get_daily_recipes). Internal only.
+- **[MCP Linux](MCP_LINUX.md)** – Per-user isolated Linux terminal with persistent git workspaces. Tools: execute_command, workspace management, account tools. Internal only.
+- **[GitHub Machine User](GITHUB_MACHINE_USER.md)** – Shared GitHub identity for MCP Linux (SSH) and GitHub MCP (PAT).
+- **[MCP Code Execution Insights](MCP_CODE_EXECUTION_INSIGHTS.md)** – Insights from Anthropic’s “Code execution with MCP” article applied to our Linux MCP server and agents.
+- **[MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md)** – CSV/JSON analysis and chart generation (Datenanalyse agent): workflow, example Python script, image return via read_workspace_file.
+- **[Agent file upload guidance](AGENT_FILE_UPLOAD.md)** – LibreChat upload options (Upload to Provider, Upload as Text), MCP Linux upload/download, when to recommend which, workspace handoff.
 - **[Webshare Proxy](WEBSHARE_PROXY.md)** - Fixed proxy URL setup (Rotating/Backbone) for mcp-ytptube and mcp-youtube-transcript
 
 ## Deployment
@@ -39,6 +46,7 @@ They are baked into the init image and written into the config volume at startup
 
 ## Development
 
+- **[Developer Agents](DEVELOPER_AGENTS.md)** - Developer domain: router, specialists, handoffs, code review (Code-Reviewer + GitHub-Assistent)
 - **[Development Guide](DEVELOPMENT.md)** - Git submodules and development stack
 - **[Testing internal MCPs from Cursor](SERVICES.md#testing-internal-mcps-from-cursor-ide)** - Use local-stack MCPs from Cursor IDE for testing
 - **[LibreChat Testing](LIBRECHAT_TESTING.md)** - Running LibreChat unit and E2E tests using the dedicated test stack

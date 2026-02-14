@@ -72,6 +72,11 @@
 - [ ] Improve server-side video access (geo/bot blocking)
   - Status: Works locally; Video-Transkripte agent is in code with `public: false`. On Hetzner, optional Webshare proxy or FlareSolverr; see [YTPTUBE_FUTURE_WORK.md](wip/YTPTUBE_FUTURE_WORK.md) for FlareSolverr and office Pi / reverse-SSH-proxy ideas for later.
 
+### MCP Memory Service
+
+- [ ] Test [mcp-memory-service](https://github.com/doobidoo/mcp-memory-service) (persistent context memory for AI sessions; MCP-compatible, semantic search, optional Cloudflare sync)
+  - May replace or complement the docs MCP (Grounded Docs) depending on use case; evaluate after testing.
+
 ### MCP Docs (Grounded Docs)
 
 - [ ] Open PR for configurable embedding dimension (fork branch `vector-dimension`)

@@ -29,3 +29,5 @@ package-lock.json
 
 # Private agent configurations (not in repository)
 packages/librechat-init/config/agents.private.json
+
+assets/icons/variants

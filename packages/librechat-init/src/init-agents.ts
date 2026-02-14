@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { readFileSync, existsSync } from 'fs';
 import { connectToMongoDB, disconnectFromMongoDB, User } from './utils/mongodb.ts';
 import { loadOptionalConfigFile, getSystemUserId } from './utils/config.ts';
 import {
@@ -9,10 +10,13 @@ import {
   type PermissionUpdate,
 } from './lib/librechat-api-client.ts';
 import {
+  CONFIG_TARGET,
+  AGENT_ID_MAP_PATH,
   PUBLIC_AGENTS_PATH,
   PUBLIC_AGENTS_FALLBACK,
   PRIVATE_AGENTS_PATH,
   PRIVATE_AGENTS_FALLBACK,
+  AGENT_INSTRUCTIONS_DIR,
   ACCESS_ROLE_VIEWER,
   ACCESS_ROLE_EDITOR,
   ACCESS_ROLE_OWNER,
@@ -21,6 +25,14 @@ import {
   MCP_ALL,
   DEFAULT_API_URL,
 } from './utils/constants.ts';
+import {
+  patchModelSpecAgentIds,
+  saveAgentIdMap,
+} from './utils/patch-model-spec-agent-ids.ts';
+import { join, relative, resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
  * Agent configuration from JSON files.
@@ -30,6 +42,8 @@ interface AgentConfig {
   name: string;
   description?: string;
   instructions?: string;
+  /** Filename in agent-instructions/ to load instructions from (takes precedence over instructions). */
+  instructionsFile?: string;
   provider: string;
   model: string;
   model_parameters?: Record<string, unknown>;
@@ -48,7 +62,22 @@ interface AgentConfig {
     public?: boolean;
     publicEdit?: boolean;
   };
+  /** Config IDs of agents this agent can hand off to (resolved to edges with edgeType: 'handoff') */
+  handoffs?: HandoffTarget[];
+  /** Config IDs of agents for sequential chain / Mixture-of-Agents (resolved to agent_ids) */
+  chain?: string[];
 }
+
+/** A handoff target: either a plain config ID or an object with metadata */
+type HandoffTarget = string | {
+  agent: string;
+  /** Tool description shown to the LLM (helps it decide when to hand off) */
+  description?: string;
+  /** Parameter description for passthrough content (enables context transfer to target agent) */
+  prompt?: string;
+  /** Parameter name for passthrough content (default: "instructions") */
+  promptKey?: string;
+};
 
 interface AgentsConfig {
   agents: AgentConfig[];
@@ -141,6 +170,9 @@ function buildAgentUpdateData(agentConfig: AgentConfig): AgentUpdateParams {
     conversation_starters: agentConfig.conversation_starters,
     recursion_limit: agentConfig.recursion_limit,
     isCollaborative: agentConfig.isCollaborative,
+    // Clear edges/agent_ids in pass 1; pass 2 sets resolved values (YAML is source of truth)
+    edges: [],
+    agent_ids: [],
   };
 }
 
@@ -179,6 +211,46 @@ function buildPermissions(agentConfig: AgentConfig, ownerUserId: string): Permis
     public: isPublic,
     publicAccessRoleId: publicRoleId,
   };
+}
+
+/**
+ * Resolves instructions for one agent: from file if instructionsFile is set, else from instructions.
+ * Validates that the file path stays under instructionsDir. Mutates agentConfig.instructions.
+ */
+function resolveAgentInstructions(
+  agentConfig: AgentConfig,
+  instructionsDir: string
+): void {
+  if (!agentConfig.instructionsFile) {
+    return;
+  }
+  const base = resolve(instructionsDir);
+  const resolvedPath = resolve(base, agentConfig.instructionsFile);
+  const rel = relative(base, resolvedPath);
+  if (rel.startsWith('..') || rel === '..') {
+    throw new Error(
+      `instructionsFile "${agentConfig.instructionsFile}" must not escape agent-instructions directory (agent: ${agentConfig.name})`
+    );
+  }
+  if (!existsSync(resolvedPath)) {
+    throw new Error(
+      `instructionsFile not found: ${resolvedPath} (agent: ${agentConfig.name})`
+    );
+  }
+  const content = readFileSync(resolvedPath, 'utf-8');
+  agentConfig.instructions = content.trim();
+}
+
+/**
+ * Resolves instructions for all agents (loads from file when instructionsFile is set).
+ */
+function resolveAllAgentInstructions(
+  agents: AgentConfig[],
+  instructionsDir: string
+): void {
+  for (const agent of agents) {
+    resolveAgentInstructions(agent, instructionsDir);
+  }
 }
 
 /**
@@ -226,12 +298,13 @@ async function resolveOwnerUserId(
 
 /**
  * Processes a single agent: creates or updates it and sets permissions.
+ * Returns the LibreChat agent ID for use in pass 2 (handoff/chain resolution).
  */
 async function processAgent(
   agentConfig: AgentConfig,
   client: LibreChatAPIClient,
   systemUserId: string
-): Promise<{ created: boolean; updated: boolean; skipped: boolean }> {
+): Promise<{ created: boolean; updated: boolean; skipped: boolean; agentId: string | null }> {
   const existingAgent = await client.findAgentByName(agentConfig.name, systemUserId);
 
   let savedAgent: Agent;
@@ -254,7 +327,7 @@ async function processAgent(
   const agentObjectId = savedAgent._id;
   if (!agentObjectId) {
     console.error(`  ⚠ Agent "${agentConfig.name}" missing _id, skipping permissions`);
-    return { created: isNew, updated: !isNew, skipped: false };
+    return { created: isNew, updated: !isNew, skipped: false, agentId: savedAgent.id || null };
   }
 
   try {
@@ -277,7 +350,66 @@ async function processAgent(
     );
   }
 
-  return { created: isNew, updated: !isNew, skipped: false };
+  return { created: isNew, updated: !isNew, skipped: false, agentId: savedAgent.id || null };
+}
+
+/** Edge structure for the LibreChat API (handoff with optional metadata) */
+interface HandoffEdge {
+  from: string;
+  to: string;
+  edgeType: 'handoff';
+  description?: string;
+  prompt?: string;
+  promptKey?: string;
+}
+
+/**
+ * Resolves handoff and chain config IDs to LibreChat agent IDs.
+ * Supports both simple string IDs and rich objects with description/prompt.
+ * Returns the edges and agent_ids arrays ready for the API update.
+ */
+function resolveAgentReferences(
+  agentConfig: AgentConfig,
+  ownAgentId: string,
+  idMap: Map<string, string>
+): { edges: HandoffEdge[]; agent_ids: string[] } {
+  const edges: HandoffEdge[] = [];
+  const agent_ids: string[] = [];
+
+  // Resolve handoffs → edges
+  if (agentConfig.handoffs) {
+    for (const target of agentConfig.handoffs) {
+      const configId = typeof target === 'string' ? target : target.agent;
+      const description = typeof target === 'string' ? undefined : target.description;
+      const prompt = typeof target === 'string' ? undefined : target.prompt;
+      const promptKey = typeof target === 'string' ? undefined : target.promptKey;
+
+      const targetId = idMap.get(configId);
+      if (targetId) {
+        const edge: HandoffEdge = { from: ownAgentId, to: targetId, edgeType: 'handoff' };
+        if (description) edge.description = description;
+        if (prompt) edge.prompt = prompt;
+        if (promptKey) edge.promptKey = promptKey;
+        edges.push(edge);
+      } else {
+        console.log(`    ⚠ Handoff target "${configId}" not found in config ID map, skipping`);
+      }
+    }
+  }
+
+  // Resolve chain → agent_ids
+  if (agentConfig.chain) {
+    for (const configId of agentConfig.chain) {
+      const targetId = idMap.get(configId);
+      if (targetId) {
+        agent_ids.push(targetId);
+      } else {
+        console.log(`    ⚠ Chain target "${configId}" not found in config ID map, skipping`);
+      }
+    }
+  }
+
+  return { edges, agent_ids };
 }
 
 /**
@@ -292,6 +424,11 @@ export async function initializeAgents(): Promise<void> {
       console.log('ℹ No agents configured - skipping agent initialization');
       return;
     }
+
+    const instructionsDir = existsSync(AGENT_INSTRUCTIONS_DIR)
+      ? AGENT_INSTRUCTIONS_DIR
+      : join(__dirname, '..', 'config', 'agent-instructions');
+    resolveAllAgentInstructions(allAgents, instructionsDir);
 
     const apiURL = process.env.LIBRECHAT_API_URL || DEFAULT_API_URL;
     const jwtSecret = process.env.LIBRECHAT_JWT_SECRET || process.env.JWT_SECRET;
@@ -341,12 +478,19 @@ export async function initializeAgents(): Promise<void> {
     const systemUserIdStr = systemUserId.toString();
     const stats = { created: 0, updated: 0, skipped: 0 };
 
+    // Pass 1: Create/update all agents and build config ID → LibreChat ID mapping
+    const idMap = new Map<string, string>();
+
     for (const agentConfig of allAgents) {
       try {
         const result = await processAgent(agentConfig, client, systemUserIdStr);
         stats.created += result.created ? 1 : 0;
         stats.updated += result.updated ? 1 : 0;
         stats.skipped += result.skipped ? 1 : 0;
+
+        if (result.agentId && agentConfig.id) {
+          idMap.set(agentConfig.id, result.agentId);
+        }
       } catch (error) {
         console.error(
           `  ✗ Error processing agent ${agentConfig.name}:`,
@@ -356,11 +500,64 @@ export async function initializeAgents(): Promise<void> {
       }
     }
 
+    if (idMap.size > 0) {
+      saveAgentIdMap(AGENT_ID_MAP_PATH, idMap);
+    }
+
+    // Pass 2: Resolve and set handoffs (edges) and chains (agent_ids)
+    const agentsWithRefs = allAgents.filter(
+      (a) => a.id && ((a.handoffs && a.handoffs.length > 0) || (a.chain && a.chain.length > 0))
+    );
+
+    if (agentsWithRefs.length > 0) {
+      console.log(`  Resolving handoffs/chains for ${agentsWithRefs.length} agent(s)...`);
+
+      for (const agentConfig of agentsWithRefs) {
+        const ownId = idMap.get(agentConfig.id!);
+        if (!ownId) {
+          console.log(`  ⚠ Agent "${agentConfig.name}" has no resolved ID, skipping handoff resolution`);
+          continue;
+        }
+
+        try {
+          const { edges, agent_ids } = resolveAgentReferences(agentConfig, ownId, idMap);
+
+          const updatePayload: AgentUpdateParams = {};
+          if (edges.length > 0) {
+            updatePayload.edges = edges;
+          }
+          if (agent_ids.length > 0) {
+            updatePayload.agent_ids = agent_ids;
+          }
+
+          if (edges.length > 0 || agent_ids.length > 0) {
+            await client.updateAgent(ownId, updatePayload, systemUserIdStr);
+            const parts: string[] = [];
+            if (edges.length > 0) parts.push(`${edges.length} handoff(s)`);
+            if (agent_ids.length > 0) parts.push(`${agent_ids.length} chain agent(s)`);
+            console.log(`    ✓ ${agentConfig.name}: set ${parts.join(' + ')}`);
+          }
+        } catch (error) {
+          console.error(
+            `  ⚠ Failed to set handoffs/chain for "${agentConfig.name}":`,
+            error instanceof Error ? error.message : String(error)
+          );
+        }
+      }
+    }
+
     console.log(`✓ Agent initialization completed:`);
     console.log(`  - Created: ${stats.created}`);
     console.log(`  - Updated: ${stats.updated}`);
     if (stats.skipped > 0) {
       console.log(`  - Skipped: ${stats.skipped}`);
+    }
+    if (agentsWithRefs.length > 0) {
+      console.log(`  - Handoffs/chains resolved: ${agentsWithRefs.length}`);
+    }
+
+    if (idMap.size > 0) {
+      patchModelSpecAgentIds(CONFIG_TARGET, idMap);
     }
   } catch (error) {
     console.error('✗ Error during agent initialization:', error);

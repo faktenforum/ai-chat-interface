@@ -2,12 +2,13 @@ agents:
   - id: shared-agent-001
     name: Recherche-Assistent
     description: Hilft bei der Recherche und Informationsbeschaffung aus verschiedenen Quellen
-    instructions: "Research assistant specializing in multi-source information gathering. LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found so far. For longer queries, give short updates between batches. Do not use labels, prefixes or tags in your replies. WORKFLOW: Gather from multiple sources (web_search, file_search), cross-reference findings, cite sources with URLs, synthesize structured summary. Prioritize accuracy over speed. Stop when sufficient information gathered. Current date & time: {{current_datetime}}"
+    instructionsFile: shared-agent-001-instructions.md
     provider: Scaleway
-    model: qwen3-235b-a22b-instruct-2507
+    model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
       temperature: 0.5
       top_p: 0.9
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
     tools:
       - web_search
       - file_search
@@ -18,20 +19,30 @@ agents:
       - Suche nach Studien zu erneuerbaren Energien
       - Vergleiche Berichterstattung verschiedener Quellen zu einem aktuellen Thema
       - Recherchiere die neuesten Entwicklungen bei Solarstrom
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
+      - agent: shared-agent-008
+        description: "Transfer to data analyst for statistical analysis, charts, or visualization of collected data"
+        prompt: "Summarize the research findings and describe what data analysis or visualization is needed"
+      - agent: shared-agent-010
+        description: "Transfer to document creator for a professional report, summary, or PDF from research results"
+        prompt: "Summarize the research findings and describe what kind of document should be created"
     recursion_limit: 50
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
   - id: shared-agent-002
     name: Bildgenerierungs-Assistent
     description: Erstellt Bilder aus Textbeschreibungen mit KI-Bildgenerierung
-    instructions: "Image generation specialist. MODEL SELECTION (mandatory): Before every generate_image call you MUST call list_models first and use only a model id that appears in that response. Never assume, guess, or invent model names (e.g. black-forest-labs/flux-pro, flux, dall-e)—they will fail. The model parameter in generate_image must be an exact id from the list_models result. Optional: use check_model(id) to confirm availability before generating. WORKFLOW: 1) list_models → 2) choose from returned ids → 3) (optional) check_model → 4) build prompt (3–6 sentences: composition, lighting, style, colors, textures, atmosphere) → 5) generate_image with that model id → 6) refine or suggest variations. For multiple images: suggest model/style variations from the available list."
+    instructionsFile: shared-agent-002-instructions.md
     provider: Scaleway
-    model: qwen3-235b-a22b-instruct-2507
+    model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
       temperature: 0.7
       top_p: 0.9
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
     tools: []
     mcpServers:
       - image-gen
@@ -45,20 +56,24 @@ agents:
       - Zeige mir verschiedene Stile für Porträts
       - Generiere ein abstraktes Kunstwerk
       - Erstelle ein Bild eines Cafés in Paris
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
     recursion_limit: 25
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
   - id: shared-agent-003
     name: Reise- und Standort-Assistent
     description: Hilft bei Reiseplanung, Standortsuche, Routenplanung und kombiniert geografische Informationen mit Wetterdaten
-    instructions: "Travel and location planning specialist. LANGUAGE: Match user's language. TOOL PARAMETERS: directions_tool - always use overview: \"simplified\" (prevents context errors). EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer queries, give short updates between batches. Do not use labels, prefixes or tags in your replies. TOOL SELECTION: Prefer Mapbox for geocoding/routing/POI. Use OpenStreetMap for neighborhood analysis, specific POI types. RAILWAY TOOLS: Use only when user explicitly asks about trains/public transport. Do NOT auto-search stations. MAP VISUALIZATION: Proactively offer static_map_image_tool for routes, locations, POI searches. For route overlays: use Mapbox's native flow—request directions_tool with geometries=polyline and overview=simplified, then pass the returned route geometry (encoded polyline string) directly to static_map_image_tool as the path overlay. Do not build GeoJSON or coordinate lists from the route; the encoded polyline is compact and accepted by the static map. Only for single points or POI use center/zoom or markers. WORKFLOWS: Location queries → geocode + weather + optional map. Route planning → directions (simplified) + weather + visualization. Railway queries (when requested) → findStations → getCurrentTimetable/getPlannedTimetable → getRecentChanges. OUTPUT: Structured format with coordinates, addresses, distances, weather. Include railway info only when requested. Current date & time: {{current_datetime}}"
+    instructionsFile: shared-agent-003-instructions.md
     provider: Scaleway
     model: qwen3-235b-a22b-instruct-2507
     model_parameters:
       temperature: 0.7
       top_p: 0.8
+      maxContextTokens: 250000   # Qwen3 235B; Scaleway has no endpointTokenConfig
     tools: []
     mcpServers:
       - mapbox
@@ -106,32 +121,96 @@ agents:
       - Finde einen Treffpunkt für drei Personen in Berlin
       - Erstelle eine Karte mit der Route von Hamburg nach Bremen
       - Wie wird das Wetter morgen in München?
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
     recursion_limit: 40
-    isCollaborative: false
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
-  - id: shared-agent-004
-    name: Entwickler-Support
-    description: Unterstützt Entwickler bei Fehlersuche, Code-Recherche, Paketauswahl, Problemlösung und Dokumentationssuche – nutzt Stack Overflow, npm, GitHub, Dokumentation durchsuchen und Websuche.
-    instructions: "Developer support specialist. You have Stack Overflow, npm, GitHub, docs (indexed documentation), and web_search. TOOL USE: Use whichever tools best fit the request; do not favor one source over another by default. Stack Overflow, npm, GitHub, docs, and web_search are equally valid—choose based on what the question needs. It is good to try different tools for the same request when useful (e.g. querying both Stack Overflow and docs, or npm and GitHub) to get broader or complementary results. Use web_search when the task is generic, news, or when no specialized tool clearly applies. LANGUAGE: Match user's language. EXECUTION: At most 2 tool calls per batch; after each batch, briefly say in normal prose what you did or found. For longer workflows, give short updates between batches. Do not use labels, prefixes or tags in your replies. EXAMPLES (equal footing; combine as needed): Errors/stack traces—search_by_error, analyze_stack_trace (Stack Overflow), search_issues (GitHub), search_docs (docs). Package discovery—search_npm_packages, search_repositories, search_docs. Code examples / API usage—search_by_tags (Stack Overflow), search_docs, search_code (GitHub). Library docs—list_libraries then search_docs; if not indexed, offer scrape_docs and explain indexing runs in background (list_jobs, get_job_info for status). Single-page content—fetch_url (docs) or web_search. DOCS INDEXING: When user asks to add or index documentation, use scrape_docs with url + library (+ optional version); tell them indexing has started and may take a few minutes; they can check status (list_jobs, get_job_info) or try search_docs later. For long-running or async tools, give clear status updates. DEPTH/EFFICIENCY: Prefer overview tools first. Use deep tools (get_file_contents, list_commits, issue_read, pull_request_read, get_commit) only when the user asks for details, the question needs depth, or an overview shows something critical; ask a short counter-question before heavy analysis. ALWAYS: Cite sources (URLs, repos, issues, doc pages), prefer recent solutions, note compatibility, give structured answers with code where helpful. Stop when you have enough to answer. Current date & time: {{current_datetime}}"
+      publicEdit: true
+  # Developer domain: router + specialists. See docs/DEVELOPER_AGENTS.md.
+
+  - id: shared-agent-developer-router
+    name: Entwickler-Router
+    description: Leitet Entwickler-Anfragen an den passenden Spezialisten weiter – Code-Recherche, Implementierung, Refactoring, GitHub, Code-Review.
+    instructionsFile: shared-agent-developer-router-instructions.md
     provider: Scaleway
-    model: qwen3-235b-a22b-instruct-2507
+    model: devstral-2-123b-instruct-2512
     model_parameters:
-      temperature: 0.65
-      top_p: 0.8
+      temperature: 0.3
+      top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+    tools: []
+    mcpServers:
+      - linux
+    mcpTools:
+      - list_workspaces_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+    category: development
+    conversation_starters:
+      - Ich brauche Hilfe bei einem Entwicklungsprojekt
+      - Welcher Entwickler-Assistent passt zu meiner Aufgabe?
+      - Ich möchte einen PR reviewen lassen
+      - Hilf mir beim Debugging
+    handoffs:
+      - agent: shared-agent-code-researcher
+        description: "Transfer to code researcher for understanding code/repos, finding examples, searching docs, Stack Overflow, npm, and indexing documentation"
+        prompt: "Describe the code research task: what needs to be understood, which repo/library, or what error/question needs investigation"
+      - agent: shared-agent-developer
+        description: "Transfer to developer for implementing features or fixing bugs in the Linux workspace"
+        prompt: "Describe what needs to be implemented or fixed, including repo URLs, language/framework, and requirements"
+      - agent: shared-agent-code-refactorer
+        description: "Transfer to code refactorer for restructuring, polishing, and improving existing code"
+        prompt: "Describe what code needs refactoring, the goals (readability, performance, structure), and the workspace/repo context"
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant for PR creation, issue management, reviews posting, and repo operations"
+        prompt: "Describe the GitHub task: repo, PR/issue number, what action is needed"
+      - agent: shared-agent-code-reviewer
+        description: "Transfer to code reviewer for analyzing a PR (clones repo, analyzes via Linux MCP); reviewer can hand off to GitHub-Assistent to post the review when the user requests it"
+        prompt: "Provide the PR URL and any specific review focus areas"
+      - agent: shared-agent-011
+        description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
+    # Router→specialist + many tool steps; limit from first agent applies to whole run
+    recursion_limit: 120
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+
+  - id: shared-agent-code-researcher
+    name: Code-Recherche
+    description: Versteht Code und Repositories, findet Beispiele, durchsucht Dokumentation, Stack Overflow, npm und GitHub. Keine Implementierung – nur Analyse und Recherche.
+    instructionsFile: shared-agent-code-researcher-instructions.md
+    # provider: OpenRouter
+    # model: anthropic/claude-opus-4.6
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
+    model_parameters:
+      temperature: 0.5
+      top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B supports 200K; required for Scaleway (no endpointTokenConfig)
     tools:
       - web_search
     mcpServers:
-      - stackoverflow
-      - npm-search
+      - linux
       - github
       - docs
+      - stackoverflow
+      - npm-search
     mcpTools:
-      - search_by_error_mcp_stackoverflow
-      - search_by_tags_mcp_stackoverflow
-      - analyze_stack_trace_mcp_stackoverflow
-      - search_npm_packages_mcp_npm-search
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - read_workspace_file_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
       - search_code_mcp_github
       - search_repositories_mcp_github
       - search_issues_mcp_github
@@ -146,15 +225,19 @@ agents:
       - list_tags_mcp_github
       - get_commit_mcp_github
       - scrape_docs_mcp_docs
-      - refresh_version_mcp_docs
       - search_docs_mcp_docs
       - list_libraries_mcp_docs
-      - find_version_mcp_docs
       - list_jobs_mcp_docs
       - get_job_info_mcp_docs
-      - cancel_job_mcp_docs
-      - remove_docs_mcp_docs
       - fetch_url_mcp_docs
+      - refresh_version_mcp_docs
+      - find_version_mcp_docs
+      - remove_docs_mcp_docs
+      - cancel_job_mcp_docs
+      - search_by_error_mcp_stackoverflow
+      - search_by_tags_mcp_stackoverflow
+      - analyze_stack_trace_mcp_stackoverflow
+      - search_npm_packages_mcp_npm-search
     category: development
     conversation_starters:
       - Ich habe einen Fehler in meinem Code, kannst du helfen?
@@ -162,23 +245,347 @@ agents:
       - Zeige mir Beispielcode für React Hooks
       - Suche auf Stack Overflow nach Lösungen für TypeScript-Typfehler
       - Dokumentation zu Vue durchsuchen
-      - Neue Library-Dokumentation indizieren (z. B. Vue oder TypeScript)
-    recursion_limit: 75
-    isCollaborative: false
+      - Neue Library-Dokumentation indizieren
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
+      - agent: shared-agent-developer
+        description: "Transfer to developer for implementing a fix or feature based on research findings"
+        prompt: "Summarize the research findings and describe what needs to be implemented or fixed"
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant for creating PRs, issues, or posting reviews"
+        prompt: "Describe the GitHub action needed based on the research"
+    # Dev: many read ops (docs, GitHub, workspace)
+    recursion_limit: 200
+    isCollaborative: true
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
+
+  - id: shared-agent-developer
+    name: Entwickler
+    description: Implementiert Features und behebt Bugs im Linux-Workspace – voller Terminal- und Workspace-Zugriff mit Node.js, Python, Git.
+    instructionsFile: shared-agent-developer-instructions.md
+    # provider: OpenRouter
+    # model: anthropic/claude-opus-4.6
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
+    model_parameters:
+      temperature: 0.5
+      top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B supports 200K; required for Scaleway (no endpointTokenConfig)
+    tools:
+      - web_search
+    mcpServers:
+      - linux
+    mcpTools:
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - write_terminal_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - delete_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - create_upload_session_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - create_download_link_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - read_workspace_file_mcp_linux
+    category: development
+    conversation_starters:
+      - Implementiere ein neues Feature in meinem Projekt
+      - Behebe diesen Bug in meinem Code
+      - Klone ein Repository und richte das Projekt ein
+      - Erstelle ein neues Python-Projekt mit Tests
+      - Führe ein Node.js-Skript aus und zeig die Ausgabe
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
+      - agent: shared-agent-code-researcher
+        description: "Transfer to code researcher for understanding code, searching docs, or investigating errors"
+        prompt: "Describe what needs to be researched or understood before continuing implementation"
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant for creating PRs, opening issues, or posting reviews"
+        prompt: "Include workspace name (e.g. ai-chat-interface), repo, branch, and what was implemented or what action is needed"
+      - agent: shared-agent-code-refactorer
+        description: "Transfer to code refactorer to polish or restructure the implemented code"
+        prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
+    # Dev: implement/fix, many file and terminal ops
+    recursion_limit: 120
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+
+  - id: shared-agent-code-refactorer
+    name: Code-Refactorer
+    description: Refactoring und Optimierung von Code – Struktur, Stil, Tests, Lesbarkeit. Voller Linux-Workspace-Zugriff.
+    instructionsFile: shared-agent-code-refactorer-instructions.md
+    # provider: OpenRouter
+    # model: google/gemini-3-pro-preview
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
+    model_parameters:
+      temperature: 0.4
+      top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B supports 200K; required for Scaleway (no endpointTokenConfig)
+    tools:
+      - web_search
+    mcpServers:
+      - linux
+    mcpTools:
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - write_terminal_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - delete_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - create_upload_session_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - create_download_link_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - read_workspace_file_mcp_linux
+    category: development
+    conversation_starters:
+      - Refactore diesen Code für bessere Lesbarkeit
+      - Verbessere die Struktur meines Projekts
+      - Extrahiere wiederverwendbare Funktionen
+      - Füge Tests zu diesem Modul hinzu
+      - Reduziere die Komplexität dieser Funktion
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
+      - agent: shared-agent-code-researcher
+        description: "Transfer to code researcher for understanding existing code patterns or searching for best practices"
+        prompt: "Describe what needs to be researched to inform the refactoring"
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant for creating a PR with the refactored code"
+        prompt: "Describe the refactoring changes and the PR that should be created"
+      - agent: shared-agent-developer
+        description: "Transfer to developer to implement missing code, tests, or new behavior identified during refactoring"
+        prompt: "Describe what needs to be implemented (e.g. missing tests, new logic) and the workspace/repo context"
+      - agent: shared-agent-code-reviewer
+        description: "Transfer to code reviewer to read a PR and its review comments, then analyze or fix the mentioned issues"
+        prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
+    # Dev: refactor, tests, many file reads
+    recursion_limit: 200
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+
+  - id: shared-agent-github
+    name: GitHub-Assistent
+    description: GitHub-Operationen – Repositories, Issues, Pull Requests lesen und verwalten. Nutzt GitHub MCP und Linux-Terminal für Git-Befehle.
+    instructionsFile: shared-agent-github-instructions.md
+    provider: Scaleway
+    model: qwen3-235b-a22b-instruct-2507
+    model_parameters:
+      temperature: 0.5
+      top_p: 0.9
+      maxContextTokens: 250000   # Qwen3 235B; Scaleway has no endpointTokenConfig
+    tools: []
+    mcpServers:
+      - github
+      - linux
+    # GitHub MCP: read/list + write (issues, PRs, review, branch, file, repo, Copilot). Names _mcp_github; unknown tools ignored.
+    mcpTools:
+      - search_code_mcp_github
+      - search_repositories_mcp_github
+      - search_issues_mcp_github
+      - search_pull_requests_mcp_github
+      - search_users_mcp_github
+      - get_file_contents_mcp_github
+      - get_commit_mcp_github
+      - get_latest_release_mcp_github
+      - get_release_by_tag_mcp_github
+      - get_label_mcp_github
+      - get_me_mcp_github
+      - issue_read_mcp_github
+      - pull_request_read_mcp_github
+      - list_commits_mcp_github
+      - list_branches_mcp_github
+      - list_tags_mcp_github
+      - list_pull_requests_mcp_github
+      - list_issues_mcp_github
+      - list_releases_mcp_github
+      - list_issue_types_mcp_github
+      - create_issue_mcp_github
+      - create_pull_request_mcp_github
+      - create_review_mcp_github
+      - pull_request_review_write_mcp_github
+      - add_comment_to_pending_review_mcp_github
+      - add_issue_comment_mcp_github
+      - issue_write_mcp_github
+      - update_pull_request_mcp_github
+      - update_pull_request_branch_mcp_github
+      - create_branch_mcp_github
+      - merge_pull_request_mcp_github
+      - create_or_update_file_mcp_github
+      - delete_file_mcp_github
+      - push_files_mcp_github
+      - fork_repository_mcp_github
+      - create_repository_mcp_github
+      - assign_copilot_to_issue_mcp_github
+      - request_copilot_review_mcp_github
+      - sub_issue_write_mcp_github
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - list_workspaces_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - read_workspace_file_mcp_linux
+      - create_download_link_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+    category: development
+    conversation_starters:
+      - Zeige mir die offenen PRs in diesem Repository
+      - Suche nach Issues zu einem bestimmten Thema
+      - Erstelle einen Pull Request für meine Änderungen
+      - Reviewe diesen Pull Request auf GitHub
+      - Zeige mir die letzten Commits in einem Repository
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
+      - agent: shared-agent-developer
+        description: "Transfer to developer for implementing code changes"
+        prompt: "Describe what needs to be implemented based on the GitHub context"
+      - agent: shared-agent-code-refactorer
+        description: "Transfer to code refactorer for improving code before creating a PR"
+        prompt: "Describe the code that needs refactoring"
+      - agent: shared-agent-code-reviewer
+        description: "Transfer to code reviewer for analyzing a PR"
+        prompt: "Provide the PR URL and context for review"
+    # Dev: GitHub API + git, many file/API ops
+    recursion_limit: 200
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+
+  - id: shared-agent-code-reviewer
+    name: Code-Reviewer
+    description: Analysiert Pull Requests – klont das Repo, prüft den Diff, liest die Codebase und erstellt ein strukturiertes Review. Postet das Review bei Bedarf über den GitHub-Assistenten.
+    instructionsFile: shared-agent-code-reviewer-instructions.md
+    # provider: OpenRouter
+    # model: google/gemini-3-pro-preview
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
+    model_parameters:
+      temperature: 0.4
+      top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B supports 200K; required for Scaleway (no endpointTokenConfig)
+    tools: []
+    mcpServers:
+      - linux
+      - github
+    mcpTools:
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - read_workspace_file_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - pull_request_read_mcp_github
+      - get_file_contents_mcp_github
+      - list_commits_mcp_github
+      - get_commit_mcp_github
+      - list_branches_mcp_github
+      - search_code_mcp_github
+      - search_repositories_mcp_github
+    category: development
+    conversation_starters:
+      - "Review diesen PR: https://github.com/..."
+      - Analysiere die Änderungen in diesem Pull Request
+      - Prüfe den Diff und die Code-Qualität dieses PRs
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant to post the review on the PR (only when the user requested posting)"
+        prompt: "Include the workspace name you are using, the review body, and any inline comments for the PR."
+      - agent: shared-agent-code-researcher
+        description: "Transfer to code researcher for deeper understanding of existing code before finalizing the review"
+        prompt: "Explain how the relevant module/function works in this codebase"
+      - agent: shared-agent-developer
+        description: "Transfer to developer to fix the issues found in the review"
+        prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
+    # Dev: PR review — file reads, diff, GitHub API, push
+    recursion_limit: 200
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+
+  - id: shared-agent-feedback
+    name: Feedback-Assistent
+    description: Meldet Fehler im Chat-Interface – versteht Fehlerbeschreibungen, bereitet sie auf und erstellt ein GitHub-Issue.
+    instructionsFile: shared-agent-feedback-instructions.md
+    provider: Scaleway
+    model: mistral-small-3.2-24b-instruct-2506
+    model_parameters:
+      temperature: 0.4
+      top_p: 0.9
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
+    tools:
+      - web_search
+    mcpServers: []
+    category: general
+    conversation_starters:
+      - Ich möchte einen Fehler im Chat melden
+      - Beim letzten Aufruf ist etwas schiefgelaufen – hier die Beschreibung
+      - Wie kann ich einen Bug reporten?
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
+      - agent: shared-agent-github
+        description: "Create the issue with prepared title and body (English)"
+        prompt: "Create the issue via create_issue_mcp_github. Repo: owner=faktenforum, repo=ai-chat-interface (always). Put in this handoff the exact title and body in English (description, steps to reproduce, expected/actual, environment) so the next agent can call the tool with these values. Do not pass German text for title/body."
+      - agent: shared-agent-code-researcher
+        description: "Search similar issues or technical context before finalizing"
+        prompt: "Search similar bugs/docs: error message, component, or context to improve the issue."
+      - agent: shared-agent-developer-router
+        description: "User wants to fix the bug, not only report"
+        prompt: "User wants to fix the reported bug; summarize error and what they need (debug, fix)."
+    recursion_limit: 50
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+
   # Video-Transkripte: public false until server-side access is reliable (proxy/geo). See docs/wip/YTPTUBE_FUTURE_WORK.md.
   # Model: llama-3.3-70b has 100K context (vs Qwen3 36K cap in UI) to handle large cookie pastes.
   - id: shared-agent-005
     name: Video-Transkripte
     description: Transkripte, Metadaten, Thumbnails und Download-Links für Video-URLs (YouTube, Instagram, TikTok u. a.).
-    instructions: "Video/audio specialist. Use ytptube MCP for all sources (YouTube, Instagram, TikTok, Vimeo, SoundCloud, etc.). COOKIES: If the user provides cookies (e.g. Netscape format), use them only inside the tool call (request_transcript/request_download_link cookies parameter); do not quote or repeat long cookie blocks in your reply to avoid token overflow. TOOLS: request_transcript(media_url); get_status(media_url|job_id); request_download_link(media_url, type?); list_recent_downloads(limit?, status_filter?); get_media_info(media_url); get_thumbnail_url(media_url); get_system_configuration (queue, presets, paused); get_history_item(job_id) for full job details; get_logs when user reports errors. TRANSCRIPT: 1) request_transcript(media_url) → transcript or status. 2) get_status(media_url) to check; when finished call request_transcript again. DOWNLOAD: request_download_link(media_url, type?) → link or status; get_status to check; when finished call request_download_link again. OTHER: get_media_info, get_thumbnail_url, list_recent_downloads. Prefer media_url for status; job_id optional in get_status. LANGUAGE: Match user's language; for transcript content prefer media's original language unless user requests another. EXECUTION: At most 2 tool calls per batch; after each batch briefly say in prose what you did or found. No labels/prefixes/tags. Relay relay= from tool results. Never invent transcript text. Current date & time: {{current_datetime}}"
+    instructionsFile: shared-agent-005-instructions.md
     provider: Scaleway
     model: llama-3.3-70b-instruct
     model_parameters:
       temperature: 0.5
       top_p: 0.9
+      maxContextTokens: 100000   # Llama 3.3 70B; Scaleway has no endpointTokenConfig
     tools: []
     mcpServers:
       - ytptube
@@ -199,6 +606,12 @@ agents:
       - "Video-Infos zu https://www.dailymotion.com/video/xczg00"
       - "Thumbnail zu https://vimeo.com/76979871"
       - "Status zu diesem Video: https://www.pbs.org/video/how-fantasy-reflects-our-world-picecq/"
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
+      - agent: shared-agent-009
+        description: "Transfer to file converter for converting downloaded audio/video to another format"
+        prompt: "Describe the media file (format, source URL, workspace path if downloaded) and the desired output format"
     recursion_limit: 40
     isCollaborative: false
     permissions:
@@ -207,12 +620,13 @@ agents:
   - id: shared-agent-006
     name: Kochhilfe
     description: Hilft beim Kochen – Rezepte vorschlagen, Inspiration für Mahlzeiten, Zutaten und Zubereitung, plus allgemeine Kochfragen.
-    instructions: "Cooking assistant. You suggest recipes, help with meal ideas, and answer general cooking questions. Never mention Chefkoch or other technical recipe sources to the user; present recipe results as \"I found these recipes\" / \"here's a suggestion\". LANGUAGE & TRANSLATION: Detect the user's language from their message. Always reply in that language. Recipe data from the tools is in German; when presenting any recipe (title, ingredients, instructions, difficulty, times, servings, etc.), output it entirely in the user's language. Do not mention translation or that the recipe was translated – present it naturally as if it were originally in their language. RECIPES: For any request for concrete recipes, suggestions, \"what to cook?\", daily or random ideas, or recipe details, use your recipe tools (search_recipes, get_recipe, get_random_recipe, get_daily_recipes). Present results in a friendly, structured way (title, ingredients, instructions, time, rating) without naming the underlying source. RECIPE IMAGE: Every recipe you present must include its image so it is rendered in the chat. Tool responses include an image_url field. For each recipe (single or in a list), embed the image using Markdown: ![Recipe title or short description](image_url). Use the exact image_url from the tool output. If image_url is missing, \"picture not found\", or similar, omit the image but still show the recipe text. GENERAL COOKING: For substitutions, techniques, tips, nutrition, shopping, or \"what is X?\" use web_search. You can combine: answer with web_search, then suggest a matching recipe via recipe tools if useful. CALCULATOR: Use add, subtract, multiply, divide for recipe scaling (e.g. double or halve ingredients), unit conversions (cups to ml, oz to g, °F to °C) by computing numbers; state the conversion or scaling result clearly. WEATHER: For \"what to cook today?\" or meal inspiration you may use get_current_weather (user must provide location/city) to suggest weather-appropriate dishes (e.g. salad when warm, soup when cold). IMAGE-GEN: Only when the user explicitly asks for a picture of a dish or \"how could it look\". Then call list_models first, pick a model id from the response, then generate_image with that exact model id; do not assume or invent model names. EXECUTION: At most 2 tool calls per batch; after each batch briefly say in normal prose what you did or found. No labels, prefixes or tags in replies. Current date & time: {{current_datetime}}"
+    instructionsFile: shared-agent-006-instructions.md
     provider: Scaleway
     model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.6
       top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
     tools:
       - web_search
     mcpServers:
@@ -248,8 +662,266 @@ agents:
       - Rezepte unter 30 Minuten mit guter Bewertung
       - Einfache Rezepte für Anfänger
       - Was ist Abschmecken und wie mache ich es?
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
     recursion_limit: 40
     isCollaborative: false
     permissions:
       public: true
-      publicEdit: false
+      publicEdit: true
+  - id: shared-agent-008
+    name: Datenanalyse
+    description: Analysiert Daten aus CSV, JSON und anderen Formaten – filtert, transformiert, visualisiert (Diagramme) und fasst zusammen. Dateien per Upload; Diagramme werden als Bild im Chat angezeigt.
+    instructionsFile: shared-agent-008-instructions.md
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
+    model_parameters:
+      temperature: 0.4
+      top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+    tools:
+      - web_search
+    mcpServers:
+      - linux
+    mcpTools:
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - write_terminal_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - create_upload_session_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - create_download_link_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - read_workspace_file_mcp_linux
+    category: productivity
+    conversation_starters:
+      - Ich habe eine CSV-Datei, die ich filtern möchte
+      - Erstelle ein Diagramm aus meiner CSV-Datei
+      - Analysiere diese JSON-Daten für mich
+      - Hilf mir, Duplikate aus einer Tabelle zu entfernen
+      - Fasse die wichtigsten Kennzahlen aus meinen Daten zusammen
+      - Konvertiere diese Daten von CSV nach JSON
+      - Erstelle eine Statistik aus meiner Datei
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
+      - agent: shared-agent-010
+        description: "Transfer to document creator for a professional report or PDF from analysis results"
+        prompt: "Summarize the analysis results, key findings, and describe what kind of report or document should be created"
+    recursion_limit: 75
+    isCollaborative: false
+    permissions:
+      public: true
+      publicEdit: true
+  - id: shared-agent-009
+    name: Dateikonverter
+    description: Konvertiert Bilder, Audio, Video und Dokumente zwischen Formaten – ImageMagick, FFmpeg, Pandoc. Ergebnis direkt im Chat oder als Download.
+    instructionsFile: shared-agent-009-instructions.md
+    provider: Scaleway
+    model: mistral-small-3.2-24b-instruct-2506
+    model_parameters:
+      temperature: 0.4
+      top_p: 0.9
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
+    mcpServers:
+      - linux
+    mcpTools:
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - write_terminal_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - create_upload_session_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - create_download_link_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - read_workspace_file_mcp_linux
+    category: productivity
+    conversation_starters:
+      - Konvertiere mein PNG in WEBP
+      - Wandle eine MP4 in MP3 um
+      - Konvertiere Markdown zu HTML
+      - Ändere die Auflösung meines Videos
+      - WAV nach FLAC konvertieren
+      - Konvertiere mein Dokument in ein anderes Format
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
+    recursion_limit: 50
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+  - id: shared-agent-010
+    name: Dokumenten-Ersteller
+    description: Erstellt professionelle Dokumente – Briefe, Berichte, Rechnungen, Lebensläufe, Vorlagen. Erzeugt PDF (Typst) oder editierbare Formate (ODT/DOCX via Pandoc). Ergebnis als Download.
+    instructionsFile: shared-agent-010-instructions.md
+    provider: Scaleway
+    model: qwen3-235b-a22b-instruct-2507
+    model_parameters:
+      temperature: 0.5
+      top_p: 0.9
+      maxContextTokens: 250000   # Qwen3 235B; Scaleway has no endpointTokenConfig
+    mcpServers:
+      - linux
+    mcpTools:
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - write_terminal_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - create_upload_session_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - create_download_link_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - read_workspace_file_mcp_linux
+    category: productivity
+    conversation_starters:
+      - Schreibe einen formellen Brief an ...
+      - Erstelle einen Bericht über ...
+      - Erstelle eine Rechnung
+      - Schreibe meinen Lebenslauf
+      - Erstelle ein PDF-Dokument mit ...
+      - Erstelle eine Vorlage für Geschäftsbriefe
+      - Konvertiere meinen Text in ein professionelles PDF
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
+      - agent: shared-agent-009
+        description: "Transfer to file converter for converting the created document to another format (e.g. PDF to image, audio extraction)"
+        prompt: "Describe the document (file path in workspace, format) and the desired output format for conversion"
+    recursion_limit: 75
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+  - id: shared-agent-linux-maintenance
+    name: Linux-Wartung
+    description: Verwaltung und Wartung des eigenen MCP-Linux-Accounts – Status, Bereinigung, Zurücksetzen, Workspace- und Session-Verwaltung.
+    instructionsFile: shared-agent-linux-maintenance-instructions.md
+    provider: Scaleway
+    model: mistral-small-3.2-24b-instruct-2506
+    model_parameters:
+      temperature: 0.3
+      top_p: 0.9
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
+    mcpServers:
+      - linux
+    mcpTools:
+      - list_workspaces_mcp_linux
+      - get_workspace_status_mcp_linux
+      - create_workspace_mcp_linux
+      - delete_workspace_mcp_linux
+      - clean_workspace_uploads_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - reset_account_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - read_workspace_file_mcp_linux
+    category: productivity
+    conversation_starters:
+      - Account-Status anzeigen
+      - Alte Uploads bereinigen
+      - Workspace löschen
+      - Linux-Account zurücksetzen
+    handoffs:
+      - agent: shared-agent-011
+        description: "Return to Universal when task is done or request is outside maintenance (e.g. coding, documents). Do not hand back merely because the request is ambiguous; ask one short clarifying question."
+    recursion_limit: 50
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+  - id: shared-agent-011
+    name: Universal
+    description: Allgemeiner Assistent – erkennt automatisch, welcher Spezialist am besten passt, und leitet die Anfrage weiter.
+    instructionsFile: shared-agent-011-instructions.md
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
+    model_parameters:
+      temperature: 0.3
+      top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+    # Global limit for whole run (e.g. Universal→Router→specialist). 200 allows long PR review and multi-step dev chains.
+    recursion_limit: 200
+    mcpServers:
+      - linux
+    mcpTools:
+      - list_workspaces_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - create_upload_session_mcp_linux
+    handoffs:
+      - agent: shared-agent-001
+        description: "Transfer to research assistant for fact-finding, information gathering, and web research"
+        prompt: "Summarize what the user wants researched, including specific topics, questions, or sources to check"
+      - agent: shared-agent-002
+        description: "Transfer to image generator for creating AI-generated images from text descriptions"
+        prompt: "Describe the image the user wants: subject, style, mood, colors, and any specific requirements"
+      - agent: shared-agent-003
+        description: "Transfer to travel and location assistant for route planning, maps, weather, POI search, and public transport"
+        prompt: "Summarize the user's travel or location query, including origin, destination, preferences, or area of interest"
+      - agent: shared-agent-developer-router
+        description: "Transfer to developer router for all development tasks: coding, debugging, implementation, refactoring, GitHub operations, PR reviews"
+        prompt: "Summarize the user's development request, including language/framework, error messages, repo URLs, or what they're trying to achieve"
+      - agent: shared-agent-feedback
+        description: "Transfer to feedback assistant for reporting bugs or errors in the chat interface (prepare and create GitHub issue)"
+        prompt: "The user wants to report a bug or error in the chat interface; include their description and any details they gave"
+      - agent: shared-agent-006
+        description: "Transfer to cooking assistant for recipes, meal inspiration, cooking tips, and ingredient substitutions"
+        prompt: "Describe what cooking help the user needs: recipe type, ingredients, dietary requirements, or cooking question"
+      - agent: shared-agent-008
+        description: "Transfer to data analyst for CSV/JSON analysis, charts, data visualization; they will provide an upload link for the user's file (MCP Linux) if needed"
+        prompt: "Describe the data analysis task: user has or will upload data; analyst will provide upload link and then analyze/visualize"
+      - agent: shared-agent-009
+        description: "Transfer to file converter for image, audio, video, and document format conversion (ImageMagick, FFmpeg, Pandoc)"
+        prompt: "Describe the conversion needed: source format, target format, and any quality or size requirements"
+      - agent: shared-agent-010
+        description: "Transfer to document creator for professional PDFs, letters, reports, invoices, and CVs (Typst/Pandoc)"
+        prompt: "Describe the document the user wants: type (letter, report, invoice, CV), content, style, and language"
+      - agent: shared-agent-linux-maintenance
+        description: "Transfer to Linux maintenance for MCP Linux account/workspace management: status, cleanup, reset, session and workspace administration"
+        prompt: "Summarize what the user wants: e.g. reset account, clean uploads, delete workspace, check disk usage, close stale sessions"
+    category: general
+    conversation_starters:
+      - Ich brauche Hilfe bei ...
+      - Was kannst du alles?
+      - Welcher Assistent passt zu meiner Aufgabe?
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true

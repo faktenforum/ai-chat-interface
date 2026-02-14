@@ -189,6 +189,7 @@ const PROMPTS: Record<string, PromptConfig> = {
     'SPRINGER_NATURE_API_KEY': { message: 'Springer Nature API Key (optional; scientific literature search):', type: 'input', defaultGen: () => '' },
     'MCP_GITHUB_PAT': { message: 'GitHub Personal Access Token (optional; for GitHub MCP):', type: 'password', defaultGen: () => '' },
     'MCP_MAPBOX_ACCESS_TOKEN': { message: 'Mapbox Access Token (optional; for Mapbox MCP):', type: 'password', defaultGen: () => '' },
+    'MCP_LINUX_GIT_SSH_KEY': { message: 'MCP Linux GitHub SSH Key base64 (optional; for git access):', type: 'password', defaultGen: () => '' },
 };
 
 /**

@@ -5,7 +5,7 @@ Initialization services for LibreChat configuration and agent setup.
 ## Services
 
 - **librechat-init**: Pre-API initialization (config, permissions, roles)
-- **librechat-post-init**: Post-API initialization (agents)
+- **librechat-post-init**: Post-API initialization (agents, prompts)
 
 ## Configuration
 
@@ -17,11 +17,20 @@ Init merges an override file onto the base `librechat.yaml` depending on `LIBREC
 
 ### Local dev: mount config (no image rebuild)
 
-When the host directory `config/` is mounted at `/app/config-source` (e.g. in `docker-compose.local-dev.yml` and `docker-compose.local.yml`), the init script reads from that path instead of the baked-in `/app/data`. Set `LIBRECHAT_ENV=local` so `librechat.local.yaml` is applied. After editing `librechat.yaml`, override files, `roles.yaml`, or `agents.yaml`, run init again and restart the API; no image rebuild needed.
+When the host directory `config/` is mounted at `/app/config-source` (e.g. in `docker-compose.local-dev.yml` and `docker-compose.local.yml`), the init script reads from that path instead of the baked-in `/app/data`. Set `LIBRECHAT_ENV=local` so `librechat.local.yaml` is applied. No image rebuild needed for config changes.
+
+After editing `librechat.yaml`, override files, or `roles.yaml`, run init and restart the API:
 
 ```bash
 docker compose -f docker-compose.local-dev.yml run --rm librechat-init
 docker compose -f docker-compose.local-dev.yml restart api
+```
+
+After editing `agents.yaml` or `agent-instructions/`, or `prompts.yaml`, run post-init so agents/prompts are synced to the API (post-init must have `config` mounted as `config-source`; then optionally restart the API):
+
+```bash
+docker compose -f docker-compose.local.yml --env-file .env.local run --rm librechat-post-init
+docker compose -f docker-compose.local.yml --env-file .env.local restart api
 ```
 
 ### Roles (`config/roles.yaml`)
@@ -39,6 +48,8 @@ roles:
 ### Agents
 
 **Files:** `config/agents.yaml` (public), `config/agents.private.yaml` (private)
+
+Each agent can use inline `instructions` or reference a file via **`instructionsFile`** (filename only, e.g. `shared-agent-001-instructions.md`). Files are loaded from `config/agent-instructions/`; naming convention: `{agent-id}-instructions.md`. If `instructionsFile` is set, its content (trimmed) is used and any inline `instructions` is ignored.
 
 ```yaml
 agents:
@@ -66,6 +77,32 @@ agents:
 - `permissions.publicEdit`: Public EDIT (requires `isCollaborative: true`)
 
 **System User Priority:** `LIBRECHAT_DEFAULT_ADMINS` → first admin → first user
+
+### Prompts
+
+**Files:** `config/prompts.yaml` (public), `config/prompts.private.yaml` (private)
+
+```yaml
+prompts:
+  - name: Kurzrecherche
+    prompt: "Recherchiere die neuesten seriösen Quellen zu: {{thema}}. Max. 3 Quellen, mit URL."
+    type: text
+    category: recherche
+    oneliner: Quick research with sources
+    command: kurzrecherche
+```
+
+**Fields:**
+- `name` (required): Display name in the prompt list; used for create-or-update matching
+- `prompt` (required): Prompt text; supports `{{current_date}}`, `{{current_user}}`, and custom `{{variables}}`
+- `type`: `text` (default) or `chat`
+- `category`: Category for filtering in the UI
+- `oneliner`: Short description shown in the prompt list
+- `command`: Slash command trigger (lowercase `a-z`, `0-9`, hyphens only)
+
+**Behaviour:** Applied by `librechat-post-init` after the API is up. Matching is by `name` (case-insensitive): existing groups are updated; new ones are created. Prompt text changes create a new version and set it as production.
+
+**ModelSpec agent IDs:** Post-init patches `librechat.yaml` and writes the config-ID → API-ID mapping to `agent-id-map.json` in the config volume. Init applies this map before the API starts, so restarts usually need no API restart. When you add a new agent, run post-init and restart the API once. The mapping file is per-environment (volume), not in the repo. See [LibreChat Features](../docs/LIBRECHAT_FEATURES.md#default-model-and-agent-modelspecs).
 
 ### Environment Variables
 

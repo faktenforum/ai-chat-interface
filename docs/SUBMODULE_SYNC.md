@@ -76,6 +76,20 @@ When merge conflicts occur:
 
 **Tip**: For `main` branch conflicts, carefully merge upstream changes while preserving Faktenforum-specific modifications.
 
+## Viewing our customizations (diff to upstream)
+
+Prefer aligning with upstream; add only what’s strictly needed. From repo root (ensure `upstream` is fetched in the submodule):
+
+```bash
+cd dev/librechat && git diff upstream/main --stat
+cd dev/librechat && git diff upstream/main -- path/to/file
+
+cd dev/agents && git diff upstream/main --stat
+cd dev/agents && git diff upstream/main -- path/to/file
+```
+
+**LibreChat** — Vision + artifact handling: `validateVisionModel`, `getVisionCapability`, `processArtifactsForAssistants` in ToolService; vision in agent config/run and client (ImageVision, useVisionModel); MCP artifact processing (base64 → files, contentParts). **Agents** — Tool definitions (Calculator, CodeExecutor, WebSearch, ProgrammaticToolCalling) kept aligned so `packages/api` can import from `@librechat/agents`.
+
 ## Adding New Fork Submodules
 
 1. Add entry to `scripts/submodules-upstream.yaml`

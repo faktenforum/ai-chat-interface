@@ -5,7 +5,7 @@ TODO list of MCP servers to evaluate and integrate for specific agents.
 | MCP Server / Concept | Target Agent | Status |
 |----------------------|--------------|--------|
 | [x-twitter-mcp-server](#1-x-twitter-mcp-server) | Social Networks (Soziale Netzwerke) | [ ] |
-| [Context7](#2-context7) | Developer Support (Entwickler-Support) | [ ] |
+| [Context7](#2-context7) | Developer domain (e.g. Code-Recherche) | [ ] |
 | [Wikipedia MCP](#3-wikipedia-mcp) | Research Assistant (Recherche-Assistent) | [ ] |
 | [Code execution with MCP](#4-code-execution-with-mcp-concept) | TBD (developer / data workflows) | [ ] — still searching for suitable server |
 
@@ -30,12 +30,12 @@ TODO list of MCP servers to evaluate and integrate for specific agents.
 
 - **Repository:** [upstash/context7](https://github.com/upstash/context7/tree/master)
 - **Purpose:** Up-to-date, version-specific code documentation for LLMs — resolves library IDs and fetches docs from source.
-- **Target agent:** Developer Support (Entwickler-Support)
+- **Target agent:** Developer domain (e.g. Code-Recherche)
 - **Transport:** Remote HTTP (`https://mcp.context7.com/mcp`) or local (`npx -y @upstash/context7-mcp --api-key KEY`). API key recommended (free at context7.com/dashboard).
 - **Tasks:**
   - [ ] Get Context7 API key and test remote vs local
   - [ ] Verify compatibility with LibreChat MCP client
-  - [ ] Create/update “Entwickler-Support” agent and assign this MCP
+  - [ ] Add Context7 MCP to a developer specialist (e.g. Code-Recherche) and document usage
   - [ ] Document rule/prompt usage (e.g. “use context7” / library IDs)
 
 ---

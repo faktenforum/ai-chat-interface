@@ -25,6 +25,20 @@ Scripts and one shared config for the dev submodule stack (local and local-dev).
 
 **Convenience:** `npm run prepare:dev` = `update:submodules` + `build:dev`. `sync:forks` / `sync:forks:status` / `sync:forks:dry-run` alias to the update:submodules variants.
 
+## Icon variants
+
+**generate-icon-variants.ts** — Generates colored SVG variants from `assets/icons` (originals unchanged). Output: `assets/icons/variants/<variant>/<name>.svg`. Same TypeScript run approach as `setup-env.ts` (Node with `--experimental-strip-types`).
+
+Variants: `green`, `amber`, `purple`, `gray`, `light`, `dark`, and `green-bg`, `amber-bg`, `purple-bg`, `light-bg`, `dark-bg`. Colors match [LibreChat group icons](docs/LIBRECHAT_GROUP_ICONS.md).
+
+```bash
+./scripts/generate-icon-variants.ts --help
+./scripts/generate-icon-variants.ts --list-variants
+./scripts/generate-icon-variants.ts                                    # all icons, all variants
+./scripts/generate-icon-variants.ts --variants green,amber lock.svg   # selected only
+./scripts/generate-icon-variants.ts --base64 purple                    # print data URI for first icon
+```
+
 ## Docs
 
 - [Submodule Sync Guide](../docs/SUBMODULE_SYNC.md) — Update/sync workflow (status, merge, conflicts).

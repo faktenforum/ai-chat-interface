@@ -49,6 +49,7 @@ services:
       LIBRECHAT_JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
       JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
     volumes:
+      - librechat-config:/app/config
       - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
     depends_on:
@@ -58,7 +59,7 @@ services:
         condition: service_healthy
     networks:
       - app-net
-    command: ["node", "--experimental-strip-types", "--no-warnings", "src/init-agents-only.ts"]
+    command: ["node", "--experimental-strip-types", "--no-warnings", "src/init-post.ts"]
 
   api:
     container_name: LibreChat
