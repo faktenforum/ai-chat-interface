@@ -43,7 +43,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'list_workspaces',
     {
-      description: 'List all workspaces for the current user with git status summary (branch, dirty, remote URL)',
+      description: 'List workspaces with git summary (branch, dirty, remote_url) and plan_preview. Use get_workspace_status(workspace) for full plan and tasks.',
       inputSchema: ListWorkspacesSchema.shape,
     },
     async (args, extra) => {
@@ -128,7 +128,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'get_workspace_status',
     {
-      description: 'Get detailed git status of a workspace: branch, staged/unstaged/untracked files, ahead/behind counts, remote URL. Includes plan and tasks (for handoffs).',
+      description: 'Full git status plus plan and tasks (each task: title, status).',
       inputSchema: GetWorkspaceStatusSchema.shape,
     },
     async (args, extra) => {
@@ -156,7 +156,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'set_workspace_plan',
     {
-      description: 'Set or update the workspace plan and/or tasks for handoffs. Optional plan (goal/context); optional tasks (list of { title, done }). Replaces plan or tasks when provided. Used so the next agent can continue from get_workspace_status.',
+      description: 'Set plan and/or tasks for handoffs. Tasks: [{ title, status? }] or string[]; status: pending | in_progress | done | cancelled. Next agent reads via get_workspace_status.',
       inputSchema: SetWorkspacePlanSchema.shape,
     },
     async (args, extra) => {

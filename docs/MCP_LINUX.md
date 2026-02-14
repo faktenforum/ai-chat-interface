@@ -25,15 +25,15 @@ User naming: `lc_` + email local part (sanitized). Example: `pascal.garber@corre
 ### Workspace
 | Tool | Description |
 |------|-------------|
-| `list_workspaces` | List all workspaces with git status |
+| `list_workspaces` | List workspaces with git summary (branch, dirty, remote_url) and `plan_preview` (truncated plan). Use `get_workspace_status(workspace)` for full plan and tasks. |
 | `create_workspace` | Create workspace (empty or from git URL) |
 | `delete_workspace` | Delete workspace (not default) |
-| `get_workspace_status` | Detailed git status; includes plan and tasks (for handoffs) |
-| `set_workspace_plan` | Set or update workspace plan and/or tasks for handoffs |
+| `get_workspace_status` | Full git status plus plan and tasks (each task: title, status). |
+| `set_workspace_plan` | Set plan and/or tasks. Tasks: `{ title, status? }` or string[]; status: pending, in_progress, done, cancelled. |
 
 #### Plan and tasks
 
-Workspaces can store a **plan** (goal/context) and **tasks** (steps) so agents can pass context across handoffs. Stored in `.mcp-linux/plan.json` per workspace. When receiving a handoff, call `get_workspace_status` to read plan and tasks; when handing off, call `set_workspace_plan` to leave or update them and pass the workspace name in handoff instructions.
+Workspaces can store a **plan** (goal/context) and **tasks** (steps) so agents can pass context across handoffs. Stored in `.mcp-linux/plan.json` per workspace. Each task has `title` and `status` (pending | in_progress | done | cancelled). When receiving a handoff, call `get_workspace_status` to read plan and tasks; when handing off, call `set_workspace_plan` and pass the workspace name in handoff instructions.
 
 ### Account
 | Tool | Description |

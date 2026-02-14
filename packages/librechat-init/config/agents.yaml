@@ -256,7 +256,7 @@ agents:
         description: "Transfer to GitHub assistant for creating PRs, issues, or posting reviews"
         prompt: "Describe the GitHub action needed based on the research"
     # Dev: many read ops (docs, GitHub, workspace)
-    recursion_limit: 100
+    recursion_limit: 200
     isCollaborative: true
     permissions:
       public: true
@@ -383,7 +383,7 @@ agents:
         description: "Transfer to code reviewer to read a PR and its review comments, then analyze or fix the mentioned issues"
         prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
     # Dev: refactor, tests, many file reads
-    recursion_limit: 100
+    recursion_limit: 200
     isCollaborative: true
     permissions:
       public: true
@@ -473,7 +473,7 @@ agents:
         description: "Transfer to code reviewer for analyzing a PR"
         prompt: "Provide the PR URL and context for review"
     # Dev: GitHub API + git, many file/API ops
-    recursion_limit: 100
+    recursion_limit: 200
     isCollaborative: true
     permissions:
       public: true
@@ -532,7 +532,7 @@ agents:
         description: "Transfer to developer to fix the issues found in the review"
         prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
     # Dev: PR review — file reads, diff, GitHub API, push
-    recursion_limit: 100
+    recursion_limit: 200
     isCollaborative: true
     permissions:
       public: true
@@ -831,8 +831,8 @@ agents:
       temperature: 0.3
       top_p: 0.9
       maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
-    # Global limit for whole run when user starts here (e.g. Universal→Router→specialist)
-    recursion_limit: 100
+    # Global limit for whole run (e.g. Universal→Router→specialist). 200 allows long PR review and multi-step dev chains.
+    recursion_limit: 200
     mcpServers:
       - linux
     mcpTools:

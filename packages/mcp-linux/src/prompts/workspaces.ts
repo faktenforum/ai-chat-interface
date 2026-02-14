@@ -16,8 +16,8 @@ Each user has persistent **workspaces** under \`~/workspaces/\`. Each workspace 
 
 Workspaces can store a **plan** (goal/context) and **tasks** (concrete steps) so the next agent can continue the work.
 
-- **Read:** \`get_workspace_status\` returns \`plan\` and \`tasks\` in addition to git status. When you **start** work or **receive a handoff**, call \`get_workspace_status\` for that workspace and follow the plan and tasks.
-- **Write:** Use \`set_workspace_plan\` to set or update \`plan\` (string) and/or \`tasks\` (array of \`{ title, done }\`). When **handing off** to another agent, update plan and tasks so the next agent has current context; always pass the workspace name in the handoff instructions.
+- **Read:** \`get_workspace_status\` returns \`plan\` and \`tasks\` in addition to git status. Each task has \`title\` and \`status\` (pending, in_progress, done, cancelled). When you **start** work or **receive a handoff**, call \`get_workspace_status\` for that workspace and follow the plan and tasks.
+- **Write:** \`set_workspace_plan\` sets \`plan\` and/or \`tasks\`. Each task: \`{ title, status? }\` (status: pending | in_progress | done | cancelled; default pending). When **handing off**, update plan/tasks and pass the workspace name in the handoff instructions.
 
 ## Creating a workspace
 
@@ -31,7 +31,7 @@ Use the \`create_workspace\` tool:
 **Python:** \`python3 -m venv .venv\`, \`source .venv/bin/activate\`, \`pip install -r requirements.txt\`, \`python3 -m pytest\`
 **General:** \`tree -L 2 -I node_modules\`, \`cat README.md\`, \`cat package.json | jq '.scripts'\`, \`du -sh *\`
 
-List workspaces with \`list_workspaces\`; pass the \`workspace\` parameter to terminal and file tools; check status with \`get_workspace_status\`.
+\`list_workspaces\` for overview (branch, dirty, remote_url, plan_preview). Use \`workspace\` in terminal/file tools; \`get_workspace_status(workspace)\` for full plan and tasks.
 
 ## Git workflow (terminal)
 

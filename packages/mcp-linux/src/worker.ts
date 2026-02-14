@@ -17,6 +17,14 @@ import { execSync, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { getDefaultGitIdentity } from './utils/git-config.ts';
 import { validateWorkspaceName, validateTerminalId } from './utils/security.ts';
+import {
+  type PlanTask,
+  isTaskStatus,
+  taskStatusFrom,
+  PLAN_DIR,
+  PLAN_FILENAME,
+  LIST_WORKSPACES_PLAN_PREVIEW_LEN,
+} from './workspace-plan.ts';
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -132,12 +140,9 @@ function resolveWorkspacePath(workspace: string): string {
   return join(workspacesDir, workspace);
 }
 
-const PLAN_DIR = '.mcp-linux';
-const PLAN_FILENAME = 'plan.json';
-
 interface PlanData {
   plan: string | null;
-  tasks: Array<{ title: string; done: boolean }>;
+  tasks: PlanTask[];
 }
 
 function getPlanPath(workspace: string): string {
@@ -157,10 +162,16 @@ function readPlanFile(workspace: string): PlanData {
       const obj = data as Record<string, unknown>;
       const plan = typeof obj.plan === 'string' ? obj.plan : obj.plan === null ? null : null;
       const tasks = Array.isArray(obj.tasks)
-        ? (obj.tasks as unknown[]).filter(
-            (t): t is { title: string; done: boolean } =>
-              t && typeof t === 'object' && typeof (t as Record<string, unknown>).title === 'string',
-          ).map((t) => ({ title: (t as { title: string; done?: boolean }).title, done: (t as { title: string; done?: boolean }).done === true }))
+        ? (obj.tasks as unknown[])
+            .filter(
+              (t): t is Record<string, unknown> =>
+                t != null && typeof t === 'object' && typeof (t as Record<string, unknown>).title === 'string',
+            )
+            .map((t): PlanTask => {
+              const title = String(t.title);
+              const status = taskStatusFrom(t.status, t.done === true);
+              return { title, status };
+            })
         : [];
       return { plan, tasks };
     }
@@ -449,12 +460,21 @@ const handlers: Record<string, Handler> = {
         // No remote
       }
 
+      const { plan } = readPlanFile(entry.name);
+      const normalized = plan != null && plan.length > 0 ? plan.replace(/\s+/g, ' ').trim() : '';
+      const plan_preview =
+        normalized.length > 0
+          ? normalized.slice(0, LIST_WORKSPACES_PLAN_PREVIEW_LEN) +
+            (normalized.length > LIST_WORKSPACES_PLAN_PREVIEW_LEN ? '…' : '')
+          : null;
+
       workspaces.push({
         name: entry.name,
         path: wsPath,
         branch: meta.branch,
         dirty: meta.dirty,
         remote_url: remoteUrl || null,
+        plan_preview,
       });
     }
 
@@ -632,9 +652,9 @@ const handlers: Record<string, Handler> = {
 
     const nextPlan = planProvided ? (params.plan as string) : current.plan;
     const nextTasks = tasksProvided
-      ? (params.tasks as Array<{ title: string; done?: boolean }>).map((t) => ({
+      ? (params.tasks as PlanTask[]).map((t): PlanTask => ({
           title: String(t.title),
-          done: t.done === true,
+          status: isTaskStatus(t.status) ? t.status : 'pending',
         }))
       : current.tasks;
 
