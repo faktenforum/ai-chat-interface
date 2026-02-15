@@ -44,7 +44,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'list_workspaces',
     {
-      description: 'Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use get_workspace_status(workspace) for full plan and tasks.',
+      description: 'Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use get_workspace_status(workspace) for full plan and tasks. When handing off to a workspace specialist, put the chosen workspace name in the handoff instructions so they call get_workspace_status(workspace) first.',
       inputSchema: ListWorkspacesSchema.shape,
     },
     async (args, extra) => {
@@ -129,7 +129,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'get_workspace_status',
     {
-      description: 'Full git status plus plan and tasks (each task: title, status). Call after receiving a handoff (use workspace name from handoff instructions; default if none).',
+      description: 'Full git status plus plan and tasks (each task: title, status). First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next.',
       inputSchema: GetWorkspaceStatusSchema.shape,
     },
     async (args, extra) => {
@@ -157,7 +157,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'set_workspace_plan',
     {
-      description: 'Set plan and/or tasks for handoffs (can update only plan, only tasks, or both). Tasks: prefer string[] e.g. ["Step 1","Step 2"]; or [{ title, status? }]. status: pending | in_progress | done | cancelled. Next agent reads via get_workspace_status.',
+      description: 'Set plan and/or tasks. Call before every handoff and at end of your turn so the next agent sees current state; if you omit this, context is lost. Pass full task list with updated statuses (done | in_progress | pending). Next agent reads via get_workspace_status. Tasks: prefer string[] e.g. ["Step 1","Step 2"] or [{ title, status? }]; status: pending | in_progress | done | cancelled.',
       inputSchema: SetWorkspacePlanSchema.shape,
     },
     async (args, extra) => {

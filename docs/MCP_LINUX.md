@@ -28,18 +28,18 @@ User naming: `lc_` + email local part (sanitized). Example: `pascal.garber@corre
 | `list_workspaces` | Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use `get_workspace_status(workspace)` for full plan and tasks. |
 | `create_workspace` | Create workspace (empty or from git URL). Call list_workspaces first if unsure whether the name exists. |
 | `delete_workspace` | Delete workspace (not default) |
-| `get_workspace_status` | Full git status plus plan and tasks (each task: title, status). File lists may be truncated/collapsed (see **Status capping** below); use `staged_count`, `unstaged_count`, `untracked_count`, `truncated`. |
-| `set_workspace_plan` | Set plan and/or tasks. Tasks: `{ title, status? }` or string[]; status: pending, in_progress, done, cancelled. |
+| `get_workspace_status` | Full git status plus plan and tasks (each task: title, status). First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next. File lists may be truncated/collapsed (see **Status capping** below). |
+| `set_workspace_plan` | Set plan and/or tasks. Call before every handoff and at end of your turn so the next agent sees current state; if you omit this, context is lost. Pass full task list with updated statuses. Tasks: `{ title, status? }` or string[]; status: pending, in_progress, done, cancelled. |
 | `clean_workspace_uploads` | Delete files in workspace `uploads/` older than N days (default 7; use 0 to delete all). Use to free space; uploads are ephemeral. |
 
 #### When to use list_workspaces vs get_workspace_status
 
-- **`list_workspaces`** — Overview only: all workspace names, branch, dirty flag, remote_url, short plan_preview. Use when: choosing or creating a workspace, checking if a name exists, or deciding which workspace to pass in a handoff.
+- **`list_workspaces`** — Overview only: all workspace names, branch, dirty flag, remote_url, short plan_preview. Use when: choosing or creating a workspace, checking if a name exists, or deciding which workspace to pass in a handoff. When handing off to a workspace specialist, put the chosen workspace name in the handoff instructions so they call `get_workspace_status(workspace)` first.
 - **`get_workspace_status(workspace)`** — Full detail for **one** workspace: full plan, all tasks (title + status), git status (with capping). Use when: after a handoff (to read plan/tasks), before/after `set_workspace_plan`, or when you need task-level context. Do not use for "list all workspaces".
 
 #### Plan and tasks
 
-Workspaces can store a **plan** (goal/context) and **tasks** (steps) so agents can pass context across handoffs. Stored in `.mcp-linux/plan.json` per workspace. Each task has `title` and `status` (pending | in_progress | done | cancelled). **Flow:** After a handoff use `get_workspace_status(workspace)` (workspace from instructions; use `default` if none). If there is no or empty plan/tasks, set an initial plan and tasks from the handoff then continue. Before creating a workspace call `list_workspaces` to avoid "already exists". When handing off call `set_workspace_plan` then pass the workspace name in handoff instructions: set completed tasks to `done`, next task to `in_progress` or `pending`, optionally update the plan summary. Prefer tasks as string array (e.g. `["Step 1", "Step 2"]`); or `[{ title, status? }]`.
+Workspaces store a **plan** (goal/context) and **tasks** (steps) as the **single source of truth** for continuity across handoffs. Stored in `.mcp-linux/plan.json` per workspace. Each task has `title` and `status` (pending | in_progress | done | cancelled). **Flow:** After a handoff use `get_workspace_status(workspace)` (workspace from handoff instructions; use `default` if none). If there is no or empty plan/tasks, set an initial plan and tasks from the handoff then continue. **Always** call `set_workspace_plan` before every handoff or when finishing your part so the next agent has current state; otherwise context is lost. Handoff instructions should contain the **workspace name** and optionally one short hint (e.g. "Continue from plan/tasks"); do not duplicate the full plan or task list in handoff text. Before creating a workspace call `list_workspaces` to avoid "already exists". Prefer tasks as string array (e.g. `["Step 1", "Step 2"]`); or `[{ title, status? }]`.
 
 #### Status capping
 

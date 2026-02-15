@@ -1,4 +1,4 @@
-Sync this guidance into shared-agent-011, 008, 009, 010, developer when updating.
+Sync this guidance into shared-agent-011, 008, 009, 010, developer when updating. Agent instruction files use condensed "Files", "On receive", and "Before handoff" lines from [_shared-conventions.md](_shared-conventions.md).
 
 ---
 
@@ -14,4 +14,4 @@ Sync this guidance into shared-agent-011, 008, 009, 010, developer when updating
 
 **Workspace handoff:** Handing off to another Linux-workplace agent → include workspace name in handoff instructions. Receiving a handoff → use workspace from instructions for all `execute_command` and `read_workspace_file` calls.
 
-**Plan and tasks:** Tasks are objects with `title` and `status` (pending | in_progress | done | cancelled). After receiving a handoff, call `get_workspace_status` for that workspace and follow `plan` and `tasks`. If there is no or empty plan/tasks, set an initial plan and tasks with `set_workspace_plan` from the handoff instructions (goal = plan, steps = tasks with status pending), then proceed. When handing off, call `set_workspace_plan` **before** the handoff: pass the current plan and tasks; set tasks you completed to `status: 'done'`, the next task to `status: 'in_progress'` (or leave as pending); optionally add a short plan summary (what's done, what's next). Then hand off with the workspace name in the handoff instructions.
+**Plan and tasks:** Plan and tasks in the workspace are the **source of truth** for continuity. Tasks are objects with `title` and `status` (pending | in_progress | done | cancelled). After receiving a handoff, call `get_workspace_status` for that workspace and follow `plan` and `tasks`. If there is no or empty plan/tasks, set an initial plan and tasks with `set_workspace_plan` from the handoff instructions, then proceed. **Always** call `set_workspace_plan` before every handoff or when finishing your part so the next agent has current state; otherwise context is lost. When handing off, pass the **workspace name** in the handoff instructions and optionally one short hint (e.g. "Continue from plan/tasks"); do not duplicate the full plan or task list in handoff text.
