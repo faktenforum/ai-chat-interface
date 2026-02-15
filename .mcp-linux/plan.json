@@ -7,11 +7,11 @@
     },
     {
       "title": "Refactor the code as needed",
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "title": "Push the refactored changes to the branch",
-      "status": "pending"
+      "status": "in_progress"
     }
   ]
 }
