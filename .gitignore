@@ -31,3 +31,5 @@ package-lock.json
 packages/librechat-init/config/agents.private.json
 
 assets/icons/variants
+
+.mcp-linux/
