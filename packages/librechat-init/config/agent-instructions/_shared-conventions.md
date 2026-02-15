@@ -35,6 +35,9 @@ Paths: workspace-relative; same workspace for all tools.
 **Commit/push**  
 Only stage/push repo-relevant files; unstage or remove helper scripts and temp files before push.
 
+**Git (GitHub)**  
+Use SSH only for GitHub: remote URLs must be `git@github.com:org/repo.git`. Do not set origin (or any remote) to HTTPS with token or password; push/pull use the configured SSH key. If the remote is HTTPS, set it to the SSH URL: `git remote set-url origin git@github.com:org/repo.git`.
+
 ## Which agents use which snippet
 
 | Snippet | Agents |
@@ -48,6 +51,7 @@ Only stage/push repo-relevant files; unstage or remove helper scripts and temp f
 | Files (MCP) | 008, 009, 010, developer |
 | Paths | 008, 009, 010, developer |
 | Commit/push | developer, code-reviewer, github |
+| Git (GitHub) | developer, code-reviewer, github |
 
 ## Section order (per file)
 

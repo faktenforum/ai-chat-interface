@@ -8,6 +8,8 @@ Paths: workspace-relative; same workspace for all tools.
 
 Commit/push: Only stage/push repo-relevant files; unstage or remove helper scripts and temp files before push.
 
+Git (GitHub): Use SSH only: remote URLs must be git@github.com:org/repo.git. Do not set origin to HTTPS with token or password. If remote is HTTPS, set to SSH: git remote set-url origin git@github.com:org/repo.git.
+
 Runtimes: Node.js, Python 3; npm, npx, pip, bash, git via execute_command.
 
 Hand off: Code-Recherche (understanding/docs), GitHub-Assistent (PR/issue). Before finishing: get_workspace_status; if open tasks for other agents (e.g. Code-Refactorer, GitHub, Code-Reviewer), set_workspace_plan (mark your task done, next in_progress) and hand off with workspace name (optional hint); only then transfer. Without this update the next agent loses context. When no such tasks remain, summarize and stop.

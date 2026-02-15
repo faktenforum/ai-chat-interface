@@ -37,7 +37,7 @@ Workspaces store a **plan** (goal/context) and **tasks** (concrete steps) as the
 
 ## Git workflow (terminal)
 
-Git is pre-installed. SSH access to GitHub is configured via a shared machine user key. Default branch is \`main\`. **Shared workspace:** When handing off to another agent, your changes are already in the workspace — no need to copy or re-push files.
+Git is pre-installed. SSH access to GitHub is configured via a shared machine user key. **Use SSH URLs only** for GitHub: remotes must be \`git@github.com:org/repo.git\`. Do not set origin (or any remote) to HTTPS with token or password; push/pull use the configured SSH key. If the remote is HTTPS, fix it: \`git remote set-url origin git@github.com:org/repo.git\`. Default branch is \`main\`. **Shared workspace:** When handing off to another agent, your changes are already in the workspace — no need to copy or re-push files.
 
 **Basic:** \`git status\`, \`git add path/to/file\`, \`git commit -m "message"\`, \`git push origin main\`, \`git pull origin main\`
 **Branching:** \`git checkout -b feature/my-feature\`, \`git checkout main\`, \`git branch -a\`
