@@ -44,6 +44,13 @@ const TaskItemSchema = z.object({
 /** Normalized task from set_workspace_plan input (re-export for callers). */
 export type NormalizedTask = PlanTask;
 
+const TaskUpdateItemSchema = z
+  .object({
+    index: z.number().int().min(0).describe('0-based task index from get_workspace_status'),
+    status: TaskStatusSchema,
+  })
+  .describe('Partial update: set status of task at index');
+
 export const SetWorkspacePlanSchema = z.object({
   workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
   plan: z.string().optional().describe('Goal or context for this workspace (replaces existing when provided)'),
@@ -60,4 +67,10 @@ export const SetWorkspacePlanSchema = z.object({
       });
     })
     .describe('Task list: [{ title, status? }] or string[]. status: pending | in_progress | done | cancelled.'),
+  task_updates: z
+    .array(TaskUpdateItemSchema)
+    .optional()
+    .describe(
+      'Partial updates: set status of task at index (0-based). Use to mark tasks done/in_progress without sending the full task list. Indices from get_workspace_status.',
+    ),
 });

@@ -188,6 +188,19 @@ function writePlanFile(workspace: string, data: PlanData): void {
   writeFileSync(join(dir, PLAN_FILENAME), JSON.stringify(data, null, 2), 'utf-8');
 }
 
+function applyTaskUpdates(
+  current: PlanTask[],
+  updates: Array<{ index: number; status: string }>,
+): PlanTask[] {
+  const result = current.map((t) => ({ ...t }));
+  for (const u of updates) {
+    if (u.index >= 0 && u.index < result.length && isTaskStatus(u.status)) {
+      result[u.index].status = u.status;
+    }
+  }
+  return result;
+}
+
 /**
  * Escapes a path for use inside double-quoted shell string (escape \ and ").
  */
@@ -778,14 +791,21 @@ const handlers: Record<string, Handler> = {
     const current = readPlanFile(workspace);
     const planProvided = params.plan !== undefined && params.plan !== null;
     const tasksProvided = params.tasks !== undefined && Array.isArray(params.tasks);
+    const taskUpdates = params.task_updates as Array<{ index: number; status: string }> | undefined;
+    const hasTaskUpdates = taskUpdates != null && taskUpdates.length > 0;
 
     const nextPlan = planProvided ? (params.plan as string) : current.plan;
-    const nextTasks = tasksProvided
-      ? (params.tasks as PlanTask[]).map((t): PlanTask => ({
-          title: String(t.title),
-          status: isTaskStatus(t.status) ? t.status : 'pending',
-        }))
-      : current.tasks;
+    let nextTasks: PlanTask[];
+    if (hasTaskUpdates) {
+      nextTasks = applyTaskUpdates(current.tasks, taskUpdates);
+    } else if (tasksProvided) {
+      nextTasks = (params.tasks as PlanTask[]).map((t): PlanTask => ({
+        title: String(t.title),
+        status: isTaskStatus(t.status) ? t.status : 'pending',
+      }));
+    } else {
+      nextTasks = current.tasks;
+    }
 
     const data: PlanData = { plan: nextPlan, tasks: nextTasks };
     writePlanFile(workspace, data);

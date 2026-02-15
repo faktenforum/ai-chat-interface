@@ -157,7 +157,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'set_workspace_plan',
     {
-      description: 'Set plan and/or tasks. Call before every handoff and at end of your turn so the next agent sees current state; if you omit this, context is lost. Pass full task list with updated statuses (done | in_progress | pending). Next agent reads via get_workspace_status. Tasks: prefer string[] e.g. ["Step 1","Step 2"] or [{ title, status? }]; status: pending | in_progress | done | cancelled.',
+      description: 'Set plan and/or tasks. Call before every handoff and at end of your turn so the next agent sees current state; if you omit this, context is lost. Pass full task list with updated statuses (done | in_progress | pending). Alternatively pass task_updates: [{ index, status }] to update only specific task statuses (0-based index from get_workspace_status) without sending the full list. Next agent reads via get_workspace_status. Tasks: prefer string[] e.g. ["Step 1","Step 2"] or [{ title, status? }]; status: pending | in_progress | done | cancelled.',
       inputSchema: SetWorkspacePlanSchema.shape,
     },
     async (args, extra) => {
@@ -170,6 +170,7 @@ export function registerWorkspaceTools(
             workspace: args.workspace,
             plan: args.plan,
             tasks: args.tasks,
+            task_updates: args.task_updates,
           },
         });
 
