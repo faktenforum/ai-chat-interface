@@ -29,6 +29,7 @@ Prompts for generating round agent avatars for LibreChat. Style: playful and fri
 | shared-agent-008 | Datenanalyse | Playful round avatar, soft blue or aqua background. Cute bar chart or line chart, friendly data vibe. Colorful, no text. |
 | shared-agent-009 | Dateikonverter | Playful round avatar, soft lime or green background. Cute two file shapes with arrow between them, conversion theme. Friendly, no text. |
 | shared-agent-010 | Dokumenten-Ersteller | Playful round avatar, soft paper-white or cream with blue accent. Cute document with pen or sheet with lines. Clean, friendly, no text. |
+| shared-agent-linux-maintenance | Linux-Experte | Playful round avatar, soft slate or grey-blue background. Cute terminal window or command prompt symbol (>_), friendly Linux vibe. No text. |
 
 ## Usage (Image-Gen MCP)
 

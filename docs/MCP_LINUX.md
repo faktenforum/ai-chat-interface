@@ -85,9 +85,9 @@ Resource template `workspace://{workspace}/{+path}` exposes workspace files as n
 
 Workspaces are persistent. Agents can save scripts (e.g. under `scripts/` in a workspace) and run them again in later turns. See [MCP Code Execution Insights](MCP_CODE_EXECUTION_INSIGHTS.md) for context-efficiency guidance (batch work in code, filter before return).
 
-### Agent Linux-Wartung
+### Agent Linux-Experte
 
-The **Linux-Wartung** agent (id: `shared-agent-linux-maintenance`) is dedicated to MCP Linux account and workspace administration. Users can select it directly or be routed from Universal when they want to: check account/disk status, clean uploads or close stale sessions, delete workspaces, or reset their Linux account. It has access to maintenance-only tools (e.g. `get_account_info`, `reset_account`, `clean_workspace_uploads`, `delete_workspace`, session close). It does not do development or content creation.
+The **Linux-Experte** agent (id: `shared-agent-linux-maintenance`) is a general Linux assistant with full MCP Linux tool access. It handles: general Linux questions, shell commands, scripts, file operations; plus MCP Linux account/workspace administration (status, cleanup, reset, sessions). Users can select it directly or be routed from Universal. It hands off to Entwickler-Router (code implementation), Datenanalyse, Dateikonverter, or Dokumenten-Ersteller for those domains.
 
 ## Environment Variables
 

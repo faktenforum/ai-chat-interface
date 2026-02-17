@@ -474,6 +474,16 @@ modelSpecs:
         endpointType: "agents"
         agent_id: "shared-agent-010"
 
+    - name: "agent-linux-experte"
+      label: "Linux-Experte"
+      description: "Allgemeiner Linux-Assistent mit vollem MCP-Linux-Zugriff – Shell, Skripte, Dateien, Workspaces. Zusätzlich Wartung: Status, Bereinigung, Zurücksetzen des Accounts."
+      group: "Assistenten"
+      order: 15
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-linux-maintenance"
+
     # ==========================================
     # Europa & Open Source (Scaleway) – alphabetisch nach Label
     # ==========================================

@@ -6,7 +6,7 @@ Round, playful avatars for LibreChat shared agents. Generated via image-gen MCP 
 
 The image-gen MCP shows each generated image in the chat. To use them:
 
-1. In the chat where the 16 avatars were generated, save each image (e.g. right‑click → Save image as).
+1. In the chat where the avatars were generated, save each image (e.g. right‑click → Save image as).
 2. Name files by agent ID and put them here:
 
 | Order | Agent ID | Suggested filename |
@@ -27,6 +27,17 @@ The image-gen MCP shows each generated image in the chat. To use them:
 | 14 | shared-agent-008 | shared-agent-008-datenanalyse.png |
 | 15 | shared-agent-009 | shared-agent-009-dateikonverter.png |
 | 16 | shared-agent-010 | shared-agent-010-dokumenten-ersteller.png |
+| 17 | shared-agent-linux-maintenance | shared-agent-linux-maintenance.png |
+
+### Linux-Experte (shared-agent-linux-maintenance) — 3 avatar options
+
+Three variants are provided; pick one and rename to `shared-agent-linux-maintenance.png`:
+
+| Option | Filename | Style |
+|--------|----------|-------|
+| 1 | shared-agent-linux-maintenance-option1.png | Terminal/prompt symbol, slate background |
+| 2 | shared-agent-linux-maintenance-option2.png | Penguin (Tux), teal background |
+| 3 | shared-agent-linux-maintenance-option3.png | Shell/bash symbol, amber background |
 
 3. In LibreChat: open each agent in the sidebar → Agent settings → upload the matching avatar image.
 
