@@ -213,9 +213,50 @@ function buildPermissions(agentConfig: AgentConfig, ownerUserId: string): Permis
   };
 }
 
+const INCLUDE_REGEX = /\{\{include:([^}]+)\}\}/g;
+
+/**
+ * Resolves {{include:path}} directives in content by replacing them with the
+ * trimmed contents of partial_instructions/<path>. Paths must stay under
+ * partial_instructions/ (no .. escape). Supports recursive includes with cycle detection.
+ */
+function resolvePartials(
+  content: string,
+  instructionsDir: string,
+  context: string,
+  seenPaths: Set<string> = new Set()
+): string {
+  const partialsBase = join(resolve(instructionsDir), 'partial_instructions');
+  return content.replace(INCLUDE_REGEX, (match, path) => {
+    const trimmedPath = (path as string).trim();
+    if (!trimmedPath) {
+      throw new Error(`Empty include path in ${context}`);
+    }
+    const resolvedPath = resolve(partialsBase, trimmedPath);
+    const rel = relative(partialsBase, resolvedPath);
+    if (rel.startsWith('..') || rel === '..') {
+      throw new Error(
+        `Include path "${trimmedPath}" escapes partial_instructions directory (${context})`
+      );
+    }
+    if (seenPaths.has(resolvedPath)) {
+      throw new Error(`Circular include detected: ${trimmedPath} (${context})`);
+    }
+    if (!existsSync(resolvedPath)) {
+      throw new Error(
+        `Partial not found: ${resolvedPath} (${context})`
+      );
+    }
+    seenPaths.add(resolvedPath);
+    const partialContent = readFileSync(resolvedPath, 'utf-8').trim();
+    seenPaths.delete(resolvedPath);
+    return resolvePartials(partialContent, instructionsDir, context, seenPaths);
+  });
+}
+
 /**
  * Resolves instructions for one agent: from file if instructionsFile is set, else from instructions.
- * Validates that the file path stays under instructionsDir. Mutates agentConfig.instructions.
+ * Expands {{include:path}} directives from partial_instructions/. Mutates agentConfig.instructions.
  */
 function resolveAgentInstructions(
   agentConfig: AgentConfig,
@@ -238,7 +279,12 @@ function resolveAgentInstructions(
     );
   }
   const content = readFileSync(resolvedPath, 'utf-8');
-  agentConfig.instructions = content.trim();
+  const expanded = resolvePartials(
+    content.trim(),
+    instructionsDir,
+    `agent: ${agentConfig.name}, file: ${agentConfig.instructionsFile}`
+  );
+  agentConfig.instructions = expanded;
 }
 
 /**

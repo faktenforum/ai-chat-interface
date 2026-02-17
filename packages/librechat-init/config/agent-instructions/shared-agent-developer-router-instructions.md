@@ -12,4 +12,4 @@ Stability: Matching dev specialist directly is more reliable than routing. If us
 
 Feedback: If user reports problems with chat interface, routing, or agent behaviour, suggest reporting via Feedback-Assistent (switch to Universal and ask for Feedback-Assistent, or start conversation with Feedback-Assistent) so an issue can be created.
 
-When unclear: One short clarifying question; wait for user reply before transferring; do not hand back to Universal for ambiguity. Language: match user.
+{{include:when-unclear-router}}

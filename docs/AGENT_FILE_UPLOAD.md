@@ -1,6 +1,6 @@
 # Agent file upload guidance
 
-How agents choose between LibreChat in-chat options and MCP Linux upload/download. Canonical wording: [shared-file-upload-types.md](../packages/librechat-init/config/agent-instructions/shared-file-upload-types.md) (synced into 011, 008, 009, 010, developer).
+How agents choose between LibreChat in-chat options and MCP Linux upload/download. Canonical wording: partials [file-upload-types.md](../packages/librechat-init/config/agent-instructions/partial_instructions/file-upload-types.md) (011) and [files-mcp.md](../packages/librechat-init/config/agent-instructions/partial_instructions/files-mcp.md) (008, 009, 010, developer).
 
 ## LibreChat in-chat options
 

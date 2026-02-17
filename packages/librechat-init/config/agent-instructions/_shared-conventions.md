@@ -1,12 +1,29 @@
 # Agent instruction conventions (maintainer reference)
 
-**Not loaded by any agent.** Use these exact phrases in the listed agent files to avoid drift. See [shared-file-upload-types.md](shared-file-upload-types.md) for full upload/workspace/plan detail.
+**Not loaded by any agent.** Canonical snippets live in `partial_instructions/` and are included in agent files via `{{include:partial-name}}` (e.g. `{{include:handoff-workspace}}`). The init process resolves these directives before storing instructions in LibreChat. See [shared-file-upload-types.md](shared-file-upload-types.md) for full upload/workspace/plan detail.
 
 ## Principle
 
 Workspace + plan/tasks are the single source of truth for continuity across handoffs; handoff text should not duplicate the full plan/task list.
 
-## Canonical snippets
+## Partial files (source of truth)
+
+| Partial | Content |
+|---------|---------|
+| handoff-workspace | Full workspace handoff (Transfer, Before handoff, On receive, End of turn) |
+| handoff-simple | Minimal handoff (Transfer via lc_transfer_to; put context in instructions) |
+| execution-2 | Execution: ≤2 tool calls/batch; brief prose; no labels/tags. |
+| execution-3 | Execution: ≤3 tool calls/batch; brief prose; no labels/tags. |
+| when-unclear | When unclear: One short clarifying question...; Language: match user. |
+| files-mcp | MCP upload/download (list_upload_sessions, read_workspace_file, create_download_link) |
+| paths-workspace | Paths: workspace-relative; same workspace for all tools. |
+| commit-push | Commit/push: Only stage/push repo-relevant files... |
+| git-github-ssh | Git (GitHub): Use SSH only... |
+| before-handoff-workspace | Before handoff or when finishing: get_workspace_status; set_workspace_plan... |
+| when-unclear-router | When unclear (routers): wait for reply before transferring; do not hand off to same specialist again |
+| file-upload-types | LibreChat vs MCP upload, routing, Linux handoff (011); workspace agents use files-mcp |
+
+## Canonical snippets (reference; edit partials, not this list)
 
 **HANDOFF (minimal)**  
 Transfer only via lc_transfer_to_<agentId>; put context in the tool's instructions param. Chat text does not trigger transfer.

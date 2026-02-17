@@ -183,14 +183,15 @@ agents:
     name: Code-Recherche
     description: Versteht Code und Repositories, findet Beispiele, durchsucht Dokumentation, Stack Overflow, npm und GitHub. Keine Implementierung – nur Analyse und Recherche.
     instructionsFile: shared-agent-code-researcher-instructions.md
-    # provider: OpenRouter
-    # model: anthropic/claude-opus-4.6
-    provider: Scaleway
-    model: devstral-2-123b-instruct-2512
+    provider: OpenRouter
+    model: anthropic/claude-opus-4.6
+    # provider: Scaleway
+    # model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.5
       top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B supports 200K; required for Scaleway (no endpointTokenConfig)
+      maxContextTokens: 1000000   # Claude Opus 4.6
+      maxOutputTokens: 128000
     tools:
       - web_search
     mcpServers:
@@ -266,14 +267,15 @@ agents:
     name: Entwickler
     description: Implementiert Features und behebt Bugs im Linux-Workspace – voller Terminal- und Workspace-Zugriff mit Node.js, Python, Git.
     instructionsFile: shared-agent-developer-instructions.md
-    # provider: OpenRouter
-    # model: anthropic/claude-opus-4.6
-    provider: Scaleway
-    model: devstral-2-123b-instruct-2512
+    provider: OpenRouter
+    model: anthropic/claude-opus-4.6
+    # provider: Scaleway
+    # model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.5
       top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B supports 200K; required for Scaleway (no endpointTokenConfig)
+      maxContextTokens: 1000000   # Claude Opus 4.6
+      maxOutputTokens: 128000
     tools:
       - web_search
     mcpServers:
@@ -328,14 +330,15 @@ agents:
     name: Code-Refactorer
     description: Refactoring und Optimierung von Code – Struktur, Stil, Tests, Lesbarkeit. Voller Linux-Workspace-Zugriff.
     instructionsFile: shared-agent-code-refactorer-instructions.md
-    # provider: OpenRouter
-    # model: google/gemini-3-pro-preview
-    provider: Scaleway
-    model: devstral-2-123b-instruct-2512
+    provider: OpenRouter
+    model: google/gemini-3-pro-preview
+    # provider: Scaleway
+    # model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B supports 200K; required for Scaleway (no endpointTokenConfig)
+      maxContextTokens: 1048576   # Gemini 3 Pro Preview
+      maxOutputTokens: 65536
     tools:
       - web_search
     mcpServers:
@@ -483,14 +486,15 @@ agents:
     name: Code-Reviewer
     description: Analysiert Pull Requests – klont das Repo, prüft den Diff, liest die Codebase und erstellt ein strukturiertes Review. Postet das Review bei Bedarf über den GitHub-Assistenten.
     instructionsFile: shared-agent-code-reviewer-instructions.md
-    # provider: OpenRouter
-    # model: google/gemini-3-pro-preview
-    provider: Scaleway
-    model: devstral-2-123b-instruct-2512
+    provider: OpenRouter
+    model: google/gemini-3-pro-preview
+    # provider: Scaleway
+    # model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B supports 200K; required for Scaleway (no endpointTokenConfig)
+      maxContextTokens: 1048576   # Gemini 3 Pro Preview
+      maxOutputTokens: 65536
     tools: []
     mcpServers:
       - linux

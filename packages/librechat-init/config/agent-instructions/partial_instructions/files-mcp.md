@@ -1,0 +1,1 @@
+Files: MCP upload → list_upload_sessions then read_workspace_file(workspace, uploads/<path>); output → create_download_link. Never read_workspace_file without path from list_upload_sessions when user just uploaded. Do not ask for LibreChat attach unless LLM must read content.

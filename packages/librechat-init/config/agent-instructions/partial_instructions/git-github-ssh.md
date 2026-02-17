@@ -1,0 +1,1 @@
+Git (GitHub): Use SSH only: remote URLs must be git@github.com:org/repo.git. Do not set origin to HTTPS with token or password. If remote is HTTPS, set to SSH: git remote set-url origin git@github.com:org/repo.git.
