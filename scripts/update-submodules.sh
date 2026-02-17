@@ -28,8 +28,11 @@ UPSTREAM_CONFIG="${SCRIPT_DIR}/submodules-upstream.yaml"
 DRY_RUN=false
 FORCE=false
 STATUS_ONLY=false
+STAGE=false
 SELECTED_SUBMODULE=""
 SELECTED_BRANCH=""
+# Populated during Step 2 for fork submodules that were synced (used for --stage)
+SYNCED_FORK_PATHS=()
 
 # Logging functions
 log_info() {
@@ -87,6 +90,10 @@ parse_args() {
                 SELECTED_BRANCH="$2"
                 shift 2
                 ;;
+            --stage)
+                STAGE=true
+                shift
+                ;;
             -h|--help)
                 show_help
                 exit 0
@@ -111,6 +118,7 @@ OPTIONS:
     --dry-run           Preview changes without applying them
     --force             Skip safety checks (use with caution)
     --status            Show sync status (fork/upstream-only submodules)
+    --stage             After sync, stage fork submodule commits in superproject (git add)
     --submodule PATH    Update only the specified submodule
     --branch BRANCH     Sync only the specified branch
     -h, --help          Show this help message
@@ -568,10 +576,14 @@ sync_submodule() {
         fi
     fi
     
-    # For non-forks: step 1 already pulled; only add upstream remote for reference (optional). Skip branch logic.
+    # For non-forks: step 1 already pulled; add upstream remote, fetch; checkout branch if it exists so we are not detached.
     if [ -z "$fork_url" ]; then
         setup_upstream_remote "$path" "$upstream_url"
         fetch_upstream "$path" || true
+        cd "${PROJECT_ROOT}/${path}"
+        if git rev-parse --verify "$upstream_branch" >/dev/null 2>&1; then
+            [ "$DRY_RUN" = false ] && git checkout "$upstream_branch" 2>/dev/null && log_submodule "Checked out ${upstream_branch} (no longer detached)"
+        fi
         log_success "Completed (non-fork; already updated in step 1)"
         return 0
     fi
@@ -589,12 +601,18 @@ sync_submodule() {
 
     if [ -z "$SELECTED_BRANCH" ] || [ "$SELECTED_BRANCH" = "$fork_branch" ]; then
         sync_main_branch "$path" "$fork_branch" "$upstream_branch"
+        SYNCED_FORK_PATHS+=("$path")
     fi
 
+    # Ensure fork submodule ends on main branch (recover from any intermediate state)
+    cd "${PROJECT_ROOT}/${path}"
+    if [ "$DRY_RUN" = false ]; then
+        git checkout "$fork_branch" 2>/dev/null && log_submodule "On branch ${fork_branch}"
+    fi
     log_success "Completed sync for ${path}"
 }
 
-# Main update function: (1) pull all submodules, (2) for forks/upstream-only: upstream + merge
+# Main update function: (1) pull all submodules, (2) for forks/upstream-only: upstream + merge, (3) ensure forks on main, (4) optional stage
 sync_all_submodules() {
     log_step "Step 1: Updating all submodules (git submodule update --init --remote)"
     if [ "$DRY_RUN" = true ]; then
@@ -609,6 +627,7 @@ sync_all_submodules() {
     fi
 
     log_step "Step 2: Fork/upstream-only submodules (upstream remote, tracking branch; forks: merge into main)"
+    SYNCED_FORK_PATHS=()
     local config_json failed_syncs=0
     config_json=$([ "$YAML_PARSER" = "python3" ] && parse_yaml_python || parse_yaml_yq)
 
@@ -617,13 +636,59 @@ sync_all_submodules() {
         sync_submodule "$line" || ((failed_syncs++))
     done < <(echo "$config_json")
 
-    echo ""
-    if [ $failed_syncs -eq 0 ]; then
-        log_success "All submodules up to date!"
-    else
+    if [ $failed_syncs -gt 0 ]; then
+        echo ""
         log_error "${failed_syncs} submodule(s) failed to sync"
         exit 1
     fi
+
+    # Step 3: Final pass — ensure every fork submodule is on its main branch (not detached)
+    log_step "Step 3: Ensuring fork submodules are on main branch"
+    while IFS= read -r line || [ -n "$line" ]; do
+        [ -z "$line" ] && continue
+        local path fork_url fork_branch
+        if [ "$YAML_PARSER" = "python3" ]; then
+            path=$(echo "$line" | python3 -c "import sys, json; print(json.load(sys.stdin).get('path', ''))" 2>/dev/null)
+            fork_url=$(echo "$line" | python3 -c "import sys, json; print(json.load(sys.stdin).get('fork_url', ''))" 2>/dev/null)
+            fork_branch=$(echo "$line" | python3 -c "import sys, json; print(json.load(sys.stdin).get('fork_branch', 'main'))" 2>/dev/null)
+        else
+            path=$(echo "$line" | yq eval '.path' -)
+            fork_url=$(echo "$line" | yq eval '.fork_url' -)
+            fork_branch=$(echo "$line" | yq eval '.fork_branch // "main"' -)
+        fi
+        [ -z "$fork_url" ] && continue
+        [ -n "$SELECTED_SUBMODULE" ] && [ "$path" != "$SELECTED_SUBMODULE" ] && continue
+        if ! is_submodule_initialized "$path"; then continue; fi
+        cd "${PROJECT_ROOT}/${path}"
+        local current=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+        if [ "$current" != "$fork_branch" ]; then
+            if [ "$DRY_RUN" = false ]; then
+                git checkout "$fork_branch" 2>/dev/null && log_submodule "${path}: checked out ${fork_branch}"
+            else
+                log_info "[DRY RUN] Would checkout ${fork_branch} in ${path}"
+            fi
+        else
+            log_submodule "${path}: already on ${fork_branch}"
+        fi
+    done < <(echo "$config_json")
+
+    # Step 4: Optional — stage fork submodule commits in superproject so user can commit
+    if [ "$STAGE" = true ] && [ ${#SYNCED_FORK_PATHS[@]} -gt 0 ]; then
+        log_step "Step 4: Staging fork submodule commits in superproject"
+        cd "${PROJECT_ROOT}"
+        for p in "${SYNCED_FORK_PATHS[@]}"; do
+            [ -d "$p" ] || continue
+            if [ "$DRY_RUN" = false ]; then
+                git add "$p" && log_submodule "Staged ${p}"
+            else
+                log_info "[DRY RUN] Would git add ${p}"
+            fi
+        done
+        log_info "Commit in the superproject to record the new submodule commits."
+    fi
+
+    echo ""
+    log_success "All submodules up to date! Fork submodules are on their main branch."
 }
 
 # Main execution

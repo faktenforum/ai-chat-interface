@@ -376,7 +376,7 @@ function resolveAgentReferences(
   const edges: HandoffEdge[] = [];
   const agent_ids: string[] = [];
 
-  // Resolve handoffs → edges
+  // Resolve handoffs → edges. Edges must use API agent IDs (e.g. agent_xxx), not config IDs (shared-agent-xxx).
   if (agentConfig.handoffs) {
     for (const target of agentConfig.handoffs) {
       const configId = typeof target === 'string' ? target : target.agent;
@@ -385,27 +385,40 @@ function resolveAgentReferences(
       const promptKey = typeof target === 'string' ? undefined : target.promptKey;
 
       const targetId = idMap.get(configId);
-      if (targetId) {
-        const edge: HandoffEdge = { from: ownAgentId, to: targetId, edgeType: 'handoff' };
-        if (description) edge.description = description;
-        if (prompt) edge.prompt = prompt;
-        if (promptKey) edge.promptKey = promptKey;
-        edges.push(edge);
-      } else {
+      if (!targetId) {
         console.log(`    ⚠ Handoff target "${configId}" not found in config ID map, skipping`);
+        continue;
       }
+      // Safeguard: edges must use API IDs (LibreChat assigns agent_<nanoid>). Config IDs must not be written.
+      if (targetId === configId || targetId.startsWith('shared-agent-')) {
+        console.log(
+          `    ⚠ Handoff target "${configId}" resolved to config-like ID; expected API id (agent_xxx). Skipping edge.`
+        );
+        continue;
+      }
+      const edge: HandoffEdge = { from: ownAgentId, to: targetId, edgeType: 'handoff' };
+      if (description) edge.description = description;
+      if (prompt) edge.prompt = prompt;
+      if (promptKey) edge.promptKey = promptKey;
+      edges.push(edge);
     }
   }
 
-  // Resolve chain → agent_ids
+  // Resolve chain → agent_ids. Must use API agent IDs, not config IDs.
   if (agentConfig.chain) {
     for (const configId of agentConfig.chain) {
       const targetId = idMap.get(configId);
-      if (targetId) {
-        agent_ids.push(targetId);
-      } else {
+      if (!targetId) {
         console.log(`    ⚠ Chain target "${configId}" not found in config ID map, skipping`);
+        continue;
       }
+      if (targetId === configId || targetId.startsWith('shared-agent-')) {
+        console.log(
+          `    ⚠ Chain target "${configId}" resolved to config-like ID; expected API id (agent_xxx). Skipping.`
+        );
+        continue;
+      }
+      agent_ids.push(targetId);
     }
   }
 

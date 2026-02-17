@@ -16,7 +16,6 @@
         "update:submodules:status": "./scripts/update-submodules.sh --status",
         "update:submodules:dry-run": "./scripts/update-submodules.sh --dry-run",
         "build:dev": "./scripts/build-dev-submodules.sh",
-        "create:forks": "./scripts/create-faktenforum-branches.sh",
         "prepare:dev": "npm run update:submodules && npm run build:dev",
         "sync:forks": "npm run update:submodules",
         "sync:forks:status": "npm run update:submodules:status",
