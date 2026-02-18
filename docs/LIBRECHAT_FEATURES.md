@@ -207,6 +207,8 @@ Other Scaleway models (Mistral, Qwen, etc.) may support parallel tool calls; the
 
 Scaleway's [OpenAI compatibility docs](https://www.scaleway.com/en/docs/managed-inference/reference-content/openai-compatibility/) list the following as **unsupported**: `frequency_penalty`, `n`, `top_logprobs`, `logit_bias`, `user`. If sent, they can cause errors or undefined behaviour. LibreChat strips them for the Scaleway endpoint via `dropParams` (camelCase keys: `frequencyPenalty`, `n`, `topLogprobs`, `logitBias`, `user`).
 
+- **`add_generation_prompt`**: Some OpenAI-compatible backends reject `add_generation_prompt: true` when the last chat message is an `assistant` message (expects `continue_final_message` instead). To avoid hard `400` errors in agent/tool loops, the Scaleway endpoint strips both `add_generation_prompt` and `addGenerationPrompt` from requests.
+
 **Supported by Scaleway (no change needed):** `messages`, `model`, `max_tokens`, `temperature`, `top_p`, `presence_penalty`, `response_format`, `logprobs`, `stop`, `seed`, `stream`, `tools`, `tool_choice`.
 
 ### Model Specs

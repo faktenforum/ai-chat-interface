@@ -579,17 +579,17 @@ agents:
       publicEdit: true
 
   # Video-Transkripte: public false until server-side access is reliable (proxy/geo). See docs/wip/YTPTUBE_FUTURE_WORK.md.
-  # Model: llama-3.3-70b has 100K context (vs Qwen3 36K cap in UI) to handle large cookie pastes.
+  # Model: devstral-2-123b has 200K context to handle large cookie pastes.
   - id: shared-agent-video-transkripte
     name: Video-Transkripte
     description: Transkripte, Metadaten, Thumbnails und Download-Links für Video-URLs (YouTube, Instagram, TikTok u. a.).
     instructionsFile: shared-agent-video-transkripte-instructions.md
     provider: Scaleway
-    model: llama-3.3-70b-instruct
+    model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.5
       top_p: 0.9
-      maxContextTokens: 100000   # Llama 3.3 70B; Scaleway has no endpointTokenConfig
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
     tools: []
     mcpServers:
       - ytptube

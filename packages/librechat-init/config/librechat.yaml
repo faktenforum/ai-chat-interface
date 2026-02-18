@@ -145,6 +145,8 @@ endpoints:
         - topLogprobs        # top_logprobs not supported
         - logitBias          # logit_bias not supported
         - user               # user identifier not supported
+        - add_generation_prompt
+        - addGenerationPrompt
       # BASE_URL construction: If SCALEWAY_PROJECT_ID is set, the initialization script
       # automatically constructs the BASE_URL as https://api.scaleway.ai/{project_id}/v1.
       # Otherwise, the default SCALEWAY_BASE_URL value is used.
@@ -153,6 +155,7 @@ endpoints:
           "llama-3.3-70b-instruct",           # Chat - Generally Available
           "qwen3-235b-a22b-instruct-2507",    # Chat - Generally Available
           "mistral-small-3.2-24b-instruct-2506", # Chat, Vision - Generally Available
+          "devstral-2-123b-instruct-2512",    # Chat (Code) - Generally Available
           "gpt-oss-120b",                      # Chat - Generally Available
           "gemma-3-27b-it",                   # Chat, Vision - Exception: Google preview
           "qwen3-coder-30b-a3b-instruct",     # Chat (Code) - Generally Available

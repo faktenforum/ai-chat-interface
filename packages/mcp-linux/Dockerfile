@@ -84,7 +84,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv globally (modern Python package/tool manager)
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh -s -- --prefix /usr/local
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_UNMANAGED_INSTALL=/usr/local/bin sh
 
 # ImageMagick: allow PDF read/write (disabled by default security policy)
 RUN if [ -f /etc/ImageMagick-6/policy.xml ]; then \
