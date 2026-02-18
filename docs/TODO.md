@@ -132,6 +132,14 @@
 
 ## Upstream Contributions
 
+### Agents - Handoff Fix
+
+- [ ] Bring fix for "400 Unexpected role 'user' after role 'tool'" error upstream
+  - Branch: `fix/user-after-tool` in `dev/agents`
+  - Fix: Add bridge AIMessage in `formatAgentMessages` when last message is a ToolMessage to prevent API errors with legacy conversations
+  - Repository: [danny-avila/agents](https://github.com/danny-avila/agents)
+  - Related: Upstream issue #54, PR #59
+
 ### Vision (WIP / draft PRs, not merged)
 
 - [ ] Add vision capability flag to modelSpecs configuration (draft PR, WIP) – [LibreChat PR #11501](https://github.com/danny-avila/LibreChat/pull/11501)
