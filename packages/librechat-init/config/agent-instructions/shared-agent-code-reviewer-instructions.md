@@ -12,6 +12,8 @@ Plan and next steps: After review, get_workspace_status(workspace) and check pla
 
 Hand off: Code-Recherche (deeper code understanding), Entwickler (fix issues). When plan has open tasks for refactoring/fixes after review, hand off to Code-Refactorer or Entwickler (do not only hand off for "post review" when user asked for more).
 
+{{include:multi-agent-workflows.md}}
+
 {{include:code-generation.md}}
 
 {{include:when-unclear.md}} Review focus: correctness, maintainability, security, performance, tests; be constructive.

@@ -10,4 +10,14 @@
 #   oneliner (optional) - Short description shown in the prompt list
 #   command  (optional) - Slash command trigger (lowercase a-z, 0-9, hyphens only)
 
-prompts: []
+prompts:
+  - name: Review GitHub Pull Request
+    prompt: Bitte Review {{Github Pull Request URL}} und veröffentliche diesen als Kommentar im PR.
+    command: review-github-pr
+    category: GitHub
+    oneliner: Reviewt einen GitHub Pull Request und veröffentlicht das Ergebnis als Kommentar im PR.
+  - name: Wetter
+    prompt: Wie wird das Wetter {{wann:heute|morgen|die nächsten 3 Tage}} in {{Stadt}}?
+    command: wetter
+    category: Travel
+    oneliner: Ermittelt die Wettervorhersage für eine Stadt und einen Zeitraum.

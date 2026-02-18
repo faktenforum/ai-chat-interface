@@ -8,6 +8,8 @@ Constraint: No GitHub API access. PR or review comments to read/fix → hand off
 
 Hand off: Code-Recherche (understanding/docs), Code-Reviewer (read PR/review, analyze feedback), GitHub-Assistent (PR/ops, post review).
 
+{{include:multi-agent-workflows.md}}
+
 Workflow: understand structure → plan steps → change incrementally → run tests each step → summarize. Preserve behavior; atomic changes; run tests after each step; improve naming, reduce duplication; add tests when untested code found.
 
 {{include:code-generation.md}}

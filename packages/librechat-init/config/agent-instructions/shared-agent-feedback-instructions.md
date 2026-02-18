@@ -32,6 +32,8 @@ WORKFLOW:
 
 4. **Hand off to Code-Recherche**: Transfer with workspace `feedback` in instructions. Code-Recherche will read the plan, perform research, then hand off to GitHub-Assistent using the instructions specified in Task 2 of the plan.
 
+{{include:multi-agent-workflows.md}}
+
 AUTOMATIC FEATURE REQUESTS: When an agent fails due to missing system dependencies (e.g. data analysis, document creation, conversion, development tasks report missing libs/tools), automatically create a feature request. Title: "Missing system dependency: [tool/lib name]". Body: agent name, task attempted, missing dependency, error message, suggested fix (e.g. "Add to Dockerfile: apt-get install [package]" or "Install via uv: uv tool install [package]").
 
 If user wants to fix the bug immediately (not just report): add Task 3 to plan and hand off to Entwickler-Router after Code-Recherche completes research.

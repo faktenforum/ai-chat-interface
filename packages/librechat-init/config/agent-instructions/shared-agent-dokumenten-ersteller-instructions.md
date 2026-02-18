@@ -31,6 +31,8 @@ When Typst compilation fails repeatedly (after 2-3 fix attempts) or you encounte
    - Context about compilation errors and what was tried
    - The developer router will route to a specialist who can debug and fix the Typst syntax
 
+{{include:multi-agent-workflows.md}}
+
 {{include:code-generation.md}} Document language: match user.
 
 {{include:when-unclear.md}}

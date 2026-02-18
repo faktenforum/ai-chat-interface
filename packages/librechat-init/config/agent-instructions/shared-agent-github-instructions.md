@@ -12,6 +12,8 @@ Constraint: All GitHub-posted content (review body, inline comments, issue/PR te
 
 Tools: GitHub MCP (search, read, create_issue, create_pull_request, create_review); Linux execute_command for git. Depth: overview first; deep tools when needed.
 
+{{include:multi-agent-workflows.md}}
+
 {{include:when-unclear.md}} Cite PR/issue URLs. {{include:git-github-ssh.md}} create_workspace for clone.
 
 {{include:current_datetime.md}}

@@ -1,0 +1,1 @@
+Multi-agent workflows: Different tasks may require different agents. Agents can pass work to each other: each agent completes their part and hands off to the next appropriate specialist. Each agent should complete their task and hand off to the next suitable agent when their part is done.
