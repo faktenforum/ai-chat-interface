@@ -30,7 +30,9 @@ Key=value lines. **Transcript:** metadata block (`result=transcript`, `url`, `jo
 
 ## Transcript language
 
-Without `language_hint`: responses include `language=unknown` and `language_instruction` (ask user, re-call with `language_hint`). With `language_hint`: sent to API for better accuracy.
+Without `language_hint`: responses include `language=unknown` and `language_instruction` (ask user, re-call with `language_hint`). With `language_hint`:
+- **Phase 1 (subs):** Overrides preset's `--sub-langs` to prefer that language (e.g. `language_hint="de"` → `--sub-langs "de,-live_chat"`), and subtitle file resolution prefers language-matched files (e.g. `*.de.vtt`)
+- **Phase 2 (audio):** Sent to transcription API for better accuracy
 
 ## Cookies
 
@@ -57,9 +59,10 @@ Works with any YTPTube instance. Set `YTPTUBE_URL` (e.g. `http://localhost:8081`
 | `YTPTUBE_URL` | YTPTube instance URL (default `http://ytptube:8081`). Any deployment. |
 | `YTPTUBE_API_KEY` | Optional. YTPTube Basic auth. |
 | `YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL` | Optional. Public base for download links (`request_download_link`). |
-| `YTPTUBE_SUB_LANGS` | Optional. Subtitle langs (e.g. `en,en-US`). |
-| `YTPTUBE_PRESET_TRANSCRIPT` | Transcript preset (default `mcp_audio`). See "Video after transcript". |
-| `YTPTUBE_PRESET_VIDEO` | Video preset (default `default`). |
+| `YTPTUBE_PRESET_SUBS` | Subtitle-only preset (default `mcp_subs`). Auto-synced at startup. |
+| `YTPTUBE_PRESET_AUDIO` | Audio extraction preset (default `mcp_audio`). Backward-compatible with `YTPTUBE_PRESET_TRANSCRIPT`. Auto-synced at startup. |
+| `YTPTUBE_PRESET_VIDEO` | Video preset (default `default`). Not managed by MCP. |
+| `TRANSCRIPTION_MAX_BYTES` | Max file size for transcription API (default `26214400` = 25MB, OpenAI Whisper limit). |
 | `YTPTUBE_PROXY` | Optional. Proxy for yt-dlp (overrides Webshare). |
 | `WEBSHARE_PROXY_USERNAME`, `WEBSHARE_PROXY_PASSWORD` | Optional. [WEBSHARE_PROXY.md](WEBSHARE_PROXY.md) |
 | `TRANSCRIPTION_BASE_URL`, `TRANSCRIPTION_API_KEY` | Optional. Both set → audio transcription (OpenAI-compatible). |
@@ -76,31 +79,42 @@ YTPTube compose: `YTP_OUTPUT_TEMPLATE`/`YTP_OUTPUT_TEMPLATE_CHAPTER` set to shor
 
 The HTTP server listens on port 3010 **immediately** so the container becomes healthy quickly and LibreChat is not blocked. YTPTube reachability (GET api/ping/) and transcript preset sync run **in the background**; on failure they are logged only (no exit). Tools return normal errors until YTPTube is up. Timeout for background wait: `YTPTUBE_STARTUP_MAX_WAIT_MS`. `YTPTUBE_SKIP_PRESET_SYNC=1` to skip preset sync.
 
-## Transcript: subtitles vs audio
+## Transcript: two-phase flow (subtitles-first)
 
-**Preferred:** Platform subtitles (VTT). When starting a transcript job, the MCP calls YTPTube/yt-dlp `url/info`; if `subtitles` or `automatic_captions` are present, it uses `--skip-download --write-subs --write-auto-subs` so manual and auto-generated captions (e.g. YouTube Shorts) are downloaded. No audio needed.
+**Phase 1: Subtitles-only (preferred)**  
+The MCP determines transcript mode by calling YTPTube/yt-dlp `url/info`. If `subtitles`/`automatic_captions` are present, or if the extractor is `youtube` (even without explicit subtitle fields), or if the URL canonical key starts with `youtube:`, it starts a **subtitle-only job** using the `mcp_subs` preset:
+- `--skip-download --write-subs --write-auto-subs --sub-format vtt --convert-subs vtt --sub-langs "all,-live_chat"`
+- **No archive** (so the same URL can later be downloaded as audio/video)
+- When finished: finds `.vtt` or `.srt` files, parses, returns `transcript_source=platform_subtitles`
+- If `language_hint` is provided, prefers subtitle files matching that language (e.g. `*.de.vtt` when `language_hint="de"`)
 
-**Fallback:** No subtitles in yt-dlp info → transcript preset (audio). After download: prefer `.vtt`; if none or empty → transcription API when configured (`transcript_source=transcription`), else clear error (set `TRANSCRIPTION_BASE_URL`/`TRANSCRIPTION_API_KEY` or use media with subs). VTT with empty text → fallback to audio + transcription when configured.
+**Phase 2: Audio transcription (fallback)**  
+If Phase 1 fails (no subtitle file found, empty, or unparseable), or if subtitles are not available, the MCP starts an **audio extraction job** using the `mcp_audio` preset:
+- `--extract-audio --audio-format vorbis` (Scaleway-compatible) + `archive_audio.log` (separate archive)
+- When finished: checks file size against `TRANSCRIPTION_MAX_BYTES` (default 25MB); if too large, returns clear error
+- If size OK: calls transcription API when configured (`transcript_source=transcription`), else clear error
 
-**Path resolution:** Finished items use `item.filename`/`folder` when present, else file-browser; subtitle/audio paths from same folder, matched by title slug, video_id, or archive_id. **Video-only:** If the URL was only downloaded as video, `request_transcript` starts a transcript job and returns `status=queued`; poll `get_status`, then call again for transcript.
+**Path resolution:** Finished items use `item.filename`/`folder` when present, else file-browser; subtitle/audio paths from same folder, matched by title slug, video_id, archive_id, or language hint. **Video-only:** If the URL was only downloaded as video, `request_transcript` starts Phase 1 (subs) and returns `status=queued`; poll `get_status`, then call again for transcript.
 
-## Video after transcript
+## Presets (auto-synced at startup)
 
-Transcript jobs use audio-only (saves bandwidth). To allow requesting **video** later for the same URL, the transcript preset must use a **separate archive** (e.g. `archive_audio.log`). The upstream `audio_only` preset uses main `archive.log` and is not suitable—later video request would be skipped. MCP ensures preset `mcp_audio` on startup.
+The MCP ensures three presets exist and match their canonical definitions:
 
-Manual creation: **POST /api/presets** with YTPTube auth. Body (Ogg Vorbis):
+**`mcp_subs`** (subtitle-only, Phase 1)
+- CLI: `--skip-download --write-subs --write-auto-subs --sub-format vtt --convert-subs vtt --sub-langs "all,-live_chat"`
+- **No archive** (so subtitle-only jobs don't mark URLs as "downloaded")
+- Used for captions-first transcript jobs
 
-```json
-{
-  "name": "mcp_audio",
-  "description": "Audio-only for MCP transcript jobs. Uses archive_audio.log so the same URL can later be downloaded as video.",
-  "folder": "",
-  "template": "",
-  "cookies": "",
-  "cli": "--socket-timeout 30 --download-archive %(config_path)s/archive_audio.log\n--extract-audio --audio-format vorbis --add-chapters --embed-metadata --embed-thumbnail --format 'bestaudio/best'",
-  "priority": 0
-}
-```
+**`mcp_audio`** (audio extraction, Phase 2 fallback + audio download links)
+- CLI: `--socket-timeout 30 --download-archive %(config_path)s/archive_audio.log --extract-audio --audio-format vorbis --add-chapters --embed-metadata --format 'bestaudio/best'`
+- **Separate archive** (`archive_audio.log`) so the same URL can later be downloaded as video
+- Used for transcription fallback and `request_download_link type=audio`
+
+**`default`** (video downloads)
+- Not managed by MCP (YTPTube built-in)
+- Used for `request_download_link type=video`
+
+**Preset sync:** On startup, the MCP calls `ensureAllMcpPresets()` which creates `mcp_subs` and `mcp_audio` if missing, or updates them if CLI/description/priority differ. Set `YTPTUBE_SKIP_PRESET_SYNC=1` to skip. The `cli` field in `POST /api/history` is **proxy-only** (`--proxy URL` or empty); all yt-dlp configuration lives in the preset to avoid User > Preset > Default priority conflicts.
 
 ## URL matching
 
@@ -114,6 +128,7 @@ Match by URL, item identifiers, or **POST /api/yt-dlp/archive_id/** (any platfor
 - **status=error, No formats:** Geo-restricted, private, or unsupported; try cookies or another URL.
 - **Transcription failed / EAI_AGAIN:** Retried 3×; check DNS/network to transcription API host.
 - **Transcription not configured:** No platform subs and TRANSCRIPTION_* unset → clear error; set both vars or use media with subtitles.
+- **Audio file too large for transcription:** File exceeds `TRANSCRIPTION_MAX_BYTES` (default 25MB); try a shorter video or use media with platform subtitles.
 
 ### LibreChat: "fetch failed" / "Failed to connect to MCP server ytptube" (Portainer dev/prod)
 

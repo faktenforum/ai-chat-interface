@@ -13,6 +13,8 @@ import {
   findItemByUrlInItems,
   findItemByUrlWithArchiveIdFallback,
   findItemByUrlInItemsWithArchiveIdFallback,
+  findItemByUrlInAll,
+  findItemByUrlAndType,
   getHistoryById,
   postHistory,
   getFileBrowser,
@@ -26,6 +28,7 @@ import {
   canonicalKeyForDisplay,
   canonicalVideoKey,
   formatProgress,
+  buildPublicDownloadUrl,
   MCP_DOWNLOAD_FOLDER,
   type GetHistoryResponse,
   type HistoryItem,
@@ -44,7 +47,7 @@ import { isValidNetscapeCookieFormat, INVALID_COOKIES_MESSAGE } from '../utils/n
 import { logger } from '../utils/logger.ts';
 import { formatTranscriptResponseAsBlocks, formatStatusResponse } from '../utils/response-format.ts';
 import { vttToPlainText } from '../utils/vtt-to-text.ts';
-import { getProxyUrl, jobAttemptContext, CLI_AUDIO, CLI_SUBS, PRESET_TRANSCRIPT } from '../utils/env.ts';
+import { getProxyUrl, jobAttemptContext, PRESET_SUBS, PRESET_AUDIO, TRANSCRIPTION_MAX_BYTES } from '../utils/env.ts';
 import { isBlockedLikeError, sleepBeforeProxyRetry } from '../utils/blocked-retry.ts';
 
 const POST_TO_QUEUE_DELAY_MS = 500;
@@ -92,30 +95,71 @@ function getItemErrorMessage(item: HistoryItem): string {
   return o.error ?? o.reason ?? o.message ?? 'YTPTube job ended with status error';
 }
 
-/** Build yt-dlp CLI for transcript job: subs-only if available, else audio; optional proxy. useProxy: true = retry with proxy. */
-async function buildTranscriptCli(
+/**
+ * Best-effort detection of the preset used for a history item.
+ * YTPTube items usually expose `preset`, but we also defensively check `template`
+ * for known MCP presets in case of version differences.
+ */
+function detectPresetFromItem(item: HistoryItem): string | null {
+  const rawPreset = (item as { preset?: unknown }).preset;
+  if (typeof rawPreset === 'string') {
+    const preset = rawPreset.trim();
+    if (preset) return preset;
+  }
+
+  const rawTemplate = (item as { template?: unknown }).template;
+  if (typeof rawTemplate === 'string') {
+    const template = rawTemplate.trim();
+    if (template === PRESET_SUBS || template === PRESET_AUDIO || template === 'mcp_subs' || template === 'mcp_audio') {
+      return template;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Determine transcript mode: 'subs' (subtitles-first) or 'audio' (transcription fallback).
+ * Returns 'subs' if:
+ * - getUrlInfo reports subtitles/automatic_captions present, OR
+ * - extractor === 'youtube' (even without subtitle fields), OR
+ * - getUrlInfo fails but URL canonical key starts with 'youtube:'
+ * Otherwise returns 'audio'.
+ */
+async function determineTranscriptMode(
   ytp: YTPTubeConfig,
   mediaUrl: string,
-  opts?: { useProxy?: boolean },
-): Promise<string> {
-  let cliBase = CLI_AUDIO;
+): Promise<'subs' | 'audio'> {
   try {
     const info = await getUrlInfo(ytp, mediaUrl);
     const hasSubs =
       (info.subtitles != null && Object.keys(info.subtitles).length > 0) ||
       (info.automatic_captions != null && Object.keys(info.automatic_captions).length > 0);
-    if (hasSubs) {
-      const subLangs = process.env.YTPTUBE_SUB_LANGS?.trim();
-      cliBase = subLangs ? `${CLI_SUBS} --sub-langs "${subLangs}"` : CLI_SUBS;
+    const extractor = info.extractor?.toLowerCase();
+    const isYouTube = extractor === 'youtube';
+
+    logger.debug(
+      { mediaUrl, extractor, hasSubs, hasAutoCaptions: info.automatic_captions != null },
+      'Transcript mode determination',
+    );
+
+    if (hasSubs || isYouTube) {
+      logger.debug({ mediaUrl, mode: 'subs' }, 'Using subtitles-first mode');
+      return 'subs';
     }
+
+    logger.debug({ mediaUrl, mode: 'audio' }, 'Using audio transcription mode');
+    return 'audio';
   } catch (e) {
-    logger.debug({ err: e, mediaUrl }, 'getUrlInfo failed, using audio CLI');
+    // Fallback: check canonical key for YouTube heuristic
+    const canonicalKey = canonicalVideoKey(mediaUrl);
+    if (canonicalKey?.startsWith('youtube:')) {
+      logger.debug({ mediaUrl, mode: 'subs', reason: 'youtube_canonical_key' }, 'Using subtitles-first mode (YouTube heuristic)');
+      return 'subs';
+    }
+    logger.debug({ err: e, mediaUrl, mode: 'audio' }, 'getUrlInfo failed, using audio mode');
+    return 'audio';
   }
-  const proxy = getProxyUrl(opts?.useProxy);
-  if (proxy) {
-    logger.info({ mediaUrl }, 'Transcript job will use proxy (Webshare/YTPTUBE_PROXY)');
-  }
-  return proxy ? `${cliBase} --proxy ${proxy}` : cliBase;
 }
 
 type FileBrowserContents = Awaited<ReturnType<typeof getFileBrowser>>['contents'];
@@ -146,13 +190,13 @@ async function buildTranscriptForFinishedItem(
   const pathFromItem = relativePathFromItem(resolvedItem);
   if (pathFromItem) {
     const lower = pathFromItem.toLowerCase();
-    if (lower.endsWith('.vtt')) subtitlePath = pathFromItem;
+    if (lower.endsWith('.vtt') || lower.endsWith('.srt')) subtitlePath = pathFromItem;
     else if (AUDIO_EXTENSIONS.some((ext) => lower.endsWith(ext))) relativePath = pathFromItem;
   }
   if (!subtitlePath || !relativePath) {
     const browser = await getFileBrowser(ytp, folder);
     contents = browser.contents ?? [];
-    if (!subtitlePath) subtitlePath = resolveSubtitlePathFromBrowser(contents, resolvedItem);
+    if (!subtitlePath) subtitlePath = resolveSubtitlePathFromBrowser(contents, resolvedItem, lang);
     if (!relativePath) relativePath = resolveAudioPathFromBrowser(contents, resolvedItem);
     if (!relativePath) {
       try {
@@ -193,6 +237,7 @@ async function buildTranscriptForFinishedItem(
     }
     const subtitleText = (vttToPlainText(buffer) ?? '').trim();
     if (subtitleText.length > 0) {
+      logger.debug({ id, subtitlePath, subtitleTextLength: subtitleText.length }, 'Subtitle parsed successfully');
       const { metadata, transcript: transcriptText } = formatTranscriptResponseAsBlocks({
         url: mediaUrl,
         job_id: id,
@@ -207,20 +252,57 @@ async function buildTranscriptForFinishedItem(
     }
     const rawLength = new TextDecoder('utf-8').decode(buffer).length;
     const minContentForParsingError = 150;
-    if (rawLength >= minContentForParsingError) {
-      logger.warn(
-        { id, subtitlePath, rawLength },
-        'VTT had substantial content but parser returned no text; possible format mismatch (e.g. comma in timestamps). Falling back to audio.',
-      );
-    } else {
-      logger.debug({ id, subtitlePath }, 'Subtitle VTT empty or no cues; falling back to audio transcription');
-    }
+    const reason = rawLength >= minContentForParsingError ? 'parse_failed' : 'empty_vtt';
+    logger.warn(
+      { id, mediaUrl, subtitlePath, rawLength, reason },
+      'Subtitle file empty or unparseable; falling back to audio transcription',
+    );
+    // Phase 1 (subs) failed -> proceed to Phase 2 (audio)
   }
 
   if (!relativePath) {
-    if (pathFromItem && isVideoPath(pathFromItem)) return null;
-    const videoPath = resolveVideoPathFromBrowser(contents, resolvedItem);
-    if (videoPath) return null;
+    // Check sidecar for audio files (yt-dlp may extract audio to sidecar)
+    try {
+      const sidecar = resolvedItem.sidecar as { video?: Array<{ file?: string }>; audio?: Array<{ file?: string }> } | undefined;
+      if (sidecar) {
+        const audioFiles = [...(sidecar.video ?? []), ...(sidecar.audio ?? [])]
+          .map((e) => e.file)
+          .filter((f): f is string => typeof f === 'string' && f.length > 0);
+        for (const audioFile of audioFiles) {
+          const audioExts = ['.mp3', '.m4a', '.webm', '.opus', '.aac', '.ogg', '.wav'];
+          const lower = audioFile.toLowerCase();
+          if (audioExts.some((ext) => lower.endsWith(ext))) {
+            // Extract relative path from absolute path
+            const relative = audioFile.replace(/^\/+/, '').replace(/^downloads\//, '');
+            relativePath = relative;
+            logger.debug({ id, audioFile, relativePath }, 'Found audio file in sidecar');
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      logger.debug({ err: e, id }, 'Failed to check sidecar for audio files');
+    }
+
+    // If we only see a video file but no audio/subtitle, check if this was a mcp_subs job
+    // If it was mcp_subs, don't return null - let caller handle Phase 2 fallback
+    if (!relativePath) {
+      const itemPreset = detectPresetFromItem(resolvedItem);
+      const wasSubsJob = itemPreset === PRESET_SUBS || itemPreset === 'mcp_subs';
+      
+      const hasVideoPath = pathFromItem && isVideoPath(pathFromItem);
+      const videoPath = hasVideoPath ? pathFromItem : resolveVideoPathFromBrowser(contents, resolvedItem);
+      
+      if (videoPath) {
+        if (wasSubsJob) {
+          logger.debug({ id, itemPreset, videoPath }, 'mcp_subs job has video but no subtitle/audio; will trigger Phase 2');
+          // Don't return null - let caller handle Phase 2 by throwing NotFoundError
+          // This will be caught and trigger Phase 2 in requestTranscript
+        } else {
+          return null; // Video-only, not a subs job - caller will start new job
+        }
+      }
+    }
     logger.warn(
       {
         id,
@@ -255,6 +337,18 @@ async function buildTranscriptForFinishedItem(
     logger.warn({ err, relativePath, id }, 'YTPTube GET /api/download failed');
     throw new YTPTubeError(`Failed to download audio: ${err.message}`);
   }
+
+  const audioSizeBytes = audioBuffer.byteLength;
+  logger.debug({ id, audioPath: relativePath, audioSizeBytes }, 'Audio file downloaded for transcription');
+
+  if (audioSizeBytes > TRANSCRIPTION_MAX_BYTES) {
+    const sizeMB = (audioSizeBytes / (1024 * 1024)).toFixed(1);
+    const limitMB = (TRANSCRIPTION_MAX_BYTES / (1024 * 1024)).toFixed(1);
+    throw new TranscriptionError(
+      `Audio file too large for transcription API (${sizeMB} MB > ${limitMB} MB limit). Try a shorter video, or use media with platform subtitles.`,
+    );
+  }
+
   const filename = filenameForTranscription(relativePath);
   let text: string;
   try {
@@ -278,12 +372,14 @@ async function buildTranscriptForFinishedItem(
 }
 
 /**
- * Build transcript CLI (subs or audio), POST to YTPTube, find the new item in the response, and return a queued status.
+ * Start a transcript job (subs or audio mode) and return queued status.
  * Used when URL is not in history and when a finished item is video-only (no audio/subtitle in folder).
+ * Mode determines which preset to use; cli field is proxy-only (no audio/subtitle flags).
  */
 async function startTranscriptJobAndReturnQueued(
   deps: RequestTranscriptDeps,
   mediaUrl: string,
+  mode: 'subs' | 'audio',
   preset: string | undefined,
   lang: string | undefined,
   options: { relay?: string; language?: string; language_instruction?: string; cookies?: string; useProxy?: boolean } = {},
@@ -294,12 +390,23 @@ async function startTranscriptJobAndReturnQueued(
   const language_instruction = options.language_instruction ?? (lang == null ? LANGUAGE_UNKNOWN_INSTRUCTION : undefined);
   const attemptCtx = jobAttemptContext(options.useProxy);
 
-  const cli = await buildTranscriptCli(ytp, mediaUrl, { useProxy: options.useProxy });
+  const presetName = preset ?? (mode === 'subs' ? PRESET_SUBS : PRESET_AUDIO);
+  const proxy = getProxyUrl(options.useProxy);
+  // cli field is proxy-only; per-request language_hint can override --sub-langs via cli if needed
+  let cli: string | undefined = proxy ? `--proxy ${proxy}` : undefined;
+  if (mode === 'subs' && lang) {
+    // Override preset's --sub-langs with language_hint
+    const subLangs = `"${lang},-live_chat"`;
+    cli = proxy ? `--sub-langs ${subLangs} --proxy ${proxy}` : `--sub-langs ${subLangs}`;
+  }
+
+  logger.debug({ mediaUrl, preset: presetName, mode, cliEffective: cli || '(preset only)' }, 'Starting transcript job');
+
   const body = {
     url: mediaUrl,
-    preset: preset ?? PRESET_TRANSCRIPT,
+    preset: presetName,
     folder: MCP_DOWNLOAD_FOLDER,
-    cli,
+    cli: cli || undefined,
     auto_start: true as const,
     ...(options.cookies?.trim() && { cookies: options.cookies.trim() }),
   };
@@ -384,25 +491,153 @@ export async function requestTranscript(
   const lang = language_hint?.trim() ? language_hint.trim().slice(0, 2).toLowerCase() : undefined;
   const ytp = deps.ytptube;
 
-  let data: GetHistoryResponse;
-  try {
-    data = await getHistory(ytp);
-  } catch (e) {
-    const err = e instanceof Error ? e : new Error(String(e));
-    logger.warn({ err, mediaUrl }, 'YTPTube GET /api/history failed');
-    throw new YTPTubeError(`Failed to check queue: ${err.message}`);
-  }
+  // Get history, queue, and done items (same as get_status does)
+  const [data, queueItems, doneItems] = await Promise.all([
+    getHistory(ytp).catch((e) => {
+      const err = e instanceof Error ? e : new Error(String(e));
+      logger.warn({ err, mediaUrl }, 'YTPTube GET /api/history failed');
+      throw new YTPTubeError(`Failed to check queue: ${err.message}`);
+    }),
+    getHistoryQueue(ytp).catch(() => [] as HistoryItem[]),
+    getHistoryDone(ytp).catch(() => [] as HistoryItem[]),
+  ]);
 
-  const found = await findItemByUrlWithArchiveIdFallback(ytp, data, mediaUrl);
+  // Find item using same logic as get_status (checks history, queue, and done)
+  // Prefer finished audio items (Phase 2 results) over video items when multiple exist
+  let found = await findItemByUrlInAll(ytp, data, mediaUrl, {
+    queue: queueItems,
+    done: doneItems,
+  });
+  
+  // If multiple items exist, prefer finished audio items (Phase 2 transcripts)
+  if (found) {
+    try {
+      const audioItem = await findItemByUrlAndType(ytp, data, mediaUrl, 'audio', {
+        queue: queueItems,
+        done: doneItems,
+      });
+      if (audioItem && (audioItem.item.status ?? '').toLowerCase() === 'finished') {
+        found = audioItem;
+        logger.debug({ mediaUrl, id: audioItem.id }, 'Preferring finished audio item (Phase 2)');
+      }
+    } catch (e) {
+      logger.debug({ err: e, mediaUrl }, 'Failed to check for audio item, using first match');
+    }
+  }
 
   if (found) {
     const { item, id } = found;
     const status = (item.status ?? '').toLowerCase();
 
     if (status === 'finished') {
-      const result = await buildTranscriptForFinishedItem(deps, mediaUrl, item, id, lang, { fromArchive: false });
-      if (result) return result;
-      return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, {
+      logger.debug({ mediaUrl, id, status: 'finished' }, 'Found finished item, attempting to build transcript');
+      let result: { content: TextContent[] } | null = null;
+      try {
+        result = await buildTranscriptForFinishedItem(deps, mediaUrl, item, id, lang, { fromArchive: false });
+      } catch (e) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        // If TranscriptionError from a subs job (e.g. file too large), re-throw it
+        // Phase 1 already attempted audio transcription and failed - don't retry Phase 2
+        if (err instanceof TranscriptionError) {
+          const itemPreset = detectPresetFromItem(item);
+          const wasSubsJob = itemPreset === PRESET_SUBS || itemPreset === 'mcp_subs';
+          if (wasSubsJob) {
+            logger.debug({ err, mediaUrl, id }, 'TranscriptionError from subs job, re-throwing');
+            throw err;
+          }
+        }
+        // For other errors (e.g. NotFoundError for video-only items), continue to Phase 2
+        logger.debug({ err, mediaUrl, id, errorType: err.name }, 'buildTranscriptForFinishedItem failed, continuing to Phase 2');
+      }
+      if (result) {
+        logger.debug({ mediaUrl, id }, 'Successfully built transcript from finished item');
+        return result;
+      }
+      logger.debug({ mediaUrl, id }, 'No transcript found in finished item, determining next phase');
+      
+      // Detect preset and determine if Phase 1 (subs) failed
+      let itemPreset = detectPresetFromItem(item);
+      let wasSubsJob = itemPreset === PRESET_SUBS || itemPreset === 'mcp_subs';
+      
+      // Heuristic: if preset missing but YouTube video with no subtitle file, assume failed subs job
+      if (!wasSubsJob && !itemPreset) {
+        const canonicalKey = canonicalVideoKey(mediaUrl);
+        const isYouTube = canonicalKey?.startsWith('youtube:') ?? false;
+        if (isYouTube) {
+          try {
+            const folder = (item.folder ?? '').trim() || MCP_DOWNLOAD_FOLDER;
+            const browser = await getFileBrowser(ytp, folder);
+            const contents = browser.contents ?? [];
+            const hasVideo = resolveVideoPathFromBrowser(contents, item) != null;
+            const hasSubtitle = resolveSubtitlePathFromBrowser(contents, item, lang) != null;
+            const hasAudio = resolveAudioPathFromBrowser(contents, item) != null;
+            
+            // Also check sidecar for audio files
+            let hasSidecarAudio = false;
+            try {
+              const sidecar = item.sidecar as { video?: Array<{ file?: string }>; audio?: Array<{ file?: string }> } | undefined;
+              if (sidecar) {
+                const audioFiles = [...(sidecar.video ?? []), ...(sidecar.audio ?? [])]
+                  .map((e) => e.file)
+                  .filter((f): f is string => typeof f === 'string' && f.length > 0);
+                hasSidecarAudio = audioFiles.length > 0;
+              }
+            } catch (e) {
+              logger.debug({ err: e, mediaUrl }, 'Failed to check sidecar in heuristic');
+            }
+            
+            if (hasVideo && !hasSubtitle && !hasAudio && !hasSidecarAudio) {
+              wasSubsJob = true;
+              itemPreset = 'mcp_subs';
+              logger.debug({ mediaUrl, id, canonicalKey }, 'Inferred failed subs job from file layout (video only, no subtitle/audio)');
+            }
+          } catch (e) {
+            logger.debug({ err: e, mediaUrl }, 'Preset detection heuristic failed');
+          }
+        }
+      }
+
+      // Determine mode: if Phase 1 failed or YouTube finished item without transcript → Phase 2 (audio)
+      const canonicalKey = canonicalVideoKey(mediaUrl);
+      const isYouTube = canonicalKey?.startsWith('youtube:') ?? false;
+      const mode: 'subs' | 'audio' =
+        wasSubsJob || (isYouTube && status === 'finished')
+          ? 'audio' // Phase 1 failed → Phase 2
+          : await determineTranscriptMode(ytp, mediaUrl);
+      
+      // If Phase 1 (mcp_subs) failed and we have a video file, throw error to trigger handoff to file converter
+      // The mcp_audio preset uses archive_audio.log, but if video is in main archive, yt-dlp will skip it
+      // Solution: Use existing video file and handoff to file converter agent to extract audio
+      if (wasSubsJob && mode === 'audio') {
+        try {
+          const folder = (item.folder ?? '').trim() || MCP_DOWNLOAD_FOLDER;
+          const browser = await getFileBrowser(ytp, folder);
+          const contents = browser.contents ?? [];
+          const videoPath = resolveVideoPathFromBrowser(contents, item);
+          
+          if (videoPath) {
+            logger.info(
+              { mediaUrl, id, videoPath, itemPreset },
+              'Phase 1 (mcp_subs) failed but video was downloaded. Getting download URL for handoff to file converter.',
+            );
+            // Get download URL for the video file
+            const publicBaseUrl = process.env.YTPTUBE_PUBLIC_DOWNLOAD_BASE_URL?.trim() || undefined;
+            const videoDownloadUrl = buildPublicDownloadUrl(videoPath, publicBaseUrl || ytp.baseUrl, ytp.apiKey);
+            
+            // Throw error with download URL to trigger handoff
+            throw new TranscriptionError(
+              `Phase 1 (subtitle extraction) failed but video file is available. Get download URL via request_download_link(media_url="${mediaUrl}", type="video"), then handoff to file converter agent to extract audio and create transcript chunks. Video download URL: ${videoDownloadUrl}`,
+            );
+          }
+        } catch (e) {
+          // If error is already TranscriptionError, re-throw it
+          if (e instanceof TranscriptionError) throw e;
+          logger.debug({ err: e, mediaUrl }, 'Failed to check for existing video, starting Phase 2 job');
+        }
+      }
+      
+      logger.debug({ mediaUrl, id, itemPreset, wasSubsJob, mode }, 'Starting transcript job (Phase 1 failed or video-only)');
+      return startTranscriptJobAndReturnQueued(deps, mediaUrl, mode, preset, lang, {
         relay: RELAY_VIDEO_ONLY_QUEUED,
         ...(cookies?.trim() && { cookies: cookies.trim() }),
       });
@@ -413,7 +648,8 @@ export async function requestTranscript(
       if (isBlockedLikeError(msg) && getProxyUrl(true)) {
         logger.info({ mediaUrl }, 'Blocked-like error, retrying with new job (with proxy)');
         await sleepBeforeProxyRetry();
-        return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, {
+        const mode = await determineTranscriptMode(ytp, mediaUrl);
+        return startTranscriptJobAndReturnQueued(deps, mediaUrl, mode, preset, lang, {
           relay: RELAY_RETRY_WITH_PROXY,
           useProxy: true,
           ...(cookies?.trim() && { cookies: cookies.trim() }),
@@ -490,225 +726,9 @@ export async function requestTranscript(
     };
   }
 
-  const attemptCtxFirst = jobAttemptContext();
-  const cli = await buildTranscriptCli(ytp, mediaUrl);
-  const body = {
-    url: mediaUrl,
-    preset: preset ?? PRESET_TRANSCRIPT,
-    folder: MCP_DOWNLOAD_FOLDER,
-    cli,
-    auto_start: true as const,
+  // Not found: start Phase 1 (subs) or Phase 2 (audio) based on mode determination
+  const mode = await determineTranscriptMode(ytp, mediaUrl);
+  return startTranscriptJobAndReturnQueued(deps, mediaUrl, mode, preset, lang, {
     ...(cookies?.trim() && { cookies: cookies.trim() }),
-  };
-  let postResult: HistoryItem[];
-  try {
-    postResult = await postHistory(ytp, body);
-  } catch (e) {
-    const err = e instanceof Error ? e : new Error(String(e));
-    logger.warn({ err, mediaUrl }, 'YTPTube POST /api/history failed');
-    throw new YTPTubeError(`Failed to add URL to YTPTube: ${err.message}`);
-  }
-
-  let postFound = findItemByUrlInItems(postResult, mediaUrl);
-  if (!postFound) postFound = await findItemByUrlInItemsWithArchiveIdFallback(ytp, postResult, mediaUrl);
-  if (!postFound && postResult.length === 1) {
-    const single = postResult[0];
-    const id = single?.id ?? (single as { _id?: string })?._id;
-    if (id != null) postFound = { item: single, id: String(id) };
-  }
-  if (postFound) {
-    const { item, id } = postFound;
-    const status = (item.status ?? '').toLowerCase();
-    const storedUrl = typeof item.url === 'string' ? item.url : undefined;
-    logger.debug({ mediaUrl, ytptubeUrl: storedUrl, status, id }, 'Matched media from POST response (already in YTPTube)');
-
-    if (status === 'finished') {
-      const result = await buildTranscriptForFinishedItem(deps, mediaUrl, item, id, lang, { fromArchive: true });
-      if (result) return result;
-      return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, { relay: RELAY_VIDEO_ONLY_QUEUED });
-    }
-
-    if (status === 'error') {
-      const msg = getItemErrorMessage(item);
-      if (isBlockedLikeError(msg) && getProxyUrl(true)) {
-        logger.info({ mediaUrl }, 'Blocked-like error, retrying with new job (with proxy)');
-        await sleepBeforeProxyRetry();
-        return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, {
-          relay: RELAY_RETRY_WITH_PROXY,
-          useProxy: true,
-          ...(cookies?.trim() && { cookies: cookies.trim() }),
-        });
-      }
-      throw new YTPTubeError(msg, 'error');
-    }
-
-    if (status === 'skip' || status === 'cancelled') {
-      const result = await buildTranscriptForFinishedItem(deps, mediaUrl, item, id, lang, { fromArchive: true }).catch((e) => {
-        logger.warn({ err: e, mediaUrl, id }, 'buildTranscriptForFinishedItem failed (postFound skip path), returning skipped');
-        return null;
-      });
-      if (result) return result;
-      const reason = (item as { msg?: string }).msg ?? 'URL already in download archive; job was skipped.';
-      return {
-        content: [
-          {
-            type: 'text',
-            text: formatStatusResponse({
-              status: 'skipped',
-              job_id: id,
-              url: mediaUrl,
-              status_url: storedUrl,
-              canonical_key: canonicalKeyForDisplay(item, mediaUrl),
-              reason,
-              relay:
-                'Media was skipped (already in archive). Call request_transcript again with the same URL to try getting transcript from the existing download.',
-              ...statusLanguageParams(lang),
-            }),
-          },
-        ],
-      };
-    }
-
-    const pct = formatProgress(await getHistoryById(ytp, id).catch(() => item));
-    const isQueued = status === 'queued' || status === 'pending' || pct === 0;
-    if (isQueued) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: formatStatusResponse({
-              status: 'queued',
-              job_id: id,
-              url: mediaUrl,
-              status_url: storedUrl,
-              canonical_key: canonicalKeyForDisplay(item, mediaUrl),
-              relay: RELAY_QUEUED,
-              proxy_used: attemptCtxFirst.proxy_used,
-              attempt: attemptCtxFirst.attempt,
-              ...statusLanguageParams(lang),
-            }),
-          },
-        ],
-      };
-    }
-    return {
-      content: [
-        {
-          type: 'text',
-          text: formatStatusResponse({
-            status: 'downloading',
-            job_id: id,
-            url: mediaUrl,
-            status_url: storedUrl,
-            canonical_key: canonicalKeyForDisplay(item, mediaUrl),
-            progress: pct,
-            relay: `Downloading (${pct}%). Use get_status; when 100% request transcript again.`,
-            proxy_used: attemptCtxFirst.proxy_used,
-            attempt: attemptCtxFirst.attempt,
-            ...statusLanguageParams(lang),
-          }),
-        },
-      ],
-    };
-  }
-
-  await new Promise((r) => setTimeout(r, POST_TO_QUEUE_DELAY_MS));
-
-  let queueItems: HistoryItem[];
-  try {
-    queueItems = await getHistoryQueue(ytp);
-  } catch (e) {
-    const err = e instanceof Error ? e : new Error(String(e));
-    logger.warn({ err, mediaUrl }, 'YTPTube GET /api/history?type=queue after POST failed');
-    throw new YTPTubeError(`Download was queued but could not resolve job id: ${err.message}`);
-  }
-
-  let afterFound = findItemByUrlInItems(queueItems, mediaUrl) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, mediaUrl));
-  if (!afterFound) {
-    await new Promise((r) => setTimeout(r, POST_TO_QUEUE_DELAY_MS));
-    try {
-      queueItems = await getHistoryQueue(ytp);
-      afterFound = findItemByUrlInItems(queueItems, mediaUrl) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, queueItems, mediaUrl));
-    } catch {
-      /* ignore retry errors, continue to check done */
-    }
-  }
-  if (afterFound) {
-    const storedUrl = typeof afterFound.item.url === 'string' ? afterFound.item.url : undefined;
-    return {
-      content: [
-        {
-          type: 'text',
-          text: formatStatusResponse({
-            status: 'queued',
-            job_id: afterFound.id,
-            url: mediaUrl,
-            status_url: storedUrl,
-            canonical_key: canonicalKeyForDisplay(afterFound.item, mediaUrl),
-            relay: RELAY_QUEUED,
-            proxy_used: attemptCtxFirst.proxy_used,
-            attempt: attemptCtxFirst.attempt,
-            ...statusLanguageParams(lang),
-          }),
-        },
-      ],
-    };
-  }
-
-  const doneItems = await getHistoryDone(ytp).catch(() => [] as HistoryItem[]);
-  const doneFound =
-    findItemByUrlInItems(doneItems, mediaUrl) ?? (await findItemByUrlInItemsWithArchiveIdFallback(ytp, doneItems, mediaUrl));
-  if (doneFound) {
-    const doneStatus = (doneFound.item.status ?? '').toLowerCase();
-    if (doneStatus === 'finished') {
-      const { item, id } = doneFound;
-      const result = await buildTranscriptForFinishedItem(deps, mediaUrl, item, id, lang, { fromArchive: true });
-      if (result) return result;
-      return startTranscriptJobAndReturnQueued(deps, mediaUrl, preset, lang, { relay: RELAY_VIDEO_ONLY_QUEUED });
-    }
-    if (doneStatus === 'skip' || doneStatus === 'cancelled') {
-      const { item, id } = doneFound;
-      const result = await buildTranscriptForFinishedItem(deps, mediaUrl, item, id, lang, { fromArchive: true }).catch((e) => {
-        logger.warn({ err: e, mediaUrl, id }, 'buildTranscriptForFinishedItem failed (doneFound skip path), returning skipped');
-        return null;
-      });
-      if (result) return result;
-      const reason = (item as { msg?: string }).msg ?? 'URL already in download archive; job was skipped.';
-      return {
-        content: [
-          {
-            type: 'text',
-            text: formatStatusResponse({
-              status: 'skipped',
-              job_id: id,
-              url: mediaUrl,
-              status_url: typeof item.url === 'string' ? item.url : undefined,
-              canonical_key: canonicalKeyForDisplay(item, mediaUrl),
-              reason,
-              relay:
-                'Media was skipped (already in archive). Call request_transcript again with the same URL to try getting transcript from the existing download.',
-              ...statusLanguageParams(lang),
-            }),
-          },
-        ],
-      };
-    }
-  }
-
-  return {
-    content: [
-      {
-        type: 'text',
-        text: formatStatusResponse({
-          status: 'queued',
-          url: mediaUrl,
-          canonical_key: canonicalVideoKey(mediaUrl) ?? undefined,
-          relay: RELAY_QUEUED_FALLBACK,
-          proxy_used: attemptCtxFirst.proxy_used,
-          attempt: attemptCtxFirst.attempt,
-          ...statusLanguageParams(lang),
-        }),
-      },
-    ],
-  };
+  });
 }

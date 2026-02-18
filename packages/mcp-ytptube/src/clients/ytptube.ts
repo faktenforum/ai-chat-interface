@@ -965,18 +965,40 @@ export function resolveVideoPathFromBrowser(
 }
 
 /**
- * Resolve the relative path of a subtitle file (.vtt) for a finished history item.
- * Uses content_type === 'subtitle' or .vtt extension; matches by item title when multiple candidates.
+ * Resolve the relative path of a subtitle file (.vtt, .srt) for a finished history item.
+ * Uses content_type === 'subtitle' or .vtt/.srt extension; prefers language-matched files when languageHint is provided.
+ * When multiple candidates exist, prefers files matching languageHint (e.g. *.de.vtt when languageHint="de").
  */
 export function resolveSubtitlePathFromBrowser(
   contents: FileBrowserEntry[],
   item: HistoryItem,
+  languageHint?: string,
 ): string | null {
+  const subtitleExtensions = ['.vtt', '.srt'];
   const candidates = (contents ?? []).filter(
     (e) =>
       e.is_file &&
-      (e.content_type === 'subtitle' || (e.name ?? '').toLowerCase().endsWith('.vtt')),
+      (e.content_type === 'subtitle' ||
+        subtitleExtensions.some((ext) => (e.name ?? '').toLowerCase().endsWith(ext))),
   );
+
+  if (candidates.length === 0) return null;
+
+  // If languageHint provided, prefer files matching that language (e.g. *.de.vtt, *.en.vtt)
+  if (languageHint && languageHint.length >= 2) {
+    const langLower = languageHint.toLowerCase().slice(0, 2);
+    const langMatched = candidates.find((c) => {
+      const name = (c.name ?? '').toLowerCase();
+      // Match patterns like *.de.vtt, *.en.srt, etc.
+      return name.includes(`.${langLower}.`) || name.includes(`_${langLower}.`);
+    });
+    if (langMatched) {
+      const p = langMatched.path ?? langMatched.name;
+      return p ? String(p).replace(/^\//, '') : null;
+    }
+  }
+
+  // Fallback to pickPathFromCandidates (single candidate or match by title/itemId)
   return pickPathFromCandidates(candidates, item);
 }
 

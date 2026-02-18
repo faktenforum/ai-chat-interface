@@ -597,6 +597,7 @@ agents:
       - request_transcript_mcp_ytptube
       - get_status_mcp_ytptube
       - request_download_link_mcp_ytptube
+      - transcribe_audio_url_mcp_ytptube
       - list_recent_downloads_mcp_ytptube
       - get_media_info_mcp_ytptube
       - get_thumbnail_url_mcp_ytptube
@@ -614,8 +615,8 @@ agents:
       - agent: shared-agent-universal
         description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
       - agent: shared-agent-dateikonverter
-        description: "Transfer to file converter for converting downloaded audio/video to another format"
-        prompt: "Describe the media file (format, source URL, workspace path if downloaded) and the desired output format"
+        description: "Transfer to file converter for converting downloaded audio/video to another format, or for splitting large audio/video files (>25MB) into smaller chunks for transcription"
+        prompt: "If file is too large for transcription (>25MB): Video/Audio-Datei ist zu groß für Transkription (>25MB). Download-URL: [URL]. Bitte konvertiere zu Audio und teile in Chunks von max 25MB auf. Gib die Download-Links zurück. Otherwise: Describe the media file (format, source URL, workspace path if downloaded) and the desired output format"
     recursion_limit: 40
     isCollaborative: false
     permissions:

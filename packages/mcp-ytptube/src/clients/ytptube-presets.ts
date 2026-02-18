@@ -5,7 +5,7 @@
 
 import type { YTPTubeConfig } from './ytptube.ts';
 import { ensureSlash, getAuthHeaders } from './ytptube.ts';
-import { PRESET_TRANSCRIPT } from '../utils/env.ts';
+import { PRESET_AUDIO, PRESET_SUBS } from '../utils/env.ts';
 import { logger } from '../utils/logger.ts';
 
 const DEFAULT_WAIT_INTERVAL_MS = 3_000;
@@ -33,15 +33,32 @@ export interface PresetBody {
   priority?: number;
 }
 
-/** Transcript preset CLI: archive_audio.log (so video can be requested later), Ogg Vorbis (Scaleway-supported). */
+/** Subtitle-only preset CLI: no download, force VTT format, exclude live chat. */
+const MCP_SUBS_PRESET_CLI =
+  '--skip-download --write-subs --write-auto-subs --sub-format vtt --convert-subs vtt --sub-langs "all,-live_chat"';
+
+/** Audio extraction preset CLI: archive_audio.log (so video can be requested later), Ogg Vorbis (Scaleway-supported). */
 const MCP_AUDIO_PRESET_CLI =
-  '--socket-timeout 30 --download-archive %(config_path)s/archive_audio.log\n--extract-audio --audio-format vorbis --add-chapters --embed-metadata --embed-thumbnail --format \'bestaudio/best\'';
+  '--socket-timeout 30 --download-archive %(config_path)s/archive_audio.log\n--extract-audio --audio-format vorbis --add-chapters --embed-metadata --format \'bestaudio/best\'';
+
+export function getMcpSubsPresetBody(): PresetBody {
+  return {
+    name: PRESET_SUBS,
+    description:
+      'Subtitle-only for MCP transcript jobs (captions-first). No archive so the same URL can later be downloaded as audio/video.',
+    folder: '',
+    template: '',
+    cookies: '',
+    cli: MCP_SUBS_PRESET_CLI,
+    priority: 0,
+  };
+}
 
 export function getMcpAudioPresetBody(): PresetBody {
   return {
-    name: PRESET_TRANSCRIPT,
+    name: PRESET_AUDIO,
     description:
-      'Audio-only for MCP transcript jobs. Uses archive_audio.log so the same URL can later be downloaded as video.',
+      'Audio-only for MCP transcript jobs (transcription fallback) and audio download links. Uses archive_audio.log so the same URL can later be downloaded as video.',
     folder: '',
     template: '',
     cookies: '',
@@ -199,11 +216,10 @@ function presetNeedsUpdate(existing: PresetItem, canonical: PresetBody): boolean
 }
 
 /**
- * Ensure the transcript preset (PRESET_TRANSCRIPT) exists and matches the canonical definition.
+ * Ensure a single MCP preset exists and matches the canonical definition.
  * Create if missing; PUT update if fields differ.
  */
-export async function ensureMcpPreset(config: YTPTubeConfig): Promise<void> {
-  const canonical = getMcpAudioPresetBody();
+async function ensurePreset(config: YTPTubeConfig, canonical: PresetBody): Promise<void> {
   const presets = await listPresets(config);
   const existing = presets.find((p) => p.name === canonical.name);
 
@@ -220,4 +236,13 @@ export async function ensureMcpPreset(config: YTPTubeConfig): Promise<void> {
   }
 
   logger.debug({ preset: canonical.name }, 'Preset already up to date');
+}
+
+/**
+ * Ensure all MCP presets (mcp_subs, mcp_audio) exist and match their canonical definitions.
+ * Create if missing; PUT update if fields differ.
+ */
+export async function ensureAllMcpPresets(config: YTPTubeConfig): Promise<void> {
+  await ensurePreset(config, getMcpSubsPresetBody());
+  await ensurePreset(config, getMcpAudioPresetBody());
 }
