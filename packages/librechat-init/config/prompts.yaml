@@ -24,6 +24,29 @@ prompts:
       public:
         enabled: true
         defaultRole: editor
+  - name: Überarbeite GitHub PR
+    prompt: |
+      Bearbeite den GitHub Pull Request {{Github Pull Request URL}} vollständig.
+
+      ## Ablauf
+
+      1. **Review**: Analysiere den PR (Code, Tests, Docs). Identifiziere Verbesserungspunkte.
+      2. **Refactor-Plan**: Erstelle eine priorisierte Liste der Änderungen.
+      3. **Workspace**: Falls ein Linux-Workspace für diesen PR existiert – prüfe ob er aktuell und wiederverwendbar ist; sonst zurücksetzen und neu anlegen.
+      4. **Umsetzung**: Delegiere jede Aufgabe an den passenden Experten (z.B. Code-Refactorer, Code-Reviewer). Jeder Experte erledigt seinen Task und übergibt an den nächsten, bis alle Punkte abgearbeitet sind.
+      5. **Abschluss**: Pushe die Änderungen auf den PR-Branch. Hinterlasse einen PR-Kommentar mit Zusammenfassung des Reviews und der vorgenommenen Verbesserungen.
+
+      ## Regeln
+      - Delegiere gezielt an Experten; keine parallelen Aufgaben ohne Abhängigkeiten.
+      - Halte den Plan überschaubar; priorisiere die wichtigsten Verbesserungen zuerst.
+      - Der finale PR-Kommentar muss Review-Ergebnis und Änderungsliste klar dokumentieren.
+    command: ueberarbeite-github-pr
+    category: code
+    oneliner: Reviewt einen GitHub PR, setzt Verbesserungen um und pusht sie auf den Branch.
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
   - name: Wetter
     prompt: Wie wird das Wetter {{wann:heute|morgen|die nächsten 3 Tage}} in {{Stadt}}?
     command: wetter
@@ -38,6 +61,22 @@ prompts:
     command: rezept-wetter
     category: misc
     oneliner: Schlägt ein zum aktuellen Wetter in einer Stadt passendes Rezept vor (Kochhilfe).
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
+  - name: Feedback-Problem melden
+    prompt: |
+      Analysiere das aufgetretene Problem und gib die relevanten Informationen an den Feedback-Assistenten weiter. Der Feedback-Assistent legt automatisch ein GitHub-Issue an mit: ursprüngliche Aufgabe, aufgetretene Probleme und mögliche Optimierungen – damit der Agent beim nächsten Mal einen runderen Durchlauf hat.
+
+      **Vorgehen**: Erschließe alle Angaben ausschließlich aus dem Chat-Verlauf (keine Websuche). Stelle dem Nutzer nur Fragen, falls etwas unklar bleibt.
+
+      **Wichtige Angaben**: Agent (Name/ID), ursprüngliche Aufgabe, wo es Probleme gab, was wiederholt schief lief, was optimiert werden könnte.
+
+      **Regeln**: Sachlich und spezifisch. Nur Kontext dieser Konversation. Alle Informationen vollständig weitergeben.
+    command: feedback-problem
+    category: misc
+    oneliner: Analysiert ein Problem und übergibt die relevanten Infos an den Feedback-Assistenten.
     sharing:
       public:
         enabled: true
