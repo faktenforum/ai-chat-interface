@@ -6,7 +6,7 @@
 #   name     (required) - Display name in the prompt list
 #   prompt   (required) - The prompt text (supports {{variables}} like {{current_date}}, {{current_user}})
 #   type     (optional) - "text" (default) or "chat"
-#   category (optional) - Category for filtering in the UI (e.g. Ideas, Travel, Learning, Writing, Shopping, Code, Misc., Roleplay, Finance)
+#   category (optional) - Category value for filtering (use exact value: idea, travel, teach_or_explain, write, shop, code, misc, roleplay, finance)
 #   oneliner (optional) - Short description shown in the prompt list
 #   command  (optional) - Slash command trigger (lowercase a-z, 0-9, hyphens only)
 #   sharing  (optional) - Sharing and permission settings:
@@ -18,7 +18,7 @@ prompts:
   - name: Review GitHub Pull Request
     prompt: Bitte Review {{Github Pull Request URL}} und veröffentliche diesen als Kommentar im PR.
     command: review-github-pr
-    category: GitHub
+    category: code
     oneliner: Reviewt einen GitHub Pull Request und veröffentlicht das Ergebnis als Kommentar im PR.
     sharing:
       public:
@@ -27,7 +27,7 @@ prompts:
   - name: Wetter
     prompt: Wie wird das Wetter {{wann:heute|morgen|die nächsten 3 Tage}} in {{Stadt}}?
     command: wetter
-    category: Travel
+    category: travel
     oneliner: Ermittelt die Wettervorhersage für eine Stadt und einen Zeitraum.
     sharing:
       public:
@@ -36,7 +36,7 @@ prompts:
   - name: Rezept zum Wetter
     prompt: Schlage mir ein Rezept vor welches zum aktuellen Wetter in {{Stadt}} passt, schaue dazu zuerst vereinfacht nach dem Wetter und suche dann nach einem passenden Rezept. Verwende die Kochhilfe und nicht den Reise- und Standort-Assistenten, falls du an diese übergeben kannst.
     command: rezept-wetter
-    category: Ideas
+    category: misc
     oneliner: Schlägt ein zum aktuellen Wetter in einer Stadt passendes Rezept vor (Kochhilfe).
     sharing:
       public:

@@ -371,41 +371,37 @@ async function applyPromptPermissions(
 
 /**
  * Checks whether prompt group metadata needs an update.
+ * When any change is detected, returns the full metadata payload (including category)
+ * so the API receives all fields and persists them reliably.
  */
 function buildMetadataUpdate(
   config: PromptConfig,
   existing: PromptGroupListEntry
 ): UpdatePromptGroupPayload | null {
-  const updates: UpdatePromptGroupPayload = {};
-  let hasChanges = false;
-
-  if (config.name !== existing.name) {
-    updates.name = config.name;
-    hasChanges = true;
-  }
-  // Compare category: treat undefined and empty string as equivalent
   const configCategory = config.category ?? '';
   const existingCategory = existing.category ?? '';
-  if (configCategory !== existingCategory) {
-    updates.category = configCategory;
-    hasChanges = true;
-  }
-  // Compare oneliner: treat undefined and empty string as equivalent
   const configOneliner = config.oneliner ?? '';
   const existingOneliner = existing.oneliner ?? '';
-  if (configOneliner !== existingOneliner) {
-    updates.oneliner = configOneliner;
-    hasChanges = true;
-  }
-  // Compare command, treating undefined/empty as equivalent
   const configCommand = config.command ?? null;
   const existingCommand = existing.command ?? null;
-  if (configCommand !== existingCommand) {
-    updates.command = configCommand;
-    hasChanges = true;
+
+  const hasChanges =
+    config.name !== existing.name ||
+    configCategory !== existingCategory ||
+    configOneliner !== existingOneliner ||
+    configCommand !== existingCommand;
+
+  if (!hasChanges) {
+    return null;
   }
 
-  return hasChanges ? updates : null;
+  // Send full metadata so category and other fields are always applied
+  return {
+    name: config.name,
+    category: configCategory,
+    oneliner: configOneliner,
+    command: configCommand,
+  };
 }
 
 /**
@@ -420,15 +416,15 @@ async function processPrompt(
   const promptType = config.type || 'text';
 
   if (!existing) {
-    // Create new prompt group
+    // Create new prompt group (send category explicitly so it is persisted)
     const result = await client.createPromptGroup(
       {
         prompt: { prompt: config.prompt, type: promptType },
         group: {
           name: config.name,
-          category: config.category,
-          oneliner: config.oneliner,
-          command: config.command,
+          category: config.category ?? '',
+          oneliner: config.oneliner ?? '',
+          command: config.command ?? undefined,
         },
       },
       systemUserId
