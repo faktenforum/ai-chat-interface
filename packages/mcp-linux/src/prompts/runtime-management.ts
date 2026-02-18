@@ -39,23 +39,62 @@ nvm install 24
 nvm use 22
 \`\`\`
 
-## Python 3 (pre-installed)
+## Python 3 & uv (pre-installed) — RECOMMENDED
+**Use uv for all Python dependencies and tools (NO sudo required)**
 \`\`\`bash
-# Check version
+# Check versions
 python3 --version
+uv --version
 
-# Create virtual environment
+# Run Python scripts
+python3 script.py
+uv run script.py              # with automatic dependency resolution
+
+# Create project with dependencies
+uv init myproject
+cd myproject
+uv add pandas matplotlib      # adds dependencies to pyproject.toml
+
+# Install CLI tools (alternative to pipx)
+uv tool install weasyprint    # HTML to PDF
+uv tool install pygments      # syntax highlighting
+uv tool install black ruff    # code formatters
+
+# Run tool without installing
+uv tool run weasyprint input.html output.pdf
+uv tool run black script.py
+
+# Install from requirements.txt
+uv pip install -r requirements.txt
+
+# Examples for document creation
+uv tool install weasyprint
+uv tool run weasyprint input.html output.pdf
+
+# Examples for data analysis
+uv add pandas matplotlib seaborn numpy
+uv run analysis.py
+\`\`\`
+
+**Why uv?**
+- ✅ No sudo required
+- ✅ Fast (Rust-based, 10-100x faster than pip)
+- ✅ Automatic virtual environments
+- ✅ No PATH conflicts
+- ✅ Tool isolation
+- ✅ Compatible with pip/requirements.txt
+
+**NEVER use:**
+- ❌ \`sudo pip install\` (requires root)
+- ❌ \`sudo apt-get install pipx\` (requires root)
+- ❌ \`pip install --user\` (can cause conflicts)
+
+**Legacy alternative (only if uv unavailable):**
+\`\`\`bash
+# Manual venv (not recommended, use uv instead)
 python3 -m venv .venv
 source .venv/bin/activate
-
-# Install packages
 pip install package-name
-
-# Install to user directory (no venv)
-pip install --user package-name
-
-# Run scripts
-python3 script.py
 \`\`\`
 
 ## Deno
@@ -78,6 +117,34 @@ source ~/.bashrc
 # Run scripts
 bun run script.ts
 bun install
+\`\`\`
+
+## Rust & Cargo
+\`\`\`bash
+# Install Rust via rustup (recommended, no sudo required)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source ~/.cargo/env
+
+# Check version
+rustc --version
+cargo --version
+
+# Create new project
+cargo new myproject
+cd myproject
+
+# Build and run
+cargo build
+cargo run
+
+# Add dependencies (edit Cargo.toml)
+cargo add serde tokio
+
+# Update toolchain
+rustup update
+
+# Install additional targets
+rustup target add wasm32-unknown-unknown
 \`\`\`
 
 ## Shell Scripts

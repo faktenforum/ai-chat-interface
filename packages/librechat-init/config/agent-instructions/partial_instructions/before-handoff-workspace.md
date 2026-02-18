@@ -1,1 +1,0 @@
-Before handoff or when finishing: get_workspace_status; then set_workspace_plan (mark your task done, next in_progress); then hand off with workspace name (optional hint) or summarize and stop. Without this update the next agent loses context.

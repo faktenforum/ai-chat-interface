@@ -2,12 +2,13 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# System packages: user management, shells, dev tools, runtimes, plotting (matplotlib headless)
+# System packages: user management, shells, dev tools, runtimes
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     curl \
     wget \
     git \
+    git-lfs \
     ca-certificates \
     gnupg \
     sudo \
@@ -16,13 +17,52 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     python3-venv \
     build-essential \
+    cmake \
+    meson \
+    ninja-build \
+    autoconf \
+    automake \
+    libtool \
+    gdb \
+    valgrind \
+    strace \
     ripgrep \
     tree \
     jq \
     less \
     vim-tiny \
+    nano \
     fontconfig \
     fonts-dejavu-core \
+    fonts-dejavu \
+    fonts-dejavu-extra \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python development libraries (headers/libs for common Python packages)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-dev \
+    libpython3-dev \
+    pkg-config \
+    libxml2-dev \
+    libxslt1-dev \
+    libssl-dev \
+    libffi-dev \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libgdk-pixbuf2.0-dev \
+    libgirepository1.0-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libwebp-dev \
+    libfreetype6-dev \
+    liblcms2-dev \
+    libopenblas-dev \
+    liblapack-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Media conversion and document tools (headless, no LibreOffice/texlive)
@@ -31,6 +71,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     imagemagick \
     pandoc \
     && rm -rf /var/lib/apt/lists/*
+
+# Database client libraries & CLI tools (for Python/Node.js)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    libpq-dev \
+    default-mysql-client \
+    default-libmysqlclient-dev \
+    sqlite3 \
+    libsqlite3-dev \
+    redis-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv globally (modern Python package/tool manager)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh -s -- --prefix /usr/local
 
 # ImageMagick: allow PDF read/write (disabled by default security policy)
 RUN if [ -f /etc/ImageMagick-6/policy.xml ]; then \

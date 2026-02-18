@@ -13,7 +13,7 @@ Workspace + plan/tasks are the single source of truth for continuity across hand
 | handoff-workspace | Full workspace handoff (Transfer, Before handoff, On receive, End of turn) |
 | handoff-simple | Minimal handoff (Transfer via lc_transfer_to; put context in instructions) |
 | execution-2 | Execution: ≤2 tool calls/batch; brief prose; no labels/tags. |
-| execution-3 | Execution: ≤3 tool calls/batch; brief prose; no labels/tags. |
+| code-generation | Execution: ≤3 tool calls/batch; brief prose; no labels/tags. |
 | when-unclear | When unclear: One short clarifying question...; Language: match user. |
 | files-mcp | MCP upload/download (list_upload_sessions, read_workspace_file, create_download_link) |
 | paths-workspace | Paths: workspace-relative; same workspace for all tools. |
@@ -72,6 +72,6 @@ Use SSH only for GitHub: remote URLs must be `git@github.com:org/repo.git`. Do n
 
 ## Section order (per file)
 
-HANDOFF → Role → Constraints → Workflow / Hand off → Execution → When unclear → {{current_datetime}}
+HANDOFF → Role → Constraints → Workflow / Hand off → Execution → When unclear → {{include:current_datetime.md}}
 
 Omit sections that do not apply.

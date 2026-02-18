@@ -8,4 +8,4 @@ Workflow: list_models → pick id → (optional) check_model → build prompt (3
 
 {{include:when-unclear.md}}
 
-{{current_datetime}}
+{{include:current_datetime.md}}
