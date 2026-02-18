@@ -554,7 +554,12 @@ agents:
       maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
     tools:
       - web_search
-    mcpServers: []
+    mcpServers:
+      - linux
+    mcpTools:
+      - list_workspaces_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
     category: general
     conversation_starters:
       - Ich möchte einen Fehler im Chat melden
@@ -565,13 +570,13 @@ agents:
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-github
         description: "Create the issue with prepared title and body (English)"
-        prompt: "Create the issue via create_issue_mcp_github. Repo: owner=faktenforum, repo=ai-chat-interface (always). Put in this handoff the exact title and body in English (description, steps to reproduce, expected/actual, environment) so the next agent can call the tool with these values. Do not pass German text for title/body."
+        prompt: "workspace: feedback — call `get_workspace_status('feedback')` to read issue details from the plan, then create the issue via `create_issue_mcp_github(owner='faktenforum', repo='ai-chat-interface', title=..., body=...)` using title and body from the plan (English). If the plan contains structured issue details, use those. Otherwise, use the title and body provided in this handoff instructions. Do not pass German text for title/body."
       - agent: shared-agent-code-researcher
-        description: "Search similar issues or technical context before finalizing"
-        prompt: "Search similar bugs/docs: error message, component, or context to improve the issue."
+        description: "Primary path: research bug (find duplicates, analyze code) in faktenforum/ai-chat-interface before issue creation"
+        prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code; after research follow plan to hand off to GitHub-Assistent"
       - agent: shared-agent-developer-router
         description: "User wants to fix the bug, not only report"
-        prompt: "User wants to fix the reported bug; summarize error and what they need (debug, fix)."
+        prompt: "workspace: feedback — call `get_workspace_status('feedback')` to read bug details from the plan. User wants to fix the reported bug in faktenforum/ai-chat-interface. Summarize error, steps to reproduce, expected vs actual behavior, and what needs to be fixed (debug, implement fix). Pass workspace name and relevant context from the plan to the appropriate developer specialist."
     recursion_limit: 50
     isCollaborative: true
     permissions:
@@ -821,6 +826,9 @@ agents:
       - agent: shared-agent-dateikonverter
         description: "Transfer to file converter for converting the created document to another format (e.g. PDF to image, audio extraction)"
         prompt: "Describe the document (file path in workspace, format) and the desired output format for conversion"
+      - agent: shared-agent-developer-router
+        description: "Transfer to developer router when Typst compilation fails repeatedly (after 2-3 fix attempts) or when encountering complex syntax issues that require deeper debugging. Include workspace name and compilation error details."
+        prompt: "Summarize the Typst compilation errors encountered, what fixes were attempted, and include the workspace name where the document source file is located"
     recursion_limit: 75
     isCollaborative: true
     permissions:

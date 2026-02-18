@@ -19,6 +19,7 @@ Workspace + plan/tasks are the single source of truth for continuity across hand
 | paths-workspace | Paths: workspace-relative; same workspace for all tools. |
 | commit-push | Commit/push: Only stage/push repo-relevant files... |
 | git-github-ssh | Git (GitHub): Use SSH only... |
+| github-default-repo | GitHub repo: faktenforum/ai-chat-interface (owner/repo constants) |
 | before-handoff-workspace | Before handoff or when finishing: get_workspace_status; set_workspace_plan... |
 | when-unclear-router | When unclear (routers): wait for reply before transferring; do not hand off to same specialist again |
 | file-upload-types | LibreChat vs MCP upload, routing, Linux handoff (011); workspace agents use files-mcp |

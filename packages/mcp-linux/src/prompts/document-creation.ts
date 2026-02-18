@@ -23,6 +23,8 @@ export const DOCUMENT_CREATION_PROMPT = {
 
 Typst is a modern markup-based typesetting system. Single binary, fast compilation, no LaTeX needed.
 
+**Documentation:** When syntax is unclear or you encounter errors, search the official Typst documentation: https://typst.app/docs/ — it's searchable and comprehensive.
+
 ### Compile
 
 \`\`\`bash
@@ -32,6 +34,12 @@ typst watch document.typ document.pdf
 # List available fonts:
 typst fonts
 \`\`\`
+
+**Error handling:** If compilation fails:
+1. Read the error message carefully — Typst provides helpful error locations
+2. Check the Typst documentation (https://typst.app/docs/) for the correct syntax
+3. Try alternative syntax if available (e.g., function call vs. content block)
+4. If errors persist after 2-3 attempts, hand off to developer router with workspace context
 
 ### Page Setup
 
@@ -129,15 +137,67 @@ See @introduction           // reference a label
 \`\`\`typst
 #v(1cm)                   // vertical space
 #h(1cm)                   // horizontal space
-#align(center)[Centered text]
-#align(right)[Right-aligned]
-#align(center + horizon)[Vertically + horizontally centered]
 \\                          // line break
 #linebreak()              // explicit line break
 #pagebreak()              // page break
 #colbreak()               // column break
 #line(length: 100%)       // horizontal rule
 \`\`\`
+
+### Alignment
+
+The \`align\` function supports two syntaxes — both are valid:
+
+**Content block syntax** (recommended for multi-line content):
+\`\`\`typst
+#align(center)[Centered text]
+#align(right)[Right-aligned text]
+#align(left)[Left-aligned text]
+
+// Multi-line aligned content
+#align(center)[
+  First line \\
+  Second line \\
+  Third line
+]
+\`\`\`
+
+**Function call syntax** (for single expressions):
+\`\`\`typst
+#align(center, [Centered text])
+#align(right, [Right-aligned])
+\`\`\`
+
+**Alignment values:**
+- Horizontal: \`left\`, \`center\`, \`right\`, \`start\`, \`end\`
+- Vertical: \`top\`, \`horizon\` (middle), \`bottom\`
+
+**Combining alignments** (use \`+\` operator):
+\`\`\`typst
+#align(center + horizon)[Centered both horizontally and vertically]
+#align(top + right)[Top-right corner]
+#align(bottom + left)[Bottom-left corner]
+\`\`\`
+
+**Common patterns:**
+\`\`\`typst
+// Right-aligned header/footer content
+#align(right)[Page #counter(page).display()]
+
+// Centered title page
+#align(center + horizon)[
+  #text(size: 24pt)[Title]
+  #v(1cm)
+  #text(size: 12pt)[Subtitle]
+]
+
+// Left-aligned block (default, but explicit for clarity)
+#align(left)[
+  Content here
+]
+\`\`\`
+
+**Important:** The \`align\` function performs block-level alignment and interrupts the current paragraph. For inline alignment within the same line, use fractional spacing: \`Start #h(1fr) End\`
 
 ### Columns
 
@@ -476,6 +536,50 @@ pandoc document.md --reference-doc=template.odt -o document.odt
 
 ---
 
+## Troubleshooting Typst Compilation Errors
+
+**Common errors and solutions:**
+
+1. **Syntax errors with \`align\`:**
+   - Use content block syntax: \`#align(center)[content]\` (preferred)
+   - Or function call: \`#align(center, [content])\`
+   - Ensure alignment value is valid: \`left\`, \`right\`, \`center\`, \`top\`, \`bottom\`, \`horizon\`, \`start\`, \`end\`
+   - For combined alignments: \`#align(center + horizon)[content]\`
+
+2. **Missing closing brackets:**
+   - Check all \`[\` have matching \`]\`
+   - Check all \`(\` have matching \`)\`
+   - Typst error messages show line numbers — use them
+
+3. **Unknown function or command:**
+   - Check Typst documentation: https://typst.app/docs/
+   - Search for the function name in the docs
+   - Verify function name spelling and parameters
+
+4. **Font not found:**
+   - List available fonts: \`typst fonts\`
+   - Use only: DejaVu Sans, DejaVu Serif, DejaVu Sans Mono
+
+5. **Image not found:**
+   - Ensure image path is relative to the \`.typ\` file
+   - Save images in workspace first, then reference them
+
+**Error handling workflow:**
+1. **First attempt:** Compile with \`typst compile document.typ document.pdf\`
+2. **If error:** Read error message (includes line numbers), check Typst docs (https://typst.app/docs/), fix syntax
+3. **Second attempt:** Compile again with fixes
+4. **If still error:** Try alternative syntax (e.g., content block vs. function call)
+5. **Third attempt:** Compile again
+6. **If still failing after 3 attempts:** Update workspace plan with current state and hand off to developer router — they have more debugging capabilities
+
+**When to hand off:**
+- Compilation errors persist after 2-3 fix attempts
+- Syntax is unclear even after checking documentation
+- Complex template issues that require deeper debugging
+- Before handoff: Update workspace plan with completed steps and current error state
+
+---
+
 ## Constraints
 
 - **PDF** — always use Typst (\`typst compile\`). Do not use LaTeX or wkhtmltopdf.
@@ -484,5 +588,6 @@ pandoc document.md --reference-doc=template.odt -o document.odt
 - **Images in documents** — save images in workspace first, reference by relative path.
 - **Output** — save in workspace; return via \`read_workspace_file\` (PDF preview) or \`create_download_link\`.
 - **Language** — match the user's language in document content; keep code/comments in English.
+- **Documentation** — When in doubt, search Typst docs: https://typst.app/docs/
 `,
 };
