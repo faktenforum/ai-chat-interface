@@ -6,9 +6,13 @@
 #   name     (required) - Display name in the prompt list
 #   prompt   (required) - The prompt text (supports {{variables}} like {{current_date}}, {{current_user}})
 #   type     (optional) - "text" (default) or "chat"
-#   category (optional) - Category for filtering in the UI
+#   category (optional) - Category for filtering in the UI (e.g. Ideas, Travel, Learning, Writing, Shopping, Code, Misc., Roleplay, Finance)
 #   oneliner (optional) - Short description shown in the prompt list
 #   command  (optional) - Slash command trigger (lowercase a-z, 0-9, hyphens only)
+#   sharing  (optional) - Sharing and permission settings:
+#     users   - List of user permissions (by email or name)
+#     groups  - List of group permissions (by name)
+#     public  - Public sharing settings (enabled: true/false, defaultRole: viewer/editor/owner)
 
 prompts:
   - name: Review GitHub Pull Request
@@ -16,8 +20,25 @@ prompts:
     command: review-github-pr
     category: GitHub
     oneliner: Reviewt einen GitHub Pull Request und veröffentlicht das Ergebnis als Kommentar im PR.
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
   - name: Wetter
     prompt: Wie wird das Wetter {{wann:heute|morgen|die nächsten 3 Tage}} in {{Stadt}}?
     command: wetter
     category: Travel
     oneliner: Ermittelt die Wettervorhersage für eine Stadt und einen Zeitraum.
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
+  - name: Rezept zum Wetter
+    prompt: Schlage mir ein Rezept vor welches zum aktuellen Wetter in {{Stadt}} passt, schaue dazu zuerst vereinfacht nach dem Wetter und suche dann nach einem passenden Rezept. Verwende die Kochhilfe und nicht den Reise- und Standort-Assistenten, falls du an diese übergeben kannst.
+    command: rezept-wetter
+    category: Ideas
+    oneliner: Schlägt ein zum aktuellen Wetter in einer Stadt passendes Rezept vor (Kochhilfe).
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor

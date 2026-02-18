@@ -49,6 +49,15 @@ export interface IUser extends mongoose.Document {
   _id: mongoose.Types.ObjectId;
   email: string;
   role: string;
+  name?: string;
+}
+
+/**
+ * Group document interface.
+ */
+export interface IGroup extends mongoose.Document {
+  _id: mongoose.Types.ObjectId;
+  name: string;
 }
 
 /**
@@ -57,3 +66,18 @@ export interface IUser extends mongoose.Document {
 export const User =
   mongoose.models.User ||
   mongoose.model<IUser>('User', new mongoose.Schema({}, { strict: false }));
+
+/**
+ * Mongoose model for Group collection.
+ */
+export const Group =
+  mongoose.models.Group ||
+  mongoose.model<IGroup>(
+    'Group',
+    new mongoose.Schema(
+      {
+        name: { type: String, required: true },
+      },
+      { strict: false }
+    )
+  );

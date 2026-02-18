@@ -1,11 +1,19 @@
 import mongoose from 'mongoose';
-import { connectToMongoDB, disconnectFromMongoDB, User } from './utils/mongodb.ts';
+import {
+  connectToMongoDB,
+  disconnectFromMongoDB,
+  User,
+  Group,
+  type IUser,
+  type IGroup,
+} from './utils/mongodb.ts';
 import { getSystemUserId } from './utils/config.ts';
 import { loadPublicPrivateConfigs } from './utils/config-loader.ts';
 import {
   LibreChatAPIClient,
   type PromptGroupListEntry,
   type UpdatePromptGroupPayload,
+  type Principal,
 } from './lib/librechat-api-client.ts';
 import {
   PUBLIC_PROMPTS_PATH,
@@ -20,6 +28,40 @@ import {
 // ============================================================================
 
 /**
+ * User permission configuration.
+ */
+interface UserPermission {
+  email?: string;
+  name?: string;
+  role: 'viewer' | 'editor' | 'owner';
+}
+
+/**
+ * Group permission configuration.
+ */
+interface GroupPermission {
+  name: string;
+  role: 'viewer' | 'editor' | 'owner';
+}
+
+/**
+ * Public sharing configuration.
+ */
+interface PublicSharing {
+  enabled: boolean;
+  defaultRole: 'viewer' | 'editor' | 'owner';
+}
+
+/**
+ * Sharing and permission configuration.
+ */
+interface SharingConfig {
+  users?: UserPermission[];
+  groups?: GroupPermission[];
+  public?: PublicSharing;
+}
+
+/**
  * Single prompt entry from YAML configuration.
  */
 interface PromptConfig {
@@ -29,10 +71,93 @@ interface PromptConfig {
   category?: string;
   oneliner?: string;
   command?: string;
+  sharing?: SharingConfig;
 }
 
 interface PromptsConfig {
   prompts: PromptConfig[];
+}
+
+// ============================================================================
+// Permission Helpers
+// ============================================================================
+
+/**
+ * Maps role string to AccessRoleIds constant for prompt groups.
+ */
+function mapRoleToAccessRoleId(role: 'viewer' | 'editor' | 'owner'): string {
+  switch (role) {
+    case 'viewer':
+      return 'promptGroup_viewer';
+    case 'editor':
+      return 'promptGroup_editor';
+    case 'owner':
+      return 'promptGroup_owner';
+    default:
+      throw new Error(`Invalid role: ${role}`);
+  }
+}
+
+/**
+ * Finds a user by email or name.
+ * Prefers email if both are provided.
+ */
+async function findUserByEmailOrName(
+  email?: string,
+  name?: string
+): Promise<IUser | null> {
+  if (!email && !name) {
+    return null;
+  }
+
+  try {
+    // Prefer email if available (more unique)
+    if (email) {
+      const userByEmail = await User.findOne({
+        email: email.toLowerCase().trim(),
+      }).lean();
+      if (userByEmail) {
+        return userByEmail;
+      }
+    }
+
+    // Fall back to name if email not found or not provided
+    if (name) {
+      const userByName = await User.findOne({
+        name: name.trim(),
+      }).lean();
+      if (userByName) {
+        return userByName;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.warn(
+      `  ⚠ Error finding user (email: ${email}, name: ${name}):`,
+      error instanceof Error ? error.message : String(error)
+    );
+    return null;
+  }
+}
+
+/**
+ * Finds a group by name.
+ */
+async function findGroupByName(name: string): Promise<IGroup | null> {
+  if (!name || name.trim().length === 0) {
+    return null;
+  }
+
+  try {
+    return await Group.findOne({ name: name.trim() }).lean();
+  } catch (error) {
+    console.warn(
+      `  ⚠ Error finding group (name: ${name}):`,
+      error instanceof Error ? error.message : String(error)
+    );
+    return null;
+  }
 }
 
 // ============================================================================
@@ -58,6 +183,59 @@ function validatePromptConfig(config: PromptConfig): string | null {
   if (config.command && !COMMAND_REGEX.test(config.command)) {
     return `Prompt "${config.name}": invalid command "${config.command}" (only lowercase a-z, 0-9, hyphens)`;
   }
+
+  // Validate sharing configuration if present
+  if (config.sharing) {
+    const sharing = config.sharing;
+
+    // Validate user permissions
+    if (sharing.users) {
+      for (const userPerm of sharing.users) {
+        if (!userPerm.email && !userPerm.name) {
+          return `Prompt "${config.name}": user permission must have either email or name`;
+        }
+        if (
+          userPerm.role !== 'viewer' &&
+          userPerm.role !== 'editor' &&
+          userPerm.role !== 'owner'
+        ) {
+          return `Prompt "${config.name}": invalid user role "${userPerm.role}" (must be viewer, editor, or owner)`;
+        }
+      }
+    }
+
+    // Validate group permissions
+    if (sharing.groups) {
+      for (const groupPerm of sharing.groups) {
+        if (!groupPerm.name || groupPerm.name.trim().length === 0) {
+          return `Prompt "${config.name}": group permission must have a name`;
+        }
+        if (
+          groupPerm.role !== 'viewer' &&
+          groupPerm.role !== 'editor' &&
+          groupPerm.role !== 'owner'
+        ) {
+          return `Prompt "${config.name}": invalid group role "${groupPerm.role}" (must be viewer, editor, or owner)`;
+        }
+      }
+    }
+
+    // Validate public sharing
+    if (sharing.public) {
+      if (typeof sharing.public.enabled !== 'boolean') {
+        return `Prompt "${config.name}": public.enabled must be a boolean`;
+      }
+      if (
+        sharing.public.enabled &&
+        sharing.public.defaultRole !== 'viewer' &&
+        sharing.public.defaultRole !== 'editor' &&
+        sharing.public.defaultRole !== 'owner'
+      ) {
+        return `Prompt "${config.name}": invalid public.defaultRole "${sharing.public.defaultRole}" (must be viewer, editor, or owner)`;
+      }
+    }
+  }
+
   return null;
 }
 
@@ -96,6 +274,102 @@ function loadPromptConfigs(): {
 // ============================================================================
 
 /**
+ * Applies sharing permissions to a prompt group.
+ * This function is non-blocking: errors are logged but don't fail prompt creation.
+ */
+async function applyPromptPermissions(
+  groupId: string,
+  sharing: SharingConfig,
+  client: LibreChatAPIClient,
+  systemUserId: string
+): Promise<void> {
+  if (!sharing) {
+    return;
+  }
+
+  try {
+    const principals: Principal[] = [];
+
+    // Process user permissions
+    if (sharing.users && sharing.users.length > 0) {
+      for (const userPerm of sharing.users) {
+        const user = await findUserByEmailOrName(userPerm.email, userPerm.name);
+        if (!user) {
+          console.warn(
+            `  ⚠ User not found (email: ${userPerm.email}, name: ${userPerm.name}) - skipping permission`
+          );
+          continue;
+        }
+
+        principals.push({
+          type: 'user',
+          id: user._id.toString(),
+          accessRoleId: mapRoleToAccessRoleId(userPerm.role),
+          name: user.name || user.email,
+        });
+      }
+    }
+
+    // Process group permissions
+    if (sharing.groups && sharing.groups.length > 0) {
+      for (const groupPerm of sharing.groups) {
+        const group = await findGroupByName(groupPerm.name);
+        if (!group) {
+          console.warn(`  ⚠ Group not found (name: ${groupPerm.name}) - skipping permission`);
+          continue;
+        }
+
+        principals.push({
+          type: 'group',
+          id: group._id.toString(),
+          accessRoleId: mapRoleToAccessRoleId(groupPerm.role),
+          name: group.name,
+        });
+      }
+    }
+
+    // Build permission update payload
+    const permissionUpdate: {
+      updated?: Principal[];
+      public?: boolean;
+      publicAccessRoleId?: string;
+    } = {};
+
+    if (principals.length > 0) {
+      permissionUpdate.updated = principals;
+    }
+
+    // Handle public sharing
+    if (sharing.public && sharing.public.enabled) {
+      permissionUpdate.public = true;
+      permissionUpdate.publicAccessRoleId = mapRoleToAccessRoleId(sharing.public.defaultRole);
+    } else if (sharing.public && !sharing.public.enabled) {
+      // Explicitly disable public sharing
+      permissionUpdate.public = false;
+    }
+
+    // Only call API if there are permissions to update
+    if (permissionUpdate.updated || permissionUpdate.public !== undefined) {
+      await client.updatePromptPermissions(groupId, permissionUpdate, systemUserId);
+      if (principals.length > 0) {
+        console.log(`    ✓ Applied ${principals.length} permission(s) for prompt group`);
+      }
+      if (permissionUpdate.public) {
+        console.log(`    ✓ Enabled public sharing with role: ${sharing.public?.defaultRole}`);
+      } else if (permissionUpdate.public === false) {
+        console.log(`    ✓ Disabled public sharing`);
+      }
+    }
+  } catch (error) {
+    // Log error but don't fail prompt creation
+    console.error(
+      `  ⚠ Error applying permissions for prompt group ${groupId}:`,
+      error instanceof Error ? error.message : String(error)
+    );
+  }
+}
+
+/**
  * Checks whether prompt group metadata needs an update.
  */
 function buildMetadataUpdate(
@@ -109,12 +383,18 @@ function buildMetadataUpdate(
     updates.name = config.name;
     hasChanges = true;
   }
-  if ((config.category ?? '') !== (existing.category ?? '')) {
-    updates.category = config.category ?? '';
+  // Compare category: treat undefined and empty string as equivalent
+  const configCategory = config.category ?? '';
+  const existingCategory = existing.category ?? '';
+  if (configCategory !== existingCategory) {
+    updates.category = configCategory;
     hasChanges = true;
   }
-  if ((config.oneliner ?? '') !== (existing.oneliner ?? '')) {
-    updates.oneliner = config.oneliner ?? '';
+  // Compare oneliner: treat undefined and empty string as equivalent
+  const configOneliner = config.oneliner ?? '';
+  const existingOneliner = existing.oneliner ?? '';
+  if (configOneliner !== existingOneliner) {
+    updates.oneliner = configOneliner;
     hasChanges = true;
   }
   // Compare command, treating undefined/empty as equivalent
@@ -155,6 +435,12 @@ async function processPrompt(
     );
     const groupId = result.group?._id ?? result.prompt.groupId;
     console.log(`  ✓ Created prompt: ${config.name} (${groupId})`);
+
+    // Apply sharing permissions if configured
+    if (config.sharing) {
+      await applyPromptPermissions(groupId, config.sharing, client, systemUserId);
+    }
+
     return { created: true, updated: false, skipped: false };
   }
 
@@ -181,6 +467,11 @@ async function processPrompt(
     await client.makePromptProduction(newPromptId, systemUserId);
     console.log(`    ✓ Updated production prompt for: ${config.name}`);
     didUpdate = true;
+  }
+
+  // 3. Apply sharing permissions if configured (always update permissions, not just on other changes)
+  if (config.sharing) {
+    await applyPromptPermissions(existing._id, config.sharing, client, systemUserId);
   }
 
   if (didUpdate) {

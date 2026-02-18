@@ -404,6 +404,23 @@ export class LibreChatAPIClient {
       false
     );
   }
+
+  /**
+   * Updates permissions for a prompt group.
+   */
+  async updatePromptPermissions(
+    groupId: string,
+    permissions: PermissionUpdate,
+    userId: string
+  ): Promise<void> {
+    await this.request<void>(
+      'PUT',
+      `/api/permissions/promptGroup/${groupId}`,
+      userId,
+      permissions,
+      false
+    );
+  }
 }
 
 /**
