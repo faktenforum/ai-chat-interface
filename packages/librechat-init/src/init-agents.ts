@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 import { readFileSync, existsSync } from 'fs';
 import { connectToMongoDB, disconnectFromMongoDB, User } from './utils/mongodb.ts';
-import { loadOptionalConfigFile, getSystemUserId } from './utils/config.ts';
+import { getSystemUserId } from './utils/config.ts';
+import { loadPublicPrivateConfigs } from './utils/config-loader.ts';
 import {
   LibreChatAPIClient,
   type Agent,
@@ -17,6 +18,7 @@ import {
   PRIVATE_AGENTS_PATH,
   PRIVATE_AGENTS_FALLBACK,
   AGENT_INSTRUCTIONS_DIR,
+  CONFIG_SOURCE_DIR,
   ACCESS_ROLE_VIEWER,
   ACCESS_ROLE_EDITOR,
   ACCESS_ROLE_OWNER,
@@ -304,22 +306,21 @@ function resolveAllAgentInstructions(
  * Returns both the agents array and counts for logging.
  */
 function loadAgentConfigs(): { agents: AgentConfig[]; publicCount: number; privateCount: number } {
-  const publicAgents = loadOptionalConfigFile<AgentsConfig>(
-    PUBLIC_AGENTS_PATH,
-    PUBLIC_AGENTS_FALLBACK,
-    { agents: [] }
-  ).agents;
-
-  const privateAgents = loadOptionalConfigFile<AgentsConfig>(
-    PRIVATE_AGENTS_PATH,
-    PRIVATE_AGENTS_FALLBACK,
-    { agents: [] }
-  ).agents;
+  const result = loadPublicPrivateConfigs<'agents', AgentConfig>({
+    publicPath: PUBLIC_AGENTS_PATH,
+    publicFallback: PUBLIC_AGENTS_FALLBACK,
+    privatePath: PRIVATE_AGENTS_PATH,
+    privateFallback: PRIVATE_AGENTS_FALLBACK,
+    defaultValue: { agents: [] },
+    arrayKey: 'agents',
+    publicLabel: 'agents.yaml',
+    privateLabel: 'agents.private.yaml',
+  });
 
   return {
-    agents: [...publicAgents, ...privateAgents],
-    publicCount: publicAgents.length,
-    privateCount: privateAgents.length,
+    agents: result.items,
+    publicCount: result.publicCount,
+    privateCount: result.privateCount,
   };
 }
 
@@ -481,6 +482,11 @@ export async function initializeAgents(): Promise<void> {
 
     if (allAgents.length === 0) {
       console.log('ℹ No agents configured - skipping agent initialization');
+      console.log(`  Config source: ${CONFIG_SOURCE_DIR}`);
+      console.log(`  Agents path: ${PUBLIC_AGENTS_PATH} (exists: ${existsSync(PUBLIC_AGENTS_PATH)})`);
+      if (existsSync(PUBLIC_AGENTS_PATH)) {
+        console.log(`  ⚠ File exists but agents array is empty - check YAML structure (top-level "agents:" list)`);
+      }
       return;
     }
 

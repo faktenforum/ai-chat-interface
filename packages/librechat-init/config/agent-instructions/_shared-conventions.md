@@ -1,6 +1,6 @@
 # Agent instruction conventions (maintainer reference)
 
-**Not loaded by any agent.** Canonical snippets live in `partial_instructions/` and are included in agent files via `{{include:partial-name}}` (e.g. `{{include:handoff-workspace}}`). The init process resolves these directives before storing instructions in LibreChat. See [shared-file-upload-types.md](shared-file-upload-types.md) for full upload/workspace/plan detail.
+**Not loaded by any agent.** Canonical snippets live in `partial_instructions/` and are included in agent files via `{{include:partial-name.md}}` (e.g. `{{include:handoff-workspace.md}}`). The init process resolves these directives before storing instructions in LibreChat. See [shared-file-upload-types.md](shared-file-upload-types.md) for full upload/workspace/plan detail.
 
 ## Principle
 

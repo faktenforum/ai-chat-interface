@@ -322,7 +322,7 @@ modelSpecs:
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-011"
+        agent_id: "shared-agent-universal"
 
     - name: "agent-recherche"
       label: "Recherche-Assistent"
@@ -332,7 +332,7 @@ modelSpecs:
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-001"
+        agent_id: "shared-agent-recherche"
 
     - name: "agent-bildgenerierung"
       label: "Bildgenerierungs-Assistent"
@@ -342,7 +342,7 @@ modelSpecs:
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-002"
+        agent_id: "shared-agent-bildgenerierung"
 
     - name: "agent-reise"
       label: "Reise- und Standort-Assistent"
@@ -352,7 +352,7 @@ modelSpecs:
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-003"
+        agent_id: "shared-agent-reise-standort"
 
     - name: "agent-entwickler-router"
       label: "Entwickler-Router"
@@ -432,7 +432,7 @@ modelSpecs:
     #   preset:
     #     endpoint: "agents"
     #     endpointType: "agents"
-    #     agent_id: "shared-agent-005"
+    #     agent_id: "shared-agent-video-transkripte"
 
     - name: "agent-kochhilfe"
       label: "Kochhilfe"
@@ -442,7 +442,7 @@ modelSpecs:
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-006"
+        agent_id: "shared-agent-kochhilfe"
 
     - name: "agent-datenanalyse"
       label: "Datenanalyse"
@@ -452,7 +452,7 @@ modelSpecs:
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-008"
+        agent_id: "shared-agent-datenanalyse"
 
     - name: "agent-dateikonverter"
       label: "Dateikonverter"
@@ -462,7 +462,7 @@ modelSpecs:
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-009"
+        agent_id: "shared-agent-dateikonverter"
 
     - name: "agent-dokumenten-ersteller"
       label: "Dokumenten-Ersteller"
@@ -472,7 +472,7 @@ modelSpecs:
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-010"
+        agent_id: "shared-agent-dokumenten-ersteller"
 
     - name: "agent-linux-experte"
       label: "Linux-Experte"
@@ -482,7 +482,7 @@ modelSpecs:
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-linux-maintenance"
+        agent_id: "shared-agent-linux-experte"
 
     # ==========================================
     # Europa & Open Source (Scaleway) – alphabetisch nach Label

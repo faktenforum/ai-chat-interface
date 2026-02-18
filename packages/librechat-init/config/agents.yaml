@@ -1,8 +1,8 @@
 agents:
-  - id: shared-agent-001
+  - id: shared-agent-recherche
     name: Recherche-Assistent
     description: Hilft bei der Recherche und Informationsbeschaffung aus verschiedenen Quellen
-    instructionsFile: shared-agent-001-instructions.md
+    instructionsFile: shared-agent-recherche-instructions.md
     provider: Scaleway
     model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
@@ -20,12 +20,12 @@ agents:
       - Vergleiche Berichterstattung verschiedener Quellen zu einem aktuellen Thema
       - Recherchiere die neuesten Entwicklungen bei Solarstrom
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
-      - agent: shared-agent-008
+      - agent: shared-agent-datenanalyse
         description: "Transfer to data analyst for statistical analysis, charts, or visualization of collected data"
         prompt: "Summarize the research findings and describe what data analysis or visualization is needed"
-      - agent: shared-agent-010
+      - agent: shared-agent-dokumenten-ersteller
         description: "Transfer to document creator for a professional report, summary, or PDF from research results"
         prompt: "Summarize the research findings and describe what kind of document should be created"
     recursion_limit: 50
@@ -33,10 +33,10 @@ agents:
     permissions:
       public: true
       publicEdit: true
-  - id: shared-agent-002
+  - id: shared-agent-bildgenerierung
     name: Bildgenerierungs-Assistent
     description: Erstellt Bilder aus Textbeschreibungen mit KI-Bildgenerierung
-    instructionsFile: shared-agent-002-instructions.md
+    instructionsFile: shared-agent-bildgenerierung-instructions.md
     provider: Scaleway
     model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
@@ -57,17 +57,17 @@ agents:
       - Generiere ein abstraktes Kunstwerk
       - Erstelle ein Bild eines Cafés in Paris
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
     recursion_limit: 25
     isCollaborative: true
     permissions:
       public: true
       publicEdit: true
-  - id: shared-agent-003
+  - id: shared-agent-reise-standort
     name: Reise- und Standort-Assistent
     description: Hilft bei Reiseplanung, Standortsuche, Routenplanung und kombiniert geografische Informationen mit Wetterdaten
-    instructionsFile: shared-agent-003-instructions.md
+    instructionsFile: shared-agent-reise-standort-instructions.md
     provider: Scaleway
     model: qwen3-235b-a22b-instruct-2507
     model_parameters:
@@ -122,7 +122,7 @@ agents:
       - Erstelle eine Karte mit der Route von Hamburg nach Bremen
       - Wie wird das Wetter morgen in München?
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
     recursion_limit: 40
     isCollaborative: true
@@ -170,7 +170,7 @@ agents:
       - agent: shared-agent-code-reviewer
         description: "Transfer to code reviewer for analyzing a PR (clones repo, analyzes via Linux MCP); reviewer can hand off to GitHub-Assistent to post the review when the user requests it"
         prompt: "Provide the PR URL and any specific review focus areas"
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
     # Router→specialist + many tool steps; limit from first agent applies to whole run
     recursion_limit: 120
@@ -248,7 +248,7 @@ agents:
       - Dokumentation zu Vue durchsuchen
       - Neue Library-Dokumentation indizieren
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-developer
         description: "Transfer to developer for implementing a fix or feature based on research findings"
@@ -308,7 +308,7 @@ agents:
       - Erstelle ein neues Python-Projekt mit Tests
       - Führe ein Node.js-Skript aus und zeig die Ausgabe
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-code-researcher
         description: "Transfer to code researcher for understanding code, searching docs, or investigating errors"
@@ -371,7 +371,7 @@ agents:
       - Füge Tests zu diesem Modul hinzu
       - Reduziere die Komplexität dieser Funktion
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-code-researcher
         description: "Transfer to code researcher for understanding existing code patterns or searching for best practices"
@@ -464,7 +464,7 @@ agents:
       - Reviewe diesen Pull Request auf GitHub
       - Zeige mir die letzten Commits in einem Repository
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-developer
         description: "Transfer to developer for implementing code changes"
@@ -524,7 +524,7 @@ agents:
       - Analysiere die Änderungen in diesem Pull Request
       - Prüfe den Diff und die Code-Qualität dieses PRs
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant to post the review on the PR (only when the user requested posting)"
@@ -561,7 +561,7 @@ agents:
       - Beim letzten Aufruf ist etwas schiefgelaufen – hier die Beschreibung
       - Wie kann ich einen Bug reporten?
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-github
         description: "Create the issue with prepared title and body (English)"
@@ -580,10 +580,10 @@ agents:
 
   # Video-Transkripte: public false until server-side access is reliable (proxy/geo). See docs/wip/YTPTUBE_FUTURE_WORK.md.
   # Model: llama-3.3-70b has 100K context (vs Qwen3 36K cap in UI) to handle large cookie pastes.
-  - id: shared-agent-005
+  - id: shared-agent-video-transkripte
     name: Video-Transkripte
     description: Transkripte, Metadaten, Thumbnails und Download-Links für Video-URLs (YouTube, Instagram, TikTok u. a.).
-    instructionsFile: shared-agent-005-instructions.md
+    instructionsFile: shared-agent-video-transkripte-instructions.md
     provider: Scaleway
     model: llama-3.3-70b-instruct
     model_parameters:
@@ -611,9 +611,9 @@ agents:
       - "Thumbnail zu https://vimeo.com/76979871"
       - "Status zu diesem Video: https://www.pbs.org/video/how-fantasy-reflects-our-world-picecq/"
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
-      - agent: shared-agent-009
+      - agent: shared-agent-dateikonverter
         description: "Transfer to file converter for converting downloaded audio/video to another format"
         prompt: "Describe the media file (format, source URL, workspace path if downloaded) and the desired output format"
     recursion_limit: 40
@@ -621,10 +621,10 @@ agents:
     permissions:
       public: false
       publicEdit: false
-  - id: shared-agent-006
+  - id: shared-agent-kochhilfe
     name: Kochhilfe
     description: Hilft beim Kochen – Rezepte vorschlagen, Inspiration für Mahlzeiten, Zutaten und Zubereitung, plus allgemeine Kochfragen.
-    instructionsFile: shared-agent-006-instructions.md
+    instructionsFile: shared-agent-kochhilfe-instructions.md
     provider: Scaleway
     model: devstral-2-123b-instruct-2512
     model_parameters:
@@ -667,17 +667,17 @@ agents:
       - Einfache Rezepte für Anfänger
       - Was ist Abschmecken und wie mache ich es?
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
     recursion_limit: 40
     isCollaborative: false
     permissions:
       public: true
       publicEdit: true
-  - id: shared-agent-008
+  - id: shared-agent-datenanalyse
     name: Datenanalyse
     description: Analysiert Daten aus CSV, JSON und anderen Formaten – filtert, transformiert, visualisiert (Diagramme) und fasst zusammen. Dateien per Upload; Diagramme werden als Bild im Chat angezeigt.
-    instructionsFile: shared-agent-008-instructions.md
+    instructionsFile: shared-agent-datenanalyse-instructions.md
     provider: Scaleway
     model: devstral-2-123b-instruct-2512
     model_parameters:
@@ -717,9 +717,9 @@ agents:
       - Konvertiere diese Daten von CSV nach JSON
       - Erstelle eine Statistik aus meiner Datei
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
-      - agent: shared-agent-010
+      - agent: shared-agent-dokumenten-ersteller
         description: "Transfer to document creator for a professional report or PDF from analysis results"
         prompt: "Summarize the analysis results, key findings, and describe what kind of report or document should be created"
     recursion_limit: 75
@@ -727,10 +727,10 @@ agents:
     permissions:
       public: true
       publicEdit: true
-  - id: shared-agent-009
+  - id: shared-agent-dateikonverter
     name: Dateikonverter
     description: Konvertiert Bilder, Audio, Video und Dokumente zwischen Formaten – ImageMagick, FFmpeg, Pandoc. Ergebnis direkt im Chat oder als Download.
-    instructionsFile: shared-agent-009-instructions.md
+    instructionsFile: shared-agent-dateikonverter-instructions.md
     provider: Scaleway
     model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
@@ -767,17 +767,17 @@ agents:
       - WAV nach FLAC konvertieren
       - Konvertiere mein Dokument in ein anderes Format
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
     recursion_limit: 50
     isCollaborative: true
     permissions:
       public: true
       publicEdit: true
-  - id: shared-agent-010
+  - id: shared-agent-dokumenten-ersteller
     name: Dokumenten-Ersteller
     description: Erstellt professionelle Dokumente – Briefe, Berichte, Rechnungen, Lebensläufe, Vorlagen. Erzeugt PDF (Typst) oder editierbare Formate (ODT/DOCX via Pandoc). Ergebnis als Download.
-    instructionsFile: shared-agent-010-instructions.md
+    instructionsFile: shared-agent-dokumenten-ersteller-instructions.md
     provider: Scaleway
     model: qwen3-235b-a22b-instruct-2507
     model_parameters:
@@ -815,9 +815,9 @@ agents:
       - Erstelle eine Vorlage für Geschäftsbriefe
       - Konvertiere meinen Text in ein professionelles PDF
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
-      - agent: shared-agent-009
+      - agent: shared-agent-dateikonverter
         description: "Transfer to file converter for converting the created document to another format (e.g. PDF to image, audio extraction)"
         prompt: "Describe the document (file path in workspace, format) and the desired output format for conversion"
     recursion_limit: 75
@@ -825,10 +825,13 @@ agents:
     permissions:
       public: true
       publicEdit: true
-  - id: shared-agent-linux-maintenance
+  - id: shared-agent-linux-experte
     name: Linux-Experte
-    description: Allgemeiner Linux-Assistent mit vollem MCP-Linux-Zugriff – Shell, Skripte, Dateien, Workspaces. Zusätzlich Wartung: Status, Bereinigung, Zurücksetzen des Accounts. Keine Code-Implementierung oder Dokumenten-Erstellung – dafür an Entwickler bzw. Dokumenten-Ersteller übergeben.
-    instructionsFile: shared-agent-linux-maintenance-instructions.md
+    description: >-
+      Allgemeiner Linux-Assistent mit vollem MCP-Linux-Zugriff – Shell, Skripte, Dateien, Workspaces.
+      Zusätzlich Wartung: Status, Bereinigung, Zurücksetzen des Accounts.
+      Keine Code-Implementierung oder Dokumenten-Erstellung – dafür an Entwickler bzw. Dokumenten-Ersteller übergeben.
+    instructionsFile: shared-agent-linux-experte-instructions.md
     provider: Scaleway
     model: mistral-small-3.2-24b-instruct-2506
     model_parameters:
@@ -867,18 +870,18 @@ agents:
       - Alte Uploads bereinigen
       - Shell-Skript für Datei-Umbenennung
     handoffs:
-      - agent: shared-agent-011
+      - agent: shared-agent-universal
         description: "Return to Universal when task is done or request is outside Linux/maintenance (e.g. coding, document creation, research). Do not hand back merely because the request is ambiguous; ask one short clarifying question."
       - agent: shared-agent-developer-router
         description: "Transfer to developer router when user needs code implementation, bug fixes, or feature development"
         prompt: "Summarize the Linux context and what coding/implementation is needed"
-      - agent: shared-agent-008
+      - agent: shared-agent-datenanalyse
         description: "Transfer to data analyst for CSV/JSON analysis, charts, or data visualization"
         prompt: "Describe the data analysis task; include workspace and file path if relevant"
-      - agent: shared-agent-009
+      - agent: shared-agent-dateikonverter
         description: "Transfer to file converter for format conversion (image, audio, video, document)"
         prompt: "Describe source/target format and file path in workspace"
-      - agent: shared-agent-010
+      - agent: shared-agent-dokumenten-ersteller
         description: "Transfer to document creator for PDFs, letters, reports, or CVs"
         prompt: "Describe the document to create"
     recursion_limit: 50
@@ -886,10 +889,10 @@ agents:
     permissions:
       public: true
       publicEdit: true
-  - id: shared-agent-011
+  - id: shared-agent-universal
     name: Universal
     description: Allgemeiner Assistent – erkennt automatisch, welcher Spezialist am besten passt, und leitet die Anfrage weiter.
-    instructionsFile: shared-agent-011-instructions.md
+    instructionsFile: shared-agent-universal-instructions.md
     provider: Scaleway
     model: devstral-2-123b-instruct-2512
     model_parameters:
@@ -907,13 +910,13 @@ agents:
       - set_workspace_plan_mcp_linux
       - create_upload_session_mcp_linux
     handoffs:
-      - agent: shared-agent-001
+      - agent: shared-agent-recherche
         description: "Transfer to research assistant for fact-finding, information gathering, and web research"
         prompt: "Summarize what the user wants researched, including specific topics, questions, or sources to check"
-      - agent: shared-agent-002
+      - agent: shared-agent-bildgenerierung
         description: "Transfer to image generator for creating AI-generated images from text descriptions"
         prompt: "Describe the image the user wants: subject, style, mood, colors, and any specific requirements"
-      - agent: shared-agent-003
+      - agent: shared-agent-reise-standort
         description: "Transfer to travel and location assistant for route planning, maps, weather, POI search, and public transport"
         prompt: "Summarize the user's travel or location query, including origin, destination, preferences, or area of interest"
       - agent: shared-agent-developer-router
@@ -922,19 +925,19 @@ agents:
       - agent: shared-agent-feedback
         description: "Transfer to feedback assistant for reporting bugs or errors in the chat interface (prepare and create GitHub issue)"
         prompt: "The user wants to report a bug or error in the chat interface; include their description and any details they gave"
-      - agent: shared-agent-006
+      - agent: shared-agent-kochhilfe
         description: "Transfer to cooking assistant for recipes, meal inspiration, cooking tips, and ingredient substitutions"
         prompt: "Describe what cooking help the user needs: recipe type, ingredients, dietary requirements, or cooking question"
-      - agent: shared-agent-008
+      - agent: shared-agent-datenanalyse
         description: "Transfer to data analyst for CSV/JSON analysis, charts, data visualization; they will provide an upload link for the user's file (MCP Linux) if needed"
         prompt: "Describe the data analysis task: user has or will upload data; analyst will provide upload link and then analyze/visualize"
-      - agent: shared-agent-009
+      - agent: shared-agent-dateikonverter
         description: "Transfer to file converter for image, audio, video, and document format conversion (ImageMagick, FFmpeg, Pandoc)"
         prompt: "Describe the conversion needed: source format, target format, and any quality or size requirements"
-      - agent: shared-agent-010
+      - agent: shared-agent-dokumenten-ersteller
         description: "Transfer to document creator for professional PDFs, letters, reports, invoices, and CVs (Typst/Pandoc)"
         prompt: "Describe the document the user wants: type (letter, report, invoice, CV), content, style, and language"
-      - agent: shared-agent-linux-maintenance
+      - agent: shared-agent-linux-experte
         description: "Transfer to Linux expert for general Linux help, shell commands, scripts, or MCP Linux account/workspace management: status, cleanup, reset, session and workspace administration"
         prompt: "Summarize what the user wants: e.g. Linux/shell question, script help, reset account, clean uploads, delete workspace, check disk usage, close stale sessions"
     category: general

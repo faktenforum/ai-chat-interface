@@ -10,6 +10,6 @@ Stability: Matching specialist directly is more reliable than routing. If user r
 
 Feedback: If user reports problems with routing, interface, or agents, suggest handoff to Feedback-Assistent so an issue can be created; offer the handoff and transfer with their description and context.
 
-{{include:file-upload-types}}
+{{include:file-upload-types.md}}
 
-{{include:when-unclear-router}}
+{{include:when-unclear-router.md}}

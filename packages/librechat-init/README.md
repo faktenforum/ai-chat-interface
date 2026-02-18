@@ -49,7 +49,7 @@ roles:
 
 **Files:** `config/agents.yaml` (public), `config/agents.private.yaml` (private)
 
-Each agent can use inline `instructions` or reference a file via **`instructionsFile`** (filename only, e.g. `shared-agent-001-instructions.md`). Files are loaded from `config/agent-instructions/`; naming convention: `{agent-id}-instructions.md`. If `instructionsFile` is set, its content (trimmed) is used and any inline `instructions` is ignored.
+Each agent can use inline `instructions` or reference a file via **`instructionsFile`** (filename only, e.g. `shared-agent-recherche-instructions.md`). Files are loaded from `config/agent-instructions/`; naming convention: `{agent-id}-instructions.md`. If `instructionsFile` is set, its content (trimmed) is used and any inline `instructions` is ignored.
 
 **Partial instructions:** Instruction files support `{{include:path}}` directives to embed shared snippets from `config/agent-instructions/partial_instructions/`. Example: `{{include:handoff-workspace}}` injects the workspace handoff block. Partials are resolved at init time; LibreChat receives the expanded text. Use this to avoid duplicating common blocks (handoff, execution, when-unclear, etc.) across agents.
 

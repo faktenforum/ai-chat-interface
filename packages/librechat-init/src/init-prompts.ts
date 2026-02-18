@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { connectToMongoDB, disconnectFromMongoDB, User } from './utils/mongodb.ts';
-import { loadOptionalConfigFile, getSystemUserId } from './utils/config.ts';
+import { getSystemUserId } from './utils/config.ts';
+import { loadPublicPrivateConfigs } from './utils/config-loader.ts';
 import {
   LibreChatAPIClient,
   type PromptGroupListEntry,
@@ -72,22 +73,21 @@ function loadPromptConfigs(): {
   publicCount: number;
   privateCount: number;
 } {
-  const publicPrompts = loadOptionalConfigFile<PromptsConfig>(
-    PUBLIC_PROMPTS_PATH,
-    PUBLIC_PROMPTS_FALLBACK,
-    { prompts: [] }
-  ).prompts;
-
-  const privatePrompts = loadOptionalConfigFile<PromptsConfig>(
-    PRIVATE_PROMPTS_PATH,
-    PRIVATE_PROMPTS_FALLBACK,
-    { prompts: [] }
-  ).prompts;
+  const result = loadPublicPrivateConfigs<'prompts', PromptConfig>({
+    publicPath: PUBLIC_PROMPTS_PATH,
+    publicFallback: PUBLIC_PROMPTS_FALLBACK,
+    privatePath: PRIVATE_PROMPTS_PATH,
+    privateFallback: PRIVATE_PROMPTS_FALLBACK,
+    defaultValue: { prompts: [] },
+    arrayKey: 'prompts',
+    publicLabel: 'prompts.yaml',
+    privateLabel: 'prompts.private.yaml',
+  });
 
   return {
-    prompts: [...publicPrompts, ...privatePrompts],
-    publicCount: publicPrompts.length,
-    privateCount: privatePrompts.length,
+    prompts: result.items,
+    publicCount: result.publicCount,
+    privateCount: result.privateCount,
   };
 }
 

@@ -6,7 +6,7 @@ import { join } from 'path';
 // ============================================================================
 
 /** When running with host config mounted at /app/config-source (local dev), use it instead of baked-in /app/data. */
-const CONFIG_SOURCE_DIR = existsSync('/app/config-source/librechat.yaml')
+export const CONFIG_SOURCE_DIR = existsSync('/app/config-source/librechat.yaml')
   ? '/app/config-source'
   : '/app/data';
 
