@@ -21,6 +21,10 @@ The image-gen MCP shows each generated image in the chat. To use them:
 | 8 | shared-agent-code-refactorer | shared-agent-code-refactorer.png |
 | 9 | shared-agent-github | shared-agent-github.png |
 | 10 | shared-agent-code-reviewer | shared-agent-code-reviewer.png |
+| 10a | shared-agent-code-researcher-quality | shared-agent-code-researcher.png (reuse default) |
+| 10b | shared-agent-developer-quality | shared-agent-developer.png (reuse default) |
+| 10c | shared-agent-code-refactorer-quality | shared-agent-code-refactorer.png (reuse default) |
+| 10d | shared-agent-code-reviewer-quality | shared-agent-code-reviewer.png (reuse default) |
 | 11 | shared-agent-feedback | shared-agent-feedback.png |
 | 12 | shared-agent-video-transkripte | shared-agent-video-transkripte.png |
 | 13 | shared-agent-kochhilfe | shared-agent-kochhilfe.png |

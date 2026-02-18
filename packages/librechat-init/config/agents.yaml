@@ -156,19 +156,31 @@ agents:
       - Hilf mir beim Debugging
     handoffs:
       - agent: shared-agent-code-researcher
-        description: "Transfer to code researcher for understanding code/repos, finding examples, searching docs, Stack Overflow, npm, and indexing documentation"
+        description: "Transfer to Code-Recherche (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Describe the code research task: what needs to be understood, which repo/library, or what error/question needs investigation"
+      - agent: shared-agent-code-researcher-quality
+        description: "Transfer to Code-Recherche (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code-Recherche could not fulfill the task."
         prompt: "Describe the code research task: what needs to be understood, which repo/library, or what error/question needs investigation"
       - agent: shared-agent-developer
-        description: "Transfer to developer for implementing features or fixing bugs in the Linux workspace"
+        description: "Transfer to Entwickler (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Describe what needs to be implemented or fixed, including repo URLs, language/framework, and requirements"
+      - agent: shared-agent-developer-quality
+        description: "Transfer to Entwickler (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Entwickler could not fulfill the task."
         prompt: "Describe what needs to be implemented or fixed, including repo URLs, language/framework, and requirements"
       - agent: shared-agent-code-refactorer
-        description: "Transfer to code refactorer for restructuring, polishing, and improving existing code"
+        description: "Transfer to Code-Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Describe what code needs refactoring, the goals (readability, performance, structure), and the workspace/repo context"
+      - agent: shared-agent-code-refactorer-quality
+        description: "Transfer to Code-Refactorer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code-Refactorer could not fulfill the task."
         prompt: "Describe what code needs refactoring, the goals (readability, performance, structure), and the workspace/repo context"
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for PR creation, issue management, reviews posting, and repo operations"
         prompt: "Describe the GitHub task: repo, PR/issue number, what action is needed"
       - agent: shared-agent-code-reviewer
-        description: "Transfer to code reviewer for analyzing a PR (clones repo, analyzes via Linux MCP); reviewer can hand off to GitHub-Assistent to post the review when the user requests it"
+        description: "Transfer to Code-Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Provide the PR URL and any specific review focus areas"
+      - agent: shared-agent-code-reviewer-quality
+        description: "Transfer to Code-Reviewer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code-Reviewer could not fulfill the task."
         prompt: "Provide the PR URL and any specific review focus areas"
       - agent: shared-agent-universal
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
@@ -183,10 +195,92 @@ agents:
     name: Code-Recherche
     description: Versteht Code und Repositories, findet Beispiele, durchsucht Dokumentation, Stack Overflow, npm und GitHub. Keine Implementierung – nur Analyse und Recherche.
     instructionsFile: shared-agent-code-researcher-instructions.md
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
+    model_parameters:
+      temperature: 0.5
+      top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+    tools:
+      - web_search
+    mcpServers:
+      - linux
+      - github
+      - docs
+      - stackoverflow
+      - npm-search
+    mcpTools:
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - read_workspace_file_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - search_code_mcp_github
+      - search_repositories_mcp_github
+      - search_issues_mcp_github
+      - search_pull_requests_mcp_github
+      - get_file_contents_mcp_github
+      - list_commits_mcp_github
+      - issue_read_mcp_github
+      - pull_request_read_mcp_github
+      - get_latest_release_mcp_github
+      - get_release_by_tag_mcp_github
+      - list_branches_mcp_github
+      - list_tags_mcp_github
+      - get_commit_mcp_github
+      - scrape_docs_mcp_docs
+      - search_docs_mcp_docs
+      - list_libraries_mcp_docs
+      - list_jobs_mcp_docs
+      - get_job_info_mcp_docs
+      - fetch_url_mcp_docs
+      - refresh_version_mcp_docs
+      - find_version_mcp_docs
+      - remove_docs_mcp_docs
+      - cancel_job_mcp_docs
+      - search_by_error_mcp_stackoverflow
+      - search_by_tags_mcp_stackoverflow
+      - analyze_stack_trace_mcp_stackoverflow
+      - search_npm_packages_mcp_npm-search
+    category: development
+    conversation_starters:
+      - Ich habe einen Fehler in meinem Code, kannst du helfen?
+      - Suche nach npm-Paketen für Formular-Validierung
+      - Zeige mir Beispielcode für React Hooks
+      - Suche auf Stack Overflow nach Lösungen für TypeScript-Typfehler
+      - Dokumentation zu Vue durchsuchen
+      - Neue Library-Dokumentation indizieren
+    handoffs:
+      - agent: shared-agent-universal
+        description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
+      - agent: shared-agent-developer
+        description: "Transfer to Entwickler (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Summarize the research findings and describe what needs to be implemented or fixed"
+      - agent: shared-agent-developer-quality
+        description: "Transfer to Entwickler (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Entwickler could not fulfill the task."
+        prompt: "Summarize the research findings and describe what needs to be implemented or fixed"
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant for creating PRs, issues, or posting reviews"
+        prompt: "Describe the GitHub action needed based on the research"
+    # Dev: many read ops (docs, GitHub, workspace)
+    recursion_limit: 200
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+
+  - id: shared-agent-code-researcher-quality
+    name: Code-Recherche (Claude Opus 4.6)
+    description: Versteht Code und Repositories, findet Beispiele, durchsucht Dokumentation, Stack Overflow, npm und GitHub. Keine Implementierung – nur Analyse und Recherche. Quality variant (OpenRouter).
+    instructionsFile: shared-agent-code-researcher-instructions.md
     provider: OpenRouter
     model: anthropic/claude-opus-4.6
-    # provider: Scaleway
-    # model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.5
       top_p: 0.9
@@ -251,12 +345,14 @@ agents:
       - agent: shared-agent-universal
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-developer
-        description: "Transfer to developer for implementing a fix or feature based on research findings"
+        description: "Transfer to Entwickler (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Summarize the research findings and describe what needs to be implemented or fixed"
+      - agent: shared-agent-developer-quality
+        description: "Transfer to Entwickler (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Entwickler could not fulfill the task."
         prompt: "Summarize the research findings and describe what needs to be implemented or fixed"
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for creating PRs, issues, or posting reviews"
         prompt: "Describe the GitHub action needed based on the research"
-    # Dev: many read ops (docs, GitHub, workspace)
     recursion_limit: 200
     isCollaborative: true
     permissions:
@@ -267,10 +363,74 @@ agents:
     name: Entwickler
     description: Implementiert Features und behebt Bugs im Linux-Workspace – voller Terminal- und Workspace-Zugriff mit Node.js, Python, Git.
     instructionsFile: shared-agent-developer-instructions.md
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
+    model_parameters:
+      temperature: 0.5
+      top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+    tools:
+      - web_search
+    mcpServers:
+      - linux
+    mcpTools:
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - write_terminal_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - delete_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - create_upload_session_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - create_download_link_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - read_workspace_file_mcp_linux
+    category: development
+    conversation_starters:
+      - Implementiere ein neues Feature in meinem Projekt
+      - Behebe diesen Bug in meinem Code
+      - Klone ein Repository und richte das Projekt ein
+      - Erstelle ein neues Python-Projekt mit Tests
+      - Führe ein Node.js-Skript aus und zeig die Ausgabe
+    handoffs:
+      - agent: shared-agent-universal
+        description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
+      - agent: shared-agent-code-researcher
+        description: "Transfer to Code-Recherche (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Describe what needs to be researched or understood before continuing implementation"
+      - agent: shared-agent-code-researcher-quality
+        description: "Transfer to Code-Recherche (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code-Recherche could not fulfill the task."
+        prompt: "Describe what needs to be researched or understood before continuing implementation"
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant for creating PRs, opening issues, or posting reviews"
+        prompt: "Include workspace name (e.g. ai-chat-interface), repo, branch, and what was implemented or what action is needed"
+      - agent: shared-agent-code-refactorer
+        description: "Transfer to Code-Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
+      - agent: shared-agent-code-refactorer-quality
+        description: "Transfer to Code-Refactorer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code-Refactorer could not fulfill the task."
+        prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
+    # Dev: implement/fix, many file and terminal ops
+    recursion_limit: 120
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+
+  - id: shared-agent-developer-quality
+    name: Entwickler (Claude Opus 4.6)
+    description: Implementiert Features und behebt Bugs im Linux-Workspace – voller Terminal- und Workspace-Zugriff mit Node.js, Python, Git. Quality variant (OpenRouter).
+    instructionsFile: shared-agent-developer-instructions.md
     provider: OpenRouter
     model: anthropic/claude-opus-4.6
-    # provider: Scaleway
-    # model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.5
       top_p: 0.9
@@ -311,15 +471,20 @@ agents:
       - agent: shared-agent-universal
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-code-researcher
-        description: "Transfer to code researcher for understanding code, searching docs, or investigating errors"
+        description: "Transfer to Code-Recherche (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Describe what needs to be researched or understood before continuing implementation"
+      - agent: shared-agent-code-researcher-quality
+        description: "Transfer to Code-Recherche (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code-Recherche could not fulfill the task."
         prompt: "Describe what needs to be researched or understood before continuing implementation"
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for creating PRs, opening issues, or posting reviews"
         prompt: "Include workspace name (e.g. ai-chat-interface), repo, branch, and what was implemented or what action is needed"
       - agent: shared-agent-code-refactorer
-        description: "Transfer to code refactorer to polish or restructure the implemented code"
+        description: "Transfer to Code-Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
-    # Dev: implement/fix, many file and terminal ops
+      - agent: shared-agent-code-refactorer-quality
+        description: "Transfer to Code-Refactorer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code-Refactorer could not fulfill the task."
+        prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
     recursion_limit: 120
     isCollaborative: true
     permissions:
@@ -330,10 +495,80 @@ agents:
     name: Code-Refactorer
     description: Refactoring und Optimierung von Code – Struktur, Stil, Tests, Lesbarkeit. Voller Linux-Workspace-Zugriff.
     instructionsFile: shared-agent-code-refactorer-instructions.md
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
+    model_parameters:
+      temperature: 0.4
+      top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+    tools:
+      - web_search
+    mcpServers:
+      - linux
+    mcpTools:
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - write_terminal_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - delete_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - create_upload_session_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - create_download_link_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - read_workspace_file_mcp_linux
+    category: development
+    conversation_starters:
+      - Refactore diesen Code für bessere Lesbarkeit
+      - Verbessere die Struktur meines Projekts
+      - Extrahiere wiederverwendbare Funktionen
+      - Füge Tests zu diesem Modul hinzu
+      - Reduziere die Komplexität dieser Funktion
+    handoffs:
+      - agent: shared-agent-universal
+        description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
+      - agent: shared-agent-code-researcher
+        description: "Transfer to Code-Recherche (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Describe what needs to be researched to inform the refactoring"
+      - agent: shared-agent-code-researcher-quality
+        description: "Transfer to Code-Recherche (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code-Recherche could not fulfill the task."
+        prompt: "Describe what needs to be researched to inform the refactoring"
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant for creating a PR with the refactored code"
+        prompt: "Describe the refactoring changes and the PR that should be created"
+      - agent: shared-agent-developer
+        description: "Transfer to Entwickler (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Describe what needs to be implemented (e.g. missing tests, new logic) and the workspace/repo context"
+      - agent: shared-agent-developer-quality
+        description: "Transfer to Entwickler (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Entwickler could not fulfill the task."
+        prompt: "Describe what needs to be implemented (e.g. missing tests, new logic) and the workspace/repo context"
+      - agent: shared-agent-code-reviewer
+        description: "Transfer to Code-Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
+      - agent: shared-agent-code-reviewer-quality
+        description: "Transfer to Code-Reviewer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code-Reviewer could not fulfill the task."
+        prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
+    # Dev: refactor, tests, many file reads
+    recursion_limit: 200
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+
+  - id: shared-agent-code-refactorer-quality
+    name: Code-Refactorer (Gemini 3 Pro Preview)
+    description: Refactoring und Optimierung von Code – Struktur, Stil, Tests, Lesbarkeit. Voller Linux-Workspace-Zugriff. Quality variant (OpenRouter).
+    instructionsFile: shared-agent-code-refactorer-instructions.md
     provider: OpenRouter
     model: google/gemini-3-pro-preview
-    # provider: Scaleway
-    # model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.4
       top_p: 0.9
@@ -374,18 +609,26 @@ agents:
       - agent: shared-agent-universal
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-code-researcher
-        description: "Transfer to code researcher for understanding existing code patterns or searching for best practices"
+        description: "Transfer to Code-Recherche (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Describe what needs to be researched to inform the refactoring"
+      - agent: shared-agent-code-researcher-quality
+        description: "Transfer to Code-Recherche (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code-Recherche could not fulfill the task."
         prompt: "Describe what needs to be researched to inform the refactoring"
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for creating a PR with the refactored code"
         prompt: "Describe the refactoring changes and the PR that should be created"
       - agent: shared-agent-developer
-        description: "Transfer to developer to implement missing code, tests, or new behavior identified during refactoring"
+        description: "Transfer to Entwickler (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Describe what needs to be implemented (e.g. missing tests, new logic) and the workspace/repo context"
+      - agent: shared-agent-developer-quality
+        description: "Transfer to Entwickler (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Entwickler could not fulfill the task."
         prompt: "Describe what needs to be implemented (e.g. missing tests, new logic) and the workspace/repo context"
       - agent: shared-agent-code-reviewer
-        description: "Transfer to code reviewer to read a PR and its review comments, then analyze or fix the mentioned issues"
+        description: "Transfer to Code-Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
-    # Dev: refactor, tests, many file reads
+      - agent: shared-agent-code-reviewer-quality
+        description: "Transfer to Code-Reviewer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code-Reviewer could not fulfill the task."
+        prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
     recursion_limit: 200
     isCollaborative: true
     permissions:
@@ -397,11 +640,11 @@ agents:
     description: GitHub-Operationen – Repositories, Issues, Pull Requests lesen und verwalten. Nutzt GitHub MCP und Linux-Terminal für Git-Befehle.
     instructionsFile: shared-agent-github-instructions.md
     provider: Scaleway
-    model: qwen3-235b-a22b-instruct-2507
+    model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.5
       top_p: 0.9
-      maxContextTokens: 250000   # Qwen3 235B; Scaleway has no endpointTokenConfig
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
     tools: []
     mcpServers:
       - github
@@ -467,13 +710,22 @@ agents:
       - agent: shared-agent-universal
         description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-developer
-        description: "Transfer to developer for implementing code changes"
+        description: "Transfer to Entwickler (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Describe what needs to be implemented based on the GitHub context"
+      - agent: shared-agent-developer-quality
+        description: "Transfer to Entwickler (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Entwickler could not fulfill the task."
         prompt: "Describe what needs to be implemented based on the GitHub context"
       - agent: shared-agent-code-refactorer
-        description: "Transfer to code refactorer for improving code before creating a PR"
+        description: "Transfer to Code-Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Describe the code that needs refactoring"
+      - agent: shared-agent-code-refactorer-quality
+        description: "Transfer to Code-Refactorer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code-Refactorer could not fulfill the task."
         prompt: "Describe the code that needs refactoring"
       - agent: shared-agent-code-reviewer
-        description: "Transfer to code reviewer for analyzing a PR"
+        description: "Transfer to Code-Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Provide the PR URL and context for review"
+      - agent: shared-agent-code-reviewer-quality
+        description: "Transfer to Code-Reviewer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code-Reviewer could not fulfill the task."
         prompt: "Provide the PR URL and context for review"
     # Dev: GitHub API + git, many file/API ops
     recursion_limit: 200
@@ -486,10 +738,71 @@ agents:
     name: Code-Reviewer
     description: Analysiert Pull Requests – klont das Repo, prüft den Diff, liest die Codebase und erstellt ein strukturiertes Review. Postet das Review bei Bedarf über den GitHub-Assistenten.
     instructionsFile: shared-agent-code-reviewer-instructions.md
+    provider: Scaleway
+    model: devstral-2-123b-instruct-2512
+    model_parameters:
+      temperature: 0.4
+      top_p: 0.9
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+    tools: []
+    mcpServers:
+      - linux
+      - github
+    mcpTools:
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - get_workspace_status_mcp_linux
+      - set_workspace_plan_mcp_linux
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - read_workspace_file_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - get_account_info_mcp_linux
+      - get_system_info_mcp_linux
+      - pull_request_read_mcp_github
+      - get_file_contents_mcp_github
+      - list_commits_mcp_github
+      - get_commit_mcp_github
+      - list_branches_mcp_github
+      - search_code_mcp_github
+      - search_repositories_mcp_github
+    category: development
+    conversation_starters:
+      - "Review diesen PR: https://github.com/..."
+      - Analysiere die Änderungen in diesem Pull Request
+      - Prüfe den Diff und die Code-Qualität dieses PRs
+    handoffs:
+      - agent: shared-agent-universal
+        description: "Return to Universal only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
+      - agent: shared-agent-github
+        description: "Transfer to GitHub assistant to post the review on the PR (only when the user requested posting)"
+        prompt: "Include the workspace name you are using, the review body, and any inline comments for the PR."
+      - agent: shared-agent-code-researcher
+        description: "Transfer to Code-Recherche (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Explain how the relevant module/function works in this codebase"
+      - agent: shared-agent-code-researcher-quality
+        description: "Transfer to Code-Recherche (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code-Recherche could not fulfill the task."
+        prompt: "Explain how the relevant module/function works in this codebase"
+      - agent: shared-agent-developer
+        description: "Transfer to Entwickler (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
+      - agent: shared-agent-developer-quality
+        description: "Transfer to Entwickler (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Entwickler could not fulfill the task."
+        prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
+    # Dev: PR review — file reads, diff, GitHub API, push
+    recursion_limit: 200
+    isCollaborative: true
+    permissions:
+      public: true
+      publicEdit: true
+
+  - id: shared-agent-code-reviewer-quality
+    name: Code-Reviewer (Gemini 3 Pro Preview)
+    description: Analysiert Pull Requests – klont das Repo, prüft den Diff, liest die Codebase und erstellt ein strukturiertes Review. Postet das Review bei Bedarf über den GitHub-Assistenten. Quality variant (OpenRouter).
+    instructionsFile: shared-agent-code-reviewer-instructions.md
     provider: OpenRouter
     model: google/gemini-3-pro-preview
-    # provider: Scaleway
-    # model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.4
       top_p: 0.9
@@ -530,12 +843,17 @@ agents:
         description: "Transfer to GitHub assistant to post the review on the PR (only when the user requested posting)"
         prompt: "Include the workspace name you are using, the review body, and any inline comments for the PR."
       - agent: shared-agent-code-researcher
-        description: "Transfer to code researcher for deeper understanding of existing code before finalizing the review"
+        description: "Transfer to Code-Recherche (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
+        prompt: "Explain how the relevant module/function works in this codebase"
+      - agent: shared-agent-code-researcher-quality
+        description: "Transfer to Code-Recherche (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code-Recherche could not fulfill the task."
         prompt: "Explain how the relevant module/function works in this codebase"
       - agent: shared-agent-developer
-        description: "Transfer to developer to fix the issues found in the review"
+        description: "Transfer to Entwickler (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
-    # Dev: PR review — file reads, diff, GitHub API, push
+      - agent: shared-agent-developer-quality
+        description: "Transfer to Entwickler (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Entwickler could not fulfill the task."
+        prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
     recursion_limit: 200
     isCollaborative: true
     permissions:
@@ -572,7 +890,10 @@ agents:
         description: "Create the issue with prepared title and body (English)"
         prompt: "workspace: feedback — call `get_workspace_status('feedback')` to read issue details from the plan, then create the issue via `create_issue_mcp_github(owner='faktenforum', repo='ai-chat-interface', title=..., body=...)` using title and body from the plan (English). If the plan contains structured issue details, use those. Otherwise, use the title and body provided in this handoff instructions. Do not pass German text for title/body."
       - agent: shared-agent-code-researcher
-        description: "Primary path: research bug (find duplicates, analyze code) in faktenforum/ai-chat-interface before issue creation"
+        description: "Primary path: research bug (find duplicates, analyze code) in faktenforum/ai-chat-interface before issue creation. Prefer this unless the user emphasizes quality or a previous attempt failed."
+        prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code; after research follow plan to hand off to GitHub-Assistent"
+      - agent: shared-agent-code-researcher-quality
+        description: "Use Code-Recherche (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code-Recherche could not fulfill the research task."
         prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code; after research follow plan to hand off to GitHub-Assistent"
       - agent: shared-agent-developer-router
         description: "User wants to fix the bug, not only report"
@@ -785,11 +1106,11 @@ agents:
     description: Erstellt professionelle Dokumente – Briefe, Berichte, Rechnungen, Lebensläufe, Vorlagen. Erzeugt PDF (Typst) oder editierbare Formate (ODT/DOCX via Pandoc). Ergebnis als Download.
     instructionsFile: shared-agent-dokumenten-ersteller-instructions.md
     provider: Scaleway
-    model: qwen3-235b-a22b-instruct-2507
+    model: devstral-2-123b-instruct-2512
     model_parameters:
       temperature: 0.5
       top_p: 0.9
-      maxContextTokens: 250000   # Qwen3 235B; Scaleway has no endpointTokenConfig
+      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
     mcpServers:
       - linux
     mcpTools:

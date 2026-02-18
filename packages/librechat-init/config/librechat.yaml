@@ -377,51 +377,91 @@ modelSpecs:
         endpointType: "agents"
         agent_id: "shared-agent-code-researcher"
 
-    - name: "agent-entwickler"
-      label: "Entwickler"
-      description: "Implementiert Features und behebt Bugs im Linux-Workspace – voller Terminal- und Workspace-Zugriff mit Node.js, Python, Git."
+    - name: "agent-code-recherche-quality"
+      label: "Code-Recherche (Claude Opus 4.6)"
+      description: "Code-Recherche mit OpenRouter Claude Opus 4.6 – für höhere Qualität oder Fallback, wenn die Standard-Variante nicht ausreicht."
       group: "Assistenten"
       order: 6
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-developer"
+        agent_id: "shared-agent-code-researcher-quality"
 
-    - name: "agent-code-refactorer"
-      label: "Code-Refactorer"
-      description: "Refactoring und Optimierung von Code – Struktur, Stil, Tests, Lesbarkeit. Voller Linux-Workspace-Zugriff."
+    - name: "agent-entwickler"
+      label: "Entwickler"
+      description: "Implementiert Features und behebt Bugs im Linux-Workspace – voller Terminal- und Workspace-Zugriff mit Node.js, Python, Git."
       group: "Assistenten"
       order: 7
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-code-refactorer"
+        agent_id: "shared-agent-developer"
 
-    - name: "agent-github"
-      label: "GitHub-Assistent"
-      description: "GitHub-Operationen – Repositories, Issues, Pull Requests lesen und verwalten. Nutzt GitHub MCP und Linux-Terminal für Git-Befehle."
+    - name: "agent-entwickler-quality"
+      label: "Entwickler (Claude Opus 4.6)"
+      description: "Entwickler mit OpenRouter Claude Opus 4.6 – für höhere Qualität oder Fallback, wenn die Standard-Variante nicht ausreicht."
       group: "Assistenten"
       order: 8
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-github"
+        agent_id: "shared-agent-developer-quality"
 
-    - name: "agent-code-reviewer"
-      label: "Code-Reviewer"
-      description: "Analysiert Pull Requests – klont das Repo, prüft den Diff, liest die Codebase und erstellt ein strukturiertes Review. Postet das Review bei Bedarf über den GitHub-Assistenten."
+    - name: "agent-code-refactorer"
+      label: "Code-Refactorer"
+      description: "Refactoring und Optimierung von Code – Struktur, Stil, Tests, Lesbarkeit. Voller Linux-Workspace-Zugriff."
       group: "Assistenten"
       order: 9
       preset:
         endpoint: "agents"
         endpointType: "agents"
+        agent_id: "shared-agent-code-refactorer"
+
+    - name: "agent-code-refactorer-quality"
+      label: "Code-Refactorer (Gemini 3 Pro Preview)"
+      description: "Code-Refactorer mit OpenRouter Gemini 3 Pro – für höhere Qualität oder Fallback, wenn die Standard-Variante nicht ausreicht."
+      group: "Assistenten"
+      order: 10
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-code-refactorer-quality"
+
+    - name: "agent-code-reviewer"
+      label: "Code-Reviewer"
+      description: "Analysiert Pull Requests – klont das Repo, prüft den Diff, liest die Codebase und erstellt ein strukturiertes Review. Postet das Review bei Bedarf über den GitHub-Assistenten."
+      group: "Assistenten"
+      order: 11
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
         agent_id: "shared-agent-code-reviewer"
+
+    - name: "agent-code-reviewer-quality"
+      label: "Code-Reviewer (Gemini 3 Pro Preview)"
+      description: "Code-Reviewer mit OpenRouter Gemini 3 Pro – für höhere Qualität oder Fallback, wenn die Standard-Variante nicht ausreicht."
+      group: "Assistenten"
+      order: 12
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-code-reviewer-quality"
+
+    - name: "agent-github"
+      label: "GitHub-Assistent"
+      description: "GitHub-Operationen – Repositories, Issues, Pull Requests lesen und verwalten. Nutzt GitHub MCP und Linux-Terminal für Git-Befehle."
+      group: "Assistenten"
+      order: 13
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-github"
 
     - name: "agent-feedback"
       label: "Feedback / Fehler melden"
       description: "Fehler im Chat-Interface melden – versteht die Beschreibung, bereitet sie auf und erstellt ein GitHub-Issue."
       group: "Assistenten"
-      order: 10
+      order: 14
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -441,7 +481,7 @@ modelSpecs:
       label: "Kochhilfe"
       description: "Hilft beim Kochen – Rezepte vorschlagen, Inspiration für Mahlzeiten, Zutaten und Zubereitung, plus allgemeine Kochfragen."
       group: "Assistenten"
-      order: 11
+      order: 15
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -451,7 +491,7 @@ modelSpecs:
       label: "Datenanalyse"
       description: "Analysiert Daten aus CSV, JSON und anderen Formaten – filtert, transformiert, visualisiert (Diagramme) und fasst zusammen."
       group: "Assistenten"
-      order: 12
+      order: 16
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -461,7 +501,7 @@ modelSpecs:
       label: "Dateikonverter"
       description: "Konvertiert Bilder, Audio, Video und Dokumente zwischen Formaten – ImageMagick, FFmpeg, Pandoc. Ergebnis direkt im Chat oder als Download."
       group: "Assistenten"
-      order: 13
+      order: 17
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -471,7 +511,7 @@ modelSpecs:
       label: "Dokumenten-Ersteller"
       description: "Erstellt professionelle Dokumente – Briefe, Berichte, Rechnungen, Lebensläufe, Vorlagen. Erzeugt PDF (Typst) oder editierbare Formate (ODT/DOCX via Pandoc)."
       group: "Assistenten"
-      order: 14
+      order: 18
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -481,7 +521,7 @@ modelSpecs:
       label: "Linux-Experte"
       description: "Allgemeiner Linux-Assistent mit vollem MCP-Linux-Zugriff – Shell, Skripte, Dateien, Workspaces. Zusätzlich Wartung: Status, Bereinigung, Zurücksetzen des Accounts."
       group: "Assistenten"
-      order: 15
+      order: 19
       preset:
         endpoint: "agents"
         endpointType: "agents"

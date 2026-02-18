@@ -31,6 +31,8 @@ Prompts for generating round agent avatars for LibreChat. Style: playful and fri
 | shared-agent-dokumenten-ersteller | Dokumenten-Ersteller | Playful round avatar, soft paper-white or cream with blue accent. Cute document with pen or sheet with lines. Clean, friendly, no text. |
 | shared-agent-linux-experte | Linux-Experte | Playful round avatar, soft slate or grey-blue background. Cute terminal window or command prompt symbol (>_), friendly Linux vibe. No text. |
 
+Quality variants (`shared-agent-code-researcher-quality`, `shared-agent-developer-quality`, `shared-agent-code-refactorer-quality`, `shared-agent-code-reviewer-quality`) use the same prompt as their default counterpart (Code-Recherche, Entwickler, Code-Refactorer, Code-Reviewer); reuse the same image file for the avatar.
+
 ## Usage (Image-Gen MCP)
 
 Example for one agent (Universal):
