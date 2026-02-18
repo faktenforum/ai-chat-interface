@@ -10,7 +10,7 @@
  */
 
 import { execSync, spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { logger } from './utils/logger.ts';
 import { UserCreationError } from './utils/errors.ts';
@@ -79,12 +79,14 @@ export class UserManager {
   }
 
   /**
-   * Persists the user mapping database to disk
+   * Persists the user mapping database to disk using atomic write
    */
   private saveDb(): void {
     try {
       mkdirSync(DATA_DIR, { recursive: true });
-      writeFileSync(USERS_FILE, JSON.stringify(this.db, null, 2), 'utf-8');
+      const tempFile = `${USERS_FILE}.tmp`;
+      writeFileSync(tempFile, JSON.stringify(this.db, null, 2), 'utf-8');
+      renameSync(tempFile, USERS_FILE);
     } catch (error) {
       logger.error({ error }, 'Failed to save user mapping');
     }
@@ -326,7 +328,7 @@ export class UserManager {
     const mapping = this.db.users[email];
     if (!mapping) return null;
 
-    const homeDir = `/home/${mapping.username}`;
+    const homeDir = `/home/${username}`;
     let diskUsage = 'unknown';
     try {
       const res = spawnSync('du', ['-sh', homeDir], { encoding: 'utf-8' });
