@@ -89,6 +89,12 @@ Workspaces are persistent. Agents can save scripts (e.g. under `scripts/` in a w
 
 The **Linux Expert** agent (id: `shared-agent-linux-expert`) is a general Linux assistant with full MCP Linux tool access. It handles: general Linux questions, shell commands, scripts, file operations; plus MCP Linux account/workspace administration (status, cleanup, reset, sessions). Users can select it directly or be routed from Main Assistant. It hands off to Code Assistant (code implementation), Data Analysis, File Converter, or Document Creator for those domains.
 
+## MCP transport and sessions
+
+The server uses **Streamable HTTP** (POST for JSON-RPC, GET for SSE). Each client gets a **session** (created on `initialize`); sessions are **in-memory only** and are lost on server restart or process exit.
+
+When a request references a missing session (e.g. after restart), the server returns **404 Not Found** with message "Session not found", as mandated by the MCP spec (2025-11-25 §Session Management). Per the spec the client MUST start a new session by sending a fresh `InitializeRequest` without a session ID.
+
 ## Environment Variables
 
 | Variable | Default | Description |

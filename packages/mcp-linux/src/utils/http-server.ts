@@ -67,6 +67,36 @@ export function sendErrorResponse(
 }
 
 /**
+ * HTTP 404 Not Found for a missing MCP session.
+ *
+ * Per MCP spec (2025-11-25) §Session Management:
+ * "The server MAY terminate the session at any time, after which it MUST respond
+ *  to requests containing that session ID with HTTP 404 Not Found."
+ * "When a client receives HTTP 404 in response to a request containing an
+ *  MCP-Session-Id, it MUST start a new session by sending a new InitializeRequest."
+ *
+ * Sessions are in-memory only and are lost on server restart.
+ */
+const SESSION_NOT_FOUND_STATUS = 404;
+
+type Logger = { info: (obj: unknown, msg?: string) => void; error: (obj: unknown, msg?: string) => void };
+
+function sendSessionNotFound(
+  res: Response,
+  sessionId: string,
+  endpoint: string,
+  totalSessions: number,
+  logger: Logger | undefined,
+  requestId: unknown = null,
+): void {
+  logger?.info(
+    { sessionIdPrefix: sessionId.slice(0, 8), totalSessions },
+    `Session not found (${endpoint}); client should re-initialize`,
+  );
+  sendErrorResponse(res, SESSION_NOT_FOUND_STATUS, -32000, 'Session not found', requestId);
+}
+
+/**
  * Configuration for creating HTTP server endpoints
  */
 export interface HttpServerConfig {
@@ -78,7 +108,7 @@ export interface HttpServerConfig {
     server: { connect: (transport: StreamableHTTPServerTransport) => Promise<void> };
     transport: StreamableHTTPServerTransport;
   };
-  logger?: { info: (obj: unknown, msg?: string) => void; error: (obj: unknown, msg?: string) => void };
+  logger?: Logger;
 }
 
 /**
@@ -108,7 +138,7 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
 
     const transport = transports.get(sessionId);
     if (!transport) {
-      sendErrorResponse(res, 404, -32000, 'Session not found');
+      sendSessionNotFound(res, sessionId, 'GET /mcp', transports.size, logger);
       return;
     }
 
@@ -134,7 +164,7 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
 
     const transport = transports.get(sessionId);
     if (!transport) {
-      sendErrorResponse(res, 404, -32000, 'Session not found');
+      sendSessionNotFound(res, sessionId, 'DELETE /mcp', transports.size, logger);
       return;
     }
 
@@ -165,7 +195,7 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
           await transport.handleRequest(req, res, req.body);
           return;
         }
-        sendErrorResponse(res, 404, -32000, 'Session not found', requestId);
+        sendSessionNotFound(res, sessionId, 'POST /mcp', transports.size, logger, requestId);
         return;
       }
 
@@ -200,7 +230,7 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
 export function setupGracefulShutdown(
   server: ReturnType<express.Application['listen']>,
   transports: Map<string, StreamableHTTPServerTransport>,
-  logger?: { info: (obj: unknown, msg?: string) => void; error: (obj: unknown, msg?: string) => void },
+  logger?: Logger,
 ): void {
   const shutdown = async () => {
     logger?.info('Shutting down...');
