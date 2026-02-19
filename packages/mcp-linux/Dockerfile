@@ -91,9 +91,10 @@ RUN if [ -f /etc/ImageMagick-6/policy.xml ]; then \
       sed -i 's/<policy domain="coder" rights="none" pattern="PDF"/<policy domain="coder" rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml; \
     fi
 
-# Typst: install latest release binary (lightweight PDF/document engine)
-RUN TYPST_VERSION=$(curl -sL https://api.github.com/repos/typst/typst/releases/latest | jq -r .tag_name) \
-    && curl -sL "https://github.com/typst/typst/releases/download/${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz" \
+# Typst: install release binary (lightweight PDF/document engine)
+# Pin version for reproducible builds; update when needed. curl -f fails on 4xx/5xx so we don't pipe HTML to tar (e.g. GitHub rate limit).
+ARG TYPST_VERSION=v0.14.2
+RUN curl -fsSL "https://github.com/typst/typst/releases/download/${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz" \
     | tar -xJ --strip-components=1 -C /usr/local/bin/ --wildcards '*/typst'
 
 # Install Node.js 24 via NodeSource
