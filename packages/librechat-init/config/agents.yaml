@@ -269,7 +269,7 @@ agents:
         description: "Transfer to GitHub assistant for creating PRs, issues, or posting reviews"
         prompt: "Describe the GitHub action needed based on the research"
     # Dev: many read ops (docs, GitHub, workspace)
-    recursion_limit: 200
+    recursion_limit: 100
     isCollaborative: true
     permissions:
       public: true
@@ -353,7 +353,7 @@ agents:
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for creating PRs, issues, or posting reviews"
         prompt: "Describe the GitHub action needed based on the research"
-    recursion_limit: 200
+    recursion_limit: 80
     isCollaborative: true
     permissions:
       public: true
@@ -485,7 +485,7 @@ agents:
       - agent: shared-agent-code-refactorer-quality
         description: "Transfer to Code Refactorer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code Refactorer could not fulfill the task."
         prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
-    recursion_limit: 120
+    recursion_limit: 80
     isCollaborative: true
     permissions:
       public: true
@@ -557,7 +557,7 @@ agents:
         description: "Transfer to Code Reviewer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code Reviewer could not fulfill the task."
         prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
     # Dev: refactor, tests, many file reads
-    recursion_limit: 200
+    recursion_limit: 100
     isCollaborative: true
     permissions:
       public: true
@@ -629,7 +629,7 @@ agents:
       - agent: shared-agent-code-reviewer-quality
         description: "Transfer to Code Reviewer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code Reviewer could not fulfill the task."
         prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
-    recursion_limit: 200
+    recursion_limit: 80
     isCollaborative: true
     permissions:
       public: true
@@ -728,7 +728,7 @@ agents:
         description: "Transfer to Code Reviewer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code Reviewer could not fulfill the task."
         prompt: "Provide the PR URL and context for review"
     # Dev: GitHub API + git, many file/API ops
-    recursion_limit: 200
+    recursion_limit: 100
     isCollaborative: true
     permissions:
       public: true
@@ -791,7 +791,7 @@ agents:
         description: "Transfer to Developer (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
         prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
     # Dev: PR review — file reads, diff, GitHub API, push
-    recursion_limit: 200
+    recursion_limit: 100
     isCollaborative: true
     permissions:
       public: true
@@ -854,7 +854,7 @@ agents:
       - agent: shared-agent-developer-quality
         description: "Transfer to Developer (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
         prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
-    recursion_limit: 200
+    recursion_limit: 80
     isCollaborative: true
     permissions:
       public: true
@@ -1230,7 +1230,7 @@ agents:
       top_p: 0.9
       maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
     # Global limit for whole run (e.g. Main Assistant→Code Assistant→specialist). 200 allows long PR review and multi-step dev chains.
-    recursion_limit: 200
+    recursion_limit: 100
     mcpServers:
       - linux
     mcpTools:
