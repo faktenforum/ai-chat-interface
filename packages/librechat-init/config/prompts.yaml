@@ -47,6 +47,15 @@ prompts:
       public:
         enabled: true
         defaultRole: editor
+  - name: Routenplan
+    prompt: Erstelle einen Routenplan von {{Start}} nach {{Ziel}} mit {{Verkehrsmittel:dem Auto|dem Zug|zu Fuß|dem Fahrrad|dem ÖPNV}}.
+    command: routenplan
+    category: travel
+    oneliner: Erstellt einen Routenplan zwischen zwei Orten mit verschiedenen Verkehrsmitteln (Auto, Zug, zu Fuß, Fahrrad, ÖPNV).
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
   - name: Wetter
     prompt: Wie wird das Wetter {{wann:heute|morgen|die nächsten 3 Tage}} in {{Stadt}}?
     command: wetter
@@ -67,7 +76,7 @@ prompts:
         defaultRole: editor
   - name: Feedback-Problem melden
     prompt: |
-      Analysiere das aufgetretene Problem und gib die relevanten Informationen an den Feedback-Assistenten weiter. Der Feedback-Assistent legt automatisch ein GitHub-Issue an mit: ursprüngliche Aufgabe, aufgetretene Probleme und mögliche Optimierungen – damit der Agent beim nächsten Mal einen runderen Durchlauf hat.
+      Analysiere das aufgetretene Problem im Chat-Interface und gib die relevanten Informationen an den Feedback-Assistenten weiter. Der Feedback-Assistent legt automatisch ein GitHub-Issue im Projekt-Repository an mit: ursprüngliche Aufgabe, aufgetretene Probleme und mögliche Optimierungen – damit der Agent beim nächsten Mal einen runderen Durchlauf hat.
 
       **Vorgehen**: Erschließe alle Angaben ausschließlich aus dem Chat-Verlauf (keine Websuche). Stelle dem Nutzer nur Fragen, falls etwas unklar bleibt.
 
@@ -76,7 +85,7 @@ prompts:
       **Regeln**: Sachlich und spezifisch. Nur Kontext dieser Konversation. Alle Informationen vollständig weitergeben.
     command: feedback-problem
     category: misc
-    oneliner: Analysiert ein Problem und übergibt die relevanten Infos an den Feedback-Assistenten.
+    oneliner: Meldet ein Problem mit dem Chat-Interface (Agent-Verhalten, Tool-Aufrufe, etc.) als GitHub-Issue im Projekt-Repository, damit es behoben werden kann.
     sharing:
       public:
         enabled: true
