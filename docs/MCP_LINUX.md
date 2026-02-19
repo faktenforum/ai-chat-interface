@@ -85,9 +85,9 @@ Resource template `workspace://{workspace}/{+path}` exposes workspace files as n
 
 Workspaces are persistent. Agents can save scripts (e.g. under `scripts/` in a workspace) and run them again in later turns. See [MCP Code Execution Insights](MCP_CODE_EXECUTION_INSIGHTS.md) for context-efficiency guidance (batch work in code, filter before return).
 
-### Agent Linux-Experte
+### Agent Linux Expert
 
-The **Linux-Experte** agent (id: `shared-agent-linux-experte`) is a general Linux assistant with full MCP Linux tool access. It handles: general Linux questions, shell commands, scripts, file operations; plus MCP Linux account/workspace administration (status, cleanup, reset, sessions). Users can select it directly or be routed from Universal. It hands off to Entwickler-Router (code implementation), Datenanalyse, Dateikonverter, or Dokumenten-Ersteller for those domains.
+The **Linux Expert** agent (id: `shared-agent-linux-expert`) is a general Linux assistant with full MCP Linux tool access. It handles: general Linux questions, shell commands, scripts, file operations; plus MCP Linux account/workspace administration (status, cleanup, reset, sessions). Users can select it directly or be routed from Main Assistant. It hands off to Code Assistant (code implementation), Data Analysis, File Converter, or Document Creator for those domains.
 
 ## Environment Variables
 
@@ -121,7 +121,7 @@ Upload and download routes are exposed publicly via Traefik (`/upload/*`, `/down
 
 ## Pre-installed Runtimes
 
-Node.js 24, Python 3, Git, Bash, ripgrep, tree, jq, build-essential, openssh-client. For headless plotting (e.g. Datenanalyse agent): fontconfig, fonts-dejavu-core. See [MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md) for CSV→chart workflow and example Python script.
+Node.js 24, Python 3, Git, Bash, ripgrep, tree, jq, build-essential, openssh-client. For headless plotting (e.g. Data Analysis agent): fontconfig, fonts-dejavu-core. See [MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md) for CSV→chart workflow and example Python script.
 
 Media conversion and document tools (no LibreOffice/texlive):
 - **FFmpeg** — audio/video conversion (MP3, OGG, FLAC, OPUS, MP4, WEBM, etc.)

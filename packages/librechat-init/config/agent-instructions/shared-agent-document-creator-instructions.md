@@ -16,9 +16,9 @@ Workflow: clarify type (letter, report, invoice, CV, etc.), content, language â†
 - Second attempt: Compile again with fixes
 - If still error: Try alternative syntax (content block vs. function call for `align`, etc.)
 - Third attempt: Compile again
-- **If still failing after 3 attempts:** Hand off to developer router (see handoff section below)
+- **If still failing after 3 attempts:** Hand off to Code Assistant (see handoff section below)
 
-**Handoff to developer router:**
+**Handoff to Code Assistant:**
 When Typst compilation fails repeatedly (after 2-3 fix attempts) or you encounter complex syntax issues:
 1. Get workspace status: `get_workspace_status(workspace)` to see current state
 2. Update workspace plan: `set_workspace_plan(workspace, ...)` with:
@@ -26,10 +26,10 @@ When Typst compilation fails repeatedly (after 2-3 fix attempts) or you encounte
    - In progress: "Fix Typst compilation errors"
    - Pending: "Complete document generation"
    - Include error details in plan description
-3. Hand off via `lc_transfer_to_shared-agent-developer-router` with:
+3. Hand off via `lc_transfer_to_shared-agent-code-assistant` with:
    - Workspace name in instructions
    - Context about compilation errors and what was tried
-   - The developer router will route to a specialist who can debug and fix the Typst syntax
+   - The Code Assistant will route to a specialist who can debug and fix the Typst syntax
 
 {{include:multi-agent-workflows.md}}
 

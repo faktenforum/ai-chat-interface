@@ -5,8 +5,8 @@ TODO list of MCP servers to evaluate and integrate for specific agents.
 | MCP Server / Concept | Target Agent | Status |
 |----------------------|--------------|--------|
 | [x-twitter-mcp-server](#1-x-twitter-mcp-server) | Social Networks (Soziale Netzwerke) | [ ] |
-| [Context7](#2-context7) | Developer domain (e.g. Code-Recherche) | [ ] |
-| [Wikipedia MCP](#3-wikipedia-mcp) | Research Assistant (Recherche-Assistent) | [ ] |
+| [Context7](#2-context7) | Developer domain (e.g. Code Research) | [ ] |
+| [Wikipedia MCP](#3-wikipedia-mcp) | Research Assistant | [ ] |
 | [Code execution with MCP](#4-code-execution-with-mcp-concept) | TBD (developer / data workflows) | [ ] — still searching for suitable server |
 
 ---
@@ -30,12 +30,12 @@ TODO list of MCP servers to evaluate and integrate for specific agents.
 
 - **Repository:** [upstash/context7](https://github.com/upstash/context7/tree/master)
 - **Purpose:** Up-to-date, version-specific code documentation for LLMs — resolves library IDs and fetches docs from source.
-- **Target agent:** Developer domain (e.g. Code-Recherche)
+- **Target agent:** Developer domain (e.g. Code Research)
 - **Transport:** Remote HTTP (`https://mcp.context7.com/mcp`) or local (`npx -y @upstash/context7-mcp --api-key KEY`). API key recommended (free at context7.com/dashboard).
 - **Tasks:**
   - [ ] Get Context7 API key and test remote vs local
   - [ ] Verify compatibility with LibreChat MCP client
-  - [ ] Add Context7 MCP to a developer specialist (e.g. Code-Recherche) and document usage
+  - [ ] Add Context7 MCP to a developer specialist (e.g. Code Research) and document usage
   - [ ] Document rule/prompt usage (e.g. “use context7” / library IDs)
 
 ---
@@ -44,12 +44,12 @@ TODO list of MCP servers to evaluate and integrate for specific agents.
 
 - **Repository:** [Rudra-ravi/wikipedia-mcp](https://github.com/Rudra-ravi/wikipedia-mcp/tree/main)
 - **Purpose:** Wikipedia search, article content, summaries, sections, links, related topics; optional multi-language and caching.
-- **Target agent:** Research Assistant (Recherche-Assistent)
+- **Target agent:** Research Assistant
 - **Transport:** STDIO or SSE. Docker image available. Optional Wikipedia access token for rate limits.
 - **Tasks:**
   - [ ] Test STDIO vs SSE with LibreChat
   - [ ] Decide Docker vs external (e.g. pipx) deployment
-  - [ ] Add to stack and wire to “Recherche-Assistent” agent
+  - [ ] Add to stack and wire to “Research Assistant” agent
   - [ ] Optionally configure language/country and caching
 
 ---

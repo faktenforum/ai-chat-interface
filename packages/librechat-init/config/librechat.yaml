@@ -12,13 +12,13 @@ interface:
     modalAcceptance: true
     modalTitle: 'Kleingedrucktes'
     modalContent: |
-      # Nutzungsbedingungen
+      # Terms of Use
 
-      **Wichtiger Hinweis zu KI-generierten Antworten**
-      Alle Antworten dieses KI-Systems sollten stets von Menschen überprüft werden. KI-generierte Inhalte können Fehler enthalten und sollten nicht als alleinige Quelle für wichtige Entscheidungen verwendet werden.
+      **Important note on AI-generated responses**
+      All responses from this AI system should always be reviewed by humans. AI-generated content may contain errors and should not be used as the sole source for important decisions.
 
-      **Datenverarbeitung und Hosting**
-      Wir bemühen uns, so viele Komponenten wie möglich selbst zu hosten. Aktuell nutzen wir noch externe Dienste wie OpenRouter, wodurch Daten derzeit an Server in den USA übertragen werden. Unser Ziel ist es, vollständig auf selbst gehostete oder europäische Dienste umzustellen.
+      **Data Processing and Hosting**
+      We strive to host as many components as possible ourselves. Currently we still use external services such as OpenRouter, which means data is currently transferred to servers in the USA. Our goal is to fully switch to self-hosted or European services.
   endpointsMenu: true
   modelSelect: true
   parameters: true
@@ -75,7 +75,7 @@ memory:
     # Supports 128K context window, improved function calling in v3.2, European-hosted
     model: "mistral-small-3.2-24b-instruct-2506"
     instructions: |
-      Store reusable info via validKeys: preferences, work_info, personal_info, projects, factcheck_info, research_context, sources, output_format, deadlines, expertise, results. NEVER: greetings, casual chat, trivial/obvious statements. PRIORITY: Explicit user requests ("Merke dir", "Remember", "Speichere") → always store, even if minor. If only greetings/casual/no info AND no explicit request → END without tools. UPDATE: Check existing memories first. If match exists → UPDATE via `set_memory` (merge old+new). Only create new if no match. NEVER delete+recreate. Delete outdated/corrected promptly. Max 2000 tokens/value.
+      Store reusable info via validKeys: preferences, work_info, personal_info, projects, factcheck_info, research_context, sources, output_format, deadlines, expertise, results. NEVER: greetings, casual chat, trivial/obvious statements. PRIORITY: Explicit user requests ("Remember", "Store") → always store, even if minor. If only greetings/casual/no info AND no explicit request → END without tools. UPDATE: Check existing memories first. If match exists → UPDATE via `set_memory` (merge old+new). Only create new if no match. NEVER delete+recreate. Delete outdated/corrected promptly. Max 2000 tokens/value.
     model_parameters:
       # Low temperature (0.15) for precise, deterministic function calling decisions
       # Mistral Small 3.2 performs best with temp 0.15 for reliable structured output
@@ -108,7 +108,7 @@ endpoints:
       models:
         # Premium models only - Fallback list if fetch fails or fetch is disabled
         # Focus on top-performance proprietary models for special use cases
-        # Note: Open Source models should use Scaleway (Europa) for better privacy
+        # Note: Open Source models should use Scaleway (Europe) for better privacy
         default: [
           "anthropic/claude-opus-4.6",        # Strongest coding/agent model (1M Context)
           "anthropic/claude-sonnet-4.5",      # Top proprietary model (Vision, 200K Context)
@@ -177,132 +177,132 @@ endpoints:
 # Chat models don't need Function Calling for Memory - Memory works independently
 #
 # ==========================================
-# MODELL-ANALYSE UND GRUPPIERUNG
+# MODEL ANALYSIS AND GROUPING
 # ==========================================
 #
-# GRUPPE 1: "Europa & Open Source" (Scaleway)
+# GROUP 1: "Europe & Open Source" (Scaleway)
 # ------------------------------------------
-# Alle Modelle in dieser Gruppe sind:
+# All models in this group are:
 # - Open Source (Apache-2.0, Llama Community, MIT, etc.)
-# - In Europa gehostet (Scaleway Data Centers)
-# - DSGVO-konform
-# - Optimal für datenschutzkritische Anwendungen
+# - Hosted in Europe (Scaleway Data Centers)
+# - GDPR-compliant
+# - Optimal for privacy-critical applications
 #
-# DETAILLIERTE MODELL-ANALYSE (Scaleway):
+# DETAILED MODEL ANALYSIS (Scaleway):
 #
-# CHAT MODELLE (Text-only):
+# CHAT MODELS (Text-only):
 # -------------------------
 # 1. llama-3.3-70b-instruct (Meta)
 #    - Context: 100K, Output: 4K
 #    - License: Llama 3.3 Community
-#    - Use Case: Allgemeine Gespräche, gute Balance
-#    - Status: Generally Available, empfohlen von Scaleway
+#    - Use Case: General conversations, good balance
+#    - Status: Generally Available, recommended by Scaleway
 #
 # 2. qwen3-235b-a22b-instruct-2507 (Qwen)
-#    - Context: 250K (größter verfügbarer Context!), Output: 8K
+#    - Context: 250K (largest available context!), Output: 8K
 #    - License: Apache-2.0
-#    - Use Case: Sehr komplexe Aufgaben, extrem lange Kontexte
+#    - Use Case: Very complex tasks, extremely long contexts
 #    - Status: Generally Available
 #
 # 3. qwen3-coder-30b-a3b-instruct (Qwen)
 #    - Context: 128K, Output: 8K
 #    - License: Apache-2.0
-#    - Use Case: Programmierung, Code-Generierung, Code-Analyse
+#    - Use Case: Programming, code generation, code analysis
 #    - Status: Generally Available
 #
 # 4. gpt-oss-120b (OpenAI Open Source)
 #    - Context: 128K, Output: 8K
 #    - License: Apache-2.0
-#    - Use Case: Komplexe Aufgaben, GPT-kompatible API
+#    - Use Case: Complex tasks, GPT-compatible API
 #    - Status: Generally Available
 #
-# CHAT & VISION MODELLE:
+# CHAT & VISION MODELS:
 # ----------------------
 # 5. mistral-small-3.2-24b-instruct-2506 (Mistral)
 #    - Context: 128K, Output: 8K
 #    - License: Apache-2.0
-#    - Use Case: Kosteneffektiv (3-6x günstiger als 70B), Vision, allgemeine Aufgaben
-#    - Status: Generally Available, EMPFOHLEN von Scaleway als Einstiegsmodell
-#    - Besonderheit: Beste Kosten-Nutzen-Balance
+#    - Use Case: Cost-effective (3-6x cheaper than 70B), Vision, general tasks
+#    - Status: Generally Available, RECOMMENDED by Scaleway as entry model
+#    - Special feature: Best cost-benefit balance
 #
 # 6. pixtral-12b-2409 (Mistral)
 #    - Context: 128K, Output: 4K
 #    - License: Apache-2.0
-#    - Use Case: Spezialisiert auf Bildverständnis, Bilder bis 32M Pixel
+#    - Use Case: Specialized in image understanding, images up to 32M pixels
 #    - Status: Generally Available
 #
-# DEPRECATED MODELLE (nicht mehr verwenden):
-# - deepseek-r1-distill-llama-70b (EOL: 16. Apr 2026)
-# - mistral-nemo-instruct-2407 (EOL: 16. Apr 2026)
-# - llama-3.1-8b-instruct (EOL: 16. Apr 2026)
+# DEPRECATED MODELS (no longer use):
+# - deepseek-r1-distill-llama-70b (EOL: Apr 16, 2026)
+# - mistral-nemo-instruct-2407 (EOL: Apr 16, 2026)
+# - llama-3.1-8b-instruct (EOL: Apr 16, 2026)
 #
-# GRUPPE 2: "Premium-Modelle" (OpenRouter)
+# GROUP 2: "Premium Models" (OpenRouter)
 # ------------------------------------------
-# Diese Modelle sind:
-# - Top-Performance für spezielle Anwendungsfälle
-# - Closed Source (Anthropic, OpenAI, Google) oder spezielle Zugänge erforderlich
-# - Über OpenRouter gehostet (USA)
-# - Nur für nicht-datenschutzkritische Aufgaben empfohlen
+# These models are:
+# - Top performance for special use cases
+# - Closed Source (Anthropic, OpenAI, Google) or special access required
+# - Hosted via OpenRouter (USA)
+# - Only recommended for non-privacy-critical tasks
 #
-# DETAILLIERTE MODELL-ANALYSE (OpenRouter Premium):
+# DETAILED MODEL ANALYSIS (OpenRouter Premium):
 #
-# 1. claude-opus-4.6 (Anthropic) — NEU
-#    - Context: 1M (größter Context bei Anthropic), Output: 128K
+# 1. claude-opus-4.6 (Anthropic) — NEW
+#    - Context: 1M (largest context at Anthropic), Output: 128K
 #    - License: Closed Source (Proprietary)
-#    - Use Case: Coding, Agents, lange Workflows, komplexe Refactors
-#    - Vision: Ja
+#    - Use Case: Coding, Agents, long workflows, complex refactors
+#    - Vision: Yes
 #    - Adaptive thinking: optional preset "effort" ("", "low", "medium", "high", "max")
 #    - Pricing: $5/M input, $25/M output tokens
-#    - Besonderheit: Stärkstes Anthropic-Modell, optimiert für Agenten und ganze Codebases
+#    - Special feature: Strongest Anthropic model, optimized for agents and entire codebases
 #
 # 2. claude-sonnet-4.5 (Anthropic)
 #    - Context: 200K, Output: 64K
 #    - License: Closed Source (Proprietary)
-#    - Use Case: Top-Performance für komplexe Aufgaben, Programmierung, Reasoning
-#    - Vision: Ja
+#    - Use Case: Top performance for complex tasks, programming, reasoning
+#    - Vision: Yes
 #    - Pricing: $3/M input, $15/M output tokens
-#    - Besonderheit: Exzellentes Reasoning, sehr gute Code-Generierung
+#    - Special feature: Excellent reasoning, very good code generation
 #
 # 3. openai/gpt-5.2 (OpenAI)
 #    - Context: 400K, Output: 128K
 #    - License: Closed Source (Proprietary)
-#    - Use Case: Top-Performance, Dynamic Reasoning, komplexe Problemlösung
-#    - Vision: Ja
+#    - Use Case: Top performance, Dynamic Reasoning, complex problem solving
+#    - Vision: Yes
 #    - Pricing: $1.25/M input, $10/M output tokens
-#    - Besonderheit: ~80% weniger Halluzinationen als o3, 74.9% SWE-Bench accuracy
+#    - Special feature: ~80% fewer hallucinations than o3, 74.9% SWE-Bench accuracy
 #
 # 4. google/gemini-2.5-flash-lite (Google)
-#    - Context: Variabel, Output: Variabel
+#    - Context: Variable, Output: Variable
 #    - License: Closed Source (Proprietary)
-#    - Use Case: Schnell und kostengünstig, gute Qualität
-#    - Vision: Ja
-#    - Besonderheit: Optimiert für Geschwindigkeit bei guter Qualität
+#    - Use Case: Fast and cost-effective, good quality
+#    - Vision: Yes
+#    - Special feature: Optimized for speed with good quality
 #
 # 5. mistralai/mistral-large-2411 (Mistral)
 #    - Context: 256K, Output: 8K
 #    - License: Closed Source (Proprietary)
-#    - Use Case: Premium-Modell, europäisches Unternehmen
-#    - Besonderheit: Französisches Unternehmen, beliebt bei europäischen Nutzern
+#    - Use Case: Premium model, European company
+#    - Special feature: French company, popular with European users
 #
 # 6. glm/glm-4.7 (Z.AI)
 #    - Context: 200K, Output: 128K
 #    - License: Closed Source (Proprietary)
-#    - Use Case: Exzellentes logisches Denken, komplexe Reasoning-Aufgaben
-#    - Besonderheit: Fortgeschrittenes Sprachverständnis
+#    - Use Case: Excellent logical thinking, complex reasoning tasks
+#    - Special feature: Advanced language understanding
 #
 # Exception (Preview from vendor, not provider — included explicitly):
 # - gemma-3-27b-it (Scaleway) — Google Gemma 3 27B
 # - google/gemini-3-flash-preview, google/gemini-3-pro-preview (OpenRouter) — Google Gemini 3
 #
-# EMPFEHLUNGEN NACH ANWENDUNGSFALL:
+# RECOMMENDATIONS BY USE CASE:
 # ----------------------------------
-# Datenschutzkritisch → Scaleway Modelle (Europa, Open Source)
-#   - Allgemein: mistral-small-3.2-24b (kosteneffektiv, Vision)
-#   - Komplex: llama-3.3-70b oder qwen3-235b
-#   - Code: devstral-2-123b oder qwen3-coder-30b
-#   - Vision: pixtral-12b oder mistral-small-3.2-24b
+# Privacy-critical → Scaleway Models (Europe, Open Source)
+#   - General: mistral-small-3.2-24b (cost-effective, Vision)
+#   - Complex: llama-3.3-70b or qwen3-235b
+#   - Code: devstral-2-123b or qwen3-coder-30b
+#   - Vision: pixtral-12b or mistral-small-3.2-24b
 #
-# Top Performance benötigt → Premium-Modelle (OpenRouter)
+# Top performance needed → Premium Models (OpenRouter)
 #   - Best Coding/Agents: claude-opus-4.6 (1M Context)
 #   - Best Overall: claude-sonnet-4.5
 #   - Largest Context: openai/gpt-5.2 (400K)
@@ -314,93 +314,93 @@ endpoints:
 modelSpecs:
   prioritize: false  # avoids API warning when default spec + interface.presets are both enabled
   list:
-    # Assistenten: agent specs; post-init patches preset.agent_id to real API id — restart API to apply. Universal = default.
-    - name: "universal-agent"
-      label: "Universal"
-      description: "Allgemeiner Assistent – erkennt automatisch den passenden Spezialisten und leitet weiter."
-      group: "Assistenten"
-      groupIcon: "/images/group-assistenten.svg"
+    # Assistants: agent specs; post-init patches preset.agent_id to real API id — restart API to apply. Main Assistant = default.
+    - name: "main-assistant-agent"
+      label: "Main Assistant"
+      description: "General assistant – automatically recognizes which specialist best fits and routes the request."
+      group: "Assistants"
+      groupIcon: "/images/group-assistants.svg"
       order: 0
       default: true
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-universal"
+        agent_id: "shared-agent-main-assistant"
 
-    - name: "agent-recherche"
-      label: "Recherche-Assistent"
-      description: "Hilft bei der Recherche und Informationsbeschaffung aus verschiedenen Quellen"
-      group: "Assistenten"
+    - name: "agent-research"
+      label: "Research Assistant"
+      description: "Helps with research and information gathering from various sources"
+      group: "Assistants"
       order: 1
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-recherche"
+        agent_id: "shared-agent-research"
 
-    - name: "agent-bildgenerierung"
-      label: "Bildgenerierungs-Assistent"
-      description: "Erstellt Bilder aus Textbeschreibungen mit KI-Bildgenerierung"
-      group: "Assistenten"
+    - name: "agent-image-generation"
+      label: "Image Generation Assistant"
+      description: "Creates images from text descriptions using AI image generation"
+      group: "Assistants"
       order: 2
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-bildgenerierung"
+        agent_id: "shared-agent-image-generation"
 
-    - name: "agent-reise"
-      label: "Reise- und Standort-Assistent"
-      description: "Hilft bei Reiseplanung, Standortsuche, Routenplanung und kombiniert geografische Informationen mit Wetterdaten"
-      group: "Assistenten"
+    - name: "agent-travel-location"
+      label: "Travel and Location Assistant"
+      description: "Helps with travel planning, location search, route planning and combines geographic information with weather data"
+      group: "Assistants"
       order: 3
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-reise-standort"
+        agent_id: "shared-agent-travel-location"
 
-    - name: "agent-entwickler-router"
-      label: "Entwickler-Router"
-      description: "Leitet Entwickler-Anfragen an den passenden Spezialisten weiter – Code-Recherche, Implementierung, Refactoring, GitHub, Code-Review."
-      group: "Assistenten"
+    - name: "agent-code-assistant"
+      label: "Code Assistant"
+      description: "Routes developer requests to the appropriate specialist – Code Research, implementation, refactoring, GitHub, Code Review."
+      group: "Assistants"
       order: 4
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-developer-router"
+        agent_id: "shared-agent-code-assistant"
 
-    - name: "agent-code-recherche"
-      label: "Code-Recherche"
-      description: "Versteht Code und Repositories, findet Beispiele, durchsucht Dokumentation, Stack Overflow, npm und GitHub. Keine Implementierung – nur Analyse und Recherche."
-      group: "Assistenten"
+    - name: "agent-code-research"
+      label: "Code Research"
+      description: "Understands code and repositories, finds examples, searches documentation, Stack Overflow, npm and GitHub. No implementation – only analysis and research."
+      group: "Assistants"
       order: 5
       preset:
         endpoint: "agents"
         endpointType: "agents"
         agent_id: "shared-agent-code-researcher"
 
-    - name: "agent-code-recherche-quality"
-      label: "Code-Recherche (Claude Opus 4.6)"
-      description: "Code-Recherche mit OpenRouter Claude Opus 4.6 – für höhere Qualität oder Fallback, wenn die Standard-Variante nicht ausreicht."
-      group: "Assistenten"
+    - name: "agent-code-research-quality"
+      label: "Code Research (Claude Opus 4.6)"
+      description: "Code Research with OpenRouter Claude Opus 4.6 – for higher quality or fallback when the default variant is insufficient."
+      group: "Assistants"
       order: 6
       preset:
         endpoint: "agents"
         endpointType: "agents"
         agent_id: "shared-agent-code-researcher-quality"
 
-    - name: "agent-entwickler"
-      label: "Entwickler"
-      description: "Implementiert Features und behebt Bugs im Linux-Workspace – voller Terminal- und Workspace-Zugriff mit Node.js, Python, Git."
-      group: "Assistenten"
+    - name: "agent-developer"
+      label: "Developer"
+      description: "Implements features and fixes bugs in the Linux workspace – full terminal and workspace access with Node.js, Python, Git."
+      group: "Assistants"
       order: 7
       preset:
         endpoint: "agents"
         endpointType: "agents"
         agent_id: "shared-agent-developer"
 
-    - name: "agent-entwickler-quality"
-      label: "Entwickler (Claude Opus 4.6)"
-      description: "Entwickler mit OpenRouter Claude Opus 4.6 – für höhere Qualität oder Fallback, wenn die Standard-Variante nicht ausreicht."
-      group: "Assistenten"
+    - name: "agent-developer-quality"
+      label: "Developer (Claude Opus 4.6)"
+      description: "Developer with OpenRouter Claude Opus 4.6 – for higher quality or fallback when the default variant is insufficient."
+      group: "Assistants"
       order: 8
       preset:
         endpoint: "agents"
@@ -408,9 +408,9 @@ modelSpecs:
         agent_id: "shared-agent-developer-quality"
 
     - name: "agent-code-refactorer"
-      label: "Code-Refactorer"
-      description: "Refactoring und Optimierung von Code – Struktur, Stil, Tests, Lesbarkeit. Voller Linux-Workspace-Zugriff."
-      group: "Assistenten"
+      label: "Code Refactorer"
+      description: "Refactoring and optimization of code – structure, style, tests, readability. Full Linux workspace access."
+      group: "Assistants"
       order: 9
       preset:
         endpoint: "agents"
@@ -418,9 +418,9 @@ modelSpecs:
         agent_id: "shared-agent-code-refactorer"
 
     - name: "agent-code-refactorer-quality"
-      label: "Code-Refactorer (Gemini 3 Pro Preview)"
-      description: "Code-Refactorer mit OpenRouter Gemini 3 Pro – für höhere Qualität oder Fallback, wenn die Standard-Variante nicht ausreicht."
-      group: "Assistenten"
+      label: "Code Refactorer (Gemini 3 Pro Preview)"
+      description: "Code Refactorer with OpenRouter Gemini 3 Pro – for higher quality or fallback when the default variant is insufficient."
+      group: "Assistants"
       order: 10
       preset:
         endpoint: "agents"
@@ -428,9 +428,9 @@ modelSpecs:
         agent_id: "shared-agent-code-refactorer-quality"
 
     - name: "agent-code-reviewer"
-      label: "Code-Reviewer"
-      description: "Analysiert Pull Requests – klont das Repo, prüft den Diff, liest die Codebase und erstellt ein strukturiertes Review. Postet das Review bei Bedarf über den GitHub-Assistenten."
-      group: "Assistenten"
+      label: "Code Reviewer"
+      description: "Analyzes pull requests – clones the repo, checks the diff, reads the codebase and creates a structured review. Posts the review via the GitHub Assistant if needed."
+      group: "Assistants"
       order: 11
       preset:
         endpoint: "agents"
@@ -438,9 +438,9 @@ modelSpecs:
         agent_id: "shared-agent-code-reviewer"
 
     - name: "agent-code-reviewer-quality"
-      label: "Code-Reviewer (Gemini 3 Pro Preview)"
-      description: "Code-Reviewer mit OpenRouter Gemini 3 Pro – für höhere Qualität oder Fallback, wenn die Standard-Variante nicht ausreicht."
-      group: "Assistenten"
+      label: "Code Reviewer (Gemini 3 Pro Preview)"
+      description: "Code Reviewer with OpenRouter Gemini 3 Pro – for higher quality or fallback when the default variant is insufficient."
+      group: "Assistants"
       order: 12
       preset:
         endpoint: "agents"
@@ -448,9 +448,9 @@ modelSpecs:
         agent_id: "shared-agent-code-reviewer-quality"
 
     - name: "agent-github"
-      label: "GitHub-Assistent"
-      description: "GitHub-Operationen – Repositories, Issues, Pull Requests lesen und verwalten. Nutzt GitHub MCP und Linux-Terminal für Git-Befehle."
-      group: "Assistenten"
+      label: "GitHub Assistant"
+      description: "GitHub operations – read and manage repositories, issues, pull requests. Uses GitHub MCP and Linux terminal for Git commands."
+      group: "Assistants"
       order: 13
       preset:
         endpoint: "agents"
@@ -458,83 +458,83 @@ modelSpecs:
         agent_id: "shared-agent-github"
 
     - name: "agent-feedback"
-      label: "Feedback / Fehler melden"
-      description: "Fehler im Chat-Interface melden – versteht die Beschreibung, bereitet sie auf und erstellt ein GitHub-Issue."
-      group: "Assistenten"
+      label: "Feedback / Report error"
+      description: "Reports errors in the chat interface – understands error descriptions, prepares them and creates a GitHub issue."
+      group: "Assistants"
       order: 14
       preset:
         endpoint: "agents"
         endpointType: "agents"
         agent_id: "shared-agent-feedback"
 
-    # - name: "agent-video-transkripte"
-    #   label: "Video-Transkripte"
-    #   description: "Transkripte, Metadaten, Thumbnails und Download-Links für Video-URLs (YouTube, Instagram, TikTok u. a.)."
-    #   group: "Assistenten"
+    # - name: "agent-video-transcripts"
+    #   label: "Video Transcripts"
+    #   description: "Transcripts, metadata, thumbnails and download links for video URLs (YouTube, Instagram, TikTok, etc.)."
+    #   group: "Assistants"
     #   order: 10
     #   preset:
     #     endpoint: "agents"
     #     endpointType: "agents"
-    #     agent_id: "shared-agent-video-transkripte"
+    #     agent_id: "shared-agent-video-transcripts"
 
-    - name: "agent-kochhilfe"
-      label: "Kochhilfe"
-      description: "Hilft beim Kochen – Rezepte vorschlagen, Inspiration für Mahlzeiten, Zutaten und Zubereitung, plus allgemeine Kochfragen."
-      group: "Assistenten"
+    - name: "agent-cooking"
+      label: "Cooking Assistant"
+      description: "Helps with cooking – suggests recipes, inspiration for meals, ingredients and preparation, plus general cooking questions."
+      group: "Assistants"
       order: 15
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-kochhilfe"
+        agent_id: "shared-agent-cooking"
 
-    - name: "agent-datenanalyse"
-      label: "Datenanalyse"
-      description: "Analysiert Daten aus CSV, JSON und anderen Formaten – filtert, transformiert, visualisiert (Diagramme) und fasst zusammen."
-      group: "Assistenten"
+    - name: "agent-data-analysis"
+      label: "Data Analysis"
+      description: "Analyzes data from CSV, JSON and other formats – filters, transforms, visualizes (charts) and summarizes."
+      group: "Assistants"
       order: 16
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-datenanalyse"
+        agent_id: "shared-agent-data-analysis"
 
-    - name: "agent-dateikonverter"
-      label: "Dateikonverter"
-      description: "Konvertiert Bilder, Audio, Video und Dokumente zwischen Formaten – ImageMagick, FFmpeg, Pandoc. Ergebnis direkt im Chat oder als Download."
-      group: "Assistenten"
+    - name: "agent-file-converter"
+      label: "File Converter"
+      description: "Converts images, audio, video and documents between formats – ImageMagick, FFmpeg, Pandoc. Result directly in chat or as download."
+      group: "Assistants"
       order: 17
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-dateikonverter"
+        agent_id: "shared-agent-file-converter"
 
-    - name: "agent-dokumenten-ersteller"
-      label: "Dokumenten-Ersteller"
-      description: "Erstellt professionelle Dokumente – Briefe, Berichte, Rechnungen, Lebensläufe, Vorlagen. Erzeugt PDF (Typst) oder editierbare Formate (ODT/DOCX via Pandoc)."
-      group: "Assistenten"
+    - name: "agent-document-creator"
+      label: "Document Creator"
+      description: "Creates professional documents – letters, reports, invoices, CVs, templates. Generates PDF (Typst) or editable formats (ODT/DOCX via Pandoc)."
+      group: "Assistants"
       order: 18
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-dokumenten-ersteller"
+        agent_id: "shared-agent-document-creator"
 
-    - name: "agent-linux-experte"
-      label: "Linux-Experte"
-      description: "Allgemeiner Linux-Assistent mit vollem MCP-Linux-Zugriff – Shell, Skripte, Dateien, Workspaces. Zusätzlich Wartung: Status, Bereinigung, Zurücksetzen des Accounts."
-      group: "Assistenten"
+    - name: "agent-linux-expert"
+      label: "Linux Expert"
+      description: "General Linux assistant with full MCP Linux access – shell, scripts, files, workspaces. Additionally maintenance: status, cleanup, reset account."
+      group: "Assistants"
       order: 19
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-linux-experte"
+        agent_id: "shared-agent-linux-expert"
 
     # ==========================================
-    # Europa & Open Source (Scaleway) – alphabetisch nach Label
+    # Europe & Open Source (Scaleway) – alphabetical by label
     # ==========================================
-    # Alle Modelle: Open Source, Europa-gehostet, DSGVO-konform
+    # All models: Open Source, Europe-hosted, GDPR-compliant
     # Token limits: Scaleway Generative APIs + Managed Inference model catalog (Oct 2025)
     - name: "scaleway-devstral-2-123b"
       label: "Devstral 2 123B"
-      description: "Coding- und Agent-Modell (Mistral). 200K Context, 8K Output. Ideal für Code, Tools und Software-Agents. Modified MIT."
+      description: "Coding and agent model (Mistral). 200K Context, 8K Output. Ideal for code, tools and software agents. Modified MIT."
       group: "Europa & Open Source"
       # Bot icon (green-600 #059669): Open Source / automation; good contrast in light and dark
       groupIcon: "/images/group-europa.svg"
@@ -548,7 +548,7 @@ modelSpecs:
 
     - name: "scaleway-gemma-3-27b"
       label: "Gemma 3 27B"
-      description: "Kompaktes Chat- und Vision-Modell (Google). 40K Context, 8K Output. Gut für Bildanalyse und allgemeine Aufgaben. Gemma License. Exception: Google-preview; in Scaleway-Katalog als Chat+Vision gelistet."
+      description: "Compact chat and vision model (Google). 40K Context, 8K Output. Good for image analysis and general tasks. Gemma License. Exception: Google-preview; listed as Chat+Vision in Scaleway catalog."
       group: "Europa & Open Source"
       order: 2
       vision: true
@@ -561,7 +561,7 @@ modelSpecs:
 
     - name: "scaleway-gpt-oss-120b"
       label: "GPT-OSS 120B"
-      description: "Großes Modell für komplexe Aufgaben. 128K Context, 8K Output. Apache-2.0 License."
+      description: "Large model for complex tasks. 128K Context, 8K Output. Apache-2.0 License."
       group: "Europa & Open Source"
       order: 3
       preset:
@@ -573,7 +573,7 @@ modelSpecs:
 
     - name: "scaleway-holo2-30b"
       label: "Holo2 30B"
-      description: "Chat- und Vision-Modell mit Fokus auf GUI-Analyse (Browser, Software-Oberflächen). 22K Context, 8K Output. CC-BY-NC-4.0; Nutzung über Scaleway erlaubt. Zum Testen von UI/UX-Verständnis."
+      description: "Chat and vision model focused on GUI analysis (browser, software interfaces). 22K Context, 8K Output. CC-BY-NC-4.0; usage via Scaleway allowed. For testing UI/UX understanding."
       group: "Europa & Open Source"
       order: 4
       vision: true
@@ -586,7 +586,7 @@ modelSpecs:
 
     - name: "scaleway-llama-3.3-70b"
       label: "Llama 3.3 70B"
-      description: "Meta's neuestes Modell. 100K Context, 4K Output. Sehr gut für allgemeine Gespräche und Aufgaben. Llama 3.3 Community License. Empfohlen von Scaleway."
+      description: "Meta's latest model. 100K Context, 4K Output. Very good for general conversations and tasks. Llama 3.3 Community License. Recommended by Scaleway."
       group: "Europa & Open Source"
       order: 5
       preset:
@@ -722,7 +722,7 @@ modelSpecs:
 
     - name: "google-gemini-3-flash-preview"
       label: "Gemini 3 Flash (Preview)"
-      description: "Googles schnelles Gemini-3-Modell (Preview). Gute Balance aus Geschwindigkeit und Qualität. Exception: Preview-Label von Google, nicht vom Provider. Über OpenRouter."
+      description: "Google's fast Gemini-3 model (Preview). Good balance of speed and quality. Exception: Preview label from Google, not from provider. Via OpenRouter."
       group: "Premium-Modelle"
       order: 6
       vision: true
@@ -735,7 +735,7 @@ modelSpecs:
 
     - name: "google-gemini-3-pro-preview"
       label: "Gemini 3 Pro (Preview)"
-      description: "Googles leistungsstarkes Gemini-3-Modell (Preview). Für anspruchsvolle Aufgaben und Reasoning. Exception: Preview-Label von Google, nicht vom Provider. Über OpenRouter."
+      description: "Google's powerful Gemini-3 model (Preview). For demanding tasks and reasoning. Exception: Preview label from Google, not from provider. Via OpenRouter."
       group: "Premium-Modelle"
       order: 7
       vision: true
@@ -970,8 +970,8 @@ mcpServers:
   image-gen:
     type: streamable-http
     url: http://mcp-image-gen:3013/mcp
-    title: Bildgenerierung
-    description: Bilder aus Textbeschreibungen erstellen
+    title: Image Generation
+    description: Create images from text descriptions
     iconPath: /images/mcp-image-gen-icon.svg
     initTimeout: 180000
     timeout: 150000  # 150 seconds for tool calls (image generation can take up to 120s)
@@ -983,7 +983,7 @@ mcpServers:
     type: streamable-http
     url: http://mcp-openstreetmap:3004/mcp
     title: OpenStreetMap
-    description: Geografische Suche, Routenplanung und Standortinformationen
+    description: Geographic search, route planning and location information
     iconPath: /images/mcp-openstreetmap-icon.svg
     initTimeout: 120000
     chatMenu: false
@@ -993,8 +993,8 @@ mcpServers:
   weather:
     type: streamable-http
     url: http://mcp-weather:3005/mcp
-    title: Wetter
-    description: Aktuelle Wetterdaten, Luftqualität und Zeitzoneninformationen
+    title: Weather
+    description: Current weather data, air quality and timezone information
     iconPath: /images/mcp-weather-icon.svg
     initTimeout: 120000
     chatMenu: true
@@ -1004,8 +1004,8 @@ mcpServers:
   docs:
     type: streamable-http
     url: http://mcp-docs:6280/mcp
-    title: Dokumentation durchsuchen
-    description: Öffentlich verfügbare Dokumentation durchsuchen
+    title: Search Documentation
+    description: Search publicly available documentation
     iconPath: /images/mcp-docs-icon.svg
     initTimeout: 120000
     chatMenu: true
@@ -1015,8 +1015,8 @@ mcpServers:
   playwright:
     type: streamable-http
     url: http://mcp-playwright:3006/mcp
-    title: Browser Automatisierung
-    description: Webseiten durchsuchen, interagieren und automatisieren
+    title: Browser Automation
+    description: Search, interact with and automate websites
     iconPath: /images/mcp-playwright-icon.svg
     initTimeout: 120000
     timeout: 150000
@@ -1027,8 +1027,8 @@ mcpServers:
   db-timetable:
     type: streamable-http
     url: http://mcp-db-timetable:3007/mcp
-    title: DB Fahrplan
-    description: Aktuelle Fahrpläne, Stationssuche und Zugverbindungen der Deutschen Bahn
+    title: DB Timetable
+    description: Current timetables, station search and train connections of Deutsche Bahn
     iconPath: /images/mcp-db-timetable-icon.svg
     initTimeout: 120000
     chatMenu: true
@@ -1039,7 +1039,7 @@ mcpServers:
     type: streamable-http
     url: http://mcp-stackoverflow:3008/mcp
     title: Stack Overflow
-    description: Programmierlösungen und Fehlerbehebung finden
+    description: Find programming solutions and troubleshooting
     iconPath: /images/mcp-stackoverflow-icon.svg
     initTimeout: 120000
     chatMenu: false
@@ -1049,8 +1049,8 @@ mcpServers:
   npm-search:
     type: streamable-http
     url: http://mcp-npm-search:3009/mcp
-    title: npm Suche
-    description: npm-Pakete durchsuchen und finden
+    title: npm Search
+    description: Search and find npm packages
     iconPath: /images/mcp-npm-search-icon.svg
     initTimeout: 120000
     chatMenu: false
@@ -1060,8 +1060,8 @@ mcpServers:
   chefkoch:
     type: streamable-http
     url: http://mcp-chefkoch:3014/mcp
-    title: Rezepte
-    description: Rezepte von Chefkoch.de suchen und anzeigen
+    title: Recipes
+    description: Search and display recipes from Chefkoch.de
     iconPath: /images/mcp-chefkoch-icon.svg
     initTimeout: 120000
     chatMenu: false
@@ -1071,8 +1071,8 @@ mcpServers:
   linux:
     type: streamable-http
     url: http://mcp-linux:3015/mcp
-    title: Linux Arbeitsumgebung
-    description: Isolierte Linux-Umgebung mit Terminal, Datei-Upload/-Download, Git und Workspaces
+    title: Linux Workspace
+    description: Isolated Linux environment with terminal, file upload/download, Git and workspaces
     iconPath: /images/mcp-linux-icon.svg
     initTimeout: 120000
     timeout: 120000
@@ -1087,8 +1087,8 @@ mcpServers:
   ytptube:
     type: streamable-http
     url: http://mcp-ytptube:3010/mcp
-    title: Video Transkripte
-    description: Transkripte von Videos anfordern und Status prüfen.
+    title: Video Transcripts
+    description: Request video transcripts and check status.
     iconPath: /images/mcp-ytptube-icon.svg
     initTimeout: 120000
     timeout: 300000   # 5 min — downloads + STT
@@ -1099,8 +1099,8 @@ mcpServers:
   youtube-transcript:
     type: streamable-http
     url: http://mcp-youtube-transcript:3011/mcp
-    title: YouTube Transkript
-    description: Transkripte von YouTube-Videos abrufen
+    title: YouTube Transcript
+    description: Retrieve transcripts from YouTube videos
     iconPath: /images/mcp-youtube-transcript-icon.svg
     initTimeout: 120000
     chatMenu: false
@@ -1124,7 +1124,7 @@ mcpServers:
     type: streamable-http
     url: https://mcp.mapbox.com/mcp
     title: Mapbox
-    description: Geografische Suche, Routenplanung, Geocoding und Kartenvisualisierung
+    description: Geographic search, route planning, geocoding and map visualization
     iconPath: /images/mcp-mapbox-icon.svg
     headers:
       Authorization: "Bearer ${MCP_MAPBOX_ACCESS_TOKEN}"

@@ -4,7 +4,7 @@ Current status and options for improving video transcripts and downloads in prod
 
 ## Current status
 
-- **Local:** YTPTube and MCP YTPTube work; the **Video-Transkripte** agent is in the codebase but **not public** (`public: false` in `agents.yaml`).
+- **Local:** YTPTube and MCP YTPTube work; the **Video Transcripts** agent is in the codebase but **not public** (`public: false` in `agents.yaml`).
 - **Server:** On production (e.g. Hetzner), requests from the server IP can be blocked (geo, rate limits, bot detection). Optional [Webshare proxy](../WEBSHARE_PROXY.md) helps; not all cases are covered.
 - **Agent:** Intentionally kept non-public until server-side access is reliable; can be enabled per-role or made public later.
 

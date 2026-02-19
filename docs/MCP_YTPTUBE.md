@@ -4,7 +4,7 @@ Media URL (video or audio) → transcript or download link. Uses YTPTube; option
 
 ## Status & limitations
 
-- **Local:** Works; Video-Transkripte agent is in config with `public: false`.
+- **Local:** Works; Video Transcripts agent is in config with `public: false`.
 - **Production (e.g. Hetzner):** Server IP can be blocked (geo/bot); optional [Webshare proxy](WEBSHARE_PROXY.md) or [FlareSolverr / office proxy ideas](wip/YTPTUBE_FUTURE_WORK.md).
 - **More:** [wip/YTPTUBE_FUTURE_WORK.md](wip/YTPTUBE_FUTURE_WORK.md) (production options), [WEBSHARE_PROXY.md](WEBSHARE_PROXY.md) (proxy setup), [YTPTUBE_CLEANUP.md](YTPTUBE_CLEANUP.md) (cleanup for fresh tests).
 

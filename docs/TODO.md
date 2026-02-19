@@ -70,7 +70,7 @@
 ### YTPTube / Video transcripts (production)
 
 - [ ] Improve server-side video access (geo/bot blocking)
-  - Status: Works locally; Video-Transkripte agent is in code with `public: false`. On Hetzner, optional Webshare proxy or FlareSolverr; see [YTPTUBE_FUTURE_WORK.md](wip/YTPTUBE_FUTURE_WORK.md) for FlareSolverr and office Pi / reverse-SSH-proxy ideas for later.
+  - Status: Works locally; Video Transcripts agent is in code with `public: false`. On Hetzner, optional Webshare proxy or FlareSolverr; see [YTPTUBE_FUTURE_WORK.md](wip/YTPTUBE_FUTURE_WORK.md) for FlareSolverr and office Pi / reverse-SSH-proxy ideas for later.
 
 ### MCP Memory Service
 

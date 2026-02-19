@@ -11,7 +11,7 @@ Group icons in `librechat.yaml` (modelSpecs list) can be:
 |-------|------|--------------|-----------|
 | Europa & Open Source | Bot | `#059669` (green-600) | Open source / automation; good contrast both themes |
 | Premium-Modelle | Lock | `#d97706` (amber-600) | Proprietary / not open source |
-| Assistenten | Bot-message-square | `#ab68ff` (brand-purple) | Matches LibreChat brand |
+| Assistants | Bot-message-square | `#ab68ff` (brand-purple) | Matches LibreChat brand |
 
 ## Theme-compatible colors (LibreChat)
 
@@ -33,7 +33,7 @@ From `dev/librechat/client/src/style.css` — use these for new group icons so t
 
 ## Assets
 
-- **Assistenten**: Source SVG is `assets/bot-message-square.svg`. The group icon in config uses the same path data with `stroke="#ab68ff"`. To change the icon, edit the asset and regenerate the base64 data URI (e.g. `Buffer.from(svgString).toString('base64')`).
+- **Assistants**: Source SVG is `assets/bot-message-square.svg`. The group icon in config uses the same path data with `stroke="#ab68ff"`. To change the icon, edit the asset and regenerate the base64 data URI (e.g. `Buffer.from(svgString).toString('base64')`).
 
 ## Using icon path instead of data URI
 

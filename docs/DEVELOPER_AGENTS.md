@@ -1,38 +1,38 @@
 # Developer Agents
 
-Development requests are routed by **Entwickler-Router** to task-specific specialists. Universal hands off to this router once (10-handoff limit); the router then has up to 10 handoffs to specialists.
+Development requests are routed by **Code Assistant** to task-specific specialists. Main Assistant hands off to this router once (10-handoff limit); the router then has up to 10 handoffs to specialists.
 
 ## Router hierarchy
 
 ```
-Universal ──► Entwickler-Router ──► Code-Recherche | Entwickler | Code-Refactorer
-                                 ──► GitHub-Assistent | Code-Reviewer
-                                 ──► Universal (back)
+Main Assistant ──► Code Assistant ──► Code Research | Developer | Code Refactorer
+                                 ──► GitHub Assistant | Code Reviewer
+                                 ──► Main Assistant (back)
 ```
 
-Specialists do **not** hand off back to the router; they hand off to Universal or to other specialists.
+Specialists do **not** hand off back to the router; they hand off to Main Assistant or to other specialists.
 
 **Recursion limit (Max Agent Steps):**
 - One limit applies to the **entire** run (all agents in the chain); taken from the **first** agent (the one the user started with).
 - Each step = one LLM call, tool call, or handoff. Stop = agent returns a final response with no further tools/handoffs; else `GRAPH_RECURSION_LIMIT`.
-- Dev agents: 100–120 so workflows with many file/git/GitHub steps complete. Universal 100, Entwickler-Router 120.
+- Dev agents: 100–120 so workflows with many file/git/GitHub steps complete. Main Assistant 200, Code Assistant 120.
 
 ## Agents
 
-Each of the four Code specialists (Code-Recherche, Entwickler, Code-Refactorer, Code-Reviewer) has two variants: a **default** (OpenSource, Scaleway devstral) and a **quality** variant (OpenRouter, name includes model). Use the default first; use the quality variant when the user explicitly emphasizes quality or when the default could not fulfill the task (fallback).
+Each of the four Code specialists (Code Research, Developer, Code Refactorer, Code Reviewer) has two variants: a **default** (OpenSource, Scaleway devstral) and a **quality** variant (OpenRouter, name includes model). Use the default first; use the quality variant when the user explicitly emphasizes quality or when the default could not fulfill the task (fallback).
 
 | Agent | ID | Provider | Model | Tools | Role |
 |-------|----|----------|-------|-------|------|
-| **Entwickler-Router** | `shared-agent-developer-router` | Scaleway | devstral-2-123b | list_workspaces, get_workspace_status (MCP Linux) | Route to specialist; uses tools only to pass explicit workspace name in handoff. |
-| **Code-Recherche** (default) | `shared-agent-code-researcher` | Scaleway | devstral-2-123b | ~35 (Linux subset, GitHub, Docs, SO, npm, web_search) | Understand code, find examples, search docs. No implementation. |
-| **Code-Recherche (Claude Opus 4.6)** (quality) | `shared-agent-code-researcher-quality` | OpenRouter | anthropic/claude-opus-4.6 | same | Same role; use when user wants higher quality or default failed. |
-| **Entwickler** (default) | `shared-agent-developer` | Scaleway | devstral-2-123b | 18 (Linux full, web_search) | Implement, fix bugs. |
-| **Entwickler (Claude Opus 4.6)** (quality) | `shared-agent-developer-quality` | OpenRouter | anthropic/claude-opus-4.6 | same | Same role; use when user wants higher quality or default failed. |
-| **Code-Refactorer** (default) | `shared-agent-code-refactorer` | Scaleway | devstral-2-123b | 18 (Linux full, web_search) | Refactor, polish, restructure. |
-| **Code-Refactorer (Gemini 3 Pro Preview)** (quality) | `shared-agent-code-refactorer-quality` | OpenRouter | google/gemini-3-pro-preview | same | Same role; use when user wants higher quality or default failed. |
-| **GitHub-Assistent** | `shared-agent-github` | Scaleway | devstral-2-123b | GitHub (read+write), Linux minimal | PRs, issues, releases; create/update/merge PR, review, file/repo ops. See [GitHub tools](#github-tools). |
-| **Code-Reviewer** (default) | `shared-agent-code-reviewer` | Scaleway | devstral-2-123b | ~18 (Linux subset, GitHub read) | Single entry for PR reviews: clone repo, analyze via Linux MCP, produce review; hand off to GitHub-Assistent to post on GitHub when the user requests it. |
-| **Code-Reviewer (Gemini 3 Pro Preview)** (quality) | `shared-agent-code-reviewer-quality` | OpenRouter | google/gemini-3-pro-preview | same | Same role; use when user wants higher quality or default failed. |
+| **Code Assistant** | `shared-agent-code-assistant` | Scaleway | devstral-2-123b | list_workspaces, get_workspace_status (MCP Linux) | Route to specialist; uses tools only to pass explicit workspace name in handoff. |
+| **Code Research** (default) | `shared-agent-code-researcher` | Scaleway | devstral-2-123b | ~35 (Linux subset, GitHub, Docs, SO, npm, web_search) | Understand code, find examples, search docs. No implementation. |
+| **Code Research (Claude Opus 4.6)** (quality) | `shared-agent-code-researcher-quality` | OpenRouter | anthropic/claude-opus-4.6 | same | Same role; use when user wants higher quality or default failed. |
+| **Developer** (default) | `shared-agent-developer` | Scaleway | devstral-2-123b | 18 (Linux full, web_search) | Implement, fix bugs. |
+| **Developer (Claude Opus 4.6)** (quality) | `shared-agent-developer-quality` | OpenRouter | anthropic/claude-opus-4.6 | same | Same role; use when user wants higher quality or default failed. |
+| **Code Refactorer** (default) | `shared-agent-code-refactorer` | Scaleway | devstral-2-123b | 18 (Linux full, web_search) | Refactor, polish, restructure. |
+| **Code Refactorer (Gemini 3 Pro Preview)** (quality) | `shared-agent-code-refactorer-quality` | OpenRouter | google/gemini-3-pro-preview | same | Same role; use when user wants higher quality or default failed. |
+| **GitHub Assistant** | `shared-agent-github` | Scaleway | devstral-2-123b | GitHub (read+write), Linux minimal | PRs, issues, releases; create/update/merge PR, review, file/repo ops. See [GitHub tools](#github-tools). |
+| **Code Reviewer** (default) | `shared-agent-code-reviewer` | Scaleway | devstral-2-123b | ~18 (Linux subset, GitHub read) | Single entry for PR reviews: clone repo, analyze via Linux MCP, produce review; hand off to GitHub Assistant to post on GitHub when the user requests it. |
+| **Code Reviewer (Gemini 3 Pro Preview)** (quality) | `shared-agent-code-reviewer-quality` | OpenRouter | google/gemini-3-pro-preview | same | Same role; use when user wants higher quality or default failed. |
 
 ## Chains
 
@@ -40,36 +40,36 @@ No automatic chains. All transitions between specialists are via explicit handof
 
 ## Handoffs
 
-Each specialist can hand off to Universal and to 2–3 relevant specialists (e.g. Entwickler → Code-Recherche, GitHub-Assistent). Specialists do **not** hand off back to Entwickler-Router. Handoff: call the transfer tool (runtime name `lc_transfer_to_<api_id>`), pass context in the **instructions** parameter. Universal has no GitHub tools; for bug reports only hand off to Feedback-Assistent.
+Each specialist can hand off to Main Assistant and to 2–3 relevant specialists (e.g. Developer → Code Research, GitHub Assistant). Specialists do **not** hand off back to Code Assistant. Handoff: call the transfer tool (runtime name `lc_transfer_to_<api_id>`), pass context in the **instructions** parameter. Main Assistant has no GitHub tools; for bug reports only hand off to Feedback Assistant.
 
-For the four Code specialists (Code-Recherche, Entwickler, Code-Refactorer, Code-Reviewer), handoffs include **both** the default and the quality variant. The handoff **description** in `agents.yaml` guides the LLM: prefer the default; use the quality variant only when the user explicitly emphasizes quality or when the default could not fulfill the task.
+For the four Code specialists (Code Research, Developer, Code Refactorer, Code Reviewer), handoffs include **both** the default and the quality variant. The handoff **description** in `agents.yaml` guides the LLM: prefer the default; use the quality variant only when the user explicitly emphasizes quality or when the default could not fulfill the task.
 
-**Loops:** Universal asks once when unclear then transfers; specialists return to Universal only when task done, user asks for another assistant, or request is clearly out of domain—not when merely ambiguous.
+**Loops:** Main Assistant asks once when unclear then transfers; specialists return to Main Assistant only when task done, user asks for another assistant, or request is clearly out of domain—not when merely ambiguous.
 
-- **Entwickler → Code-Refactorer**: Polish or restructure code (readability, structure, tests, style).
-- **Code-Refactorer → Entwickler**: Implement missing code, tests, or behavior found during refactoring.
-- **Code-Refactorer → Code-Reviewer**: Read PR/review comments and fix issues (Code-Refactorer has no GitHub API).
-- **Feedback-Assistent → GitHub-Assistent**: Create issue (title + body in English); → Code-Recherche (similar issues); → Entwickler-Router (user wants to fix).
+- **Developer → Code Refactorer**: Polish or restructure code (readability, structure, tests, style).
+- **Code Refactorer → Developer**: Implement missing code, tests, or behavior found during refactoring.
+- **Code Refactorer → Code Reviewer**: Read PR/review comments and fix issues (Code Refactorer has no GitHub API).
+- **Feedback Assistant → GitHub Assistant**: Create issue (title + body in English); → Code Research (similar issues); → Code Assistant (user wants to fix).
 
 ## Code review flow
 
-1. User provides PR URL to **Code-Reviewer** (via router or by selecting the agent).
-2. **Code-Reviewer**: `pull_request_read` → head/base ref and repo URL; `create_workspace` (git_url, branch = head ref) → in workspace: `git fetch origin <base_ref>`, `git diff origin/<base_ref>...HEAD`; `read_workspace_file` for changed files and context → analyze → structured review (summary + optional inline comments).
-3. To post on GitHub: **Code-Reviewer** hands off via transfer tool with review body and inline comments; **GitHub-Assistent** uses `create_review` or `pull_request_review_write`. If using `pull_request_review_write` with method `create`, the assistant must then call it again with method `submit_pending` so the review is published; otherwise only a pending (draft) review exists and nothing appears on the PR.
+1. User provides PR URL to **Code Reviewer** (via router or by selecting the agent).
+2. **Code Reviewer**: `pull_request_read` → head/base ref and repo URL; `create_workspace` (git_url, branch = head ref) → in workspace: `git fetch origin <base_ref>`, `git diff origin/<base_ref>...HEAD`; `read_workspace_file` for changed files and context → analyze → structured review (summary + optional inline comments).
+3. To post on GitHub: **Code Reviewer** hands off via transfer tool with review body and inline comments; **GitHub Assistant** uses `create_review` or `pull_request_review_write`. If using `pull_request_review_write` with method `create`, the assistant must then call it again with method `submit_pending` so the review is published; otherwise only a pending (draft) review exists and nothing appears on the PR.
 
-Optional handoffs: Code-Reviewer → Code-Recherche (codebase context) or → Entwickler (fix issues).
+Optional handoffs: Code Reviewer → Code Research (codebase context) or → Developer (fix issues).
 
-**GitHub content:** GitHub-Assistent posts all review bodies, inline comments, and issue/PR text in **English** (per agent instructions).
+**GitHub content:** GitHub Assistant posts all review bodies, inline comments, and issue/PR text in **English** (per agent instructions).
 
 ## Feedback / Bug reports
 
-**Feedback-Assistent** (`shared-agent-feedback`): Chat-interface bug reports. Repo always **faktenforum/ai-chat-interface**. No GitHub tools → hand off to **GitHub-Assistent** (title + body in English). On create_issue error, GitHub-Assistent reports the error. Optional: **Code-Recherche** (similar issues), **Entwickler-Router** (user wants to fix). Entry: Universal or preset “Feedback / Fehler melden”.
+**Feedback Assistant** (`shared-agent-feedback`): Chat-interface bug reports. Repo always **faktenforum/ai-chat-interface**. No GitHub tools → hand off to **GitHub Assistant** (title + body in English). On create_issue error, GitHub Assistant reports the error. Optional: **Code Research** (similar issues), **Code Assistant** (user wants to fix). Entry: Main Assistant or preset “Feedback / Report error”.
 
 ## GitHub tools
 
-Write tools are **only on GitHub-Assistent**; Code-Recherche and Code-Reviewer have read-only GitHub tools. Code-Reviewer hands off to GitHub-Assistent to post reviews.
+Write tools are **only on GitHub Assistant**; Code Research and Code Reviewer have read-only GitHub tools. Code Reviewer hands off to GitHub Assistant to post reviews.
 
-GitHub-Assistent’s tools in `agents.yaml` (suffix `_mcp_github`):
+GitHub Assistant’s tools in `agents.yaml` (suffix `_mcp_github`):
 
 | Scope | Examples |
 |-------|----------|
@@ -78,13 +78,13 @@ GitHub-Assistent’s tools in `agents.yaml` (suffix `_mcp_github`):
 | Write — branch/file/repo | create_branch, create_or_update_file, delete_file, push_files, fork_repository, create_repository |
 | Optional (if MCP provides) | assign_copilot_to_issue, request_copilot_review, sub_issue_write |
 
-Only tools the GitHub MCP server actually provides are exposed; unknown names in YAML are ignored. In the UI, tools may appear without the `_mcp_github` suffix—keep them enabled for GitHub-Assistent.
+Only tools the GitHub MCP server actually provides are exposed; unknown names in YAML are ignored. In the UI, tools may appear without the `_mcp_github` suffix—keep them enabled for GitHub Assistant.
 
 ## Troubleshooting
 
-**"empty_messages" / "Message pruning removed all messages"** when using Scaleway (or other custom endpoints) for dev agents: Custom endpoints without `endpointTokenConfig` get a **18K context fallback**. Long chains (Universal → Router → Code-Refactorer/Code-Reviewer plus PR/commit data) exceed that; pruning then removes all messages. **Fix:** set `maxContextTokens` in each agent’s `model_parameters` in `agents.yaml` to the model’s real context (e.g. `200000` for Devstral 2 123B). Re-run the librechat-init after any change to `agents.yaml` so the DB receives the updated `model_parameters`; otherwise the runtime keeps using the 18K fallback. For very large PRs, use the quality variant (e.g. Code-Reviewer with Gemini 3 Pro Preview, 1M context). See [AGENTS_CONTEXT_LIMIT](wip/AGENTS_CONTEXT_LIMIT.md) for the init/pruning flow.
+**"empty_messages" / "Message pruning removed all messages"** when using Scaleway (or other custom endpoints) for dev agents: Custom endpoints without `endpointTokenConfig` get a **18K context fallback**. Long chains (Main Assistant → Router → Code Refactorer/Code Reviewer plus PR/commit data) exceed that; pruning then removes all messages. **Fix:** set `maxContextTokens` in each agent’s `model_parameters` in `agents.yaml` to the model’s real context (e.g. `200000` for Devstral 2 123B). Re-run the librechat-init after any change to `agents.yaml` so the DB receives the updated `model_parameters`; otherwise the runtime keeps using the 18K fallback. For very large PRs, use the quality variant (e.g. Code Reviewer with Gemini 3 Pro Preview, 1M context). See [AGENTS_CONTEXT_LIMIT](wip/AGENTS_CONTEXT_LIMIT.md) for the init/pruning flow.
 
-**"400 Unexpected role 'user' after role 'tool'"** after a transfer (e.g. Universal → Datenanalyse right after the router ran `list_upload_sessions`): The API expects an assistant turn after a tool message, but the handoff logic was appending the handoff instructions as a user message. Fixed in **dev/agents** (`MultiAgentGraph.ts`): when the last message before the handoff is a tool message, handoff instructions are now injected into that tool message’s content instead of adding a separate user message. Ensure the agents submodule/image includes this fix.
+**"400 Unexpected role 'user' after role 'tool'"** after a transfer (e.g. Main Assistant → Data Analysis right after the router ran `list_upload_sessions`): The API expects an assistant turn after a tool message, but the handoff logic was appending the handoff instructions as a user message. Fixed in **dev/agents** (`MultiAgentGraph.ts`): when the last message before the handoff is a tool message, handoff instructions are now injected into that tool message’s content instead of adding a separate user message. Ensure the agents submodule/image includes this fix.
 
 ## Config
 

@@ -16,15 +16,15 @@ How agents choose between LibreChat in-chat options and MCP Linux upload/downloa
 | **Upload** | Agent provides a link via `create_upload_session`; file lands in the Linux workspace. | Data analysis, charts, format conversion, processing without loading full content into the conversation. |
 | **Download** | Agent creates a temporary URL via `create_download_link`; user downloads the file in the browser. | Processed or generated files (charts, converted files, exports) that the user should receive. |
 
-Data viz / "upload for data" → **Datenanalyse** (or 009/010). Specialists use MCP Linux upload and `create_download_link` for results.
+Data viz / "upload for data" → **Data Analysis** (or 009/010). Specialists use MCP Linux upload and `create_download_link` for results.
 
 ## Router tools (handoff only)
 
 | Router | MCP Linux tools | Use |
 |--------|------------------|-----|
-| **Universal** | list_upload_sessions, get_workspace_status, create_upload_session | Resolve upload state and workspace before handoff to Datenanalyse/009/010; optionally create upload link in first reply. |
-| **Entwickler-Router** | list_workspaces, get_workspace_status | Resolve workspace name when handing off to dev specialists. |
+| **Main Assistant** | list_upload_sessions, get_workspace_status, create_upload_session | Resolve upload state and workspace before handoff to Data Analysis/009/010; optionally create upload link in first reply. |
+| **Code Assistant** | list_workspaces, get_workspace_status | Resolve workspace name when handing off to dev specialists. |
 
 ## Workspace handoff
 
-Linux-workplace agents (Datenanalyse, Dateikonverter, Dokumenten-Ersteller, Entwickler, dev specialists): when handing off to another such agent, pass **workspace name** in handoff `instructions`; on receive, use that workspace for all Linux tool calls.
+Linux-workplace agents (Data Analysis, File Converter, Document Creator, Developer, dev specialists): when handing off to another such agent, pass **workspace name** in handoff `instructions`; on receive, use that workspace for all Linux tool calls.

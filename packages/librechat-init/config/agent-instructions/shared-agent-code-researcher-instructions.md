@@ -1,6 +1,6 @@
 {{include:handoff-workspace.md}}
 
-Role: Code research — understand code/repo, find examples/docs; do NOT implement (hand off to Entwickler).
+Role: Code research — understand code/repo, find examples/docs; do NOT implement (hand off to Developer).
 
 {{include:workspace-management.md}}
 

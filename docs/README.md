@@ -9,7 +9,7 @@ The project’s LibreChat setup is defined in the **librechat-init** config; the
 | File | Purpose |
 |------|---------|
 | **[`packages/librechat-init/config/librechat.yaml`](../packages/librechat-init/config/librechat.yaml)** | LibreChat settings: endpoints, model specs, MCP servers, interface, memory, OCR, etc. |
-| **[`packages/librechat-init/config/agents.yaml`](../packages/librechat-init/config/agents.yaml)** | Shared agents (Recherche, Bildgenerierung, Universal, Entwickler-Router, Feedback-Assistent, Linux-Experte, dev specialists) and their tools. |
+| **[`packages/librechat-init/config/agents.yaml`](../packages/librechat-init/config/agents.yaml)** | Shared agents (Research Assistant, Image Generation Assistant, Main Assistant, Code Assistant, Feedback Assistant, Linux Expert, dev specialists) and their tools. |
 | **[`packages/librechat-init/config/agent-instructions/_shared-conventions.md`](../packages/librechat-init/config/agent-instructions/_shared-conventions.md)** | Canonical snippets for agent instructions (maintainer reference; not loaded by agents). |
 | **[`packages/librechat-init/config/roles.yaml`](../packages/librechat-init/config/roles.yaml)** | Roles and permissions (who can use which agents/features). |
 
@@ -35,7 +35,7 @@ They are baked into the init image and written into the config volume at startup
 - **[MCP Linux](MCP_LINUX.md)** – Per-user isolated Linux terminal with persistent git workspaces. Tools: execute_command, workspace management, account tools. Internal only.
 - **[GitHub Machine User](GITHUB_MACHINE_USER.md)** – Shared GitHub identity for MCP Linux (SSH) and GitHub MCP (PAT).
 - **[MCP Code Execution Insights](MCP_CODE_EXECUTION_INSIGHTS.md)** – Insights from Anthropic’s “Code execution with MCP” article applied to our Linux MCP server and agents.
-- **[MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md)** – CSV/JSON analysis and chart generation (Datenanalyse agent): workflow, example Python script, image return via read_workspace_file.
+- **[MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md)** – CSV/JSON analysis and chart generation (Data Analysis agent): workflow, example Python script, image return via read_workspace_file.
 - **[Agent file upload guidance](AGENT_FILE_UPLOAD.md)** – LibreChat upload options (Upload to Provider, Upload as Text), MCP Linux upload/download, when to recommend which, workspace handoff.
 - **[Webshare Proxy](WEBSHARE_PROXY.md)** - Fixed proxy URL setup (Rotating/Backbone) for mcp-ytptube and mcp-youtube-transcript
 
@@ -47,7 +47,7 @@ They are baked into the init image and written into the config volume at startup
 
 ## Development
 
-- **[Developer Agents](DEVELOPER_AGENTS.md)** - Developer domain: router, specialists, handoffs, code review (Code-Reviewer + GitHub-Assistent)
+- **[Developer Agents](DEVELOPER_AGENTS.md)** - Developer domain: router, specialists, handoffs, code review (Code Reviewer + GitHub Assistant)
 - **[Development Guide](DEVELOPMENT.md)** - Git submodules and development stack
 - **[Testing internal MCPs from Cursor](SERVICES.md#testing-internal-mcps-from-cursor-ide)** - Use local-stack MCPs from Cursor IDE for testing
 - **[LibreChat Testing](LIBRECHAT_TESTING.md)** - Running LibreChat unit and E2E tests using the dedicated test stack

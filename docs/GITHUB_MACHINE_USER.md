@@ -39,4 +39,4 @@ Set in `.env.local` / `.env.prod` / `.env.dev`. Never commit secrets; see [envir
 ## References
 
 - [MCP Linux](MCP_LINUX.md) — Git Access
-- [Developer Agents](DEVELOPER_AGENTS.md) — GitHub-Assistent, write tools
+- [Developer Agents](DEVELOPER_AGENTS.md) — GitHub Assistant, write tools

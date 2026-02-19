@@ -149,7 +149,7 @@ pandoc uploads/input.md -s -o uploads/output.html
 \`\`\`
 
 **Supported formats:** Markdown, HTML, ODT, DOCX, EPUB, RST, LaTeX, man, plain text, and more.
-For PDF generation, prefer **Typst** (see Dokumenten-Ersteller agent or MCP prompt \`document_creation\`).
+For PDF generation, prefer **Typst** (see Document Creator agent or MCP prompt \`document_creation\`).
 
 ---
 

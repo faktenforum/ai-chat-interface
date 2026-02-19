@@ -16,114 +16,114 @@
 
 prompts:
   - name: Review GitHub Pull Request
-    prompt: Bitte Review {{Github Pull Request URL}} und veröffentliche diesen als Kommentar im PR.
+    prompt: Please review {{Github Pull Request URL}} and publish it as a comment in the PR.
     command: review-github-pr
     category: code
-    oneliner: Reviewt einen GitHub Pull Request und veröffentlicht das Ergebnis als Kommentar im PR (OpenSource-Modelle).
+    oneliner: Reviews a GitHub Pull Request and publishes the result as a comment in the PR (OpenSource models).
     sharing:
       public:
         enabled: true
         defaultRole: editor
   - name: Review GitHub Pull Request (Quality)
     prompt: |
-      Bitte Review {{Github Pull Request URL}} und veröffentliche diesen als Kommentar im PR.
+      Please review {{Github Pull Request URL}} and publish it as a comment in the PR.
       
-      **Wichtig**: Verwende die Quality-Entwickler-Agents (Code-Reviewer mit Gemini 3 Pro Preview) für höhere Qualität und detailliertere Analysen. Diese Variante nutzt teurere, aber leistungsstärkere Modelle.
+      **Important**: Use the Quality developer agents (Code Reviewer with Gemini 3 Pro Preview) for higher quality and more detailed analysis. This variant uses more expensive but more powerful models.
     command: review-github-pr-quality
     category: code
-    oneliner: Reviewt einen GitHub Pull Request mit Quality-Agents (Gemini 3 Pro Preview) für höhere Qualität und detailliertere Analysen.
+    oneliner: Reviews a GitHub Pull Request with Quality agents (Gemini 3 Pro Preview) for higher quality and more detailed analysis.
     sharing:
       public:
         enabled: true
         defaultRole: editor
-  - name: Überarbeite GitHub PR
+  - name: Refactor GitHub PR
     prompt: |
-      Bearbeite den GitHub Pull Request {{Github Pull Request URL}} vollständig.
+      Process the GitHub Pull Request {{Github Pull Request URL}} completely.
 
-      ## Ablauf
+      ## Process
 
-      1. **Review**: Analysiere den PR (Code, Tests, Docs). Identifiziere Verbesserungspunkte.
-      2. **Refactor-Plan**: Erstelle eine priorisierte Liste der Änderungen.
-      3. **Workspace**: Falls ein Linux-Workspace für diesen PR existiert – prüfe ob er aktuell und wiederverwendbar ist; sonst zurücksetzen und neu anlegen.
-      4. **Umsetzung**: Delegiere jede Aufgabe an den passenden Experten (z.B. Code-Refactorer, Code-Reviewer). Jeder Experte erledigt seinen Task und übergibt an den nächsten, bis alle Punkte abgearbeitet sind.
-      5. **Abschluss**: Pushe die Änderungen auf den PR-Branch. Hinterlasse einen PR-Kommentar mit Zusammenfassung des Reviews und der vorgenommenen Verbesserungen.
+      1. **Review**: Analyze the PR (Code, Tests, Docs). Identify improvement points.
+      2. **Refactor Plan**: Create a prioritized list of changes.
+      3. **Workspace**: If a Linux workspace exists for this PR – check if it is current and reusable; otherwise reset and create new.
+      4. **Implementation**: Delegate each task to the appropriate expert (e.g. Code Refactorer, Code Reviewer). Each expert completes their task and hands off to the next, until all points are completed.
+      5. **Completion**: Push the changes to the PR branch. Leave a PR comment summarizing the review and the improvements made.
 
-      ## Regeln
-      - Delegiere gezielt an Experten; keine parallelen Aufgaben ohne Abhängigkeiten.
-      - Halte den Plan überschaubar; priorisiere die wichtigsten Verbesserungen zuerst.
-      - Der finale PR-Kommentar muss Review-Ergebnis und Änderungsliste klar dokumentieren.
-    command: ueberarbeite-github-pr
+      ## Rules
+      - Delegate specifically to experts; no parallel tasks without dependencies.
+      - Keep the plan manageable; prioritize the most important improvements first.
+      - The final PR comment must clearly document review results and change list.
+    command: refactor-github-pr
     category: code
-    oneliner: Reviewt einen GitHub PR, setzt Verbesserungen um und pusht sie auf den Branch (OpenSource-Modelle).
-  - name: Überarbeite GitHub PR (Quality)
+    oneliner: Reviews a GitHub PR, implements improvements and pushes them to the branch (OpenSource models).
+  - name: Refactor GitHub PR (Quality)
     prompt: |
-      Bearbeite den GitHub Pull Request {{Github Pull Request URL}} vollständig.
+      Process the GitHub Pull Request {{Github Pull Request URL}} completely.
 
-      **Wichtig**: Verwende die Quality-Entwickler-Agents für höhere Qualität:
-      - Code-Reviewer (Gemini 3 Pro Preview) für detaillierte Reviews
-      - Code-Refactorer (Gemini 3 Pro Preview) für Refactoring
-      - Entwickler (Claude Opus 4.6) für Implementierungen
+      **Important**: Use the Quality developer agents for higher quality:
+      - Code Reviewer (Gemini 3 Pro Preview) for detailed reviews
+      - Code Refactorer (Gemini 3 Pro Preview) for refactoring
+      - Developer (Claude Opus 4.6) for implementations
       
-      Diese Variante nutzt teurere, aber leistungsstärkere Modelle für bessere Ergebnisse.
+      This variant uses more expensive but more powerful models for better results.
 
-      ## Ablauf
+      ## Process
 
-      1. **Review**: Analysiere den PR (Code, Tests, Docs) mit Code-Reviewer (Gemini 3 Pro Preview). Identifiziere Verbesserungspunkte.
-      2. **Refactor-Plan**: Erstelle eine priorisierte Liste der Änderungen.
-      3. **Workspace**: Falls ein Linux-Workspace für diesen PR existiert – prüfe ob er aktuell und wiederverwendbar ist; sonst zurücksetzen und neu anlegen.
-      4. **Umsetzung**: Delegiere jede Aufgabe an die Quality-Experten (Code-Refactorer mit Gemini 3 Pro Preview, Entwickler mit Claude Opus 4.6). Jeder Experte erledigt seinen Task und übergibt an den nächsten, bis alle Punkte abgearbeitet sind.
-      5. **Abschluss**: Pushe die Änderungen auf den PR-Branch. Hinterlasse einen PR-Kommentar mit Zusammenfassung des Reviews und der vorgenommenen Verbesserungen.
+      1. **Review**: Analyze the PR (Code, Tests, Docs) with Code Reviewer (Gemini 3 Pro Preview). Identify improvement points.
+      2. **Refactor Plan**: Create a prioritized list of changes.
+      3. **Workspace**: If a Linux workspace exists for this PR – check if it is current and reusable; otherwise reset and create new.
+      4. **Implementation**: Delegate each task to the Quality experts (Code Refactorer with Gemini 3 Pro Preview, Developer with Claude Opus 4.6). Each expert completes their task and hands off to the next, until all points are completed.
+      5. **Completion**: Push the changes to the PR branch. Leave a PR comment summarizing the review and the improvements made.
 
-      ## Regeln
-      - Delegiere gezielt an Quality-Experten; keine parallelen Aufgaben ohne Abhängigkeiten.
-      - Halte den Plan überschaubar; priorisiere die wichtigsten Verbesserungen zuerst.
-      - Der finale PR-Kommentar muss Review-Ergebnis und Änderungsliste klar dokumentieren.
-    command: ueberarbeite-github-pr-quality
+      ## Rules
+      - Delegate specifically to Quality experts; no parallel tasks without dependencies.
+      - Keep the plan manageable; prioritize the most important improvements first.
+      - The final PR comment must clearly document review results and change list.
+    command: refactor-github-pr-quality
     category: code
-    oneliner: Reviewt einen GitHub PR mit Quality-Agents (Gemini 3 Pro Preview, Claude Opus 4.6), setzt Verbesserungen um und pusht sie auf den Branch.
+    oneliner: Reviews a GitHub PR with Quality agents (Gemini 3 Pro Preview, Claude Opus 4.6), implements improvements and pushes them to the branch.
     sharing:
       public:
         enabled: true
         defaultRole: editor
-  - name: Routenplan
-    prompt: Erstelle einen Routenplan von {{Start}} nach {{Ziel}} mit {{Verkehrsmittel:dem Auto|dem Zug|zu Fuß|dem Fahrrad|dem ÖPNV}}.
-    command: routenplan
+  - name: Route Plan
+    prompt: Create a route plan from {{Start}} to {{Destination}} using {{Transport:car|train|walking|bicycle|public transport}}.
+    command: route-plan
     category: travel
-    oneliner: Erstellt einen Routenplan zwischen zwei Orten mit verschiedenen Verkehrsmitteln (Auto, Zug, zu Fuß, Fahrrad, ÖPNV).
+    oneliner: Creates a route plan between two locations with various modes of transport (car, train, walking, bicycle, public transport).
     sharing:
       public:
         enabled: true
         defaultRole: editor
-  - name: Wetter
-    prompt: Wie wird das Wetter {{wann:heute|morgen|die nächsten 3 Tage}} in {{Stadt}}?
-    command: wetter
+  - name: Weather
+    prompt: What will the weather be {{when:today|tomorrow|the next 3 days}} in {{City}}?
+    command: weather
     category: travel
-    oneliner: Ermittelt die Wettervorhersage für eine Stadt und einen Zeitraum.
+    oneliner: Gets the weather forecast for a city and a time period.
     sharing:
       public:
         enabled: true
         defaultRole: editor
-  - name: Rezept zum Wetter
-    prompt: Schlage mir ein Rezept vor welches zum aktuellen Wetter in {{Stadt}} passt, schaue dazu zuerst vereinfacht nach dem Wetter und suche dann nach einem passenden Rezept. Verwende die Kochhilfe und nicht den Reise- und Standort-Assistenten, falls du an diese übergeben kannst.
-    command: rezept-wetter
+  - name: Recipe for Weather
+    prompt: Suggest a recipe that matches the current weather in {{City}}, first check the weather briefly and then search for a matching recipe. Use the Cooking Assistant and not the Travel and Location Assistant, if you can hand off to it.
+    command: recipe-weather
     category: misc
-    oneliner: Schlägt ein zum aktuellen Wetter in einer Stadt passendes Rezept vor (Kochhilfe).
+    oneliner: Suggests a recipe that matches the current weather in a city (Cooking Assistant).
     sharing:
       public:
         enabled: true
         defaultRole: editor
-  - name: Feedback-Problem melden
+  - name: Report Feedback Problem
     prompt: |
-      Analysiere das aufgetretene Problem im Chat-Interface und gib die relevanten Informationen an den Feedback-Assistenten weiter. Der Feedback-Assistent legt automatisch ein GitHub-Issue im Projekt-Repository an mit: ursprüngliche Aufgabe, aufgetretene Probleme und mögliche Optimierungen – damit der Agent beim nächsten Mal einen runderen Durchlauf hat.
+      Analyze the problem that occurred in the chat interface and pass the relevant information to the Feedback Assistant. The Feedback Assistant automatically creates a GitHub issue in the project repository with: original task, problems encountered and possible optimizations – so the agent has a smoother run next time.
 
-      **Vorgehen**: Erschließe alle Angaben ausschließlich aus dem Chat-Verlauf (keine Websuche). Stelle dem Nutzer nur Fragen, falls etwas unklar bleibt.
+      **Procedure**: Derive all information exclusively from the chat history (no web search). Only ask the user questions if something remains unclear.
 
-      **Wichtige Angaben**: Agent (Name/ID), ursprüngliche Aufgabe, wo es Probleme gab, was wiederholt schief lief, was optimiert werden könnte.
+      **Important information**: Agent (name/ID), original task, where problems occurred, what repeatedly went wrong, what could be optimized.
 
-      **Regeln**: Sachlich und spezifisch. Nur Kontext dieser Konversation. Alle Informationen vollständig weitergeben.
+      **Rules**: Factual and specific. Only context of this conversation. Pass all information completely.
     command: feedback-problem
     category: misc
-    oneliner: Meldet ein Problem mit dem Chat-Interface (Agent-Verhalten, Tool-Aufrufe, etc.) als GitHub-Issue im Projekt-Repository, damit es behoben werden kann.
+    oneliner: Reports a problem with the chat interface (agent behavior, tool calls, etc.) as a GitHub issue in the project repository so it can be fixed.
     sharing:
       public:
         enabled: true

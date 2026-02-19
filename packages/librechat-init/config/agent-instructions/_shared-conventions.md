@@ -42,7 +42,7 @@ Always call set_workspace_plan before handoff or when finishing your part so the
 ≤N tool calls/batch; brief prose; no labels/tags.
 
 **When unclear**  
-One short clarifying question or reasonable interpretation; do not hand back to Universal for ambiguity. Language: match user.
+One short clarifying question or reasonable interpretation; do not hand back to Main Assistant for ambiguity. Language: match user.
 
 **Files (MCP)**  
 Files: MCP upload → list_upload_sessions then read_workspace_file(workspace, uploads/<path>); output → create_download_link. Do not ask for LibreChat attach unless LLM must read content.
@@ -65,7 +65,7 @@ Use SSH only for GitHub: remote URLs must be `git@github.com:org/repo.git`. Do n
 | On receive | 008, 009, 010, developer, code-refactorer, code-reviewer, github, code-researcher |
 | End of turn | 008, 009, 010, developer, code-refactorer, code-reviewer, github, code-researcher |
 | Execution | 001, 002, 003, 005, 006, 008, 009, 010, developer, code-refactorer, code-reviewer, github, code-researcher, feedback |
-| When unclear | 001, 002, 003, 005, 006, 008, 009, 010, developer, code-refactorer, code-reviewer, github, code-researcher, feedback, developer-router, 011 |
+| When unclear | 001, 002, 003, 005, 006, 008, 009, 010, developer, code-refactorer, code-reviewer, github, code-researcher, feedback, code-assistant, 011 |
 | Files (MCP) | 008, 009, 010, developer |
 | Paths | 008, 009, 010, developer |
 | Commit/push | developer, code-reviewer, github |
