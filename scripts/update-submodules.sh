@@ -222,6 +222,58 @@ get_current_branch() {
     git rev-parse --abbrev-ref HEAD 2>/dev/null || echo ""
 }
 
+# Get branch from .gitmodules for a submodule
+get_branch_from_gitmodules() {
+    local submodule_path="$1"
+    git config -f "${PROJECT_ROOT}/.gitmodules" --get "submodule.${submodule_path}.branch" 2>/dev/null || echo ""
+}
+
+# Push branch if there are unpushed commits (for fork submodules)
+push_if_unpushed() {
+    local submodule_path="$1"
+    local branch="$2"
+    
+    cd "${PROJECT_ROOT}/${submodule_path}"
+    
+    # Fetch to update remote refs
+    git fetch origin --quiet 2>/dev/null || true
+    
+    # Check if branch exists locally and remotely
+    if ! git rev-parse --verify "$branch" >/dev/null 2>&1; then
+        return 0
+    fi
+    
+    if ! git rev-parse --verify "origin/$branch" >/dev/null 2>&1; then
+        # Remote branch doesn't exist, push to create it
+        if [ "$DRY_RUN" = false ]; then
+            log_submodule "Pushing ${branch} to origin (creating remote branch)..."
+            if git push -u origin "$branch" --quiet; then
+                log_success "Pushed ${branch} to origin"
+            else
+                log_warning "Failed to push ${branch} to origin"
+            fi
+        else
+            log_info "[DRY RUN] Would push ${branch} to origin (creating remote branch)"
+        fi
+        return 0
+    fi
+    
+    # Check if local is ahead of remote
+    local ahead=$(git rev-list --count "origin/${branch}..${branch}" 2>/dev/null || echo "0")
+    if [ "$ahead" -gt 0 ]; then
+        if [ "$DRY_RUN" = false ]; then
+            log_submodule "Pushing ${ahead} unpushed commit(s) to origin/${branch}..."
+            if git push origin "$branch" --quiet; then
+                log_success "Pushed ${branch} to origin"
+            else
+                log_warning "Failed to push ${branch} to origin (may require manual push)"
+            fi
+        else
+            log_info "[DRY RUN] Would push ${ahead} commit(s) to origin/${branch}"
+        fi
+    fi
+}
+
 # Check if there are uncommitted changes
 has_uncommitted_changes() {
     local submodule_path="$1"
@@ -434,11 +486,27 @@ sync_main_branch() {
     
     git checkout "$fork_branch" 2>/dev/null || { log_error "Failed to checkout ${fork_branch}"; return 1; }
     
+    # Check if there are commits to merge
+    git fetch origin --quiet 2>/dev/null || true
+    local merge_base=$(git merge-base "$fork_branch" "upstream/${upstream_branch}" 2>/dev/null || echo "")
+    local upstream_head=$(git rev-parse "upstream/${upstream_branch}" 2>/dev/null || echo "")
+    
+    if [ -n "$merge_base" ] && [ -n "$upstream_head" ] && [ "$merge_base" = "$upstream_head" ]; then
+        log_info "Already up to date with upstream/${upstream_branch}"
+        # Still push any unpushed commits
+        push_if_unpushed "$submodule_path" "$fork_branch"
+        return 0
+    fi
+    
     if git merge "upstream/${upstream_branch}" --no-edit; then
         log_success "Merged upstream/${upstream_branch} into ${fork_branch}"
+        # Push merged changes (and any other unpushed commits)
+        push_if_unpushed "$submodule_path" "$fork_branch"
     elif [ -n "$(git ls-files -u)" ]; then
         # Conflicts detected
         handle_merge_conflicts "$submodule_path" "$fork_branch" || return 1
+        # After resolving conflicts, push resolved merge (and any other unpushed commits)
+        push_if_unpushed "$submodule_path" "$fork_branch"
     else
         log_error "Merge failed (unknown reason)"
         return 1
@@ -582,7 +650,11 @@ sync_submodule() {
         fetch_upstream "$path" || true
         cd "${PROJECT_ROOT}/${path}"
         if git rev-parse --verify "$upstream_branch" >/dev/null 2>&1; then
-            [ "$DRY_RUN" = false ] && git checkout "$upstream_branch" 2>/dev/null && log_submodule "Checked out ${upstream_branch} (no longer detached)"
+            if [ "$DRY_RUN" = false ]; then
+                git checkout "$upstream_branch" 2>/dev/null && log_submodule "Checked out ${upstream_branch} (no longer detached)"
+                # Pull to ensure branch is up to date with remote
+                git pull origin "$upstream_branch" --quiet 2>/dev/null || git pull --quiet 2>/dev/null || true
+            fi
         fi
         log_success "Completed (non-fork; already updated in step 1)"
         return 0
@@ -608,11 +680,13 @@ sync_submodule() {
     cd "${PROJECT_ROOT}/${path}"
     if [ "$DRY_RUN" = false ]; then
         git checkout "$fork_branch" 2>/dev/null && log_submodule "On branch ${fork_branch}"
+        # Pull to ensure branch is up to date with remote
+        git pull origin "$fork_branch" --quiet 2>/dev/null || git pull --quiet 2>/dev/null || true
     fi
     log_success "Completed sync for ${path}"
 }
 
-# Main update function: (1) pull all submodules, (2) for forks/upstream-only: upstream + merge, (3) ensure forks on main, (4) optional stage
+# Main update function: (1) pull all submodules, (2) for forks/upstream-only: upstream + merge, (3) ensure all submodules on their defined branch and up to date, (4) optional stage
 sync_all_submodules() {
     log_step "Step 1: Updating all submodules (git submodule update --init --remote)"
     if [ "$DRY_RUN" = true ]; then
@@ -642,35 +716,156 @@ sync_all_submodules() {
         exit 1
     fi
 
-    # Step 3: Final pass — ensure every fork submodule is on its main branch (not detached)
-    log_step "Step 3: Ensuring fork submodules are on main branch"
+    # Step 3: Final pass — ensure all submodules are on their defined branch (not detached)
+    log_step "Step 3: Ensuring all submodules are on their defined branch"
     while IFS= read -r line || [ -n "$line" ]; do
         [ -z "$line" ] && continue
-        local path fork_url fork_branch
+        local path fork_url upstream_url fork_branch upstream_branch branch_to_check
         if [ "$YAML_PARSER" = "python3" ]; then
             path=$(echo "$line" | python3 -c "import sys, json; print(json.load(sys.stdin).get('path', ''))" 2>/dev/null)
             fork_url=$(echo "$line" | python3 -c "import sys, json; print(json.load(sys.stdin).get('fork_url', ''))" 2>/dev/null)
+            upstream_url=$(echo "$line" | python3 -c "import sys, json; print(json.load(sys.stdin).get('upstream_url', ''))" 2>/dev/null)
             fork_branch=$(echo "$line" | python3 -c "import sys, json; print(json.load(sys.stdin).get('fork_branch', 'main'))" 2>/dev/null)
+            upstream_branch=$(echo "$line" | python3 -c "import sys, json; print(json.load(sys.stdin).get('upstream_branch', 'main'))" 2>/dev/null)
         else
             path=$(echo "$line" | yq eval '.path' -)
             fork_url=$(echo "$line" | yq eval '.fork_url' -)
+            upstream_url=$(echo "$line" | yq eval '.upstream_url' -)
             fork_branch=$(echo "$line" | yq eval '.fork_branch // "main"' -)
+            upstream_branch=$(echo "$line" | yq eval '.upstream_branch // "main"' -)
         fi
-        [ -z "$fork_url" ] && continue
         [ -n "$SELECTED_SUBMODULE" ] && [ "$path" != "$SELECTED_SUBMODULE" ] && continue
         if ! is_submodule_initialized "$path"; then continue; fi
+        
+        # Determine which branch to check:
+        # - For forks: fork_branch
+        # - For non-forks with upstream_url: upstream_branch
+        # - For submodules without upstream_url: branch from .gitmodules, or try main/master
+        if [ -n "$fork_url" ]; then
+            branch_to_check="$fork_branch"
+        elif [ -n "$upstream_url" ]; then
+            branch_to_check="$upstream_branch"
+        else
+            # No upstream_url: try to get branch from .gitmodules
+            branch_to_check=$(get_branch_from_gitmodules "$path")
+            # If no branch in .gitmodules, try common defaults
+            if [ -z "$branch_to_check" ]; then
+                cd "${PROJECT_ROOT}/${path}"
+                # Try main first, then master
+                if git rev-parse --verify origin/main >/dev/null 2>&1; then
+                    branch_to_check="main"
+                elif git rev-parse --verify origin/master >/dev/null 2>&1; then
+                    branch_to_check="master"
+                else
+                    # Skip if we can't determine a branch
+                    log_warning "${path}: Cannot determine branch, skipping"
+                    continue
+                fi
+            fi
+        fi
+        
         cd "${PROJECT_ROOT}/${path}"
         local current=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
-        if [ "$current" != "$fork_branch" ]; then
+        if [ "$current" != "$branch_to_check" ]; then
             if [ "$DRY_RUN" = false ]; then
-                git checkout "$fork_branch" 2>/dev/null && log_submodule "${path}: checked out ${fork_branch}"
+                # Check if branch exists locally, if not try to checkout from remote
+                if ! git rev-parse --verify "$branch_to_check" >/dev/null 2>&1; then
+                    # Branch doesn't exist locally, try to checkout from origin
+                    if git rev-parse --verify "origin/$branch_to_check" >/dev/null 2>&1; then
+                        git checkout -b "$branch_to_check" "origin/$branch_to_check" 2>/dev/null && log_submodule "${path}: created and checked out ${branch_to_check}"
+                    else
+                        log_warning "${path}: Branch ${branch_to_check} does not exist locally or remotely, skipping"
+                        continue
+                    fi
+                else
+                    git checkout "$branch_to_check" 2>/dev/null && log_submodule "${path}: checked out ${branch_to_check}"
+                fi
+                # Pull to ensure branch is up to date with remote
+                git pull origin "$branch_to_check" --quiet 2>/dev/null || git pull --quiet 2>/dev/null || true
+                # Push unpushed commits for fork submodules
+                if [ -n "$fork_url" ]; then
+                    push_if_unpushed "$path" "$branch_to_check"
+                fi
             else
-                log_info "[DRY RUN] Would checkout ${fork_branch} in ${path}"
+                log_info "[DRY RUN] Would checkout ${branch_to_check} in ${path} and pull latest changes"
             fi
         else
-            log_submodule "${path}: already on ${fork_branch}"
+            if [ "$DRY_RUN" = false ]; then
+                # Pull to ensure branch is up to date with remote even if already on correct branch
+                git pull origin "$branch_to_check" --quiet 2>/dev/null || git pull --quiet 2>/dev/null || true
+                # Push unpushed commits for fork submodules
+                if [ -n "$fork_url" ]; then
+                    push_if_unpushed "$path" "$branch_to_check"
+                fi
+            fi
+            log_submodule "${path}: already on ${branch_to_check}"
         fi
     done < <(echo "$config_json")
+
+    # Also handle submodules from .gitmodules that might not be in YAML config
+    log_submodule "Checking submodules from .gitmodules..."
+    git config -f "${PROJECT_ROOT}/.gitmodules" --get-regexp '^submodule\..*\.path$' | while IFS= read -r line; do
+        local submodule_name=$(echo "$line" | sed 's/^submodule\.\(.*\)\.path=.*/\1/')
+        local submodule_path=$(echo "$line" | sed 's/^submodule\..*\.path=\(.*\)/\1/')
+        
+        # Skip if already processed in YAML config loop
+        local already_processed=false
+        while IFS= read -r yaml_line || [ -n "$yaml_line" ]; do
+            [ -z "$yaml_line" ] && continue
+            local yaml_path
+            if [ "$YAML_PARSER" = "python3" ]; then
+                yaml_path=$(echo "$yaml_line" | python3 -c "import sys, json; print(json.load(sys.stdin).get('path', ''))" 2>/dev/null)
+            else
+                yaml_path=$(echo "$yaml_line" | yq eval '.path' -)
+            fi
+            if [ "$yaml_path" = "$submodule_path" ]; then
+                already_processed=true
+                break
+            fi
+        done < <(echo "$config_json")
+        
+        [ "$already_processed" = true ] && continue
+        [ -n "$SELECTED_SUBMODULE" ] && [ "$submodule_path" != "$SELECTED_SUBMODULE" ] && continue
+        if ! is_submodule_initialized "$submodule_path"; then continue; fi
+        
+        # Get branch from .gitmodules
+        local branch_to_check=$(get_branch_from_gitmodules "$submodule_path")
+        if [ -z "$branch_to_check" ]; then
+            cd "${PROJECT_ROOT}/${submodule_path}"
+            # Try common defaults
+            if git rev-parse --verify origin/main >/dev/null 2>&1; then
+                branch_to_check="main"
+            elif git rev-parse --verify origin/master >/dev/null 2>&1; then
+                branch_to_check="master"
+            else
+                continue
+            fi
+        fi
+        
+        cd "${PROJECT_ROOT}/${submodule_path}"
+        local current=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+        if [ "$current" != "$branch_to_check" ]; then
+            if [ "$DRY_RUN" = false ]; then
+                if ! git rev-parse --verify "$branch_to_check" >/dev/null 2>&1; then
+                    if git rev-parse --verify "origin/$branch_to_check" >/dev/null 2>&1; then
+                        git checkout -b "$branch_to_check" "origin/$branch_to_check" 2>/dev/null && log_submodule "${submodule_path}: created and checked out ${branch_to_check}"
+                    else
+                        continue
+                    fi
+                else
+                    git checkout "$branch_to_check" 2>/dev/null && log_submodule "${submodule_path}: checked out ${branch_to_check}"
+                fi
+                git pull origin "$branch_to_check" --quiet 2>/dev/null || git pull --quiet 2>/dev/null || true
+            else
+                log_info "[DRY RUN] Would checkout ${branch_to_check} in ${submodule_path} and pull latest changes"
+            fi
+        else
+            if [ "$DRY_RUN" = false ]; then
+                git pull origin "$branch_to_check" --quiet 2>/dev/null || git pull --quiet 2>/dev/null || true
+            fi
+            log_submodule "${submodule_path}: already on ${branch_to_check}"
+        fi
+    done
 
     # Step 4: Optional — stage fork submodule commits in superproject so user can commit
     if [ "$STAGE" = true ] && [ ${#SYNCED_FORK_PATHS[@]} -gt 0 ]; then
@@ -688,7 +883,7 @@ sync_all_submodules() {
     fi
 
     echo ""
-    log_success "All submodules up to date! Fork submodules are on their main branch."
+    log_success "All submodules up to date! All submodules are on their defined branches."
 }
 
 # Main execution
