@@ -1,0 +1,32 @@
+{
+  "name": "@ai-chat-interface/mcp-linux",
+  "version": "1.0.0",
+  "description": "MCP Linux Server - Per-user isolated Linux terminal environments with persistent workspaces",
+  "type": "module",
+  "main": "src/server.ts",
+  "scripts": {
+    "start": "./src/server.ts",
+    "dev": "node --watch --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
+    "lint": "eslint . --ext .ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "busboy": "^1.6.0",
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1",
+    "node-pty": "^1.1.0",
+    "pino": "^10.3.1",
+    "pug": "^3.0.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/busboy": "^1.5.4",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.2.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

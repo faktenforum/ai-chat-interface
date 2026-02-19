@@ -115,7 +115,7 @@ export async function getStatus(
             url,
             status_url: url,
             canonical_key,
-            relay: 'Done. Call request_transcript or request_download_link again for transcript or link.',
+            relay: 'Job finished. Call request_transcript again to retrieve transcript (it will return transcript if available, or automatically start Phase 2 if Phase 1 failed). Or call request_download_link again to get download URL.',
           }),
         },
       ],

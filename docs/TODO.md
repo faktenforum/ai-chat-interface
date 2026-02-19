@@ -70,7 +70,12 @@
 ### YTPTube / Video transcripts (production)
 
 - [ ] Improve server-side video access (geo/bot blocking)
-  - Status: Works locally; Video-Transkripte agent is in code with `public: false`. On Hetzner, optional Webshare proxy or FlareSolverr; see [YTPTUBE_FUTURE_WORK.md](wip/YTPTUBE_FUTURE_WORK.md) for FlareSolverr and office Pi / reverse-SSH-proxy ideas for later.
+  - Status: Works locally; Video Transcripts agent is in code with `public: false`. On Hetzner, optional Webshare proxy or FlareSolverr; see [YTPTUBE_FUTURE_WORK.md](wip/YTPTUBE_FUTURE_WORK.md) for FlareSolverr and office Pi / reverse-SSH-proxy ideas for later.
+
+### MCP Memory Service
+
+- [ ] Test [mcp-memory-service](https://github.com/doobidoo/mcp-memory-service) (persistent context memory for AI sessions; MCP-compatible, semantic search, optional Cloudflare sync)
+  - May replace or complement the docs MCP (Grounded Docs) depending on use case; evaluate after testing.
 
 ### MCP Docs (Grounded Docs)
 
@@ -126,6 +131,14 @@
 ---
 
 ## Upstream Contributions
+
+### Agents - Handoff Fix
+
+- [ ] Bring fix for "400 Unexpected role 'user' after role 'tool'" error upstream
+  - Branch: `fix/user-after-tool` in `dev/agents`
+  - Fix: Add bridge AIMessage in `formatAgentMessages` when last message is a ToolMessage to prevent API errors with legacy conversations
+  - Repository: [danny-avila/agents](https://github.com/danny-avila/agents)
+  - Related: Upstream issue #54, PR #59
 
 ### Vision (WIP / draft PRs, not merged)
 

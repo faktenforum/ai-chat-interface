@@ -58,7 +58,10 @@ services:
   librechat-post-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-post-init }
     env_file: .env.local
+    # Mount host config so agent/prompt changes apply without image rebuild; post-init reads from /app/config-source when present.
     volumes:
+      - librechat-config:/app/config
+      - ./packages/librechat-init/config:/app/config-source:ro
       - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
 
@@ -319,6 +322,16 @@ services:
       - "127.0.0.1:${MCP_CHEFKOCH_PORT:-3014}:${MCP_CHEFKOCH_PORT:-3014}"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
+  mcp-linux:
+    extends: { file: docker-compose.mcp-linux.yml, service: mcp-linux }
+    env_file: .env.local
+    build:
+      context: ./packages/mcp-linux
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${MCP_LINUX_PORT:-3015}:${MCP_LINUX_PORT:-3015}"  # Cursor IDE – local only
+    # No Traefik labels - internal service only
+
   # Additional Services
   openwebui:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }
@@ -336,6 +349,7 @@ volumes:
   docs-mcp-data:
   docs-mcp-config:
   firecrawl_pgdata:
+  firecrawl_rabbitmq_data:
   librechat-config:
   mongodata:
   mongoconfig:
@@ -345,3 +359,5 @@ volumes:
   n8n_data:
   ytptube_config:
   ytptube_downloads:
+  mcp_linux_homes:
+  mcp_linux_data:

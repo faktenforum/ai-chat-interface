@@ -208,6 +208,32 @@ services:
     image: ghcr.io/faktenforum/mcp-chefkoch:latest
     # No Traefik labels - internal service only
 
+  mcp-linux:
+    extends: { file: docker-compose.mcp-linux.yml, service: mcp-linux }
+    container_name: ${STACK_NAME:-prod}-mcp-linux
+    image: ghcr.io/faktenforum/mcp-linux:latest
+    volumes:
+      - mcp_linux_homes:/home
+      - mcp_linux_data:/app/data
+    networks:
+      - app-net
+      - traefik-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=loadbalancer-net"
+      # Only expose /upload/* and /download/* routes publicly (MCP endpoint stays internal)
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/upload`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.service=${STACK_NAME:-prod}-mcp-linux"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/download`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.service=${STACK_NAME:-prod}-mcp-linux"
+      - "traefik.http.services.${STACK_NAME:-prod}-mcp-linux.loadbalancer.server.port=3015"
+
   # YTPTube - download-only exposed via Traefik (only /api/download); Web UI and rest of API internal
   ytptube:
     extends: { file: docker-compose.ytptube.yml, service: ytptube }
@@ -260,6 +286,8 @@ volumes:
     name: ${STACK_NAME:-prod}-mongoconfig
   firecrawl_pgdata:
     name: ${STACK_NAME:-prod}-firecrawl-pgdata
+  firecrawl_rabbitmq_data:
+    name: ${STACK_NAME:-prod}-firecrawl-rabbitmq-data
   pgdata2:
     name: ${STACK_NAME:-prod}-pgdata2
   librechat-config:
@@ -278,3 +306,7 @@ volumes:
     name: ${STACK_NAME:-prod}-mcp-docs-data
   docs-mcp-config:
     name: ${STACK_NAME:-prod}-mcp-docs-config
+  mcp_linux_homes:
+    name: ${STACK_NAME:-prod}-mcp-linux-homes
+  mcp_linux_data:
+    name: ${STACK_NAME:-prod}-mcp-linux-data

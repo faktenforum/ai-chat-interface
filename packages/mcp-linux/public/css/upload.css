@@ -1,0 +1,297 @@
+/**
+ * Upload page styles.
+ * Requires common.css for design tokens and base reset.
+ */
+
+/* ── Layout ───────────────────────────────────────────── */
+
+.container {
+  width: 100%;
+  max-width: 520px;
+}
+
+.card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  padding: 32px;
+}
+
+h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-bottom: 24px;
+}
+
+.meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.meta-tag {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+/* ── Drop Zone ────────────────────────────────────────── */
+
+.dropzone {
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius);
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  position: relative;
+}
+
+.dropzone:hover,
+.dropzone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.dropzone-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  opacity: 0.5;
+}
+
+.dropzone-label {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+
+.dropzone-label strong {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.dropzone-hint {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 8px;
+}
+
+input[type="file"] {
+  display: none;
+}
+
+/* ── File Preview ─────────────────────────────────────── */
+
+.file-preview {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  margin-top: 16px;
+}
+
+.file-preview.visible {
+  display: flex;
+}
+
+.file-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-size {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.file-remove {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 1.25rem;
+  line-height: 1;
+  transition: color var(--transition);
+}
+
+.file-remove:hover {
+  color: var(--error);
+}
+
+/* ── Upload Button ────────────────────────────────────── */
+
+.upload-btn {
+  display: none;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition), opacity var(--transition);
+}
+
+.upload-btn.visible {
+  display: block;
+}
+
+.upload-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Progress Bar ─────────────────────────────────────── */
+
+.progress-container {
+  display: none;
+  margin-top: 16px;
+}
+
+.progress-container.visible {
+  display: block;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 150ms ease;
+}
+
+/* ── Status Messages ──────────────────────────────────── */
+
+.status {
+  display: none;
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.status.visible {
+  display: block;
+}
+
+.status.success {
+  background: var(--success-glow);
+  border: 1px solid var(--success);
+  color: var(--success);
+}
+
+.status.error {
+  background: var(--error-glow);
+  border: 1px solid var(--error);
+  color: var(--error);
+}
+
+.status-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-detail {
+  opacity: 0.85;
+  word-break: break-all;
+}
+
+/* ── Expired Overlay ──────────────────────────────────── */
+
+.expired-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 13, 13, 0.85);
+  border-radius: var(--radius);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+}
+
+.expired-overlay.visible {
+  display: flex;
+}
+
+.expired-overlay span {
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+}
+
+/* ── Footer ───────────────────────────────────────────── */
+
+.footer {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+/* ── Responsive ───────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .card {
+    padding: 20px;
+  }
+
+  .dropzone {
+    padding: 32px 16px;
+  }
+}

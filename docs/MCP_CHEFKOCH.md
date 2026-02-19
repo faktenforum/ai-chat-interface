@@ -18,7 +18,7 @@ Recipes from [chefkoch.de](https://www.chefkoch.de). Self-written MCP server (Pa
 
 ## Agent
 
-Assigned to **Kochhilfe** in `packages/librechat-init/config/agents.yaml`.
+Assigned to **Cooking Assistant** in `packages/librechat-init/config/agents.yaml`.
 
 ## Development
 

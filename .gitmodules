@@ -55,3 +55,6 @@
 	path = dev/docs-mcp-server
 	url = git@github.com:faktenforum/docs-mcp-server.git
 	branch = main
+[submodule "dev/checkbot-rag"]
+	path = dev/checkbot-rag
+	url = https://github.com/faktenforum/checkbot-rag

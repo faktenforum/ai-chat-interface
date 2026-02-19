@@ -5,8 +5,8 @@ This document provides suggestions for additional Agents and MCP Servers that co
 ## Current Setup
 
 ### Existing Agents
-- **Recherche-Assistent** - Research assistant with web_search and file_search capabilities
-- **Bildgenerierungs-Assistent** - Image generation assistant using mcp-image-gen
+- **Research Assistant** - Research assistant with web_search and file_search capabilities
+- **Image Generation Assistant** - Image generation assistant using mcp-image-gen
 
 ### Existing MCP Servers
 - **calculator** - Mathematical calculations
@@ -273,7 +273,7 @@ This document provides suggestions for additional Agents and MCP Servers that co
 
 ---
 
-### 2. **Datenanalyse-Assistent** - Data Analysis Assistant
+### 2. **Data Analysis Assistant** - Data Analysis Assistant
 **Category:** analysis
 
 **Description:** Performs data analysis, visualization, and statistical operations
@@ -418,7 +418,7 @@ This document provides suggestions for additional Agents and MCP Servers that co
 2. **mcp-rag** - Integrates existing RAG API
 3. **mcp-filesystem** - Essential for file operations
 4. **Code-Assistent** - High demand for development tasks
-5. **Datenanalyse-Assistent** - Useful for data insights
+5. **Data Analysis Assistant** - Useful for data insights
 
 ### Medium Priority (Good Value)
 6. **mcp-firecrawl** - Integrates existing service

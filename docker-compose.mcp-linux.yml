@@ -1,0 +1,53 @@
+services:
+  mcp-linux:
+    # MCP endpoint is internal only; upload routes exposed via Traefik
+    # Build overridden in docker-compose.local.yml and docker-compose.local-dev.yml; prod pulls from registry
+    image: ghcr.io/faktenforum/mcp-linux:latest
+    container_name: mcp-linux
+    restart: always
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${MCP_LINUX_PORT:-3015}
+      LOG_LEVEL: ${MCP_LINUX_LOG_LEVEL:-info}
+      WORKER_IDLE_TIMEOUT: ${MCP_LINUX_WORKER_IDLE_TIMEOUT:-1800000}
+      GIT_SSH_KEY: ${MCP_LINUX_GIT_SSH_KEY:-}
+      MCP_LINUX_GIT_USER_NAME: ${MCP_LINUX_GIT_USER_NAME:-}
+      MCP_LINUX_GIT_USER_EMAIL: ${MCP_LINUX_GIT_USER_EMAIL:-}
+      MCP_LINUX_UPLOAD_BASE_URL: ${MCP_LINUX_UPLOAD_BASE_URL:-}
+      MCP_LINUX_UPLOAD_MAX_FILE_SIZE_MB: ${MCP_LINUX_UPLOAD_MAX_FILE_SIZE_MB:-100}
+      MCP_LINUX_UPLOAD_SESSION_TIMEOUT_MIN: ${MCP_LINUX_UPLOAD_SESSION_TIMEOUT_MIN:-15}
+      MCP_LINUX_DOWNLOAD_BASE_URL: ${MCP_LINUX_DOWNLOAD_BASE_URL:-}
+      MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN: ${MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN:-60}
+    expose:
+      - "3015"
+    # Traefik labels defined in docker-compose.prod.yml and docker-compose.local.yml
+    volumes:
+      - mcp_linux_homes:/home
+      - mcp_linux_data:/app/data
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3015/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    read_only: false
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  mcp_linux_homes:
+  mcp_linux_data:

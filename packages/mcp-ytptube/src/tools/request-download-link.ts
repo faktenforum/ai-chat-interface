@@ -29,7 +29,7 @@ import { VideoTranscriptsError, NotFoundError, InvalidCookiesError } from '../ut
 import { isValidNetscapeCookieFormat, INVALID_COOKIES_MESSAGE } from '../utils/netscape-cookies.ts';
 import { logger } from '../utils/logger.ts';
 import { formatDownloadLinkResponse, formatStatusResponse, formatErrorResponse } from '../utils/response-format.ts';
-import { getProxyUrl, jobAttemptContext, PRESET_VIDEO } from '../utils/env.ts';
+import { getProxyUrl, jobAttemptContext, PRESET_VIDEO, PRESET_AUDIO } from '../utils/env.ts';
 import { isBlockedLikeError, sleepBeforeProxyRetry } from '../utils/blocked-retry.ts';
 
 const POST_TO_QUEUE_DELAY_MS = 500;
@@ -167,11 +167,12 @@ async function startDownloadJobAndReturnQueued(
 ): Promise<{ content: TextContent[] }> {
   const attemptCtx = jobAttemptContext(true);
   const proxy = getProxyUrl(true);
-  const cliBase = type === 'audio' ? '--extract-audio --audio-format mp3' : '';
-  const cli = proxy ? (cliBase ? `${cliBase} --proxy ${proxy}` : `--proxy ${proxy}`) : cliBase;
+  // cli field is proxy-only; preset owns the audio/video config
+  const cli = proxy ? `--proxy ${proxy}` : undefined;
+  const presetName = preset ?? (type === 'video' ? PRESET_VIDEO : PRESET_AUDIO);
   const body = {
     url: mediaUrl,
-    preset: preset ?? (type === 'video' ? PRESET_VIDEO : undefined),
+    preset: presetName,
     folder: MCP_DOWNLOAD_FOLDER,
     cli: cli || undefined,
     auto_start: true as const,
@@ -459,11 +460,12 @@ export async function requestDownloadLink(
   // Not found: trigger POST (first attempt: no proxy when Webshare, else use configured proxy)
   const attemptCtxFirst = jobAttemptContext();
   const proxy = getProxyUrl();
-  const cliBase = type === 'audio' ? '--extract-audio --audio-format mp3' : '';
-  const cli = proxy ? (cliBase ? `${cliBase} --proxy ${proxy}` : `--proxy ${proxy}`) : cliBase;
+  // cli field is proxy-only; preset owns the audio/video config
+  const cli = proxy ? `--proxy ${proxy}` : undefined;
+  const presetName = preset ?? (type === 'video' ? PRESET_VIDEO : PRESET_AUDIO);
   const body = {
     url: mediaUrl,
-    preset: preset ?? (type === 'video' ? PRESET_VIDEO : undefined),
+    preset: presetName,
     folder: MCP_DOWNLOAD_FOLDER,
     cli: cli || undefined,
     auto_start: true as const,

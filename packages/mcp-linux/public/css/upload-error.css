@@ -1,0 +1,29 @@
+/**
+ * Error page styles.
+ * Requires common.css for design tokens and base reset.
+ */
+
+.card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  padding: 40px;
+  max-width: 440px;
+  text-align: center;
+}
+
+h1 {
+  font-size: 1.25rem;
+  margin-bottom: 12px;
+}
+
+p {
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.icon {
+  margin-bottom: 20px;
+  opacity: 0.4;
+}

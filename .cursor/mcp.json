@@ -17,6 +17,14 @@
     "stackoverflow": { "url": "http://localhost:3008/mcp" },
     "npm-search": { "url": "http://localhost:3009/mcp" },
     "chefkoch": { "url": "http://localhost:3014/mcp" },
+    "linux": {
+      "url": "http://localhost:3015/mcp",
+      "headers": {
+        "X-User-ID": "cursor-local-dev",
+        "X-User-Username": "localdev",
+        "X-User-Email": "localdev@example.com"
+      }
+    },
     "ytptube": { "url": "http://localhost:3010/mcp" },
     "youtube-transcript": { "url": "http://localhost:3011/mcp" },
     "docs": { "url": "http://localhost:6280/mcp" }

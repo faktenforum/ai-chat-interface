@@ -1,0 +1,156 @@
+# Shared prompt templates for LibreChat.
+# Each entry creates a reusable prompt group accessible via the Prompts panel or slash commands.
+# Private prompts (e.g. with API keys in the text) go in prompts.private.yaml (git-ignored).
+#
+# Fields:
+#   name     (required) - Display name in the prompt list
+#   prompt   (required) - The prompt text (supports {{variables}} like {{current_date}}, {{current_user}})
+#   type     (optional) - "text" (default) or "chat"
+#   category (optional) - Category value for filtering (use exact value: idea, travel, teach_or_explain, write, shop, code, misc, roleplay, finance)
+#   oneliner (optional) - Short description shown in the prompt list
+#   command  (optional) - Slash command trigger (lowercase a-z, 0-9, hyphens only)
+#   sharing  (optional) - Sharing and permission settings:
+#     users   - List of user permissions (by email or name)
+#     groups  - List of group permissions (by name)
+#     public  - Public sharing settings (enabled: true/false, defaultRole: viewer/editor/owner)
+
+prompts:
+  - name: Review GitHub Pull Request
+    prompt: Please review {{Github Pull Request URL}} and publish it as a comment in the PR.
+    command: review-github-pr
+    category: code
+    oneliner: Reviews a GitHub Pull Request and publishes the result as a comment in the PR (OpenSource models).
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
+  - name: Review GitHub Pull Request (Quality)
+    prompt: |
+      Please review {{Github Pull Request URL}} and publish it as a comment in the PR.
+      
+      **Important**: Use the Quality developer agents (Code Reviewer with Gemini 3 Pro Preview) for higher quality and more detailed analysis. This variant uses more expensive but more powerful models.
+    command: review-github-pr-quality
+    category: code
+    oneliner: Reviews a GitHub Pull Request with Quality agents (Gemini 3 Pro Preview) for higher quality and more detailed analysis.
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
+  - name: Refactor GitHub PR
+    prompt: |
+      Process the GitHub Pull Request {{Github Pull Request URL}} completely.
+
+      ## Process
+
+      1. **Review**: Analyze the PR (Code, Tests, Docs). Identify improvement points.
+      2. **Refactor Plan**: Create a prioritized list of changes.
+      3. **Workspace**: If a Linux workspace exists for this PR – check if it is current and reusable; otherwise reset and create new.
+      4. **Implementation**: Delegate each task to the appropriate expert (e.g. Code Refactorer, Code Reviewer). Each expert completes their task and hands off to the next, until all points are completed.
+      5. **Completion**: Push the changes to the PR branch. Leave a PR comment summarizing the review and the improvements made.
+
+      ## Rules
+      - Delegate specifically to experts; no parallel tasks without dependencies.
+      - Keep the plan manageable; prioritize the most important improvements first.
+      - The final PR comment must clearly document review results and change list.
+    command: refactor-github-pr
+    category: code
+    oneliner: Reviews a GitHub PR, implements improvements and pushes them to the branch (OpenSource models).
+  - name: Refactor GitHub PR (Quality)
+    prompt: |
+      Process the GitHub Pull Request {{Github Pull Request URL}} completely.
+
+      **Important**: Use the Quality developer agents for higher quality:
+      - Code Reviewer (Gemini 3 Pro Preview) for detailed reviews
+      - Code Refactorer (Gemini 3 Pro Preview) for refactoring
+      - Developer (Claude Opus 4.6) for implementations
+      
+      This variant uses more expensive but more powerful models for better results.
+
+      ## Process
+
+      1. **Review**: Analyze the PR (Code, Tests, Docs) with Code Reviewer (Gemini 3 Pro Preview). Identify improvement points.
+      2. **Refactor Plan**: Create a prioritized list of changes.
+      3. **Workspace**: If a Linux workspace exists for this PR – check if it is current and reusable; otherwise reset and create new.
+      4. **Implementation**: Delegate each task to the Quality experts (Code Refactorer with Gemini 3 Pro Preview, Developer with Claude Opus 4.6). Each expert completes their task and hands off to the next, until all points are completed.
+      5. **Completion**: Push the changes to the PR branch. Leave a PR comment summarizing the review and the improvements made.
+
+      ## Rules
+      - Delegate specifically to Quality experts; no parallel tasks without dependencies.
+      - Keep the plan manageable; prioritize the most important improvements first.
+      - The final PR comment must clearly document review results and change list.
+    command: refactor-github-pr-quality
+    category: code
+    oneliner: Reviews a GitHub PR with Quality agents (Gemini 3 Pro Preview, Claude Opus 4.6), implements improvements and pushes them to the branch.
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
+  - name: Route Plan
+    prompt: Create a route plan from {{Start}} to {{Destination}} using {{Transport:car|train|walking|bicycle|public transport}}.
+    command: route-plan
+    category: travel
+    oneliner: Creates a route plan between two locations with various modes of transport (car, train, walking, bicycle, public transport).
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
+  - name: Weather
+    prompt: What will the weather be {{when:today|tomorrow|the next 3 days}} in {{City}}?
+    command: weather
+    category: travel
+    oneliner: Gets the weather forecast for a city and a time period.
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
+  - name: Recipe for Weather
+    prompt: Suggest a recipe that matches the current weather in {{City}}, first check the weather briefly and then search for a matching recipe. Use the Cooking Assistant and not the Travel and Location Assistant, if you can hand off to it.
+    command: recipe-weather
+    category: misc
+    oneliner: Suggests a recipe that matches the current weather in a city (Cooking Assistant).
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
+  - name: Report Feedback Problem
+    prompt: |
+      Analyze the problem that occurred in the chat interface and pass the relevant information to the Feedback Assistant. The Feedback Assistant automatically creates a GitHub issue in the project repository with: original task, problems encountered and possible optimizations – so the agent has a smoother run next time.
+
+      **Procedure**: Derive all information exclusively from the chat history (no web search). Only ask the user questions if something remains unclear.
+
+      **Important information**: Agent (name/ID), original task, where problems occurred, what repeatedly went wrong, what could be optimized.
+
+      **Rules**: Factual and specific. Only context of this conversation. Pass all information completely.
+    command: feedback-problem
+    category: misc
+    oneliner: Reports a problem with the chat interface (agent behavior, tool calls, etc.) as a GitHub issue in the project repository so it can be fixed.
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
+  - name: Image Generation
+    prompt: |
+      Generate an image with the following specifications:
+      
+      **Description**: {{Image Description}}
+      
+      **Style**: {{Style:photorealistic|comic|anime/manga|watercolor|oil painting|digital art|sketch|pencil drawing|3D render|pixel art|vector art|impressionist|surreal|fantasy art|cyberpunk|steampunk|minimalist|abstract}}
+            
+      **Quality Level**: {{Quality:high detail|ultra detailed|professional|standard|sketch quality}}
+      
+      **Lighting**: {{Lighting:natural daylight|golden hour|dramatic|soft|studio lighting|neon|firelight|candlelight|moonlight|harsh shadows|rim lighting}}
+      
+      **Mood/Atmosphere**: {{Mood:peaceful|dramatic|mysterious|energetic|melancholic|joyful|epic|intimate|nostalgic|futuristic|dark|bright and cheerful}}
+      
+      **Color Scheme**: {{Color Scheme:vibrant|muted|monochrome|warm tones|cool tones|high contrast|pastel|saturated|desaturated|black and white|sepia}}
+      
+      **Additional Details**: {{Additional Details (optional):}}
+      
+      Create a high-quality image that matches all these specifications. Focus on composition, detail, and artistic coherence.
+    command: generate-image
+    category: misc
+    oneliner: Generates an image with customizable style, aspect ratio, quality, lighting, mood, and color scheme parameters.
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor

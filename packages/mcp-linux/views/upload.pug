@@ -1,0 +1,68 @@
+extends layout
+
+block styles
+  link(rel="stylesheet" href="/css/upload.css")
+
+block content
+  .container
+    .card(style="position:relative;")
+      h1 Upload File
+      p.subtitle to workspace #[strong= workspace]
+
+      .meta
+        span.meta-tag Max #{maxFileSizeMb} MB
+        if allowedExtensions && allowedExtensions.length
+          span.meta-tag= allowedExtensions.join(', ')
+        span.meta-tag#expiresTag Expires: calculating...
+
+      .dropzone#dropzone
+        svg.dropzone-icon(viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round")
+          path(d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4")
+          polyline(points="17 8 12 3 7 8")
+          line(x1="12" y1="3" x2="12" y2="15")
+        p.dropzone-label Drop your file here or #[strong browse]
+        p.dropzone-hint Single file upload
+
+      if allowedExtensions && allowedExtensions.length
+        input#fileInput(type="file" accept=allowedExtensions.join(','))
+      else
+        input#fileInput(type="file")
+
+      .file-preview#filePreview
+        svg.file-icon(viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round")
+          path(d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z")
+          polyline(points="14 2 14 8 20 8")
+        .file-info
+          .file-name#fileName
+          .file-size#fileSize
+        button.file-remove#fileRemove(title="Remove") &times;
+
+      button.upload-btn#uploadBtn(disabled) Upload
+
+      .progress-container#progressContainer
+        .progress-header
+          span#progressLabel Uploading...
+          span#progressPercent 0%
+        .progress-track
+          .progress-fill#progressFill
+
+      .status#status
+
+      .expired-overlay#expiredOverlay
+        svg(width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round")
+          circle(cx="12" cy="12" r="10")
+          polyline(points="12 6 12 12 16 14")
+        span Session expired
+
+    p.footer Powered by MCP Linux Server
+
+block scripts
+  //- Pass server-side config to client JS
+  script.
+    window.__UPLOAD_CONFIG__ = {
+      token: !{JSON.stringify(token)},
+      maxSizeMb: !{maxFileSizeMb},
+      allowedExtensions: !{JSON.stringify(allowedExtensions || [])},
+      expiresAt: !{JSON.stringify(expiresAt)}
+    };
+  script(src="/js/upload.js")

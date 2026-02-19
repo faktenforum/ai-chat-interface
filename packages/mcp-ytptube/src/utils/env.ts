@@ -58,15 +58,18 @@ export function jobAttemptContext(useProxyForRetry?: boolean): { proxy_used: boo
   return { proxy_used: proxyUsed, attempt };
 }
 
-/** CLI fragment for extracting audio (mp3) for transcription. */
-export const CLI_AUDIO = '--extract-audio --audio-format mp3';
+/** Preset name for subtitle-only jobs (captions-first; no archive). */
+export const PRESET_SUBS = process.env.YTPTUBE_PRESET_SUBS?.trim() || 'mcp_subs';
 
-/** CLI fragment for subtitles/captions only (no download). Includes auto-generated captions (e.g. YouTube Shorts). */
-export const CLI_SUBS = '--skip-download --write-subs --write-auto-subs';
-
-/** Preset name for transcript jobs (audio-only; separate archive so video can be requested later). */
-export const PRESET_TRANSCRIPT =
-  process.env.YTPTUBE_PRESET_TRANSCRIPT?.trim() || 'mcp_audio';
+/** Preset name for audio extraction jobs (transcription fallback + audio download links; separate archive). */
+export const PRESET_AUDIO =
+  process.env.YTPTUBE_PRESET_AUDIO?.trim() || process.env.YTPTUBE_PRESET_TRANSCRIPT?.trim() || 'mcp_audio';
 
 /** Preset name for video download jobs (main archive). */
 export const PRESET_VIDEO = process.env.YTPTUBE_PRESET_VIDEO?.trim() || 'default';
+
+/** Maximum file size (bytes) for transcription API. Default 25MB (OpenAI Whisper limit). */
+export const TRANSCRIPTION_MAX_BYTES = parseInt(
+  process.env.TRANSCRIPTION_MAX_BYTES?.trim() || String(25 * 1024 * 1024),
+  10,
+);

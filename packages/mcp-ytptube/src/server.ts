@@ -13,6 +13,7 @@ import type { TranscriptionConfig } from './clients/transcription.ts';
 import { requestTranscript, type RequestTranscriptDeps } from './tools/request-transcript.ts';
 import { getStatus } from './tools/get-status.ts';
 import { requestDownloadLink } from './tools/request-download-link.ts';
+import { transcribeAudioUrl, type TranscribeAudioUrlDeps } from './tools/transcribe-audio-url.ts';
 import { listRecentDownloads } from './tools/list-recent-downloads.ts';
 import { getMediaInfo } from './tools/get-media-info.ts';
 import { getThumbnailUrl } from './tools/get-thumbnail-url.ts';
@@ -20,6 +21,7 @@ import { getLogsTool } from './tools/get-logs.ts';
 import { getSystemConfigurationTool } from './tools/get-system-configuration.ts';
 import { getHistoryItemTool } from './tools/get-history-item.ts';
 import { RequestTranscriptSchema } from './schemas/request-transcript.schema.ts';
+import { TranscribeAudioUrlSchema } from './schemas/transcribe-audio-url.schema.ts';
 import { GetStatusSchema } from './schemas/get-status.schema.ts';
 import { RequestDownloadLinkSchema } from './schemas/request-download-link.schema.ts';
 import { ListRecentDownloadsSchema } from './schemas/list-recent-downloads.schema.ts';
@@ -28,7 +30,7 @@ import { GetThumbnailUrlSchema } from './schemas/get-thumbnail-url.schema.ts';
 import { GetLogsSchema } from './schemas/get-logs.schema.ts';
 import { GetSystemConfigurationSchema } from './schemas/get-system-configuration.schema.ts';
 import { GetHistoryItemSchema } from './schemas/get-history-item.schema.ts';
-import { waitForYTPTube, ensureMcpPreset } from './clients/ytptube-presets.ts';
+import { waitForYTPTube, ensureAllMcpPresets } from './clients/ytptube-presets.ts';
 import { logger } from './utils/logger.ts';
 import { VideoTranscriptsError } from './utils/errors.ts';
 import { formatErrorResponse } from './utils/response-format.ts';
@@ -64,6 +66,7 @@ function createMcpServer(): McpServer {
   const ytptube = getYTPTubeConfig();
   const transcription = getTranscriptionConfig();
   const deps: RequestTranscriptDeps = { ytptube, transcription };
+  const transcribeDeps: TranscribeAudioUrlDeps = { transcription };
 
   const server = new McpServer(
     {
@@ -118,7 +121,7 @@ function createMcpServer(): McpServer {
     'request_transcript',
     {
       description:
-        'Get transcript for a media URL (video or audio-only). Any yt-dlp-supported URL (YouTube, SoundCloud, etc.). If result exists → transcript; else starts job and returns status. Poll get_status; when finished call again for transcript. Video-only items start a transcript job automatically. language_hint (e.g. "de") forces language; omit → language=unknown + instruction to ask user and re-call if wrong. Optional cookies (Netscape format) for age-restricted or login-required; user can paste content or upload file – see server instructions.',
+        'Get transcript for media URL. Two-phase: Phase 1 (subtitles, YouTube/captions) → Phase 2 (audio transcription) if unavailable. If finished job exists with transcript, returns it immediately. If finished job exists but no transcript (Phase 1 failed), automatically starts Phase 2. If no job exists, starts Phase 1. Poll get_status; when status=finished, call request_transcript again - it will return transcript if available or start Phase 2 automatically. language_hint selects subtitle language and improves transcription. Optional cookies (Netscape format) for 403/age-restricted – see server instructions.',
       inputSchema: RequestTranscriptSchema,
     },
     withErrorHandler('request_transcript', (a, d) => requestTranscript(a, d)),
@@ -128,7 +131,7 @@ function createMcpServer(): McpServer {
     'get_status',
     {
       description:
-        'Poll status of a YTPTube item (transcript or download). Use media_url (the URL you requested) or job_id (the UUID from a prior response; not the platform media id). When status=finished, call request_transcript or request_download_link again to get transcript or link.',
+        'Poll status by media_url or job_id (UUID, not platform id). When status=finished, call request_transcript or request_download_link again for result.',
       inputSchema: GetStatusSchema,
     },
     withErrorHandler('get_status', (a, d) => getStatus(a, { ytptube: d.ytptube })),
@@ -139,12 +142,22 @@ function createMcpServer(): McpServer {
     'request_download_link',
     {
       description:
-        'Get download link (video or audio) for a media URL. If the file exists, returns download_url; otherwise starts download and returns status=queued. Poll with get_status; when finished call this tool again for the link. Use type=video for video file, type=audio for audio-only (e.g. when only transcript/audio exists). Optional cookies (Netscape format) for age-restricted or login-required; user can paste content or upload file – see server instructions.',
+        'Get download link (video or audio) for media URL. Returns download_url if exists, else starts job and returns status. Poll get_status; when finished call again for link. type=video for video, type=audio for audio-only. Optional cookies (Netscape format) for 403/age-restricted – see server instructions.',
       inputSchema: RequestDownloadLinkSchema,
     },
     withErrorHandler('request_download_link', (a) =>
       requestDownloadLink(a, { ytptube, publicDownloadBaseUrl }),
     ),
+  );
+
+  server.registerTool(
+    'transcribe_audio_url',
+    {
+      description:
+        'Transcribe an audio file directly from a URL. Downloads the file in memory and transcribes it. Used for transcribing audio chunks created by the file converter agent. File must be ≤25MB. Returns transcript with metadata.',
+      inputSchema: TranscribeAudioUrlSchema,
+    },
+    withErrorHandler('transcribe_audio_url', (a) => transcribeAudioUrl(a, transcribeDeps)),
   );
 
   server.registerTool(
@@ -287,9 +300,9 @@ function runYTPTubeStartupInBackground(): void {
       return;
     }
     try {
-      await ensureMcpPreset(ytptube);
+      await ensureAllMcpPresets(ytptube);
     } catch (e) {
-      logger.warn({ error: e }, 'Preset sync failed; transcript preset may be missing or outdated');
+      logger.warn({ error: e }, 'Preset sync failed; MCP presets may be missing or outdated');
     }
   })();
 }

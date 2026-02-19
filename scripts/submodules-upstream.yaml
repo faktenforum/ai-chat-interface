@@ -2,9 +2,9 @@
 #
 # Responsibilities:
 #   update-submodules.sh       — Bring all up to date: (1) git submodule update --init --remote for all;
-#                                (2) for entries with upstream_url: upstream remote, tracking branch; forks: merge into main.
+#                                (2) for entries with upstream_url: upstream remote, tracking branch; forks: merge into main;
+#                                fork submodules end on main branch; optional --stage to stage in superproject.
 #   build-dev-submodules.sh    — Build submodules needed for local/local-dev stacks (post_init steps only).
-#   create-faktenforum-branches.sh — For entries with upstream_url: create upstream tracking branch (optional).
 #
 # Fields: path (required); upstream_url + fork_url (forks) or upstream_url only (upstream-only); post_init (for build-dev).
 

@@ -8,7 +8,7 @@ export const RequestTranscriptSchema = z.object({
     .describe(
       'URL of the media to transcribe (video or audio-only). Any yt-dlp-supported URL, e.g. YouTube, Vimeo, SoundCloud, Bandcamp.',
     ),
-  preset: z.string().optional().describe('YTPTube preset name (e.g. for audio-only). Omit to use default or inline cli.'),
+  preset: z.string().optional().describe('YTPTube preset name (optional). Omit to use automatic mode selection: Phase 1 (subtitles-first) for YouTube or URLs with captions, Phase 2 (audio transcription) otherwise.'),
   language_hint: z
     .string()
     .optional()

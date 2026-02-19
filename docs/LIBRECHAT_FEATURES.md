@@ -10,7 +10,7 @@ Project-defined LibreChat behaviour comes from these files under **`packages/lib
 |------|----------|
 | **`librechat.yaml`** | Base LibreChat config: endpoints (OpenRouter, Scaleway), model specs, interface, memory, MCP servers, web search, OCR, etc. |
 | **`librechat.local.yaml`**, **`librechat.dev.yaml`**, **`librechat.prod.yaml`** | Environment overrides (merged at init by `LIBRECHAT_ENV`). Only differing keys; e.g. prod disables `execute_code`, sets `modelSpecs.addedEndpoints: [agents]`, custom `fetch: false`. |
-| **`agents.yaml`** | Shared agents (e.g. Recherche-Assistent, Bildgenerierungs-Assistent, Reise-Assistent) and their providers, models, tools, MCPs. |
+| **`agents.yaml`** | Shared agents (e.g. Research Assistant, Image Generation Assistant, Travel and Location Assistant) and their providers, models, tools, MCPs. |
 | **`roles.yaml`** | Roles and permissions (access to agents and features). |
 
 Init merges the override for the current `LIBRECHAT_ENV` (`local` | `dev` | `prod`, default `prod`) onto the base, then writes the result to the config volume. Files are included in the librechat-init image; for local dev, mounting `config/` and setting `LIBRECHAT_ENV=local` allows editing without rebuilding (see [Local development: config mount](#local-development-config-mount-no-image-rebuild)).
@@ -164,6 +164,16 @@ Visibility is controlled by **environment override files** via `modelSpecs.added
 
 Compose sets `LIBRECHAT_ENV` per stack (local: `local`, dev: `dev`, prod: `prod`). To change behaviour, edit the corresponding override file under `packages/librechat-init/config/` (rebuild init image for prod/dev, or use the config mount for local).
 
+### Default model and agent modelSpecs
+
+- **Default spec:** Main Assistant agent (`shared-agent-main-assistant`). All agents from `agents.yaml` are in `modelSpecs.list` (group "Assistants").
+- **`modelSpecs.prioritize: false`** — avoids API warning when using a default spec with `interface.presets: true`.
+- **Post-init:** Replaces config IDs in `preset.agent_id` with real API agent IDs and persists the mapping to `agent-id-map.json` in the config volume. **Init** applies this persisted map before the API starts, so on most restarts (when no new agents were added) the Assistants group and default work without an API restart.
+- **When to restart the API:** Only when you add a new agent: run post-init, then restart the API once; the next startup will use the updated map. The mapping file is per-environment (config volume), not in the repo.
+- **Stale agent ID map:** The map in `agent-id-map.json` is only updated when post-init runs. Init (at container start) only reads that file and patches `librechat.yaml`; it never writes the map. If agents were recreated (new API IDs), you restored a DB/volume, or you changed `agents.yaml` and did not run post-init again, the persisted map can contain old or wrong agent IDs; init will then patch with those stale keys. **Fix:** After any change that affects agent IDs, run post-init so the map is refreshed, then restart the API if needed.
+
+**Assistants group missing:** Client shows agent presets only when `preset.agent_id` matches an API agent ID. If the config still has config IDs (e.g. `shared-agent-main-assistant`), run post-init (logs: “Patched N modelSpec(s) with real agent IDs”), then restart the API. Require: `LIBRECHAT_JWT_SECRET` set, API reachable at `LIBRECHAT_API_URL`.
+
 ### Endpoints Configuration
 
 **Lines 77-101:** OpenRouter endpoint
@@ -196,6 +206,8 @@ Other Scaleway models (Mistral, Qwen, etc.) may support parallel tool calls; the
 **Config:** Scaleway endpoint uses `dropParams` to strip parameters the Scaleway Chat Completions API does not support.
 
 Scaleway's [OpenAI compatibility docs](https://www.scaleway.com/en/docs/managed-inference/reference-content/openai-compatibility/) list the following as **unsupported**: `frequency_penalty`, `n`, `top_logprobs`, `logit_bias`, `user`. If sent, they can cause errors or undefined behaviour. LibreChat strips them for the Scaleway endpoint via `dropParams` (camelCase keys: `frequencyPenalty`, `n`, `topLogprobs`, `logitBias`, `user`).
+
+- **`add_generation_prompt`**: Some OpenAI-compatible backends reject `add_generation_prompt: true` when the last chat message is an `assistant` message (expects `continue_final_message` instead). To avoid hard `400` errors in agent/tool loops, the Scaleway endpoint strips both `add_generation_prompt` and `addGenerationPrompt` from requests.
 
 **Supported by Scaleway (no change needed):** `messages`, `model`, `max_tokens`, `temperature`, `top_p`, `presence_penalty`, `response_format`, `logprobs`, `stop`, `seed`, `stream`, `tools`, `tool_choice`.
 

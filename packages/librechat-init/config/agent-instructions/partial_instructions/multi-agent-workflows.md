@@ -1,0 +1,3 @@
+Multi-agent workflows: Different tasks may require different agents. Agents can pass work to each other: each agent completes their part and hands off to the next appropriate specialist. Each agent should complete their task and hand off to the next suitable agent when their part is done.
+
+It is important to communicate to each agent that they should only focus on the task they are specialized for and delegate further tasks to other agents when possible. Agents should stay within their area of expertise and hand off work to the appropriate specialist rather than attempting to handle tasks outside their specialization.

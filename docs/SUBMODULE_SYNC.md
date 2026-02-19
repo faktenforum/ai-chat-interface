@@ -1,6 +1,6 @@
 # Submodule Sync Guide
 
-**update-submodules** brings all submodules up to date: (1) pull all (non-forks stay current), (2) for fork/upstream-only: upstream remote, tracking branch; forks: merge into main. To also build submodules needed for local/local-dev, run **`npm run build:dev`** (or **`npm run prepare:dev`** = update + build).
+**update-submodules** brings all submodules up to date: (1) pull all (non-forks stay current), (2) for fork/upstream-only: upstream remote, tracking branch; forks: merge into main, (3) fork submodules end on their **main** branch (not detached). To also build submodules needed for local/local-dev, run **`npm run build:dev`** (or **`npm run prepare:dev`** = update + build).
 
 ## Quick Start
 
@@ -22,7 +22,7 @@ npm run update:submodules:dry-run
 
 ## Configuration
 
-Config: `scripts/submodules-upstream.yaml` (shared with build-dev-submodules and create-faktenforum-branches). **Only entries with `upstream_url`** get step 2 (upstream remote, tracking branch, merge). All submodules are updated in step 1 (`git submodule update --init --remote`).
+Config: `scripts/submodules-upstream.yaml` (shared with build-dev-submodules). **Only entries with `upstream_url`** get step 2 (upstream remote, tracking branch, merge). All submodules are updated in step 1 (`git submodule update --init --remote`).
 
 Sync-relevant entries: `path`, `upstream_url`, `upstream_branch`, `fork_branch`, `upstream_tracking_branch`; `fork_url` only for Faktenforum forks.
 
@@ -49,7 +49,10 @@ Automatically:
 1. Creates/updates `upstream` tracking branches
 2. Fetches latest changes from upstream
 3. Merges upstream changes into `main` branches
-4. Handles conflicts interactively
+4. Ensures fork submodules end on their main branch (not detached)
+5. Handles conflicts interactively
+
+Use **`--stage`** to stage fork submodule commits in the superproject after sync (`git add` each synced fork path). Then commit in the superproject so that a later `git submodule update` does not reset the submodule to an older commit.
 
 ### Update Specific Submodule
 
@@ -75,6 +78,20 @@ When merge conflicts occur:
 5. Press Enter in the script to continue
 
 **Tip**: For `main` branch conflicts, carefully merge upstream changes while preserving Faktenforum-specific modifications.
+
+## Viewing our customizations (diff to upstream)
+
+Prefer aligning with upstream; add only what’s strictly needed. From repo root (ensure `upstream` is fetched in the submodule):
+
+```bash
+cd dev/librechat && git diff upstream/main --stat
+cd dev/librechat && git diff upstream/main -- path/to/file
+
+cd dev/agents && git diff upstream/main --stat
+cd dev/agents && git diff upstream/main -- path/to/file
+```
+
+**LibreChat** — Vision + artifact handling: `validateVisionModel`, `getVisionCapability`, `processArtifactsForAssistants` in ToolService; vision in agent config/run and client (ImageVision, useVisionModel); MCP artifact processing (base64 → files, contentParts). **Agents** — Tool definitions (Calculator, CodeExecutor, WebSearch, ProgrammaticToolCalling) kept aligned so `packages/api` can import from `@librechat/agents`.
 
 ## Adding New Fork Submodules
 
