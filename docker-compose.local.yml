@@ -80,6 +80,15 @@ services:
       dockerfile: Dockerfile
       target: node
     env_file: .env.local
+    depends_on:
+      librechat-init:
+        condition: service_completed_successfully
+      mongodb:
+        condition: service_started
+      meilisearch:
+        condition: service_started
+      mcp-linux:
+        condition: service_healthy
     volumes:
       - ./dev/agents:/app/node_modules/@librechat/agents
     environment:

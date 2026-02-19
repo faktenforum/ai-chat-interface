@@ -47,6 +47,8 @@ services:
         condition: service_started
       meilisearch:
         condition: service_started
+      mcp-linux:
+        condition: service_healthy
       mcp-ytptube:
         condition: service_healthy
     networks:

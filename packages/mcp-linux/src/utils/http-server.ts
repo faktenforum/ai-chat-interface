@@ -109,13 +109,15 @@ export interface HttpServerConfig {
     transport: StreamableHTTPServerTransport;
   };
   logger?: Logger;
+  /** Called when a session is used (GET or POST with existing session). Used for idle timeout. */
+  onSessionActivity?: (sessionId: string) => void;
 }
 
 /**
  * Creates standard Express endpoints for MCP HTTP server
  */
 export function setupMcpEndpoints(app: express.Application, config: HttpServerConfig): void {
-  const { serverName, version, transports, createServer, logger } = config;
+  const { serverName, version, transports, createServer, logger, onSessionActivity } = config;
 
   // Health check endpoint
   app.get('/health', (_req: Request, res: Response) => {
@@ -142,6 +144,7 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
       return;
     }
 
+    onSessionActivity?.(sessionId);
     try {
       await transport.handleRequest(req, res, null);
     } catch (error) {
@@ -192,6 +195,7 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
       if (sessionId) {
         const transport = transports.get(sessionId);
         if (transport) {
+          onSessionActivity?.(sessionId);
           await transport.handleRequest(req, res, req.body);
           return;
         }

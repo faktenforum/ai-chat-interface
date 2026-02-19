@@ -40,6 +40,8 @@ const SERVER_VERSION = '1.0.0';
 
 // Session management
 const transports = new Map<string, StreamableHTTPServerTransport>();
+/** Last activity timestamp per session (for idle timeout and leak prevention) */
+const sessionLastActivity = new Map<string, number>();
 
 // Shared managers (singleton per container)
 const userManager = new UserManager();
@@ -137,6 +139,7 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
     onsessioninitialized: (sessionId: string) => {
       logger.info({ sessionId, totalSessions: transports.size + 1 }, 'Session initialized');
       transports.set(sessionId, transport);
+      sessionLastActivity.set(sessionId, Date.now());
     },
   });
 
@@ -146,6 +149,7 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
       logger.info({ sessionId: sid, totalSessions: transports.size - 1 }, 'Session closed');
       transports.delete(sid);
       sessionEmailMap.delete(sid);
+      sessionLastActivity.delete(sid);
     }
   };
 
@@ -196,6 +200,7 @@ function createApp(): express.Application {
     transports,
     createServer: createSession,
     logger,
+    onSessionActivity: (sessionId: string) => sessionLastActivity.set(sessionId, Date.now()),
   });
 
   return app;
@@ -209,6 +214,35 @@ async function main(): Promise<void> {
     // Restore existing users from persistent mapping on startup
     await userManager.restoreUsers();
     logger.info('User restoration complete');
+
+    // Idle session cleanup: close sessions with no activity for MCP_LINUX_SESSION_IDLE_TIMEOUT_MIN
+    const sessionIdleTimeoutMin = parseInt(
+      process.env.MCP_LINUX_SESSION_IDLE_TIMEOUT_MIN || '30',
+      10,
+    );
+    const sessionIdleTimeoutMs = sessionIdleTimeoutMin * 60 * 1000;
+    const SESSION_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // run every 5 min
+    const sessionCleanupTimer = setInterval(() => {
+      const now = Date.now();
+      for (const [sessionId, lastActivity] of sessionLastActivity.entries()) {
+        if (now - lastActivity < sessionIdleTimeoutMs) continue;
+        const t = transports.get(sessionId);
+        if (!t) {
+          sessionLastActivity.delete(sessionId);
+          continue;
+        }
+        try {
+          t.close();
+        } catch (err) {
+          logger.error({ error: err, sessionId }, 'Error closing idle session');
+        }
+        transports.delete(sessionId);
+        sessionEmailMap.delete(sessionId);
+        sessionLastActivity.delete(sessionId);
+        logger.info({ sessionId, totalSessions: transports.size }, 'Session evicted (idle timeout)');
+      }
+    }, SESSION_CLEANUP_INTERVAL_MS);
+    sessionCleanupTimer.unref();
 
     // Optional: scheduled cleanup of uploads/ (MCP_LINUX_UPLOADS_MAX_AGE_DAYS > 0)
     const uploadsMaxAgeDays = parseInt(process.env.MCP_LINUX_UPLOADS_MAX_AGE_DAYS || '0', 10);
