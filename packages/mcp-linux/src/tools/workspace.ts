@@ -11,6 +11,7 @@ import { logger } from '../utils/logger.ts';
 import { extractUserContext } from '../utils/http-server.ts';
 import type { UserManager } from '../user-manager.ts';
 import type { WorkerManager } from '../worker-manager.ts';
+import { resolveEmail, errorResult } from './helpers.ts';
 import {
   ListWorkspacesSchema,
   CreateWorkspaceSchema,
@@ -220,37 +221,8 @@ export function registerWorkspaceTools(
 /**
  * Resolves user email from MCP extra context.
  *
- * The MCP SDK passes session metadata through the `extra` parameter.
- * We store user email in the session's transport metadata.
+ * User identity: see helpers.resolveEmail (prefers request headers for multi-user).
  */
-function resolveEmail(extra: unknown): string {
-  // The extra parameter from MCP SDK contains session info
-  // We need to extract the email from the original HTTP headers
-  // This is stored in the session context by our middleware
-  const ctx = extra as Record<string, unknown> | undefined;
-
-  // Try to get from session metadata (set by our middleware)
-  if (ctx?.sessionId && typeof ctx.sessionId === 'string') {
-    // Look up in the session-to-email map (set in server.ts)
-    const email = sessionEmailMap.get(ctx.sessionId);
-    if (email) return email;
-  }
-
-  // Fallback: check if email is directly on context
-  if (ctx && typeof (ctx as Record<string, unknown>).email === 'string') {
-    return (ctx as Record<string, unknown>).email as string;
-  }
-
-  throw new Error('User email not found in request context. Ensure X-User-Email header is sent.');
-}
-
-function errorResult(error: unknown): { content: Array<{ type: 'text'; text: string }>; isError: true } {
-  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : String(error);
-  return {
-    content: [{ type: 'text', text: `Error: ${message}` }],
-    isError: true,
-  };
-}
 
 /**
  * Global map to track session ID -> email mapping.

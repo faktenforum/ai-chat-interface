@@ -11,6 +11,10 @@ Per-user isolated Linux terminal environment with persistent git workspaces, fil
 
 User naming: `lc_` + email local part (sanitized). Example: `pascal.garber@correctiv.org` → `lc_pascal_garber`.
 
+### Multi-user (shared session)
+
+LibreChat can use one app-level MCP connection (`startup: true`), so one MCP session is shared by all users. User identity is taken from the **current request**: each tool invocation uses `X-User-Email` (and related headers) from that request’s HTTP headers, not from a session-scoped map. That avoids last-writer-wins races when multiple users use the Linux MCP at the same time.
+
 ## Tools
 
 ### Terminal

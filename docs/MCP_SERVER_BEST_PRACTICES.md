@@ -370,6 +370,14 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
 }
 ```
 
+## Per-user identity (LibreChat user headers)
+
+If your MCP server is configured in LibreChat with `headers` (e.g. `X-User-Email`, `X-User-ID`, `X-User-Username`) and `startup: true`, all users share **one** app-level MCP session. Do **not** store user identity in a session-scoped map keyed by `sessionId` and overwrite it on every request—that causes last-writer-wins races (wrong user context for tool calls).
+
+**Correct approach:** Resolve the current user from the **current request** in each tool handler. The MCP SDK passes `requestInfo: { headers }` in the `extra` argument to tool handlers; read the user from `extra.requestInfo?.headers['x-user-email']` (and similar) there. Use that request-scoped identity for all per-user state (workers, workspaces, uploads, etc.). See `packages/mcp-linux/src/tools/helpers.ts` (`resolveEmail`) and `docs/MCP_LINUX.md` (Multi-user).
+
+**Other MCP servers** in this repo (calculator, image-gen, chefkoch, ytptube, etc.) are stateless and do not use user headers; they are not affected. Only servers that need per-user isolation and receive LibreChat user headers must implement request-scoped identity.
+
 ## Checklist for New MCP Servers
 
 When creating a new MCP server, ensure:
@@ -382,6 +390,7 @@ When creating a new MCP server, ensure:
 - [ ] Graceful shutdown handlers (SIGTERM, SIGINT)
 - [ ] Consistent error responses with Request-ID
 - [ ] Proper session management and cleanup
+- [ ] If configured with LibreChat user headers (`X-User-*`) and `startup: true`: resolve user from `extra.requestInfo.headers` per request, not from a session-scoped map (see Per-user identity above)
 - [ ] `x-powered-by` header disabled
 - [ ] JSON body parser with appropriate limit (e.g., `10mb`)
 
