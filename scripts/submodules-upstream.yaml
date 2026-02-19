@@ -66,19 +66,25 @@ submodules:
     upstream_tracking_branch: upstream
     description: "Grounded Docs MCP server fork (configurable embedding dimension)"
 
+  - path: dev/agents
+    fork_url: git@github.com:faktenforum/agents.git
+    upstream_url: https://github.com/danny-avila/agents.git
+    upstream_branch: main
+    fork_branch: main
+    upstream_tracking_branch: upstream
+    description: "LibreChat agents npm package fork"
+    post_init: npm_install_build
+
   # --- Upstream-only (not forks): fork: false, no fork_url ---
   - path: dev/ytptube
     fork: false
     upstream_url: https://github.com/arabcoders/ytptube.git
-    upstream_branch: main
+    upstream_branch: master
     fork_branch: main
     upstream_tracking_branch: upstream
     description: "ytptube (upstream only, not a fork)"
 
   # --- External dev submodules (updated by update-submodules step 1; no upstream sync) ---
-  - path: dev/agents
-    description: "LibreChat agents npm package"
-    post_init: npm_install_build
 
   - path: dev/rag_api
     description: "RAG API service"

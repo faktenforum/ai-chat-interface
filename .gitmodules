@@ -4,7 +4,7 @@
 	branch = main
 [submodule "dev/agents"]
 	path = dev/agents
-	url = https://github.com/danny-avila/agents.git
+	url = git@github.com:faktenforum/agents.git
 	branch = main
 [submodule "dev/rag_api"]
 	path = dev/rag_api

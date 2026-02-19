@@ -173,7 +173,7 @@ export class UserManager {
     if (!existsSync(defaultDir)) {
       mkdirSync(defaultDir, { recursive: true });
       try {
-        const { name, email } = getDefaultGitIdentity();
+        const { name, email } = getDefaultGitIdentity(username);
         const emailEsc = shellEscapeSingleQuoted(email);
         const nameEsc = shellEscapeSingleQuoted(name);
         
