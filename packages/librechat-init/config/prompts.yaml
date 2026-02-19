@@ -19,7 +19,19 @@ prompts:
     prompt: Bitte Review {{Github Pull Request URL}} und veröffentliche diesen als Kommentar im PR.
     command: review-github-pr
     category: code
-    oneliner: Reviewt einen GitHub Pull Request und veröffentlicht das Ergebnis als Kommentar im PR.
+    oneliner: Reviewt einen GitHub Pull Request und veröffentlicht das Ergebnis als Kommentar im PR (OpenSource-Modelle).
+    sharing:
+      public:
+        enabled: true
+        defaultRole: editor
+  - name: Review GitHub Pull Request (Quality)
+    prompt: |
+      Bitte Review {{Github Pull Request URL}} und veröffentliche diesen als Kommentar im PR.
+      
+      **Wichtig**: Verwende die Quality-Entwickler-Agents (Code-Reviewer mit Gemini 3 Pro Preview) für höhere Qualität und detailliertere Analysen. Diese Variante nutzt teurere, aber leistungsstärkere Modelle.
+    command: review-github-pr-quality
+    category: code
+    oneliner: Reviewt einen GitHub Pull Request mit Quality-Agents (Gemini 3 Pro Preview) für höhere Qualität und detailliertere Analysen.
     sharing:
       public:
         enabled: true
@@ -42,7 +54,33 @@ prompts:
       - Der finale PR-Kommentar muss Review-Ergebnis und Änderungsliste klar dokumentieren.
     command: ueberarbeite-github-pr
     category: code
-    oneliner: Reviewt einen GitHub PR, setzt Verbesserungen um und pusht sie auf den Branch.
+    oneliner: Reviewt einen GitHub PR, setzt Verbesserungen um und pusht sie auf den Branch (OpenSource-Modelle).
+  - name: Überarbeite GitHub PR (Quality)
+    prompt: |
+      Bearbeite den GitHub Pull Request {{Github Pull Request URL}} vollständig.
+
+      **Wichtig**: Verwende die Quality-Entwickler-Agents für höhere Qualität:
+      - Code-Reviewer (Gemini 3 Pro Preview) für detaillierte Reviews
+      - Code-Refactorer (Gemini 3 Pro Preview) für Refactoring
+      - Entwickler (Claude Opus 4.6) für Implementierungen
+      
+      Diese Variante nutzt teurere, aber leistungsstärkere Modelle für bessere Ergebnisse.
+
+      ## Ablauf
+
+      1. **Review**: Analysiere den PR (Code, Tests, Docs) mit Code-Reviewer (Gemini 3 Pro Preview). Identifiziere Verbesserungspunkte.
+      2. **Refactor-Plan**: Erstelle eine priorisierte Liste der Änderungen.
+      3. **Workspace**: Falls ein Linux-Workspace für diesen PR existiert – prüfe ob er aktuell und wiederverwendbar ist; sonst zurücksetzen und neu anlegen.
+      4. **Umsetzung**: Delegiere jede Aufgabe an die Quality-Experten (Code-Refactorer mit Gemini 3 Pro Preview, Entwickler mit Claude Opus 4.6). Jeder Experte erledigt seinen Task und übergibt an den nächsten, bis alle Punkte abgearbeitet sind.
+      5. **Abschluss**: Pushe die Änderungen auf den PR-Branch. Hinterlasse einen PR-Kommentar mit Zusammenfassung des Reviews und der vorgenommenen Verbesserungen.
+
+      ## Regeln
+      - Delegiere gezielt an Quality-Experten; keine parallelen Aufgaben ohne Abhängigkeiten.
+      - Halte den Plan überschaubar; priorisiere die wichtigsten Verbesserungen zuerst.
+      - Der finale PR-Kommentar muss Review-Ergebnis und Änderungsliste klar dokumentieren.
+    command: ueberarbeite-github-pr-quality
+    category: code
+    oneliner: Reviewt einen GitHub PR mit Quality-Agents (Gemini 3 Pro Preview, Claude Opus 4.6), setzt Verbesserungen um und pusht sie auf den Branch.
     sharing:
       public:
         enabled: true
