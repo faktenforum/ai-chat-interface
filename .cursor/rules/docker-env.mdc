@@ -62,7 +62,6 @@ Identical compose structure for local and production. Differences: environment f
 - ❌ Hardcode localhost/127.0.0.1 in service URLs (use service names)
 - ❌ Mix volume strategies (bind mounts + named volumes for same data)
 - ❌ Run prod and dev on same host with same STACK_NAME (causes shared app-net/volumes and DNS conflicts on traefik-net)
-- ❌ Put a service on traefik-net with default service-name alias when that service is reached by hostname and another stack may share the network (use stack-specific alias on traefik-net; see §13)
 
 ### 9. Service Integration Patterns
 - **Service Files**: Create `docker-compose.{service}.yml` with base service definitions
@@ -101,23 +100,23 @@ When **both** prod and dev stacks run on one host, they share the external netwo
 1. **Different STACK_NAME per stack**  
    Deploy the **dev** stack with `STACK_NAME=dev` (e.g. in Portainer stack env). Then app-net, volumes, and container names are isolated (`dev-app-net`, `dev-mcp-linux`, etc.). Document in the dev compose file that when running both stacks, set `STACK_NAME=dev` for the dev stack.
 
-2. **Stack-specific alias on traefik-net for services reached by hostname**  
-   Any service that is on **traefik-net** and is reached by **hostname** (e.g. API calls `http://mcp-linux:3015`, `http://ytptube:8081`) must **not** use the default service name as alias on traefik-net. Use only a **stack-specific** alias there so the short name exists only on each stack’s **app-net** (where there is one container per stack).
+2. **Network order for LibreChat to ensure correct DNS resolution**  
+   LibreChat connects to services like `mcp-linux` over **app-net** (not traefik-net). To ensure Docker DNS resolves service names correctly on the isolated app-net (not on shared traefik-net where both stacks register the same service name), LibreChat's network configuration must list **app-net first**, then traefik-net.
 
-   **Pattern** (apply in prod, dev, local, local-dev for mcp-linux, ytptube, and any future service on traefik-net that the API calls by name):
+   **Pattern** (apply in prod, dev, local, local-dev for LibreChat):
 
    ```yaml
    networks:
-     app-net: {}
-     traefik-net:
-       aliases:
-         - ${STACK_NAME:-prod}-mcp-linux   # prod/dev default; use :-local for local compose
+     # app-net first to ensure mcp-linux resolves correctly on isolated app-net
+     # (not on shared traefik-net where both prod and dev containers register mcp-linux)
+     - app-net
+     - traefik-net
    ```
 
-   - **app-net**: no aliases override → default alias stays (e.g. `mcp-linux`) → API resolves correctly on app-net.
-   - **traefik-net**: Docker Compose still registers the service name (`mcp-linux`) automatically, but we add `${STACK_NAME}-<service>` as an additional alias. Traefik's Docker provider should use container names/IPs directly from Docker's API (not DNS), so the DNS conflict on traefik-net shouldn't affect Traefik routing. If issues persist, verify Traefik is using Docker service discovery correctly.
+   - **app-net**: Each stack has its own isolated network (`prod-app-net` vs `dev-app-net`) → service names resolve correctly without conflicts.
+   - **traefik-net**: Shared external network; Docker DNS resolves in network order, so app-net (first) is checked before traefik-net → correct resolution.
 
-   **Apply to:** All services that attach to traefik-net and are used by hostname (currently: mcp-linux, ytptube). Other MCPs (calculator, image-gen, etc.) are app-net only and need no change.
+   **Traefik routing:** Traefik uses container names/IPs directly from Docker's API (not DNS), and service names are unique (`prod-mcp-linux` vs `dev-mcp-linux`), so Traefik can route correctly even when both stacks use the same hostname rule.
 
    **LibreChat config:** Keep URLs as `http://mcp-linux:3015/mcp` etc.; no change needed (resolution happens on app-net).
 

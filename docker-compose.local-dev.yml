@@ -89,6 +89,11 @@ services:
         condition: service_started
       mcp-linux:
         condition: service_healthy
+    networks:
+      # app-net first to ensure mcp-linux resolves correctly on isolated app-net
+      # (not on shared traefik-net where multiple containers might register mcp-linux)
+      - app-net
+      - traefik-net
     volumes:
       - ./dev/agents:/app/node_modules/@librechat/agents
     environment:
@@ -189,9 +194,7 @@ services:
     env_file: .env.local
     networks:
       app-net: {}
-      traefik-net:
-        aliases:
-          - ${STACK_NAME:-local}-ytptube
+      traefik-net: {}
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=ai-chat-interface_traefik-net"
@@ -341,9 +344,7 @@ services:
       - "127.0.0.1:${MCP_LINUX_PORT:-3015}:${MCP_LINUX_PORT:-3015}"  # Cursor IDE – local only
     networks:
       app-net: {}
-      traefik-net:
-        aliases:
-          - ${STACK_NAME:-local}-mcp-linux
+      traefik-net: {}
     # No Traefik labels - internal service only
 
   # Additional Services

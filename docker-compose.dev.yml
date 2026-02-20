@@ -63,8 +63,10 @@ services:
       mcp-ytptube:
         condition: service_healthy
     networks:
-      - traefik-net
+      # app-net first to ensure mcp-linux resolves correctly on isolated app-net
+      # (not on shared traefik-net where both prod and dev containers register mcp-linux)
       - app-net
+      - traefik-net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
@@ -232,15 +234,10 @@ services:
       - mcp_linux_data:/app/data
     networks:
       app-net: {}
-      # Stack-specific alias on shared traefik-net so "mcp-linux" does not resolve to both prod and dev (see docs/MCP_LINUX.md)
-      traefik-net:
-        aliases:
-          - ${STACK_NAME:-prod}-mcp-linux
+      traefik-net: {}
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
-      # Stack-specific tag to ensure Traefik identifies containers correctly when multiple stacks share traefik-net
-      - "traefik.tags=${STACK_NAME:-prod}"
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/upload`)"
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.entrypoints=websecure"
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.tls=true"
@@ -259,14 +256,10 @@ services:
     container_name: ${STACK_NAME:-prod}-ytptube
     networks:
       app-net: {}
-      traefik-net:
-        aliases:
-          - ${STACK_NAME:-prod}-ytptube
+      traefik-net: {}
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
-      # Stack-specific tag to ensure Traefik identifies containers correctly when multiple stacks share traefik-net
-      - "traefik.tags=${STACK_NAME:-prod}"
       - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.rule=Host(`ytptube.${DOMAIN:-localhost}`) && PathPrefix(`/api/download`)"
       - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.entrypoints=websecure"
       - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.tls=true"

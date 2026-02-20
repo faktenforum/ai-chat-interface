@@ -105,7 +105,7 @@ Sessions that have no activity for **MCP_LINUX_SESSION_IDLE_TIMEOUT_MIN** minute
 
 All services already use **STACK_NAME** in names: `container_name: ${STACK_NAME:-prod}-<service>`, networks like `${STACK_NAME:-prod}-app-net`, volumes like `${STACK_NAME:-prod}-mcp-linux-homes`. So set **STACK_NAME=dev** for the dev stack so prod and dev get separate networks/volumes/containers.
 
-If you run **both** stacks on one host they also share the external network `loadbalancer-net` (traefik-net). Any service attached to traefik-net gets the **service name** as DNS alias there, so **both** stacks’ containers would register as e.g. `mcp-linux` → API DNS can return two IPs and connections alternate → 404s and instability.
+If you run **both** stacks on one host they also share the external network `loadbalancer-net` (traefik-net). Any service attached to traefik-net gets the **service name** as DNS alias there, so **both** stacks’ containers would register as e.g. `mcp-linux` → if LibreChat resolves DNS on traefik-net first, it could connect to the wrong container → 404s, session loss, instability.
 
 **Fix:** (1) Deploy the **dev** stack with **STACK_NAME=dev**. (2) Every service that is on **traefik-net** and reached by hostname (mcp-linux, ytptube) uses a **stack-specific alias on traefik-net** only (`${STACK_NAME}-mcp-linux`, `${STACK_NAME}-ytptube`), so the short hostname (`mcp-linux`, `ytptube`) exists only on each stack’s app-net. Other MCPs are only on app-net, so no traefik-net alias is needed.
 
