@@ -115,7 +115,7 @@ When **both** prod and dev stacks run on one host, they share the external netwo
    ```
 
    - **app-net**: no aliases override → default alias stays (e.g. `mcp-linux`) → API resolves correctly on app-net.
-   - **traefik-net**: only `${STACK_NAME}-<service>` → no duplicate short name on shared network.
+   - **traefik-net**: Docker Compose still registers the service name (`mcp-linux`) automatically, but we add `${STACK_NAME}-<service>` as an additional alias. Traefik's Docker provider should use container names/IPs directly from Docker's API (not DNS), so the DNS conflict on traefik-net shouldn't affect Traefik routing. If issues persist, verify Traefik is using Docker service discovery correctly.
 
    **Apply to:** All services that attach to traefik-net and are used by hostname (currently: mcp-linux, ytptube). Other MCPs (calculator, image-gen, etc.) are app-net only and need no change.
 
