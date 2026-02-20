@@ -103,3 +103,17 @@ submodules:
 
   - path: dev/yt-dlp
     description: "yt-dlp (reference only; used indirectly via YTPTube; we do not build from sources)"
+
+workspace_repos:
+  - path: workspaces/document-creator
+    fork_url: git@github.com:faktenforum/workspace-document-creator.git
+    fork: false
+  - path: workspaces/file-converter
+    fork_url: git@github.com:faktenforum/workspace-file-converter.git
+    fork: false
+  - path: workspaces/data-analysis
+    fork_url: git@github.com:faktenforum/workspace-data-analysis.git
+    fork: false
+  - path: workspaces/linux-expert
+    fork_url: git@github.com:faktenforum/workspace-linux-expert.git
+    fork: false

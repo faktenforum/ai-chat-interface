@@ -137,12 +137,13 @@ Upload and download routes are exposed publicly via Traefik (`/upload/*`, `/down
 ## Git Access
 
 - **SSH**: Optional `MCP_LINUX_GIT_SSH_KEY` (base64 ed25519 private key) → written to each user's `~/.ssh/` on account creation. Use same account as `MCP_GITHUB_PAT` (see [GitHub Machine User](GITHUB_MACHINE_USER.md)).
+- **GitHub CLI**: Optional `MCP_GITHUB_PAT` → authenticates `gh` CLI for all users (PR creation, GitHub operations). Same PAT as GitHub MCP for consistency. Written to each user's `~/.config/gh/hosts.yml` on account creation.
 - **Author**: Optional `MCP_LINUX_GIT_USER_NAME` / `MCP_LINUX_GIT_USER_EMAIL` set default `git config user.name` and `user.email` for new and default workspaces. If not set, falls back to the user's global git config (`git config --global user.name` / `user.email`), then to built-in default (Correctiv Team Digital Bot).
 - **Default .gitignore**: When a workspace is created (empty or default), a minimal `.gitignore` is added if missing (`uploads/`, `venv/`, `.venv/`) so git does not report hundreds of ephemeral files in status.
 
 ## Pre-installed Runtimes
 
-Node.js 24, Python 3, Git, Bash, ripgrep, tree, jq, build-essential, openssh-client. For headless plotting (e.g. Data Analysis agent): fontconfig, fonts-dejavu-core. See [MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md) for CSV→chart workflow and example Python script.
+Node.js 24, Python 3, Git, Bash, ripgrep, tree, jq, build-essential, openssh-client, **GitHub CLI (gh)**. For headless plotting (e.g. Data Analysis agent): fontconfig, fonts-dejavu-core. See [MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md) for CSV→chart workflow and example Python script.
 
 Media conversion and document tools (no LibreOffice/texlive):
 - **FFmpeg** — audio/video conversion (MP3, OGG, FLAC, OPUS, MP4, WEBM, etc.)

@@ -58,3 +58,19 @@
 [submodule "dev/checkbot-rag"]
 	path = dev/checkbot-rag
 	url = https://github.com/faktenforum/checkbot-rag
+[submodule "workspaces/document-creator"]
+	path = workspaces/document-creator
+	url = git@github.com:faktenforum/workspace-document-creator.git
+	branch = main
+[submodule "workspaces/file-converter"]
+	path = workspaces/file-converter
+	url = git@github.com:faktenforum/workspace-file-converter.git
+	branch = main
+[submodule "workspaces/data-analysis"]
+	path = workspaces/data-analysis
+	url = git@github.com:faktenforum/workspace-data-analysis.git
+	branch = main
+[submodule "workspaces/linux-expert"]
+	path = workspaces/linux-expert
+	url = git@github.com:faktenforum/workspace-linux-expert.git
+	branch = main
