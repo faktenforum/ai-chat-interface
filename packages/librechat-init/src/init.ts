@@ -24,8 +24,11 @@ function resolveConfigPlaceholders(content: string): string {
 
   for (const varName of INIT_TIME_ENV_VARS) {
     const envValue = process.env[varName];
-    const regex = new RegExp(`\\$\\$\\{${varName}\\}`, 'g');
-    resolved = resolved.replace(regex, envValue ?? '');
+    // Support both $${VAR} and $${VAR:-default} syntax
+    const regex = new RegExp(`\\$\\$\\{${varName}(?::-([^}]+))?\\}`, 'g');
+    resolved = resolved.replace(regex, (match, defaultValue) => {
+      return envValue ?? defaultValue ?? '';
+    });
   }
 
   resolved = resolved.replace(/\$\$\{([^}]+)\}/g, '${$1}');

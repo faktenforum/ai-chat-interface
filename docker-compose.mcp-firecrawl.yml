@@ -8,7 +8,7 @@ services:
       PORT: ${MCP_FIRECRAWL_PORT:-3003}
       HOST: 0.0.0.0
       HTTP_STREAMABLE_SERVER: "true"
-      FIRECRAWL_API_URL: ${FIRECRAWL_API_URL:-http://firecrawl-api:3002}
+      FIRECRAWL_API_URL: ${FIRECRAWL_API_URL:-http://${STACK_NAME:-prod}-firecrawl-api:3002}
       FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-}
     expose:
       - "3003"

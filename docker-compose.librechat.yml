@@ -19,6 +19,7 @@ services:
       LIBRECHAT_ENV: ${LIBRECHAT_ENV:-prod}
       SCALEWAY_PROJECT_ID: ${SCALEWAY_PROJECT_ID:-}
       SCALEWAY_BASE_URL: ${SCALEWAY_BASE_URL:-https://api.scaleway.ai/v1}
+      STACK_NAME: ${STACK_NAME:-prod}
     volumes:
       - librechat-config:/app/config
       - ./logs:/logs
@@ -103,15 +104,15 @@ services:
       SCALEWAY_BASE_URL: ${SCALEWAY_BASE_URL:-https://api.scaleway.ai/v1}
       SCALEWAY_SITE_URL: ${SCALEWAY_SITE_URL:-http://chat.localhost}
       SCALEWAY_APP_NAME: ${SCALEWAY_APP_NAME:-LibreChat}
-      LIBRECHAT_SEARXNG_URL: ${LIBRECHAT_SEARXNG_URL:-http://searxng:8080}
+      LIBRECHAT_SEARXNG_URL: ${LIBRECHAT_SEARXNG_URL:-http://${STACK_NAME:-prod}-searxng:8080}
       LIBRECHAT_SEARXNG_API_KEY: ${LIBRECHAT_SEARXNG_API_KEY:-}
       LIBRECHAT_JINA_API_KEY: ${LIBRECHAT_JINA_API_KEY:-}
       LIBRECHAT_JINA_API_URL: ${LIBRECHAT_JINA_API_URL:-https://api.jina.ai/v1/rerank}
       FIRECRAWL_API_KEY: ${FIRECRAWL_API_KEY:-local-selfhost}
-      FIRECRAWL_API_URL: ${FIRECRAWL_API_URL:-http://firecrawl-api:3002}
+      FIRECRAWL_API_URL: ${FIRECRAWL_API_URL:-http://${STACK_NAME:-prod}-firecrawl-api:3002}
       FIRECRAWL_VERSION: ${FIRECRAWL_VERSION:-v2}
       DOMAIN_CLIENT: ${DOMAIN_CLIENT:-http://chat.localhost}
-      SEARXNG_BASE_URL: ${LIBRECHAT_SEARXNG_URL:-http://searxng:8080}
+      SEARXNG_BASE_URL: ${LIBRECHAT_SEARXNG_URL:-http://${STACK_NAME:-prod}-searxng:8080}
       SEARCH: ${LIBRECHAT_SEARCH_ENABLED:-true}
       MEILI_MASTER_KEY: ${LIBRECHAT_MEILI_MASTER_KEY}
       CONFIG_PATH: /app/config/librechat.yaml

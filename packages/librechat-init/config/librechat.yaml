@@ -1070,7 +1070,7 @@ mcpServers:
 
   linux:
     type: streamable-http
-    url: http://mcp-linux:3015/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-linux:3015/mcp
     title: Linux Workspace
     description: Isolated Linux environment with terminal, file upload/download, Git and workspaces
     iconPath: /images/mcp-linux-icon.svg

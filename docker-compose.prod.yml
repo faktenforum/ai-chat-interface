@@ -226,12 +226,13 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
       # Only expose /upload/* and /download/* routes publicly (MCP endpoint stays internal)
-      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/upload`)"
+      # Stack-specific hostname ensures complete isolation when both prod and dev stacks run
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.rule=Host(`mcp-linux-${STACK_NAME:-prod}.${DOMAIN:-localhost}`) && PathPrefix(`/upload`)"
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.entrypoints=websecure"
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.tls=true"
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.tls.certresolver=le"
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-upload.service=${STACK_NAME:-prod}-mcp-linux"
-      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/download`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.rule=Host(`mcp-linux-${STACK_NAME:-prod}.${DOMAIN:-localhost}`) && PathPrefix(`/download`)"
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.entrypoints=websecure"
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.tls=true"
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.tls.certresolver=le"
@@ -248,7 +249,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
-      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.rule=Host(`ytptube.${DOMAIN:-localhost}`) && PathPrefix(`/api/download`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.rule=Host(`ytptube-${STACK_NAME:-prod}.${DOMAIN:-localhost}`) && PathPrefix(`/api/download`)"
       - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.entrypoints=websecure"
       - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.tls=true"
       - "traefik.http.routers.${STACK_NAME:-prod}-ytptube-download.tls.certresolver=le"
