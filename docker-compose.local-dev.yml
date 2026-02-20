@@ -188,8 +188,10 @@ services:
     extends: { file: docker-compose.ytptube.yml, service: ytptube }
     env_file: .env.local
     networks:
-      - traefik-net
-      - app-net
+      app-net: {}
+      traefik-net:
+        aliases:
+          - ${STACK_NAME:-local}-ytptube
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=ai-chat-interface_traefik-net"
@@ -337,6 +339,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - "127.0.0.1:${MCP_LINUX_PORT:-3015}:${MCP_LINUX_PORT:-3015}"  # Cursor IDE – local only
+    networks:
+      app-net: {}
+      traefik-net:
+        aliases:
+          - ${STACK_NAME:-local}-mcp-linux
     # No Traefik labels - internal service only
 
   # Additional Services

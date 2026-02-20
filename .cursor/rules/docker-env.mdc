@@ -61,6 +61,8 @@ Identical compose structure for local and production. Differences: environment f
 - ❌ Create `traefik-net` in production compose (must be external)
 - ❌ Hardcode localhost/127.0.0.1 in service URLs (use service names)
 - ❌ Mix volume strategies (bind mounts + named volumes for same data)
+- ❌ Run prod and dev on same host with same STACK_NAME (causes shared app-net/volumes and DNS conflicts on traefik-net)
+- ❌ Put a service on traefik-net with default service-name alias when that service is reached by hostname and another stack may share the network (use stack-specific alias on traefik-net; see §13)
 
 ### 9. Service Integration Patterns
 - **Service Files**: Create `docker-compose.{service}.yml` with base service definitions
@@ -90,31 +92,60 @@ Identical compose structure for local and production. Differences: environment f
 - **Service-Specific Networks**: Use dedicated networks (e.g., `firecrawl-network`) for isolated service groups
 - **Database Services**: `app-net` only (never `traefik-net`)
 
-### 13. Volume Strategy by Environment
+### 13. Prod and dev on the same host (Portainer / shared traefik-net)
+
+When **both** prod and dev stacks run on one host, they share the external network `loadbalancer-net` (traefik-net). Without isolation, **two** containers (one per stack) register the same service name (e.g. `mcp-linux`, `ytptube`) on that network → API DNS can return two IPs → connections alternate between stacks → 404s, session loss, instability.
+
+**Required:**
+
+1. **Different STACK_NAME per stack**  
+   Deploy the **dev** stack with `STACK_NAME=dev` (e.g. in Portainer stack env). Then app-net, volumes, and container names are isolated (`dev-app-net`, `dev-mcp-linux`, etc.). Document in the dev compose file that when running both stacks, set `STACK_NAME=dev` for the dev stack.
+
+2. **Stack-specific alias on traefik-net for services reached by hostname**  
+   Any service that is on **traefik-net** and is reached by **hostname** (e.g. API calls `http://mcp-linux:3015`, `http://ytptube:8081`) must **not** use the default service name as alias on traefik-net. Use only a **stack-specific** alias there so the short name exists only on each stack’s **app-net** (where there is one container per stack).
+
+   **Pattern** (apply in prod, dev, local, local-dev for mcp-linux, ytptube, and any future service on traefik-net that the API calls by name):
+
+   ```yaml
+   networks:
+     app-net: {}
+     traefik-net:
+       aliases:
+         - ${STACK_NAME:-prod}-mcp-linux   # prod/dev default; use :-local for local compose
+   ```
+
+   - **app-net**: no aliases override → default alias stays (e.g. `mcp-linux`) → API resolves correctly on app-net.
+   - **traefik-net**: only `${STACK_NAME}-<service>` → no duplicate short name on shared network.
+
+   **Apply to:** All services that attach to traefik-net and are used by hostname (currently: mcp-linux, ytptube). Other MCPs (calculator, image-gen, etc.) are app-net only and need no change.
+
+   **LibreChat config:** Keep URLs as `http://mcp-linux:3015/mcp` etc.; no change needed (resolution happens on app-net).
+
+### 14. Volume Strategy by Environment
 - **Local**: Named volumes (no bind mounts for new services - Portainer compatibility)
 - **Production**: Named volumes only with `${STACK_NAME:-prod}-` prefix
 - **Config Volumes**: Use init containers to write configs to named volumes (never bind-mount configs in production)
 
-### 14. Security Requirements
+### 15. Security Requirements
 - **Production**: HTTPS required, Basic Auth recommended for exposed services
 - **Dev Environment** (online accessible): Same security as production (HTTPS + Basic Auth)
 - **Local**: HTTP only, no Basic Auth required
 - **Encryption Keys**: Generate with `openssl rand -base64 32` or via `setup-env.ts` auto-generation
 - **Credentials**: Store in environment variables, never hardcode
 
-### 15. Environment Variable Patterns
+### 16. Environment Variable Patterns
 - **Host/Protocol**: `{SERVICE}_HOST`, `{SERVICE}_PROTOCOL` (http for local, https for prod/dev)
 - **Secure Cookies**: `{SERVICE}_SECURE_COOKIE` (false for local, true for prod/dev)
 - **Database**: `{SERVICE}_POSTGRES_DB`, `{SERVICE}_POSTGRES_USER`, `{SERVICE}_POSTGRES_PASSWORD`
 - **Webhook URLs**: Auto-configured based on `{SERVICE}_HOST` and `{SERVICE}_PROTOCOL`
 
-### 16. Documentation Requirements
+### 17. Documentation Requirements
 - **SERVICES.md**: Add service to matrix table, add details section
 - **README.md**: Add link to service-specific docs if created
 - **Service Docs**: Create `docs/{SERVICE}.md` for complex services (e.g., `docs/N8N.md`)
 - **Update**: Keep documentation in sync with implementation
 
-### 17. Testing
+### 18. Testing
 
 - **Local**: Use `npm run setup:yes && docker compose down -v && sleep 3 && docker compose up -d` to make sure all services are restarted and all changes are applied.
 - **Production**: `docker compose --env-file .env.prod -f docker-compose.prod.yml up`
