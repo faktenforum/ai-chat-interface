@@ -1,6 +1,11 @@
 # Portainer dev/test deployment stack
 # Uses :dev image tags for feature branch testing
 # For production deployments, use docker-compose.prod.yml (uses :latest tags)
+#
+# When running BOTH prod and dev on the same Portainer host: set STACK_NAME=dev for this stack
+# (e.g. in Portainer stack env or .env) so networks/volumes/containers are isolated (dev-app-net,
+# dev-mcp-linux, etc.). Otherwise DNS on the shared traefik-net can resolve "mcp-linux" to both
+# stacks and connections become unstable.
 
 services:
   librechat-init:
@@ -226,8 +231,11 @@ services:
       - mcp_linux_homes:/home
       - mcp_linux_data:/app/data
     networks:
-      - app-net
-      - traefik-net
+      app-net: {}
+      # Stack-specific alias on shared traefik-net so "mcp-linux" does not resolve to both prod and dev (see docs/MCP_LINUX.md)
+      traefik-net:
+        aliases:
+          - ${STACK_NAME:-prod}-mcp-linux
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
@@ -248,8 +256,10 @@ services:
     extends: { file: docker-compose.ytptube.yml, service: ytptube }
     container_name: ${STACK_NAME:-prod}-ytptube
     networks:
-      - app-net
-      - traefik-net
+      app-net: {}
+      traefik-net:
+        aliases:
+          - ${STACK_NAME:-prod}-ytptube
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"

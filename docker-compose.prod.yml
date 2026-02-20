@@ -218,8 +218,11 @@ services:
       - mcp_linux_homes:/home
       - mcp_linux_data:/app/data
     networks:
-      - app-net
-      - traefik-net
+      app-net: {}
+      # Stack-specific alias on shared traefik-net so "mcp-linux" does not resolve to both prod and dev (see docs/MCP_LINUX.md)
+      traefik-net:
+        aliases:
+          - ${STACK_NAME:-prod}-mcp-linux
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
@@ -241,8 +244,10 @@ services:
     extends: { file: docker-compose.ytptube.yml, service: ytptube }
     container_name: ${STACK_NAME:-prod}-ytptube
     networks:
-      - app-net
-      - traefik-net
+      app-net: {}
+      traefik-net:
+        aliases:
+          - ${STACK_NAME:-prod}-ytptube
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
