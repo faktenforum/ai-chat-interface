@@ -382,7 +382,19 @@ services:
     networks:
       app-net: {}
       traefik-net: {}
-    # No Traefik labels - internal service only
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
+      - "traefik.http.routers.mcp-linux-upload.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/upload`)"
+      - "traefik.http.routers.mcp-linux-upload.entrypoints=web"
+      - "traefik.http.routers.mcp-linux-upload.service=mcp-linux"
+      - "traefik.http.routers.mcp-linux-static.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && (PathPrefix(`/css`) || PathPrefix(`/js`))"
+      - "traefik.http.routers.mcp-linux-static.entrypoints=web"
+      - "traefik.http.routers.mcp-linux-static.service=mcp-linux"
+      - "traefik.http.routers.mcp-linux-download.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/download`)"
+      - "traefik.http.routers.mcp-linux-download.entrypoints=web"
+      - "traefik.http.routers.mcp-linux-download.service=mcp-linux"
+      - "traefik.http.services.mcp-linux.loadbalancer.server.port=3015"
 
   # Additional Services
   openwebui:
