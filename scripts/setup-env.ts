@@ -97,7 +97,7 @@ const extractDefaultValue = (expansion: string): string | undefined => {
 };
 
 /**
- * Resolve ${VAR} expansions in a value using the provided env map.
+ * Resolve ${VAR} and ${VAR:-default} expansions in a value using the provided env map.
  * Used to compare example default (which may contain ${X}) to written value.
  */
 function resolveValueAgainstMap(
@@ -108,13 +108,41 @@ function resolveValueAgainstMap(
     let result = value;
     let iterations = 0;
     while (containsVariableExpansion(result) && iterations < maxIterations) {
-        const varNames = extractVariableNames(result);
-        for (const varName of varNames) {
-            const resolved = envMap[varName];
-            if (resolved !== undefined) {
-                result = result.replace(new RegExp(`\\$\\{${varName}\\}`, 'g'), resolved);
+        // Find all expansion patterns (${VAR} or ${VAR:-default})
+        const expansionMatches = Array.from(result.matchAll(/\$\{([^}]+)\}/g));
+        let changed = false;
+        
+        for (const match of expansionMatches) {
+            const fullExpansion = match[0]; // e.g., "${VAR:-default}" or "${VAR}"
+            const innerContent = match[1]; // e.g., "VAR:-default" or "VAR"
+            
+            // Extract variable name and default value
+            const defaultMatch = innerContent.match(/^([^:-]+)(?::-(.+))?$/);
+            if (!defaultMatch) continue;
+            
+            const varName = defaultMatch[1];
+            const defaultValue = defaultMatch[2];
+            const resolvedValue = envMap[varName];
+            
+            let replacement: string;
+            if (resolvedValue !== undefined) {
+                // Variable exists in env map - use its value
+                replacement = resolvedValue;
+            } else if (defaultValue !== undefined) {
+                // Variable not found but default provided - use default
+                replacement = defaultValue;
+            } else {
+                // Variable not found and no default - keep expansion for next iteration
+                continue;
             }
+            
+            // Replace the entire expansion pattern (escape special regex chars)
+            const escapedExpansion = fullExpansion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            result = result.replace(new RegExp(escapedExpansion, 'g'), replacement);
+            changed = true;
         }
+        
+        if (!changed) break; // No more changes possible
         iterations++;
     }
     return result;
@@ -616,16 +644,23 @@ interface DivergenceReport {
 
 function computeDivergenceAndObsolete(
     writtenEnv: Record<string, string>,
-    baseDefaults: Record<string, string>
+    baseDefaults: Record<string, string>,
+    stackName?: string
 ): DivergenceReport {
     const exampleKeys = new Set(Object.keys(baseDefaults));
     let expectedToDifferCount = 0;
     const mightNeedReview: Array<{ key: string; example: string; current: string }> = [];
 
+    // Create extended env map that includes STACK_NAME for variable resolution
+    const envMapForResolution = { ...writtenEnv };
+    if (stackName) {
+        envMapForResolution.STACK_NAME = stackName;
+    }
+
     for (const key of Object.keys(writtenEnv)) {
         if (!exampleKeys.has(key)) continue;
         const defaultValue = baseDefaults[key] ?? '';
-        const resolvedDefault = resolveValueAgainstMap(defaultValue, writtenEnv);
+        const resolvedDefault = resolveValueAgainstMap(defaultValue, envMapForResolution);
         const current = (writtenEnv[key] ?? '').trim();
         if (current !== resolvedDefault.trim()) {
             if (isExpectedToDiffer(key)) {
@@ -776,7 +811,7 @@ async function main() {
 
     // 9b. Divergence and obsolete reports
     const writtenEnv = buildWrittenEnvFromLines(filteredLines);
-    const report = computeDivergenceAndObsolete(writtenEnv, baseDefaults);
+    const report = computeDivergenceAndObsolete(writtenEnv, baseDefaults, stackName);
     printDivergenceAndObsoleteReports(report);
 
     // 10. Summary
