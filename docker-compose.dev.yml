@@ -63,6 +63,10 @@ services:
         condition: service_healthy
       mcp-ytptube:
         condition: service_healthy
+      mcp-stackoverflow:
+        condition: service_healthy
+      mcp-npm-search:
+        condition: service_healthy
     networks:
       # app-net first to ensure mcp-linux resolves correctly on isolated app-net
       # (not on shared traefik-net where both prod and dev containers register mcp-linux)
@@ -145,8 +149,8 @@ services:
       n8n-postgres:
         condition: service_healthy
     networks:
-      - traefik-net
       - app-net
+      - traefik-net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
@@ -234,8 +238,8 @@ services:
       - mcp_linux_homes:/home
       - mcp_linux_data:/app/data
     networks:
-      app-net: {}
-      traefik-net: {}
+      - app-net
+      - traefik-net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
@@ -262,8 +266,8 @@ services:
     extends: { file: docker-compose.ytptube.yml, service: ytptube }
     container_name: ${STACK_NAME:-prod}-ytptube
     networks:
-      app-net: {}
-      traefik-net: {}
+      - app-net
+      - traefik-net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=loadbalancer-net"
@@ -295,15 +299,15 @@ services:
     # No Traefik labels - internal service only
 
 networks:
-  traefik-net:
-    external: true
-    name: loadbalancer-net
   app-net:
     name: ${STACK_NAME:-prod}-app-net
     driver: bridge
   firecrawl-network:
     name: ${STACK_NAME:-prod}-firecrawl-network
     driver: bridge
+  traefik-net:
+    external: true
+    name: loadbalancer-net
 
 volumes:
   mongodata:

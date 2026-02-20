@@ -133,8 +133,10 @@ services:
       meilisearch:
         condition: service_started
     networks:
-      - traefik-net
+      # app-net first to ensure mcp-linux resolves correctly on isolated app-net
+      # (not on shared traefik-net where multiple containers might register mcp-linux)
       - app-net
+      - traefik-net
 
   mongodb-init:
     image: alpine:latest

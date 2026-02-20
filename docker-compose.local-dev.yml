@@ -9,8 +9,8 @@ services:
     image: maildev/maildev:latest
     restart: always
     networks:
-      - traefik-net
       - app-net
+      - traefik-net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=ai-chat-interface_traefik-net"
@@ -95,6 +95,10 @@ services:
       meilisearch:
         condition: service_started
       mcp-linux:
+        condition: service_healthy
+      mcp-stackoverflow:
+        condition: service_healthy
+      mcp-npm-search:
         condition: service_healthy
     networks:
       # app-net first to ensure mcp-linux resolves correctly on isolated app-net
@@ -214,8 +218,8 @@ services:
     container_name: ${STACK_NAME:-local}-ytptube
     env_file: .env.local
     networks:
-      app-net: {}
-      traefik-net: {}
+      - app-net
+      - traefik-net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=ai-chat-interface_traefik-net"
@@ -378,8 +382,8 @@ services:
     ports:
       - "127.0.0.1:${MCP_LINUX_PORT:-3015}:${MCP_LINUX_PORT:-3015}"  # Cursor IDE – local only
     networks:
-      app-net: {}
-      traefik-net: {}
+      - app-net
+      - traefik-net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=ai-chat-interface_traefik-net"
@@ -400,11 +404,11 @@ services:
     env_file: .env.local
 
 networks:
-  traefik-net:
-    driver: bridge
   app-net:
     driver: bridge
   firecrawl-network:
+    driver: bridge
+  traefik-net:
     driver: bridge
 
 volumes:
