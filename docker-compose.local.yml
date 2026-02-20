@@ -43,6 +43,7 @@ services:
     env_file: .env.local
     environment:
       LIBRECHAT_ENV: local
+      STACK_NAME: ${STACK_NAME:-local}
     # Mount host config so changes to librechat.yaml/roles/agents apply without image rebuild.
     # Init reads from /app/config-source when present and writes to volume /app/config.
     volumes:
@@ -112,6 +113,7 @@ services:
 
   searxng:
     extends: { file: docker-compose.websearch.yml, service: searxng }
+    container_name: ${STACK_NAME:-local}-searxng
     volumes:
       - searxng-config:/etc/searxng:ro
     depends_on:
@@ -127,6 +129,7 @@ services:
 
   firecrawl-api:
     extends: { file: docker-compose.websearch.yml, service: firecrawl-api }
+    container_name: ${STACK_NAME:-local}-firecrawl-api
     env_file: .env.local
     labels:
       - "traefik.enable=true"
@@ -185,6 +188,7 @@ services:
   # YTPTube - video/audio download via yt-dlp (for MCP YTPTube)
   ytptube:
     extends: { file: docker-compose.ytptube.yml, service: ytptube }
+    container_name: ${STACK_NAME:-local}-ytptube
     env_file: .env.local
     networks:
       app-net: {}
@@ -338,6 +342,7 @@ services:
 
   mcp-linux:
     extends: { file: docker-compose.mcp-linux.yml, service: mcp-linux }
+    container_name: ${STACK_NAME:-local}-mcp-linux
     env_file: .env.local
     build:
       context: ./packages/mcp-linux

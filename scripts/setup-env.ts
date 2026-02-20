@@ -74,10 +74,26 @@ const containsVariableExpansion = (value: string): boolean => {
 /**
  * Extract all variable names from expansions in a value
  * Returns array of variable names found (e.g., "${VAR1}/${VAR2}" -> ["VAR1", "VAR2"])
+ * Also handles default syntax: "${VAR:-default}" -> "VAR"
  */
 const extractVariableNames = (value: string): string[] => {
     const matches = value.matchAll(/\$\{([^}]+)\}/g);
-    return Array.from(matches, m => m[1]);
+    return Array.from(matches, m => {
+        const fullMatch = m[1];
+        // Handle default syntax: ${VAR:-default} -> extract VAR
+        const defaultMatch = fullMatch.match(/^([^:-]+)(?::-.*)?$/);
+        return defaultMatch ? defaultMatch[1] : fullMatch;
+    });
+};
+
+/**
+ * Extract default value from expansion syntax
+ * Returns default value if present, undefined otherwise
+ * Example: "${VAR:-default}" -> "default", "${VAR}" -> undefined
+ */
+const extractDefaultValue = (expansion: string): string | undefined => {
+    const defaultMatch = expansion.match(/^\$\{([^:-]+):-(.+)\}$/);
+    return defaultMatch ? defaultMatch[2] : undefined;
 };
 
 /**
@@ -342,13 +358,18 @@ async function processPrompted(
 }
 
 /**
- * Resolve variable expansions (e.g., ${VAR_NAME}) in environment lines
+ * Resolve variable expansions (e.g., ${VAR_NAME} or ${VAR_NAME:-default}) in environment lines
  * Supports multiple expansions per value and handles dependencies
  */
-function resolveVariableExpansions(envLines: string[]): string[] {
+function resolveVariableExpansions(envLines: string[], stackName?: string): string[] {
     // Build initial map of all key-value pairs
     const envMap = new Map<string, string>();
     const lineMap = new Map<string, { line: string; key: string; value: string }>();
+
+    // Add STACK_NAME to envMap if provided
+    if (stackName) {
+        envMap.set('STACK_NAME', stackName);
+    }
 
     for (const line of envLines) {
         const trimmed = line.trim();
@@ -384,25 +405,44 @@ function resolveVariableExpansions(envLines: string[]): string[] {
                 continue;
             }
 
-            // Extract all variable names from expansions
-            const varNames = extractVariableNames(value);
+            // Find all expansion patterns (${VAR} or ${VAR:-default})
+            const expansionMatches = Array.from(value.matchAll(/\$\{([^}]+)\}/g));
             let newValue = value;
 
             // Replace each expansion with its resolved value
-            for (const varName of varNames) {
+            for (const match of expansionMatches) {
+                const fullExpansion = match[0]; // e.g., "${VAR:-default}"
+                const innerContent = match[1]; // e.g., "VAR:-default"
+                
+                // Extract variable name and default value
+                const defaultMatch = innerContent.match(/^([^:-]+)(?::-(.+))?$/);
+                if (!defaultMatch) continue;
+                
+                const varName = defaultMatch[1];
+                const defaultValue = defaultMatch[2];
                 const resolvedValue = envMap.get(varName);
 
+                let replacement: string;
                 if (resolvedValue && !containsVariableExpansion(resolvedValue)) {
-                    // Replace ${VAR_NAME} with resolved value (replace all occurrences)
-                    newValue = newValue.replace(new RegExp(`\\$\\{${varName}\\}`, 'g'), resolvedValue);
+                    // Variable exists and is fully resolved - use its value
+                    replacement = resolvedValue;
                     resolvedExpansions.push({ key, varName });
                 } else if (resolvedValue && containsVariableExpansion(resolvedValue)) {
-                    // The referenced variable itself contains expansions - will be resolved in next iteration
-                    // Do nothing, will be resolved in next iteration
+                    // Variable exists but contains expansions - will be resolved in next iteration
+                    // Keep expansion for now
+                    continue;
+                } else if (defaultValue !== undefined) {
+                    // Variable not found but default provided - use default
+                    replacement = defaultValue;
+                    resolvedExpansions.push({ key, varName: `${varName} (default: ${defaultValue})` });
                 } else {
-                    // Variable not found - keep expansion (will be resolved at runtime by docker-compose)
-                    // Do nothing, keep expansion
+                    // Variable not found and no default - keep expansion (will be resolved at runtime by docker-compose)
+                    continue;
                 }
+
+                // Replace the expansion (escape special regex chars in fullExpansion)
+                const escapedExpansion = fullExpansion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                newValue = newValue.replace(new RegExp(escapedExpansion, 'g'), replacement);
             }
 
             // Update if value changed
@@ -429,25 +469,29 @@ function resolveVariableExpansions(envLines: string[]): string[] {
         console.warn('⚠️  Warning: Variable expansion resolution reached max iterations. Some expansions may not be resolved.');
     }
 
-    // Rebuild lines with resolved values
+    // Rebuild lines with resolved values (preserve comments and empty lines)
     const resolvedLines: string[] = [];
 
     for (const line of envLines) {
         const trimmed = line.trim();
 
-        // Skip comments and empty lines
+        // Preserve comments and empty lines
         if (!trimmed || trimmed.startsWith('#')) {
+            resolvedLines.push(line);
             continue;
         }
 
         const [key, ...valueParts] = trimmed.split('=');
         if (!key || valueParts.length === 0) {
+            resolvedLines.push(line);
             continue;
         }
 
         const entry = lineMap.get(key);
         if (entry) {
             resolvedLines.push(`${key}=${entry.value}`);
+        } else {
+            resolvedLines.push(line);
         }
     }
 
@@ -716,8 +760,9 @@ async function main() {
         finalEnvLines.push(...devLines);
     }
 
-    // 7. Resolve variable expansions
-    const resolvedEnvLines = resolveVariableExpansions(finalEnvLines);
+    // 7. Resolve variable expansions (set STACK_NAME based on mode)
+    const stackName = isProdMode ? 'prod' : (isDevMode ? 'dev' : undefined);
+    const resolvedEnvLines = resolveVariableExpansions(finalEnvLines, stackName);
 
     // 8. Filter out comments and empty lines
     const filteredLines = resolvedEnvLines.filter(line => {

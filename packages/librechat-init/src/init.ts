@@ -27,7 +27,11 @@ function resolveConfigPlaceholders(content: string): string {
     // Support both $${VAR} and $${VAR:-default} syntax
     const regex = new RegExp(`\\$\\$\\{${varName}(?::-([^}]+))?\\}`, 'g');
     resolved = resolved.replace(regex, (match, defaultValue) => {
-      return envValue ?? defaultValue ?? '';
+      const result = envValue ?? defaultValue ?? '';
+      if (varName === 'STACK_NAME') {
+        console.log(`  Resolved ${match} -> ${result} (envValue: ${envValue ?? 'undefined'}, defaultValue: ${defaultValue ?? 'none'})`);
+      }
+      return result;
     });
   }
 
@@ -60,6 +64,17 @@ async function main() {
   console.log('=========================================');
   console.log('LibreChat Initialization Started');
   console.log('=========================================\n');
+
+  // Ensure STACK_NAME is set (fallback based on LIBRECHAT_ENV or 'prod')
+  // This is needed for resolving placeholders in librechat.yaml
+  if (!process.env.STACK_NAME) {
+    // Default based on LIBRECHAT_ENV: local -> 'local', dev -> 'dev', prod -> 'prod'
+    const libreachEnv = process.env.LIBRECHAT_ENV ?? 'prod';
+    process.env.STACK_NAME = libreachEnv === 'local' ? 'local' : (libreachEnv === 'dev' ? 'dev' : 'prod');
+    console.log(`ℹ️  STACK_NAME not set, defaulting to "${process.env.STACK_NAME}" (based on LIBRECHAT_ENV=${libreachEnv})`);
+  } else {
+    console.log(`ℹ️  STACK_NAME=${process.env.STACK_NAME}`);
+  }
 
   try {
     console.log('[1/4] Setting up LibreChat configuration...');

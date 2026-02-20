@@ -13,6 +13,7 @@ services:
     container_name: ${STACK_NAME:-prod}-librechat-init
     environment:
       LIBRECHAT_ENV: dev
+      STACK_NAME: ${STACK_NAME:-prod}
     image: ghcr.io/faktenforum/librechat-init:dev
     volumes:
       - librechat-config:/app/config

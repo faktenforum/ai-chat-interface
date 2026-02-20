@@ -3,6 +3,8 @@ services:
     extends: { file: docker-compose.librechat.yml, service: librechat-init }
     container_name: ${STACK_NAME:-prod}-librechat-init
     image: ghcr.io/faktenforum/librechat-init:latest
+    environment:
+      STACK_NAME: ${STACK_NAME:-prod}
     volumes:
       - librechat-config:/app/config
       - ./images:/images
