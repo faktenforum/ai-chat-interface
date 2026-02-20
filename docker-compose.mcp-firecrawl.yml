@@ -1,7 +1,7 @@
 services:
   mcp-firecrawl:
     image: ghcr.io/firecrawl/firecrawl-mcp-server:latest
-    container_name: mcp-firecrawl
+    # container_name is set in docker-compose.prod.yml, docker-compose.dev.yml, docker-compose.local.yml, etc.
     restart: always
     environment:
       NODE_ENV: ${NODE_ENV:-production}

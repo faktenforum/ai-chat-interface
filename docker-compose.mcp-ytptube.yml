@@ -2,7 +2,7 @@
 services:
   mcp-ytptube:
     image: ghcr.io/faktenforum/mcp-ytptube:latest
-    container_name: mcp-ytptube
+    # container_name is set in docker-compose.prod.yml, docker-compose.dev.yml, docker-compose.local.yml, etc.
     restart: always
     environment:
       NODE_ENV: ${NODE_ENV:-production}

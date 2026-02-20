@@ -3,7 +3,7 @@
 services:
   mcp-youtube-transcript:
     image: ghcr.io/faktenforum/mcp-youtube-transcript:latest
-    container_name: mcp-youtube-transcript
+    # container_name is set in docker-compose.prod.yml, docker-compose.dev.yml, docker-compose.local.yml, etc.
     entrypoint: []
     restart: always
     environment:

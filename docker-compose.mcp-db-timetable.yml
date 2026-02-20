@@ -1,8 +1,8 @@
 services:
   mcp-db-timetable:
     # Internal service only - not exposed via Traefik. Image built by extension files (local, local-dev) or pulled from registry (prod, dev). Do not use base file alone.
+    # container_name is set in docker-compose.prod.yml, docker-compose.dev.yml, docker-compose.local.yml, etc.
     image: ghcr.io/faktenforum/mcp-db-timetable:latest
-    container_name: mcp-db-timetable
     restart: always
     environment:
       NODE_ENV: ${NODE_ENV:-production}

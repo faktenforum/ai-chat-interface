@@ -3,7 +3,7 @@
 services:
   mcp-docs:
     image: ghcr.io/faktenforum/mcp-docs:latest
-    container_name: mcp-docs
+    # container_name is set in docker-compose.prod.yml, docker-compose.dev.yml, docker-compose.local.yml, etc.
     restart: always
     command: ["--protocol", "http", "--host", "0.0.0.0", "--port", "6280"]
     environment:

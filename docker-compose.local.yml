@@ -21,6 +21,7 @@ services:
   # Database Services - MongoDB
   mongodb-init:
     extends: { file: docker-compose.librechat.yml, service: mongodb-init }
+    container_name: ${STACK_NAME:-local}-mongodb-init
     env_file: .env.local
     volumes:
       - mongodata:/data/db
@@ -28,6 +29,7 @@ services:
 
   mongodb:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
+    container_name: ${STACK_NAME:-local}-mongodb
     env_file: .env.local
     volumes:
       - mongodata:/data/db
@@ -40,6 +42,7 @@ services:
   # LibreChat Services
   librechat-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-init }
+    container_name: ${STACK_NAME:-local}-librechat-init
     env_file: .env.local
     environment:
       LIBRECHAT_ENV: local
@@ -58,6 +61,7 @@ services:
 
   librechat-post-init:
     extends: { file: docker-compose.librechat.yml, service: librechat-post-init }
+    container_name: ${STACK_NAME:-local}-librechat-post-init
     env_file: .env.local
     # Mount host config so agent/prompt changes apply without image rebuild; post-init reads from /app/config-source when present.
     volumes:
@@ -68,10 +72,12 @@ services:
 
   meilisearch:
     extends: { file: docker-compose.librechat.yml, service: meilisearch }
+    container_name: ${STACK_NAME:-local}-meilisearch
     env_file: .env.local
 
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
+    container_name: ${STACK_NAME:-local}-librechat
     # Build from submodule Dockerfile (like rag_api)
     # Use unique image name to prevent Docker layering built image on base image
     image: librechat:local
@@ -99,6 +105,7 @@ services:
       - ./dev/agents:/app/node_modules/@librechat/agents
     environment:
       NODE_ENV: development
+      STACK_NAME: ${STACK_NAME:-local}
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=ai-chat-interface_traefik-net"
@@ -109,6 +116,7 @@ services:
   # Web Search Services
   searxng-config-init:
     extends: { file: docker-compose.websearch.yml, service: searxng-config-init }
+    container_name: ${STACK_NAME:-local}-searxng-config-init
     env_file: .env.local
 
   searxng:
@@ -140,40 +148,49 @@ services:
 
   playwright-service:
     extends: { file: docker-compose.websearch.yml, service: playwright-service }
+    container_name: ${STACK_NAME:-local}-firecrawl-playwright
     env_file: .env.local
 
   redis:
     extends: { file: docker-compose.websearch.yml, service: redis }
+    container_name: ${STACK_NAME:-local}-firecrawl-redis
     env_file: .env.local
 
   nuq-postgres:
     extends: { file: docker-compose.websearch.yml, service: nuq-postgres }
+    container_name: ${STACK_NAME:-local}-firecrawl-postgres
     env_file: .env.local
 
   rabbitmq:
     extends: { file: docker-compose.websearch.yml, service: rabbitmq }
+    container_name: ${STACK_NAME:-local}-firecrawl-rabbitmq
     env_file: .env.local
 
   # RAG Services
   vectordb:
     extends: { file: docker-compose.rag.yml, service: vectordb }
+    container_name: ${STACK_NAME:-local}-vectordb
     env_file: .env.local
 
   rag_api:
     extends: { file: docker-compose.rag.yml, service: rag_api }
+    container_name: ${STACK_NAME:-local}-rag-api
     env_file: .env.local
 
   # n8n Services
   n8n-postgres:
     extends: { file: docker-compose.n8n.yml, service: n8n-postgres }
+    container_name: ${STACK_NAME:-local}-n8n-postgres
     env_file: .env.local
 
   n8n-init:
     extends: { file: docker-compose.n8n.yml, service: n8n-init }
+    container_name: ${STACK_NAME:-local}-n8n-init
     env_file: .env.local
 
   n8n:
     extends: { file: docker-compose.n8n.yml, service: n8n }
+    container_name: ${STACK_NAME:-local}-n8n
     env_file: .env.local
     depends_on:
       n8n-postgres:
@@ -203,6 +220,7 @@ services:
   # MCP Services
   mcp-calculator:
     extends: { file: docker-compose.mcp-calculator.yml, service: mcp-calculator }
+    container_name: ${STACK_NAME:-local}-mcp-calculator
     env_file: .env.local
     # Override: use build for local development instead of image from registry
     build:
@@ -214,6 +232,7 @@ services:
 
   mcp-image-gen:
     extends: { file: docker-compose.mcp-image-gen.yml, service: mcp-image-gen }
+    container_name: ${STACK_NAME:-local}-mcp-image-gen
     env_file: .env.local
     # Override: use build for local development instead of image from registry
     build:
@@ -225,12 +244,14 @@ services:
 
   mcp-firecrawl:
     extends: { file: docker-compose.mcp-firecrawl.yml, service: mcp-firecrawl }
+    container_name: ${STACK_NAME:-local}-mcp-firecrawl
     env_file: .env.local
     ports:
       - "127.0.0.1:3003:3003"  # Cursor IDE – local only
 
   mcp-docs:
     extends: { file: docker-compose.mcp-docs.yml, service: mcp-docs }
+    container_name: ${STACK_NAME:-local}-mcp-docs
     env_file: .env.local
     image: ghcr.io/faktenforum/mcp-docs:latest
     build:
@@ -241,6 +262,7 @@ services:
 
   mcp-openstreetmap:
     extends: { file: docker-compose.mcp-openstreetmap.yml, service: mcp-openstreetmap }
+    container_name: ${STACK_NAME:-local}-mcp-openstreetmap
     env_file: .env.local
     # Build from submodule Dockerfile (like rag_api)
     # Use unique image name to avoid layering on top of base image (python:3.13-slim)
@@ -254,6 +276,7 @@ services:
 
   mcp-weather:
     extends: { file: docker-compose.mcp-weather.yml, service: mcp-weather }
+    container_name: ${STACK_NAME:-local}-mcp-weather
     env_file: .env.local
     ports:
       - "127.0.0.1:3005:3005"  # Cursor IDE – local only
@@ -261,6 +284,7 @@ services:
 
   mcp-playwright:
     extends: { file: docker-compose.mcp-playwright.yml, service: mcp-playwright }
+    container_name: ${STACK_NAME:-local}-mcp-playwright
     env_file: .env.local
     ports:
       - "127.0.0.1:3006:3006"  # Cursor IDE – local only
@@ -268,6 +292,7 @@ services:
 
   mcp-ytptube:
     extends: { file: docker-compose.mcp-ytptube.yml, service: mcp-ytptube }
+    container_name: ${STACK_NAME:-local}-mcp-ytptube
     env_file: .env.local
     build:
       context: ./packages/mcp-ytptube
@@ -281,6 +306,7 @@ services:
 
   mcp-youtube-transcript:
     extends: { file: docker-compose.mcp-youtube-transcript.yml, service: mcp-youtube-transcript }
+    container_name: ${STACK_NAME:-local}-mcp-youtube-transcript
     env_file: .env.local
     # Build from submodule Dockerfile (like mcp-db-timetable)
     image: ghcr.io/faktenforum/mcp-youtube-transcript:latest
@@ -293,6 +319,7 @@ services:
 
   mcp-db-timetable:
     extends: { file: docker-compose.mcp-db-timetable.yml, service: mcp-db-timetable }
+    container_name: ${STACK_NAME:-local}-mcp-db-timetable
     env_file: .env.local
     # Build from submodule Dockerfile
     # Use unique image name to prevent Docker layering built image on base image
@@ -306,6 +333,7 @@ services:
 
   mcp-stackoverflow:
     extends: { file: docker-compose.mcp-stackoverflow.yml, service: mcp-stackoverflow }
+    container_name: ${STACK_NAME:-local}-mcp-stackoverflow
     env_file: .env.local
     # Build from submodule Dockerfile
     # Use unique image name to prevent Docker layering built image on base image
@@ -319,6 +347,7 @@ services:
 
   mcp-npm-search:
     extends: { file: docker-compose.mcp-npm-search.yml, service: mcp-npm-search }
+    container_name: ${STACK_NAME:-local}-mcp-npm-search
     env_file: .env.local
     # Build from submodule Dockerfile
     # Use unique image name to prevent Docker layering built image on base image
@@ -332,6 +361,7 @@ services:
 
   mcp-chefkoch:
     extends: { file: docker-compose.mcp-chefkoch.yml, service: mcp-chefkoch }
+    container_name: ${STACK_NAME:-local}-mcp-chefkoch
     env_file: .env.local
     build:
       context: ./packages/mcp-chefkoch

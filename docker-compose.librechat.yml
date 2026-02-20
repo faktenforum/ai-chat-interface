@@ -9,7 +9,7 @@ services:
     restart: "no"
     user: root
     environment:
-      MONGO_URI: ${LIBRECHAT_MONGO_URI}
+      MONGO_URI: ${LIBRECHAT_MONGO_URI:-mongodb://${STACK_NAME:-prod}-mongodb:27017/LibreChat}
       LIBRECHAT_DEFAULT_ADMINS: ${LIBRECHAT_DEFAULT_ADMINS:-}
       UID: ${UID:-1000}
       GID: ${GID:-1000}
@@ -44,7 +44,7 @@ services:
     restart: "no"
     user: root
     environment:
-      MONGO_URI: ${LIBRECHAT_MONGO_URI}
+      MONGO_URI: ${LIBRECHAT_MONGO_URI:-mongodb://${STACK_NAME:-prod}-mongodb:27017/LibreChat}
       LIBRECHAT_DEFAULT_ADMINS: ${LIBRECHAT_DEFAULT_ADMINS:-}
       LIBRECHAT_API_URL: ${LIBRECHAT_API_URL:-http://api:3080}
       LIBRECHAT_JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
@@ -76,10 +76,10 @@ services:
         compress: "true"
     environment:
       HOST: ${LIBRECHAT_HOST:-0.0.0.0}
-      MONGO_URI: ${LIBRECHAT_MONGO_URI}
-      MEILI_HOST: ${LIBRECHAT_MEILI_HOST:-http://meilisearch:7700}
+      MONGO_URI: ${LIBRECHAT_MONGO_URI:-mongodb://${STACK_NAME:-prod}-mongodb:27017/LibreChat}
+      MEILI_HOST: ${LIBRECHAT_MEILI_HOST:-http://${STACK_NAME:-prod}-meilisearch:7700}
       RAG_PORT: ${LIBRECHAT_RAG_PORT:-8000}
-      RAG_API_URL: ${LIBRECHAT_RAG_API_URL:-http://rag_api:8000}
+      RAG_API_URL: ${LIBRECHAT_RAG_API_URL:-http://${STACK_NAME:-prod}-rag-api:8000}
       SESSION_SECRET: ${LIBRECHAT_SESSION_SECRET}
       JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
       JWT_REFRESH_SECRET: ${LIBRECHAT_JWT_REFRESH_SECRET}

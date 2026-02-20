@@ -931,20 +931,20 @@ mcpSettings:
   allowedDomains:
     - 'host.docker.internal'    # Docker host access (required for Docker setups)
     - 'localhost'               # Local development
-    - 'mcp-calculator'           # MCP Calculator service (Docker network)
-    - 'mcp-image-gen'            # MCP Image Generation service (Docker network)
-    - 'mcp-firecrawl'           # MCP Firecrawl service (Docker network)
-    - 'mcp-openstreetmap'       # MCP OpenStreetMap service (Docker network)
-    - 'mcp-weather'             # MCP Weather service (Docker network)
-    - 'mcp-playwright'          # MCP Playwright service (Docker network)
-    - 'mcp-db-timetable'        # MCP DB Timetable service (Docker network)
-    - 'mcp-stackoverflow'       # MCP StackOverflow service (Docker network)
-    - 'mcp-npm-search'           # MCP npm Search service (Docker network)
-    - 'mcp-ytptube'             # MCP YTPTube (YTPTube + Scaleway STT)
-    - 'mcp-youtube-transcript'  # MCP YouTube Transcript (youtube-transcript-api)
-    - 'mcp-docs'                # MCP Docs (Grounded Docs) service (Docker network)
-    - 'mcp-chefkoch'            # MCP Chefkoch service (Docker network)
-    - 'mcp-linux'                # MCP Linux service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-calculator'           # MCP Calculator service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-image-gen'            # MCP Image Generation service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-firecrawl'           # MCP Firecrawl service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-openstreetmap'       # MCP OpenStreetMap service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-weather'             # MCP Weather service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-playwright'          # MCP Playwright service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-db-timetable'        # MCP DB Timetable service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-stackoverflow'       # MCP StackOverflow service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-npm-search'           # MCP npm Search service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-ytptube'             # MCP YTPTube (YTPTube + Scaleway STT)
+    - '$${STACK_NAME:-prod}-mcp-youtube-transcript'  # MCP YouTube Transcript (youtube-transcript-api)
+    - '$${STACK_NAME:-prod}-mcp-docs'                # MCP Docs (Grounded Docs) service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-chefkoch'            # MCP Chefkoch service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-linux'                # MCP Linux service (Docker network)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     - 'mcp.mapbox.com'           # Mapbox MCP Server (remote hosted)
     # - '*.example.com'           # Wildcard subdomain
@@ -958,7 +958,7 @@ mcpSettings:
 mcpServers:
   calculator:
     type: streamable-http
-    url: http://mcp-calculator:3012/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-calculator:3012/mcp
     title: Rechner
     description: Mathematische Berechnungen und Rechenoperationen
     iconPath: /images/mcp-calculator-icon.svg
@@ -969,7 +969,7 @@ mcpServers:
 
   image-gen:
     type: streamable-http
-    url: http://mcp-image-gen:3013/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-image-gen:3013/mcp
     title: Image Generation
     description: Create images from text descriptions
     iconPath: /images/mcp-image-gen-icon.svg
@@ -981,7 +981,7 @@ mcpServers:
 
   openstreetmap:
     type: streamable-http
-    url: http://mcp-openstreetmap:3004/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-openstreetmap:3004/mcp
     title: OpenStreetMap
     description: Geographic search, route planning and location information
     iconPath: /images/mcp-openstreetmap-icon.svg
@@ -992,7 +992,7 @@ mcpServers:
 
   weather:
     type: streamable-http
-    url: http://mcp-weather:3005/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-weather:3005/mcp
     title: Weather
     description: Current weather data, air quality and timezone information
     iconPath: /images/mcp-weather-icon.svg
@@ -1003,7 +1003,7 @@ mcpServers:
 
   docs:
     type: streamable-http
-    url: http://mcp-docs:6280/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-docs:6280/mcp
     title: Search Documentation
     description: Search publicly available documentation
     iconPath: /images/mcp-docs-icon.svg
@@ -1014,7 +1014,7 @@ mcpServers:
 
   playwright:
     type: streamable-http
-    url: http://mcp-playwright:3006/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-playwright:3006/mcp
     title: Browser Automation
     description: Search, interact with and automate websites
     iconPath: /images/mcp-playwright-icon.svg
@@ -1026,7 +1026,7 @@ mcpServers:
 
   db-timetable:
     type: streamable-http
-    url: http://mcp-db-timetable:3007/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-db-timetable:3007/mcp
     title: DB Timetable
     description: Current timetables, station search and train connections of Deutsche Bahn
     iconPath: /images/mcp-db-timetable-icon.svg
@@ -1037,7 +1037,7 @@ mcpServers:
 
   stackoverflow:
     type: streamable-http
-    url: http://mcp-stackoverflow:3008/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-stackoverflow:3008/mcp
     title: Stack Overflow
     description: Find programming solutions and troubleshooting
     iconPath: /images/mcp-stackoverflow-icon.svg
@@ -1048,7 +1048,7 @@ mcpServers:
 
   npm-search:
     type: streamable-http
-    url: http://mcp-npm-search:3009/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-npm-search:3009/mcp
     title: npm Search
     description: Search and find npm packages
     iconPath: /images/mcp-npm-search-icon.svg
@@ -1059,7 +1059,7 @@ mcpServers:
 
   chefkoch:
     type: streamable-http
-    url: http://mcp-chefkoch:3014/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-chefkoch:3014/mcp
     title: Recipes
     description: Search and display recipes from Chefkoch.de
     iconPath: /images/mcp-chefkoch-icon.svg
@@ -1086,7 +1086,7 @@ mcpServers:
 
   ytptube:
     type: streamable-http
-    url: http://mcp-ytptube:3010/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-ytptube:3010/mcp
     title: Video Transcripts
     description: Request video transcripts and check status.
     iconPath: /images/mcp-ytptube-icon.svg
@@ -1098,7 +1098,7 @@ mcpServers:
 
   youtube-transcript:
     type: streamable-http
-    url: http://mcp-youtube-transcript:3011/mcp
+    url: http://$${STACK_NAME:-prod}-mcp-youtube-transcript:3011/mcp
     title: YouTube Transcript
     description: Retrieve transcripts from YouTube videos
     iconPath: /images/mcp-youtube-transcript-icon.svg
@@ -1137,7 +1137,7 @@ mcpServers:
   # Web scraping (scrape, search, map, crawl, extract). Not shown in chat dropdown; available for agents.
   # firecrawl:
   #   type: streamable-http
-  #   url: http://mcp-firecrawl:3003/mcp
+  #   url: http://$${STACK_NAME:-prod}-mcp-firecrawl:3003/mcp
   #   title: Web Scraping
   #   description: Webseiten scrapen, durchsuchen und analysieren
   #   iconPath: /images/mcp-firecrawl-icon.svg

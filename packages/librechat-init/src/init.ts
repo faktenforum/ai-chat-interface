@@ -67,6 +67,7 @@ async function main() {
 
   // Ensure STACK_NAME is set (fallback based on LIBRECHAT_ENV or 'prod')
   // This is needed for resolving placeholders in librechat.yaml
+  // MUST be set BEFORE reading config files
   if (!process.env.STACK_NAME) {
     // Default based on LIBRECHAT_ENV: local -> 'local', dev -> 'dev', prod -> 'prod'
     const libreachEnv = process.env.LIBRECHAT_ENV ?? 'prod';
@@ -96,6 +97,7 @@ async function main() {
       }
 
       let resolvedContent = stringifyYaml(configObj);
+      // STACK_NAME is already set above, so placeholders will resolve correctly
       resolvedContent = resolveConfigPlaceholders(resolvedContent);
       resolvedContent = injectConstructedBaseURLs(resolvedContent);
       writeFileSync(CONFIG_TARGET, resolvedContent, 'utf-8');
