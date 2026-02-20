@@ -244,6 +244,41 @@ export class UserManager {
   }
 
   /**
+   * Configures GitHub CLI authentication if MCP_GITHUB_PAT is set
+   * Uses the same PAT as GitHub MCP for consistency
+   */
+  private setupGitHubCli(username: string): void {
+    const githubPat = process.env.MCP_GITHUB_PAT;
+    if (!githubPat) return;
+
+    const ghConfigDir = `/home/${username}/.config/gh`;
+    const ghHostsFile = join(ghConfigDir, 'hosts.yml');
+
+    try {
+      mkdirSync(ghConfigDir, { recursive: true });
+
+      // Write GitHub CLI hosts config with PAT authentication
+      // Format: https://cli.github.com/manual/gh_auth_login#gh-auth-login-with-token
+      const gitUserName = process.env.MCP_LINUX_GIT_USER_NAME || 'faktenforum-mcp-bot';
+      const ghHostsConfig = `github.com:
+    oauth_token: ${githubPat}
+    git_protocol: ssh
+    user: ${gitUserName}
+`;
+      writeFileSync(ghHostsFile, ghHostsConfig, { mode: 0o600 });
+
+      // Set ownership and permissions
+      chmodSync(ghConfigDir, 0o700);
+      spawnSync('chown', ['-R', `${username}:${username}`, ghConfigDir], { stdio: 'ignore' });
+      chmodSync(ghHostsFile, 0o600);
+
+      logger.info({ username }, 'GitHub CLI configured with PAT');
+    } catch (error) {
+      logger.warn({ username, error }, 'Failed to configure GitHub CLI');
+    }
+  }
+
+  /**
    * Ensures a Linux user exists for the given email.
    * Creates the user if new, returns the Linux username.
    */
@@ -256,6 +291,7 @@ export class UserManager {
         this.createLinuxUser(existing.username, existing.uid);
         this.setupDefaultWorkspace(existing.username);
         this.setupSshKey(existing.username);
+        this.setupGitHubCli(existing.username);
       }
       return existing;
     }
@@ -267,6 +303,7 @@ export class UserManager {
     this.createLinuxUser(username, uid);
     this.setupDefaultWorkspace(username);
     this.setupSshKey(username);
+    this.setupGitHubCli(username);
 
     const mapping: UserMapping = {
       email,
@@ -306,6 +343,7 @@ export class UserManager {
       // Re-create default workspace and SSH key
       this.setupDefaultWorkspace(username);
       this.setupSshKey(username);
+      this.setupGitHubCli(username);
 
       logger.info({ email, username }, 'User account reset');
     } catch (error) {
@@ -390,6 +428,7 @@ export class UserManager {
           this.setupDefaultWorkspace(mapping.username);
         }
         this.setupSshKey(mapping.username);
+        this.setupGitHubCli(mapping.username);
       } catch (error) {
         logger.error({ email, username: mapping.username, error }, 'Failed to restore user');
       }

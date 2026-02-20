@@ -215,12 +215,50 @@ function buildPermissions(agentConfig: AgentConfig, ownerUserId: string): Permis
   };
 }
 
-const INCLUDE_REGEX = /\{\{include:([^}]+)\}\}/g;
+const INCLUDE_REGEX = /\{\{include:([^}|]+)(?:\|([^}]+))?\}\}/g;
+
+/**
+ * Parses parameter string from include directive.
+ * Format: "KEY1=value1|KEY2=value2"
+ * Returns a Map<string, string> of parameter names to values.
+ */
+function parseIncludeParameters(paramString: string | undefined): Map<string, string> {
+  const params = new Map<string, string>();
+  if (!paramString) return params;
+  
+  const pairs = paramString.split('|');
+  for (const pair of pairs) {
+    const trimmed = pair.trim();
+    if (!trimmed) continue;
+    const [key, ...valueParts] = trimmed.split('=');
+    if (!key) continue;
+    const value = valueParts.join('='); // Support values with '=' in them
+    params.set(key.trim(), value.trim());
+  }
+  return params;
+}
+
+/**
+ * Replaces {PARAM_NAME} placeholders in content with parameter values.
+ * Only replaces exact matches (case-sensitive, must be wrapped in braces).
+ */
+function substituteParameters(content: string, params: Map<string, string>): string {
+  if (params.size === 0) return content;
+  
+  let result = content;
+  for (const [key, value] of params.entries()) {
+    // Replace {KEY} with value, but not {{KEY}} (double braces are for includes)
+    const regex = new RegExp(`\\{${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\}`, 'g');
+    result = result.replace(regex, value);
+  }
+  return result;
+}
 
 /**
  * Resolves {{include:path}} directives in content by replacing them with the
  * trimmed contents of partial_instructions/<path>. Paths must stay under
  * partial_instructions/ (no .. escape). Supports recursive includes with cycle detection.
+ * Supports parameters: {{include:path|KEY1=value1|KEY2=value2}} which replace {KEY1} and {KEY2} in the included content.
  */
 function resolvePartials(
   content: string,
@@ -229,11 +267,15 @@ function resolvePartials(
   seenPaths: Set<string> = new Set()
 ): string {
   const partialsBase = join(resolve(instructionsDir), 'partial_instructions');
-  return content.replace(INCLUDE_REGEX, (match, path) => {
+  return content.replace(INCLUDE_REGEX, (match, path, paramString) => {
     const trimmedPath = (path as string).trim();
     if (!trimmedPath) {
       throw new Error(`Empty include path in ${context}`);
     }
+    
+    // Parse parameters
+    const params = parseIncludeParameters(paramString);
+    
     const resolvedPath = resolve(partialsBase, trimmedPath);
     const rel = relative(partialsBase, resolvedPath);
     if (rel.startsWith('..') || rel === '..') {
@@ -251,8 +293,12 @@ function resolvePartials(
     }
     seenPaths.add(resolvedPath);
     const partialContent = readFileSync(resolvedPath, 'utf-8').trim();
+    
+    // Substitute parameters before recursive resolution
+    const substitutedContent = substituteParameters(partialContent, params);
+    
     seenPaths.delete(resolvedPath);
-    return resolvePartials(partialContent, instructionsDir, context, seenPaths);
+    return resolvePartials(substitutedContent, instructionsDir, context, seenPaths);
   });
 }
 
