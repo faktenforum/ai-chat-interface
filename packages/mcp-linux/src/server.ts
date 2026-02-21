@@ -85,7 +85,7 @@ Usage guidelines:
 - Use workspace tools to manage projects (create from git clone or empty repo)
 - File operations, search, and git are all done via the terminal
 - Each terminal response includes workspace git metadata (branch, dirty status)
-- list_workspaces = overview (all workspaces, branch, dirty, plan_preview). get_workspace_status(workspace) = full detail for one workspace (plan, tasks, git status). Use the latter after handoffs or when you need task-level context; use the former to choose or create a workspace.
+- list_workspaces = overview (all workspaces, branch, dirty, plan_preview). get_workspace_status(workspace) = full detail for one workspace (plan, tasks, optional instructions from .mcp-linux/instructions.md, git status). Use the latter after handoffs or when you need task-level context; use the former to choose or create a workspace.
 - get_workspace_status returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files.
 - Users can install additional tools in their home (nvm, pip --user, etc.)
 

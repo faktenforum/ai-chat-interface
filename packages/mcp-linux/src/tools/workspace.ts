@@ -130,7 +130,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'get_workspace_status',
     {
-      description: 'Full git status plus plan and tasks (each task: title, status). First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next.',
+      description: 'Full git status plus plan and tasks (each task: title, status). When .mcp-linux/instructions.md exists, returns instructions (entry instructions for expert workspaces). First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next.',
       inputSchema: GetWorkspaceStatusSchema.shape,
     },
     async (args, extra) => {
@@ -158,7 +158,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'set_workspace_plan',
     {
-      description: 'Set plan and/or tasks. Call before every handoff and at end of your turn so the next agent sees current state; if you omit this, context is lost. Pass full task list with updated statuses (done | in_progress | pending). Alternatively pass task_updates: [{ index, status }] to update only specific task statuses (0-based index from get_workspace_status) without sending the full list. Next agent reads via get_workspace_status. Tasks: prefer string[] e.g. ["Step 1","Step 2"] or [{ title, status? }]; status: pending | in_progress | done | cancelled.',
+      description: 'Set plan and/or tasks. Plan is stored in .mcp-linux/plan.md, tasks in .mcp-linux/tasks.json. instructions.md is not modified by tools. Call before every handoff and at end of your turn so the next agent sees current state; if you omit this, context is lost. Pass full task list with updated statuses (done | in_progress | pending). Alternatively pass task_updates: [{ index, status }] to update only specific task statuses (0-based index from get_workspace_status) without sending the full list. Next agent reads via get_workspace_status. Tasks: prefer string[] e.g. ["Step 1","Step 2"] or [{ title, status? }]; status: pending | in_progress | done | cancelled.',
       inputSchema: SetWorkspacePlanSchema.shape,
     },
     async (args, extra) => {

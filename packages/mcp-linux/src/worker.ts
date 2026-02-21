@@ -22,7 +22,9 @@ import {
   isTaskStatus,
   taskStatusFrom,
   PLAN_DIR,
-  PLAN_FILENAME,
+  PLAN_MD_FILENAME,
+  TASKS_FILENAME,
+  INSTRUCTIONS_FILENAME,
   LIST_WORKSPACES_PLAN_PREVIEW_LEN,
 } from './workspace-plan.ts';
 
@@ -145,47 +147,75 @@ interface PlanData {
   tasks: PlanTask[];
 }
 
-function getPlanPath(workspace: string): string {
-  const wsPath = resolveWorkspacePath(workspace);
-  return join(wsPath, PLAN_DIR, PLAN_FILENAME);
+function getPlanDir(workspace: string): string {
+  return join(resolveWorkspacePath(workspace), PLAN_DIR);
 }
 
-function readPlanFile(workspace: string): PlanData {
-  const path = getPlanPath(workspace);
-  if (!existsSync(path)) {
-    return { plan: null, tasks: [] };
-  }
-  try {
-    const raw = readFileSync(path, 'utf-8');
-    const data = JSON.parse(raw) as unknown;
-    if (data && typeof data === 'object' && !Array.isArray(data)) {
-      const obj = data as Record<string, unknown>;
-      const plan = typeof obj.plan === 'string' ? obj.plan : obj.plan === null ? null : null;
-      const tasks = Array.isArray(obj.tasks)
-        ? (obj.tasks as unknown[])
-            .filter(
-              (t): t is Record<string, unknown> =>
-                t != null && typeof t === 'object' && typeof (t as Record<string, unknown>).title === 'string',
-            )
-            .map((t): PlanTask => {
-              const title = String(t.title);
-              const status = taskStatusFrom(t.status, t.done === true);
-              return { title, status };
-            })
-        : [];
-      return { plan, tasks };
+function readPlanData(workspace: string): PlanData {
+  const dir = getPlanDir(workspace);
+  let plan: string | null = null;
+  const planPath = join(dir, PLAN_MD_FILENAME);
+  if (existsSync(planPath)) {
+    try {
+      const raw = readFileSync(planPath, 'utf-8').trim();
+      plan = raw.length > 0 ? raw : null;
+    } catch {
+      /* ignore read error */
     }
-  } catch {
-    /* parse or read error */
   }
-  return { plan: null, tasks: [] };
+
+  let tasks: PlanTask[] = [];
+  const tasksPath = join(dir, TASKS_FILENAME);
+  if (existsSync(tasksPath)) {
+    try {
+      const raw = readFileSync(tasksPath, 'utf-8');
+      const data = JSON.parse(raw) as unknown;
+      const arr =
+        data != null && typeof data === 'object' && !Array.isArray(data) && 'tasks' in data && Array.isArray((data as { tasks: unknown }).tasks)
+          ? (data as { tasks: unknown[] }).tasks
+          : Array.isArray(data)
+            ? data
+            : [];
+      tasks = arr
+        .filter(
+          (t): t is Record<string, unknown> =>
+            t != null && typeof t === 'object' && typeof (t as Record<string, unknown>).title === 'string',
+        )
+        .map((t): PlanTask => {
+          const title = String(t.title);
+          const status = taskStatusFrom(t.status, t.done === true);
+          return { title, status };
+        });
+    } catch {
+      /* parse or read error */
+    }
+  }
+  return { plan, tasks };
 }
 
-function writePlanFile(workspace: string, data: PlanData): void {
-  const wsPath = resolveWorkspacePath(workspace);
-  const dir = join(wsPath, PLAN_DIR);
+function readInstructionsFile(workspace: string): string | null {
+  const path = join(getPlanDir(workspace), INSTRUCTIONS_FILENAME);
+  if (!existsSync(path)) return null;
+  try {
+    const raw = readFileSync(path, 'utf-8').trim();
+    return raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePlanData(workspace: string, data: PlanData): void {
+  const dir = getPlanDir(workspace);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, PLAN_FILENAME), JSON.stringify(data, null, 2), 'utf-8');
+
+  const planPath = join(dir, PLAN_MD_FILENAME);
+  if (data.plan != null && data.plan.length > 0) {
+    writeFileSync(planPath, data.plan, 'utf-8');
+  } else if (existsSync(planPath)) {
+    unlinkSync(planPath);
+  }
+
+  writeFileSync(join(dir, TASKS_FILENAME), JSON.stringify({ tasks: data.tasks }, null, 2), 'utf-8');
 }
 
 function applyTaskUpdates(
@@ -593,7 +623,7 @@ const handlers: Record<string, Handler> = {
         // No remote
       }
 
-      const { plan } = readPlanFile(entry.name);
+      const { plan } = readPlanData(entry.name);
       const normalized = plan != null && plan.length > 0 ? plan.replace(/\s+/g, ' ').trim() : '';
       const plan_preview =
         normalized.length > 0
@@ -757,7 +787,8 @@ const handlers: Record<string, Handler> = {
       behind = parseInt(parts[1] || '0', 10);
     }
 
-    const { plan, tasks } = readPlanFile(workspace);
+    const { plan, tasks } = readPlanData(workspace);
+    const instructions = readInstructionsFile(workspace);
 
     const capped = capAndCollapseStatusLists(staged, unstaged, untracked);
 
@@ -777,6 +808,7 @@ const handlers: Record<string, Handler> = {
       behind,
       plan,
       tasks,
+      instructions: instructions ?? null,
     };
   },
 
@@ -788,7 +820,7 @@ const handlers: Record<string, Handler> = {
       throw new Error(`Workspace "${workspace}" does not exist`);
     }
 
-    const current = readPlanFile(workspace);
+    const current = readPlanData(workspace);
     const planProvided = params.plan !== undefined && params.plan !== null;
     const tasksProvided = params.tasks !== undefined && Array.isArray(params.tasks);
     const taskUpdates = params.task_updates as Array<{ index: number; status: string }> | undefined;
@@ -808,7 +840,7 @@ const handlers: Record<string, Handler> = {
     }
 
     const data: PlanData = { plan: nextPlan, tasks: nextTasks };
-    writePlanFile(workspace, data);
+    writePlanData(workspace, data);
 
     return { plan: data.plan, tasks: data.tasks };
   },
