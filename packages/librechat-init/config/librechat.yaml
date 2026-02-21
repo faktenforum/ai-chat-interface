@@ -337,11 +337,21 @@ modelSpecs:
         endpointType: "agents"
         agent_id: "shared-agent-research"
 
+    - name: "agent-faktencheck"
+      label: "Faktencheck Assistant"
+      description: "Search and present German fact-checks from Faktenforum; verify claims and find existing checks"
+      group: "Assistants"
+      order: 2
+      preset:
+        endpoint: "agents"
+        endpointType: "agents"
+        agent_id: "shared-agent-faktencheck"
+
     - name: "agent-image-generation"
       label: "Image Generation Assistant"
       description: "Creates images from text descriptions using AI image generation"
       group: "Assistants"
-      order: 2
+      order: 3
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -351,7 +361,7 @@ modelSpecs:
       label: "Travel and Location Assistant"
       description: "Helps with travel planning, location search, route planning and combines geographic information with weather data"
       group: "Assistants"
-      order: 3
+      order: 4
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -361,7 +371,7 @@ modelSpecs:
       label: "Code Assistant"
       description: "Routes developer requests to the appropriate specialist – Code Research, implementation, refactoring, GitHub, Code Review."
       group: "Assistants"
-      order: 4
+      order: 5
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -371,7 +381,7 @@ modelSpecs:
       label: "Code Research"
       description: "Understands code and repositories, finds examples, searches documentation, Stack Overflow, npm and GitHub. No implementation – only analysis and research."
       group: "Assistants"
-      order: 5
+      order: 6
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -381,7 +391,7 @@ modelSpecs:
       label: "Code Research (Claude Opus 4.6)"
       description: "Code Research with OpenRouter Claude Opus 4.6 – for higher quality or fallback when the default variant is insufficient."
       group: "Assistants"
-      order: 6
+      order: 7
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -391,7 +401,7 @@ modelSpecs:
       label: "Developer"
       description: "Implements features and fixes bugs in the Linux workspace – full terminal and workspace access with Node.js, Python, Git."
       group: "Assistants"
-      order: 7
+      order: 8
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -401,7 +411,7 @@ modelSpecs:
       label: "Developer (Claude Opus 4.6)"
       description: "Developer with OpenRouter Claude Opus 4.6 – for higher quality or fallback when the default variant is insufficient."
       group: "Assistants"
-      order: 8
+      order: 9
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -411,7 +421,7 @@ modelSpecs:
       label: "Code Refactorer"
       description: "Refactoring and optimization of code – structure, style, tests, readability. Full Linux workspace access."
       group: "Assistants"
-      order: 9
+      order: 10
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -421,7 +431,7 @@ modelSpecs:
       label: "Code Refactorer (Gemini 3 Pro Preview)"
       description: "Code Refactorer with OpenRouter Gemini 3 Pro – for higher quality or fallback when the default variant is insufficient."
       group: "Assistants"
-      order: 10
+      order: 11
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -431,7 +441,7 @@ modelSpecs:
       label: "Code Reviewer"
       description: "Analyzes pull requests – clones the repo, checks the diff, reads the codebase and creates a structured review. Posts the review via the GitHub Assistant if needed."
       group: "Assistants"
-      order: 11
+      order: 12
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -441,7 +451,7 @@ modelSpecs:
       label: "Code Reviewer (Gemini 3 Pro Preview)"
       description: "Code Reviewer with OpenRouter Gemini 3 Pro – for higher quality or fallback when the default variant is insufficient."
       group: "Assistants"
-      order: 12
+      order: 13
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -451,7 +461,7 @@ modelSpecs:
       label: "GitHub Assistant"
       description: "GitHub operations – read and manage repositories, issues, pull requests. Uses GitHub MCP and Linux terminal for Git commands."
       group: "Assistants"
-      order: 13
+      order: 14
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -461,7 +471,7 @@ modelSpecs:
       label: "Feedback / Report error"
       description: "Reports errors in the chat interface – understands error descriptions, prepares them and creates a GitHub issue."
       group: "Assistants"
-      order: 14
+      order: 15
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -481,7 +491,7 @@ modelSpecs:
       label: "Cooking Assistant"
       description: "Helps with cooking – suggests recipes, inspiration for meals, ingredients and preparation, plus general cooking questions."
       group: "Assistants"
-      order: 15
+      order: 16
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -491,7 +501,7 @@ modelSpecs:
       label: "Data Analysis"
       description: "Analyzes data from CSV, JSON and other formats – filters, transforms, visualizes (charts) and summarizes."
       group: "Assistants"
-      order: 16
+      order: 17
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -501,7 +511,7 @@ modelSpecs:
       label: "File Converter"
       description: "Converts images, audio, video and documents between formats – ImageMagick, FFmpeg, Pandoc. Result directly in chat or as download."
       group: "Assistants"
-      order: 17
+      order: 18
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -511,7 +521,7 @@ modelSpecs:
       label: "Document Creator"
       description: "Creates professional documents – letters, reports, invoices, CVs, templates. Generates PDF (Typst) or editable formats (ODT/DOCX via Pandoc)."
       group: "Assistants"
-      order: 18
+      order: 19
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -521,7 +531,7 @@ modelSpecs:
       label: "Linux Expert"
       description: "General Linux assistant with full MCP Linux access – shell, scripts, files, workspaces. Additionally maintenance: status, cleanup, reset account."
       group: "Assistants"
-      order: 19
+      order: 20
       preset:
         endpoint: "agents"
         endpointType: "agents"
@@ -947,6 +957,7 @@ mcpSettings:
     - '$${STACK_NAME:-prod}-mcp-linux'                # MCP Linux service (Docker network)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     - 'mcp.mapbox.com'           # Mapbox MCP Server (remote hosted)
+    - '$${CHECKBOT_RAG_MCP_DOMAIN}'  # Checkbot RAG (external; host only, e.g. checkbot-rag.localhost)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
     # - 'http://internal:8080'    # Protocol and port restricted
@@ -1130,6 +1141,19 @@ mcpServers:
       Authorization: "Bearer ${MCP_MAPBOX_ACCESS_TOKEN}"
     initTimeout: 120000
     timeout: 150000
+    chatMenu: true
+    startup: true
+    serverInstructions: true
+
+  checkbot-rag:
+    type: streamable-http
+    url: ${CHECKBOT_RAG_MCP_URL}
+    title: Checkbot RAG
+    description: Search German fact-checks (Faktenforum); hybrid semantic and full-text search
+    iconPath: /images/mcp-checkbot-rag-icon.svg
+    headers:
+      Authorization: "Bearer ${CHECKBOT_RAG_MCP_API_KEY}"
+    initTimeout: 120000
     chatMenu: true
     startup: true
     serverInstructions: true

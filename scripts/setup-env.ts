@@ -229,11 +229,20 @@ const PROMPTS: Record<string, PromptConfig> = {
     'EMAIL_FROM': { message: 'Email From Address (e.g., noreply@faktenforum.org):', type: 'input', prodOnly: true },
     'LIBRECHAT_DEFAULT_ADMINS': { message: 'Default LibreChat Admin Emails (comma-separated, optional):', type: 'input' },
 
+    // Scaleway (used by LibreChat endpoints; press enter to skip)
+    'SCALEWAY_API_KEY': { message: 'Scaleway API Key (optional; for Scaleway Inference):', type: 'password', defaultGen: () => '' },
+    'SCALEWAY_PROJECT_ID': { message: 'Scaleway Project ID (optional; for API URL construction):', type: 'input', defaultGen: () => '' },
+
     // Optional API keys (press enter to skip; default empty)
     'SPRINGER_NATURE_API_KEY': { message: 'Springer Nature API Key (optional; scientific literature search):', type: 'input', defaultGen: () => '' },
     'MCP_GITHUB_PAT': { message: 'GitHub Personal Access Token (optional; for GitHub MCP):', type: 'password', defaultGen: () => '' },
     'MCP_MAPBOX_ACCESS_TOKEN': { message: 'Mapbox Access Token (optional; for Mapbox MCP):', type: 'password', defaultGen: () => '' },
     'MCP_LINUX_GIT_SSH_KEY': { message: 'MCP Linux GitHub SSH Key base64 (optional; for git access):', type: 'password', defaultGen: () => '' },
+
+    // Checkbot RAG (external MCP; optional)
+    'CHECKBOT_RAG_MCP_URL': { message: 'Checkbot RAG MCP URL (optional; e.g. http://checkbot-rag.localhost/mcp):', type: 'input', defaultGen: () => '' },
+    'CHECKBOT_RAG_MCP_API_KEY': { message: 'Checkbot RAG MCP API key (optional; must match external Checkbot):', type: 'password', defaultGen: () => '' },
+    'CHECKBOT_RAG_MCP_DOMAIN': { message: 'Checkbot RAG MCP domain for allowlist (optional; e.g. checkbot-rag.localhost):', type: 'input', defaultGen: () => '' },
 };
 
 /**
