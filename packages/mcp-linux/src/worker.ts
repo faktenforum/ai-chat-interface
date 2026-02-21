@@ -19,14 +19,23 @@ import { getDefaultGitIdentity } from './utils/git-config.ts';
 import { validateWorkspaceName, validateTerminalId } from './utils/security.ts';
 import {
   type PlanTask,
+  type WorkspaceConfig,
   isTaskStatus,
   taskStatusFrom,
   PLAN_DIR,
   PLAN_MD_FILENAME,
   TASKS_FILENAME,
   INSTRUCTIONS_FILENAME,
+  CONFIG_FILENAME,
   LIST_WORKSPACES_PLAN_PREVIEW_LEN,
 } from './workspace-plan.ts';
+import {
+  indexWorkspace,
+  searchWorkspace,
+  getIndexStatus,
+  hasIndex,
+  isCodeIndexEnabled,
+} from './code-index/code-index-service.ts';
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -216,6 +225,38 @@ function writePlanData(workspace: string, data: PlanData): void {
   }
 
   writeFileSync(join(dir, TASKS_FILENAME), JSON.stringify({ tasks: data.tasks }, null, 2), 'utf-8');
+}
+
+function readWorkspaceConfig(workspace: string): WorkspaceConfig {
+  const path = join(getPlanDir(workspace), CONFIG_FILENAME);
+  if (!existsSync(path)) return {};
+  try {
+    const raw = readFileSync(path, 'utf-8');
+    const data = JSON.parse(raw) as unknown;
+    if (data != null && typeof data === 'object' && !Array.isArray(data)) {
+      const obj = data as Record<string, unknown>;
+      return {
+        code_index_enabled:
+          typeof obj.code_index_enabled === 'boolean' ? obj.code_index_enabled : undefined,
+      };
+    }
+  } catch {
+    /* parse or read error */
+  }
+  return {};
+}
+
+function writeWorkspaceConfig(workspace: string, config: WorkspaceConfig): void {
+  const dir = getPlanDir(workspace);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, CONFIG_FILENAME), JSON.stringify(config, null, 2), 'utf-8');
+}
+
+/** True if code index is enabled globally and not disabled for this workspace via config.json. */
+function isCodeIndexEnabledForWorkspace(workspace: string): boolean {
+  if (!isCodeIndexEnabled()) return false;
+  const config = readWorkspaceConfig(workspace);
+  return config.code_index_enabled !== false;
 }
 
 function applyTaskUpdates(
@@ -701,6 +742,12 @@ const handlers: Record<string, Handler> = {
     }
     ensureDefaultGitignore(wsPath);
 
+    if (isCodeIndexEnabledForWorkspace(name)) {
+      indexWorkspace(wsPath).catch((err) => {
+        console.error(`Code indexing failed for ${name}:`, (err as Error).message);
+      });
+    }
+
     const meta = getGitMetadata(name);
     return {
       name,
@@ -795,6 +842,7 @@ const handlers: Record<string, Handler> = {
     const instructions = readInstructionsFile(workspace);
 
     const capped = capAndCollapseStatusLists(staged, unstaged, untracked);
+    const config = readWorkspaceConfig(workspace);
 
     return {
       workspace,
@@ -813,7 +861,27 @@ const handlers: Record<string, Handler> = {
       plan,
       tasks,
       instructions: instructions ?? null,
+      config,
     };
+  },
+
+  async set_workspace_config(params) {
+    const workspace = (params.workspace as string) || 'default';
+    const wsPath = resolveWorkspacePath(workspace);
+
+    if (!existsSync(wsPath)) {
+      throw new Error(`Workspace "${workspace}" does not exist`);
+    }
+
+    const current = readWorkspaceConfig(workspace);
+    const codeIndexEnabled = params.code_index_enabled as boolean | undefined;
+
+    const next: WorkspaceConfig = { ...current };
+    if (codeIndexEnabled !== undefined) {
+      next.code_index_enabled = codeIndexEnabled;
+    }
+    writeWorkspaceConfig(workspace, next);
+    return { config: next };
   },
 
   async set_workspace_plan(params) {
@@ -855,6 +923,64 @@ const handlers: Record<string, Handler> = {
     const uploadsDir = join(workspacesDir, workspace, 'uploads');
     if (!existsSync(uploadsDir)) return { deleted: 0 };
     return { deleted: purgeUploadsByAge(uploadsDir, olderThanDays) };
+  },
+
+  // Code Index ─────────────────────────────────────────────────────────────────
+
+  async index_workspace_code(params) {
+    const workspace = (params.workspace as string) || 'default';
+    const force = params.force === true;
+    const wsPath = resolveWorkspacePath(workspace);
+    if (!existsSync(wsPath)) {
+      throw new Error(`Workspace "${workspace}" does not exist`);
+    }
+    if (!isCodeIndexEnabledForWorkspace(workspace)) {
+      return {
+        status: 'standby',
+        message: 'Code index disabled (global or workspace config)',
+        files_processed: 0,
+        files_total: 0,
+      };
+    }
+    const state = await indexWorkspace(wsPath, force);
+    return state;
+  },
+
+  async codebase_search(params) {
+    const workspace = (params.workspace as string) || 'default';
+    const query = (params.query as string) || '';
+    const pathPrefix = params.path as string | undefined;
+    const limit = typeof params.limit === 'number' ? params.limit : undefined;
+    const wsPath = resolveWorkspacePath(workspace);
+    if (!existsSync(wsPath)) {
+      throw new Error(`Workspace "${workspace}" does not exist`);
+    }
+    if (!query.trim()) {
+      return { results: [] };
+    }
+    if (isCodeIndexEnabledForWorkspace(workspace) && !(await hasIndex(wsPath))) {
+      await indexWorkspace(wsPath);
+    }
+    const results = await searchWorkspace(wsPath, query.trim(), {
+      pathPrefix: pathPrefix?.trim() || undefined,
+      limit,
+    });
+    return { results };
+  },
+
+  async get_code_index_status(params) {
+    const workspace = (params.workspace as string) || 'default';
+    const wsPath = resolveWorkspacePath(workspace);
+    if (!existsSync(wsPath)) {
+      throw new Error(`Workspace "${workspace}" does not exist`);
+    }
+    const state = getIndexStatus(wsPath);
+    const hasIndexData = await hasIndex(wsPath);
+    return {
+      ...state,
+      has_index: hasIndexData,
+      enabled: isCodeIndexEnabled(),
+    };
   },
 
   async clean_all_workspace_uploads(params) {

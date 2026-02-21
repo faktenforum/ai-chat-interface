@@ -27,6 +27,7 @@ import { registerAccountTools } from './tools/account.ts';
 import { registerUploadTools } from './tools/upload.ts';
 import { registerDownloadTools } from './tools/download.ts';
 import { registerFileTools } from './tools/file.ts';
+import { registerCodeIndexTools } from './tools/code-index.ts';
 import { registerPrompts } from './prompts/index.ts';
 import { registerWorkspaceResources } from './resources/workspace-resources.ts';
 import { UploadManager } from './upload/upload-manager.ts';
@@ -102,6 +103,9 @@ File Download:
 - Download links are single-use and expire after 60 minutes by default.
 - Cleanup: Check list_download_links (e.g. after creating links or at end of task); close unused links with close_download_link to limit exposure and follow security practice.
 
+Code Search:
+- Use codebase_search(workspace, query) for semantic code search before exploring unfamiliar code; prefer it over read_workspace_file when you do not yet know which files to open. Queries must be in English.
+
 Reading Files:
 - Use read_workspace_file to read a file and get its contents as structured content
 - Text files (.txt, .csv, .json, .py, .js, etc.) are returned inline as text
@@ -118,6 +122,7 @@ Reading Files:
   registerUploadTools(server, userManager, uploadManager);
   registerDownloadTools(server, userManager, downloadManager);
   registerFileTools(server, userManager, downloadManager);
+  registerCodeIndexTools(server, userManager, workerManager);
 
   // Register resources
   registerWorkspaceResources(server, userManager);

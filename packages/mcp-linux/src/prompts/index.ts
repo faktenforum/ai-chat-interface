@@ -10,10 +10,12 @@ import { FILE_OPERATIONS_PROMPT } from './file-operations.ts';
 import { SEARCH_FILES_PROMPT } from './search.ts';
 import { WORKSPACES_PROMPT } from './workspaces.ts';
 import { RUNTIME_MANAGEMENT_PROMPT } from './runtime-management.ts';
+import { CODE_SEARCH_PROMPT } from './code-search.ts';
 
 const ALL_PROMPTS = [
   FILE_OPERATIONS_PROMPT,
   SEARCH_FILES_PROMPT,
+  CODE_SEARCH_PROMPT,
   WORKSPACES_PROMPT,
   RUNTIME_MANAGEMENT_PROMPT,
 ];

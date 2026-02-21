@@ -11,10 +11,12 @@
     "test:e2e": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/e2e-document-creator-workspace.ts"
   },
   "dependencies": {
+    "@lancedb/lancedb": "^0.26.2",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "busboy": "^1.6.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "ignore": "^7.0.4",
     "node-pty": "^1.1.0",
     "pino": "^10.3.1",
     "pug": "^3.0.3",

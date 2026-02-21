@@ -18,6 +18,7 @@ import {
   DeleteWorkspaceSchema,
   GetWorkspaceStatusSchema,
   SetWorkspacePlanSchema,
+  SetWorkspaceConfigSchema,
   CleanWorkspaceUploadsSchema,
 } from '../schemas/workspace.schema.ts';
 
@@ -172,6 +173,36 @@ export function registerWorkspaceTools(
             plan: args.plan,
             tasks: args.tasks,
             task_updates: args.task_updates,
+          },
+        });
+
+        if (response.error) {
+          return errorResult(response.error);
+        }
+
+        return { content: [{ type: 'text', text: JSON.stringify(response.result, null, 2) }] };
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    'set_workspace_config',
+    {
+      description:
+        'Set per-workspace config (stored in .mcp-linux/config.json). Use code_index_enabled: false to disable semantic code indexing for this workspace only. get_workspace_status returns the current config.',
+      inputSchema: SetWorkspaceConfigSchema.shape,
+    },
+    async (args, extra) => {
+      try {
+        const email = resolveEmail(extra);
+        const response = await workerManager.sendRequest(email, {
+          id: randomUUID(),
+          method: 'set_workspace_config',
+          params: {
+            workspace: args.workspace,
+            code_index_enabled: args.code_index_enabled,
           },
         });
 

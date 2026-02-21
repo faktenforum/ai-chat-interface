@@ -25,6 +25,12 @@ export const PLAN_DIR = '.mcp-linux';
 export const PLAN_MD_FILENAME = 'plan.md';
 export const TASKS_FILENAME = 'tasks.json';
 export const INSTRUCTIONS_FILENAME = 'instructions.md';
+export const CONFIG_FILENAME = 'config.json';
+
+/** Per-workspace config (stored in .mcp-linux/config.json). Missing key = default (true for code_index_enabled). */
+export interface WorkspaceConfig {
+  code_index_enabled?: boolean;
+}
 
 /** Max length for plan excerpt in list_workspaces (one line, truncated). */
 export const LIST_WORKSPACES_PLAN_PREVIEW_LEN = 160;

@@ -74,3 +74,8 @@ export const SetWorkspacePlanSchema = z.object({
       'Partial updates: set status of task at index (0-based). Use to mark tasks done/in_progress without sending the full task list. Indices from get_workspace_status.',
     ),
 });
+
+export const SetWorkspaceConfigSchema = z.object({
+  workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
+  code_index_enabled: z.boolean().describe('Enable or disable code indexing for this workspace'),
+});

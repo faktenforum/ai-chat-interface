@@ -243,6 +243,9 @@ const PROMPTS: Record<string, PromptConfig> = {
     'CHECKBOT_RAG_MCP_URL': { message: 'Checkbot RAG MCP URL (optional; e.g. http://checkbot-rag.localhost/mcp):', type: 'input', defaultGen: () => '' },
     'CHECKBOT_RAG_MCP_API_KEY': { message: 'Checkbot RAG MCP API key (optional; must match external Checkbot):', type: 'password', defaultGen: () => '' },
     'CHECKBOT_RAG_MCP_DOMAIN': { message: 'Checkbot RAG MCP domain for allowlist (optional; e.g. checkbot-rag.localhost):', type: 'input', defaultGen: () => '' },
+
+    // MCP Linux - Code index (semantic code search; optional)
+    'CODE_INDEX_EMBEDDING_API_KEY': { message: 'Code index embedding API key (optional; OpenRouter or Scaleway for semantic code search):', type: 'password', defaultGen: () => '' },
 };
 
 /**
