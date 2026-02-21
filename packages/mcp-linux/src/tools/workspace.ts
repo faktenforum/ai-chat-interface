@@ -71,7 +71,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'create_workspace',
     {
-      description: 'Create a new workspace (empty repo or clone from git_url). Call list_workspaces first if unsure whether the name already exists.',
+      description: 'Create a new workspace (empty repo or clone from git_url). When cloning, submodules are checked out recursively (--recurse-submodules). Call list_workspaces first if unsure whether the name already exists.',
       inputSchema: CreateWorkspaceSchema.shape,
     },
     async (args, extra) => {

@@ -25,7 +25,7 @@ Workspaces store a **plan** (goal/context) and **tasks** (concrete steps) as the
 
 **Call \`list_workspaces\` first** to avoid creating a workspace that already exists. Then use \`create_workspace\`:
 - Empty repo: create_workspace(name: "my-project")
-- Clone: create_workspace(name: "my-project", git_url: "git@github.com:org/repo.git")
+- Clone: create_workspace(name: "my-project", git_url: "git@github.com:org/repo.git") — submodules are checked out recursively
 
 ## Project setup (terminal)
 

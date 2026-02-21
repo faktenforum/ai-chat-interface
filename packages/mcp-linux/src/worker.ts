@@ -673,11 +673,15 @@ const handlers: Record<string, Handler> = {
         throw new Error('Branch name cannot start with -');
       }
 
-      const result = spawnSync('git', ['clone', '--branch', branch, gitUrl, wsPath], {
-        stdio: 'pipe',
-        timeout: 120000,
-        encoding: 'utf-8',
-      });
+      const result = spawnSync(
+        'git',
+        ['clone', '--recurse-submodules', '--branch', branch, gitUrl, wsPath],
+        {
+          stdio: 'pipe',
+          timeout: 120000,
+          encoding: 'utf-8',
+        },
+      );
       if (result.status !== 0) {
         throw new Error(`Git clone failed: ${result.stderr}`);
       }

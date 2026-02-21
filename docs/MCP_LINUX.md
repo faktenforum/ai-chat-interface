@@ -30,7 +30,7 @@ LibreChat can use one app-level MCP connection (`startup: true`), so one MCP ses
 | Tool | Description |
 |------|-------------|
 | `list_workspaces` | Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use `get_workspace_status(workspace)` for full plan and tasks. |
-| `create_workspace` | Create workspace (empty or from git URL). Call list_workspaces first if unsure whether the name exists. |
+| `create_workspace` | Create workspace (empty or from git URL). When cloning, submodules are checked out recursively. Call list_workspaces first if unsure whether the name exists. |
 | `delete_workspace` | Delete workspace (not default) |
 | `get_workspace_status` | Full git status plus plan and tasks (each task: title, status). First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next. File lists may be truncated/collapsed (see **Status capping** below). |
 | `set_workspace_plan` | Set plan and/or tasks. Call before every handoff and at end of your turn so the next agent sees current state; if you omit this, context is lost. Pass full task list with updated statuses, or partial updates via `task_updates: [{ index, status }]` (0-based index from get_workspace_status). Tasks: `{ title, status? }` or string[]; status: pending, in_progress, done, cancelled. |
