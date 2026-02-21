@@ -31,6 +31,7 @@ They are baked into the init image and written into the config volume at startup
 - **[YTPTube Cleanup](YTPTUBE_CLEANUP.md)** - Where archive and downloads live; how to clean for fresh tests
 - **[MCP YouTube Transcript](MCP_YOUTUBE_TRANSCRIPT.md)** - YouTube Transcript MCP (video URL → transcript via youtube-transcript-api)
 - **[MCP Grounded Docs](MCP_DOCS.md)** - Grounded Docs MCP (documentation index; optional embeddings)
+- **[Checkbot RAG](../dev/checkbot-rag/README.md)** - External fact-check RAG (MCP); configure URL and API key in env
 - **[MCP Chefkoch](MCP_CHEFKOCH.md)** – Recipes from chefkoch.de (get_recipe, search_recipes, get_random_recipe, get_daily_recipes). Internal only.
 - **[MCP Linux](MCP_LINUX.md)** – Per-user isolated Linux terminal with persistent git workspaces. Tools: execute_command, workspace management, account tools. Internal only.
 - **[GitHub Machine User](GITHUB_MACHINE_USER.md)** – Shared GitHub identity for MCP Linux (SSH) and GitHub MCP (PAT).

@@ -20,6 +20,8 @@ services:
       SCALEWAY_PROJECT_ID: ${SCALEWAY_PROJECT_ID:-}
       SCALEWAY_BASE_URL: ${SCALEWAY_BASE_URL:-https://api.scaleway.ai/v1}
       STACK_NAME: ${STACK_NAME:-prod}
+      CHECKBOT_RAG_MCP_URL: ${CHECKBOT_RAG_MCP_URL:-}
+      CHECKBOT_RAG_MCP_DOMAIN: ${CHECKBOT_RAG_MCP_DOMAIN:-}
     volumes:
       - librechat-config:/app/config
       - ./logs:/logs

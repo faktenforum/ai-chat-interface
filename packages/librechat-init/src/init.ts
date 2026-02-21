@@ -89,17 +89,53 @@ async function main() {
       const configSourceDir = dirname(CONFIG_SOURCE);
       const overridePath = join(configSourceDir, `librechat.${libreachEnv}.yaml`);
 
-      let configObj = parseYaml(readFileSync(CONFIG_SOURCE, 'utf-8')) as object;
+      let configObj = parseYaml(readFileSync(CONFIG_SOURCE, 'utf-8')) as Record<string, unknown>;
       if (existsSync(overridePath)) {
         const overrideObj = parseYaml(readFileSync(overridePath, 'utf-8')) as object;
-        configObj = deepMerge(configObj, overrideObj) as object;
+        configObj = deepMerge(configObj, overrideObj) as Record<string, unknown>;
         console.log(`✓ Merged override: librechat.${libreachEnv}.yaml`);
+      }
+
+      // Omit Checkbot RAG MCP server when URL is not set (avoids "Invalid URL" in LibreChat)
+      const checkbotRagUrl = process.env.CHECKBOT_RAG_MCP_URL?.trim();
+      const mcpServers = configObj?.mcpServers as Record<string, { url?: string }> | undefined;
+      if (mcpServers && 'checkbot-rag' in mcpServers) {
+        if (!checkbotRagUrl) {
+          delete mcpServers['checkbot-rag'];
+          console.log('✓ Checkbot RAG MCP omitted (CHECKBOT_RAG_MCP_URL not set)');
+        } else {
+          mcpServers['checkbot-rag'].url = checkbotRagUrl;
+        }
       }
 
       let resolvedContent = stringifyYaml(configObj);
       // STACK_NAME is already set above, so placeholders will resolve correctly
       resolvedContent = resolveConfigPlaceholders(resolvedContent);
       resolvedContent = injectConstructedBaseURLs(resolvedContent);
+
+      // Remove empty URLs and empty allowedDomains to avoid "Invalid URL" in LibreChat
+      let finalObj = parseYaml(resolvedContent) as Record<string, unknown>;
+      const mcpSettings = finalObj?.mcpSettings as { allowedDomains?: string[] } | undefined;
+      if (Array.isArray(mcpSettings?.allowedDomains)) {
+        const before = mcpSettings.allowedDomains.length;
+        mcpSettings.allowedDomains = mcpSettings.allowedDomains.filter(
+          (d) => d != null && typeof d === 'string' && d.trim() !== ''
+        );
+        if (mcpSettings.allowedDomains.length < before) {
+          console.log('✓ Removed empty/null entries from mcpSettings.allowedDomains');
+        }
+      }
+      const servers = finalObj?.mcpServers as Record<string, { url?: string }> | undefined;
+      if (servers && typeof servers === 'object') {
+        for (const [name, entry] of Object.entries(servers)) {
+          if (entry && typeof entry === 'object' && (!entry.url || String(entry.url).trim() === '')) {
+            delete servers[name];
+            console.log(`✓ MCP server "${name}" omitted (empty url)`);
+          }
+        }
+      }
+      resolvedContent = stringifyYaml(finalObj);
+
       writeFileSync(CONFIG_TARGET, resolvedContent, 'utf-8');
       console.log('✓ Config written and placeholders resolved successfully');
 

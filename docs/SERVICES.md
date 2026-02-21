@@ -81,6 +81,8 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 
 **RAG API** — Retrieval-Augmented Generation service for document search. Network: `app-net`. Access: LibreChat API only.
 
+**Checkbot RAG (external)** — LibreChat connects to an **external** Checkbot RAG instance via MCP. No Checkbot services run in this stack. Configure `CHECKBOT_RAG_MCP_URL`, `CHECKBOT_RAG_MCP_API_KEY`, and `CHECKBOT_RAG_MCP_DOMAIN` in env. To run or deploy Checkbot RAG, see [Checkbot RAG docs](../dev/checkbot-rag/README.md).
+
 **n8n PostgreSQL** — n8n's database. Network: `app-net`. Access: n8n only.
 
 **n8n-init** — Init container that creates n8n owner account via API. Network: `app-net`. Waits for n8n readiness, then calls `/rest/owner/setup` if credentials are provided.
