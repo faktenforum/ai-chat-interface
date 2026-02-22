@@ -11,6 +11,7 @@ export const EMBEDDING_BATCH_SIZE = 32;
 export const DEFAULT_SEARCH_LIMIT = 20;
 export const DEFAULT_MIN_SCORE = 0.3;
 export const INDEX_DIR = '.mcp-linux/code-index';
+export const SHARED_INDEX_BASE_DIR = '/app/data/index-cache';
 
 export const SUPPORTED_EXTENSIONS = new Set([
   '.ts',

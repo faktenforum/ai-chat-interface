@@ -2,12 +2,15 @@
  * Code index orchestrator: scan, filter, chunk, embed, store, search.
  */
 
-import { readdirSync, readFileSync, statSync, writeFileSync, existsSync, mkdirSync, type Dirent } from 'node:fs';
+import { readdirSync, readFileSync, statSync, writeFileSync, existsSync, mkdirSync, openSync, closeSync, unlinkSync, type Dirent } from 'node:fs';
 import { join, relative, extname } from 'node:path';
+import { createHash } from 'node:crypto';
+import { execSync } from 'node:child_process';
 import ignore, { type Ignore } from 'ignore';
 import type { CodeBlock, SearchResult, IndexState, IndexStatus } from './types.ts';
 import {
   INDEX_DIR,
+  SHARED_INDEX_BASE_DIR,
   SUPPORTED_EXTENSIONS,
   SUPPORTED_FILENAMES,
   DIRS_TO_IGNORE,
@@ -21,7 +24,84 @@ import { createFileHash, chunkFile } from './chunking-service.ts';
 import { embedBatch, getEmbeddingDimensions, isEmbeddingConfigured } from './embedding-service.ts';
 import { LanceDBStore } from './lancedb-store.ts';
 
-const FILE_HASHES_FILENAME = 'file_hashes.json';
+const FILE_HASHES_BASENAME = 'file_hashes';
+
+/**
+ * Returns the branch-specific file hashes filename.
+ * Using per-branch filenames prevents users on different branches from
+ * invalidating each other's incremental index state in the shared cache.
+ * Falls back to the default name when the current branch cannot be determined.
+ */
+function fileHashesFilename(workspacePath: string): string {
+  try {
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', {
+      cwd: workspacePath,
+      encoding: 'utf-8',
+      timeout: 3000,
+    }).trim();
+    if (branch && branch !== 'HEAD') {
+      const safeBranch = branch.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 64);
+      return `${FILE_HASHES_BASENAME}.${safeBranch}.json`;
+    }
+  } catch { /* no git or detached HEAD → fall through */ }
+  return `${FILE_HASHES_BASENAME}.json`;
+}
+const LOCK_FILENAME = '.indexing.lock';
+const LOCK_WAIT_MS = 1000;
+const LOCK_MAX_RETRIES = 10;
+
+/**
+ * Returns the base directory for shared index caches.
+ * Configurable via CODE_INDEX_SHARED_DIR; defaults to SHARED_INDEX_BASE_DIR.
+ */
+function getSharedIndexBaseDir(): string {
+  return process.env.CODE_INDEX_SHARED_DIR?.trim() || SHARED_INDEX_BASE_DIR;
+}
+
+/**
+ * Resolves the LanceDB directory for a workspace.
+ * If the workspace has a git remote, uses the shared cache keyed by remote URL hash.
+ * Otherwise falls back to the workspace-local path.
+ */
+function resolveIndexPath(workspacePath: string): string {
+  try {
+    const remoteUrl = execSync('git remote get-url origin', {
+      cwd: workspacePath,
+      encoding: 'utf-8',
+      timeout: 3000,
+    }).trim();
+    if (remoteUrl) {
+      const hash = createHash('sha256').update(remoteUrl).digest('hex').slice(0, 16);
+      return join(getSharedIndexBaseDir(), hash);
+    }
+  } catch {
+    // No remote or git not available → fall through to local path
+  }
+  return join(workspacePath, INDEX_DIR);
+}
+
+/**
+ * Acquires an exclusive file lock for the index directory.
+ * Returns a release function on success, or null if the lock is already held.
+ */
+function acquireLock(indexDir: string): (() => void) | null {
+  if (!existsSync(indexDir)) mkdirSync(indexDir, { recursive: true });
+  const lockPath = join(indexDir, LOCK_FILENAME);
+  try {
+    const fd = openSync(lockPath, 'wx');
+    closeSync(fd);
+    return () => {
+      try { unlinkSync(lockPath); } catch { /* ignore */ }
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Waits ms milliseconds. */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 /**
  * Recursively list files under dir, skipping ignored dirs and applying extension filter.
@@ -113,8 +193,9 @@ function loadIgnorePatterns(workspacePath: string): Ignore {
   return ig;
 }
 
-function loadFileHashes(workspacePath: string): Record<string, string> {
-  const path = join(workspacePath, INDEX_DIR, FILE_HASHES_FILENAME);
+function loadFileHashes(indexPath: string, workspacePath: string): Record<string, string> {
+  const filename = fileHashesFilename(workspacePath);
+  const path = join(indexPath, filename);
   if (!existsSync(path)) return {};
   try {
     const raw = readFileSync(path, 'utf-8');
@@ -125,10 +206,9 @@ function loadFileHashes(workspacePath: string): Record<string, string> {
   }
 }
 
-function saveFileHashes(workspacePath: string, hashes: Record<string, string>): void {
-  const dir = join(workspacePath, INDEX_DIR);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, FILE_HASHES_FILENAME), JSON.stringify(hashes, null, 0), 'utf-8');
+function saveFileHashes(indexPath: string, workspacePath: string, hashes: Record<string, string>): void {
+  if (!existsSync(indexPath)) mkdirSync(indexPath, { recursive: true });
+  writeFileSync(join(indexPath, fileHashesFilename(workspacePath)), JSON.stringify(hashes, null, 0), 'utf-8');
 }
 
 const statusByWorkspace = new Map<string, { status: IndexStatus; message: string; files_processed: number; files_total: number }>();
@@ -168,6 +248,7 @@ export function isCodeIndexEnabled(): boolean {
 
 /**
  * Full index of a workspace. Call from worker.
+ * Uses shared cache when the workspace has a git remote URL.
  */
 export async function indexWorkspace(workspacePath: string, force = false): Promise<IndexState> {
   if (!isCodeIndexEnabled()) {
@@ -175,8 +256,36 @@ export async function indexWorkspace(workspacePath: string, force = false): Prom
     return getIndexStatus(workspacePath);
   }
 
+  const indexPath = resolveIndexPath(workspacePath);
   const vectorSize = getEmbeddingDimensions();
-  const store = new LanceDBStore({ workspacePath, vectorSize });
+
+  // Acquire exclusive lock; retry up to LOCK_MAX_RETRIES times
+  let releaseLock: (() => void) | null = null;
+  for (let attempt = 0; attempt < LOCK_MAX_RETRIES; attempt++) {
+    releaseLock = acquireLock(indexPath);
+    if (releaseLock) break;
+    // Another worker is indexing; if already complete, skip
+    const checkStore = new LanceDBStore({ dbPath: indexPath, vectorSize });
+    try {
+      await checkStore.initialize();
+      const complete = await checkStore.isIndexComplete();
+      await checkStore.close();
+      if (complete && !force) {
+        setStatus(workspacePath, 'indexed', 'Index complete (shared cache hit)', 0, 0);
+        return getIndexStatus(workspacePath);
+      }
+    } catch {
+      await checkStore.close().catch(() => {});
+    }
+    await sleep(LOCK_WAIT_MS);
+  }
+
+  if (!releaseLock) {
+    setStatus(workspacePath, 'error', 'Could not acquire index lock after retries', 0, 0);
+    return getIndexStatus(workspacePath);
+  }
+
+  const store = new LanceDBStore({ dbPath: indexPath, vectorSize });
 
   try {
     setStatus(workspacePath, 'indexing', 'Listing files...', 0, 0);
@@ -190,7 +299,7 @@ export async function indexWorkspace(workspacePath: string, force = false): Prom
       await store.markIndexingIncomplete();
     }
 
-    const prevHashes = force ? {} : loadFileHashes(workspacePath);
+    const prevHashes = force ? {} : loadFileHashes(indexPath, workspacePath);
     const currentHashes: Record<string, string> = {};
     const toIndex: string[] = [];
     const toDelete: string[] = [];
@@ -243,13 +352,15 @@ export async function indexWorkspace(workspacePath: string, force = false): Prom
       setStatus(workspacePath, 'indexing', `Indexed ${processed}/${toIndex.length} files`, processed, total);
     }
 
-    saveFileHashes(workspacePath, currentHashes);
+    saveFileHashes(indexPath, workspacePath, currentHashes);
     await store.markIndexingComplete();
     await store.optimize();
     await store.close();
+    releaseLock();
     setStatus(workspacePath, 'indexed', 'Index complete', total, total);
     return getIndexStatus(workspacePath);
   } catch (err) {
+    releaseLock();
     const message = err instanceof Error ? err.message : String(err);
     setStatus(workspacePath, 'error', message, 0, 0);
     await store.close().catch(() => {});
@@ -267,8 +378,9 @@ export async function searchWorkspace(
 ): Promise<SearchResult[]> {
   if (!isCodeIndexEnabled()) return [];
 
+  const indexPath = resolveIndexPath(workspacePath);
   const vectorSize = getEmbeddingDimensions();
-  const store = new LanceDBStore({ workspacePath, vectorSize });
+  const store = new LanceDBStore({ dbPath: indexPath, vectorSize });
 
   try {
     await store.initialize();
@@ -297,8 +409,9 @@ export async function searchWorkspace(
  */
 export async function hasIndex(workspacePath: string): Promise<boolean> {
   if (!isCodeIndexEnabled()) return false;
+  const indexPath = resolveIndexPath(workspacePath);
   const vectorSize = getEmbeddingDimensions();
-  const store = new LanceDBStore({ workspacePath, vectorSize });
+  const store = new LanceDBStore({ dbPath: indexPath, vectorSize });
   try {
     await store.initialize();
     const complete = await store.isIndexComplete();

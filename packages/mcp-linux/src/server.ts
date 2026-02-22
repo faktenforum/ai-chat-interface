@@ -12,6 +12,7 @@
 
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
+import { mkdirSync, chmodSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'url';
 import express from 'express';
@@ -214,8 +215,27 @@ function createApp(): express.Application {
 /**
  * Main entry point
  */
+/**
+ * Creates the shared index cache directory with sticky-bit permissions (0o1777).
+ * All worker users can create entries; no user can delete another's entries.
+ */
+function ensureSharedIndexDir(): void {
+  const sharedDir = process.env.CODE_INDEX_SHARED_DIR?.trim() || '/app/data/index-cache';
+  try {
+    if (!existsSync(sharedDir)) {
+      mkdirSync(sharedDir, { recursive: true });
+    }
+    chmodSync(sharedDir, 0o1777);
+  } catch (err) {
+    logger.warn({ error: err, sharedDir }, 'Could not create/chmod shared index cache dir; shared indexing may not work');
+  }
+}
+
 async function main(): Promise<void> {
   try {
+    // Ensure shared index cache directory exists and is world-writable with sticky bit
+    ensureSharedIndexDir();
+
     // Restore existing users from persistent mapping on startup
     await userManager.restoreUsers();
     logger.info('User restoration complete');

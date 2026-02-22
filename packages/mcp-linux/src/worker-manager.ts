@@ -109,6 +109,7 @@ export class WorkerManager {
         CODE_INDEX_EMBEDDING_BASE_URL: process.env.CODE_INDEX_EMBEDDING_BASE_URL ?? '',
         CODE_INDEX_EMBEDDING_DIMENSIONS: process.env.CODE_INDEX_EMBEDDING_DIMENSIONS ?? '',
         CODE_INDEX_EMBEDDING_BATCH_SIZE: process.env.CODE_INDEX_EMBEDDING_BATCH_SIZE ?? '',
+        CODE_INDEX_SHARED_DIR: process.env.CODE_INDEX_SHARED_DIR ?? '',
       },
     });
 

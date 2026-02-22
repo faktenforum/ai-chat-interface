@@ -6,7 +6,7 @@ import { mkdirSync, existsSync, rmSync, readFileSync, writeFileSync } from 'node
 import { join } from 'node:path';
 import type { CodeBlock } from './types.ts';
 import type { SearchResult } from './types.ts';
-import { INDEX_DIR, DEFAULT_SEARCH_LIMIT, DEFAULT_MIN_SCORE } from './constants.ts';
+import { DEFAULT_SEARCH_LIMIT, DEFAULT_MIN_SCORE } from './constants.ts';
 
 const VECTOR_TABLE_NAME = 'vector';
 const METADATA_TABLE_NAME = 'metadata';
@@ -29,7 +29,8 @@ function escapeSqlLikePattern(pattern: string): string {
 }
 
 export interface LanceDBStoreConfig {
-  workspacePath: string;
+  /** Resolved absolute path to the LanceDB directory (shared cache or workspace-local). */
+  dbPath: string;
   vectorSize: number;
 }
 
@@ -40,19 +41,17 @@ type LanceTable = any;
 
 /**
  * LanceDB store: vectors table + metadata table.
- * DB path: {workspacePath}/.mcp-linux/code-index/
+ * DB path provided externally (shared cache or workspace-local).
  */
 export class LanceDBStore {
   private readonly dbPath: string;
-  private readonly workspacePath: string;
   private readonly vectorSize: number;
   private db: LanceConnection | null = null;
   private table: LanceTable | null = null;
 
   constructor(config: LanceDBStoreConfig) {
-    this.workspacePath = config.workspacePath;
+    this.dbPath = config.dbPath;
     this.vectorSize = config.vectorSize;
-    this.dbPath = join(config.workspacePath, INDEX_DIR);
   }
 
   private async getLanceDB(): Promise<typeof import('@lancedb/lancedb')> {

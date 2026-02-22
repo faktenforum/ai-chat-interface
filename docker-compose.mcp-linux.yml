@@ -26,6 +26,7 @@ services:
       CODE_INDEX_EMBEDDING_BASE_URL: ${CODE_INDEX_EMBEDDING_BASE_URL:-https://openrouter.ai/api/v1}
       CODE_INDEX_EMBEDDING_DIMENSIONS: ${CODE_INDEX_EMBEDDING_DIMENSIONS:-1536}
       CODE_INDEX_EMBEDDING_BATCH_SIZE: ${CODE_INDEX_EMBEDDING_BATCH_SIZE:-32}
+      CODE_INDEX_SHARED_DIR: ${CODE_INDEX_SHARED_DIR:-/app/data/index-cache}
     expose:
       - "3015"
     # Traefik labels defined in docker-compose.prod.yml and docker-compose.local.yml
