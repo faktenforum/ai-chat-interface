@@ -33,7 +33,10 @@ export function registerTerminalTools(
     'execute_command',
     {
       description:
-        'Execute a shell command in a workspace context. The command always runs in the given workspace (shell starts there); paths in the command are relative to the workspace root. Returns: terminal output, terminal_id, workspace, cwd (current working directory after the command), optional cwd_relative_to_workspace, and git metadata (branch, dirty). Use the same workspace and the same relative path for read_workspace_file and create_download_link (e.g. if the script saves to chart.png, use read_workspace_file(workspace, "chart.png")). The terminal is the primary interface for file operations, search, git, and everything else.',
+        'Execute a shell command in a workspace context. The command always runs in the given workspace (shell starts there); paths in the command are relative to the workspace root. ' +
+        'Prefer relative paths from the workspace root for portability. Prefer executing complex CLI commands over creating executable scripts; they are more flexible and easier to run. ' +
+        'Use the same workspace for read_workspace_file and create_download_link (e.g. if the script saves to chart.png, use read_workspace_file(workspace, "chart.png")). ' +
+        'Returns: terminal output, terminal_id, workspace, cwd, optional cwd_relative_to_workspace, and git metadata (branch, dirty). The terminal is the primary interface for file operations, search, git, and everything else.',
       inputSchema: ExecuteCommandSchema.shape,
     },
     async (args, extra) => {

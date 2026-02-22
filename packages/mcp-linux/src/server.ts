@@ -75,44 +75,25 @@ function createMcpServer() {
       },
       instructions: `You have access to a Linux terminal environment via the MCP Linux server.
 
-Each user has their own isolated Linux account with:
-- A personal home directory with persistent bash history
-- Git-backed workspaces (a "default" workspace exists automatically)
-- Pre-installed runtimes: Node.js, Python 3, Git, Bash, ripgrep, and more
-- SSH access to GitHub via a shared machine user key
+TOOL USE
+- You have access to tools executed in a Linux workspace context. Use one tool at a time; each step should be informed by the previous result.
+- Assess what information you need, then choose the most appropriate tool. For example: list_workspace_files is more effective than running ls in the terminal for exploring directory structure.
 
-Usage guidelines:
-- Use the terminal tools (execute_command, write_terminal) to run any command
-- All commands run in the context of a workspace (default: "default")
-- Use workspace tools to manage projects (create from git clone or empty repo)
-- File operations, search, and git are all done via the terminal
-- Each terminal response includes workspace git metadata (branch, dirty status)
-- list_workspaces = overview (all workspaces, branch, dirty, plan_preview). get_workspace_status(workspace) = full detail for one workspace (plan, tasks, optional instructions from .mcp-linux/instructions.md, git status). Use the latter after handoffs or when you need task-level context; use the former to choose or create a workspace.
-- get_workspace_status returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files.
-- Users can install additional tools in their home (nvm, pip --user, etc.)
+CAPABILITIES
+- Each user has their own isolated Linux account: personal home directory with persistent bash history, Git-backed workspaces (a "default" workspace exists automatically), pre-installed runtimes (Node.js, Python 3, Git, Bash, ripgrep, and more), SSH access to GitHub via a shared machine user key. Users can install additional tools in their home (nvm, pip --user, etc.); see runtime_management prompt for details.
+- Use terminal tools (execute_command, write_terminal) to run any command. All commands run in the context of a workspace (default: "default"). File operations, search, and git are done via the terminal. Each terminal response includes workspace git metadata (branch, dirty status).
+- list_workspaces = overview (all workspaces, branch, dirty, plan_preview). get_workspace_status(workspace) = full detail (plan, tasks, optional .mcp-linux/instructions.md, git status). Use the latter after handoffs or when you need task-level context; use the former to choose or create a workspace. get_workspace_status returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files.
+- list_workspace_files: Use to explore directory structure; more effective than ls for getting a structured file list.
+- codebase_search: MUST use FIRST before read_workspace_file when exploring unfamiliar code. Queries in English.
 
 File Upload:
-- Use create_upload_session to generate a unique upload URL for the user
-- Share the URL with the user so they can upload files via their browser
-- Uploaded files are saved to ~/workspaces/{workspace}/uploads/. Uploads are ephemeral (may be purged); use clean_workspace_uploads to free space or move/download important outputs.
-- Upload sessions auto-close after successful upload and expire after 15 minutes by default
-- User uploaded → list_upload_sessions (default all), find completed session with uploaded_file, then read_workspace_file(workspace, e.g. uploads/filename). Never read_workspace_file without path from list_upload_sessions when user just uploaded.
-- Close unnecessary active sessions with close_upload_session when appropriate (e.g. after explaining or when cleaning up)
+- create_upload_session to generate a unique upload URL for the user. Uploaded files are saved to ~/workspaces/{workspace}/uploads/. Uploads are ephemeral (may be purged); use clean_workspace_uploads to free space or move/download important outputs. Sessions auto-close after upload and expire after 15 minutes by default. User uploaded → list_upload_sessions, find completed session with uploaded_file, then read_workspace_file(workspace, e.g. uploads/filename). Never read_workspace_file without path from list_upload_sessions when user just uploaded. Close unnecessary active sessions with close_upload_session when appropriate.
 
 File Download:
-- Use create_download_link to generate a temporary download URL for any workspace file; share the URL with the user.
-- Download links are single-use and expire after 60 minutes by default.
-- Cleanup: Check list_download_links (e.g. after creating links or at end of task); close unused links with close_download_link to limit exposure and follow security practice.
-
-Code Search:
-- Use codebase_search(workspace, query) for semantic code search before exploring unfamiliar code; prefer it over read_workspace_file when you do not yet know which files to open. Queries must be in English.
+- create_download_link for a temporary download URL for any workspace file; share the URL with the user. Links are single-use, expire after 60 minutes by default. Cleanup: list_download_links, close_download_link to limit exposure.
 
 Reading Files:
-- Use read_workspace_file to read a file and get its contents as structured content
-- Text files (.txt, .csv, .json, .py, .js, etc.) are returned inline as text
-- Images (.png, .jpg, .gif, .webp) are returned as base64 image content
-- Audio files (.wav, .mp3, .ogg) are returned as base64 audio content
-- Large or binary files automatically get a download link instead`,
+- read_workspace_file returns content with line numbers for diffing. Use optional line_ranges for specific sections. Text files are returned inline; images and audio as base64; large or binary files get a download link instead.`,
     },
   );
 

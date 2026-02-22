@@ -21,8 +21,8 @@ export function registerCodeIndexTools(
     {
       description:
         'Semantic code search in a workspace. Finds code relevant to a natural language query (meaning-based, not just keywords). ' +
-        'Use this before read_workspace_file when exploring unfamiliar code. Queries should be in English. ' +
-        'If the workspace has no index yet, indexing runs automatically on first search.',
+        'CRITICAL: For ANY exploration of code you haven\'t examined yet in this conversation, you MUST use this tool FIRST before any other search or file exploration tools. This applies throughout the entire conversation. ' +
+        'Queries should be in English. If the workspace has no index yet, indexing runs automatically on first search.',
       inputSchema: CodebaseSearchSchema.shape,
     },
     async (args, extra) => {

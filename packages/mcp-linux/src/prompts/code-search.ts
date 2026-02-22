@@ -9,24 +9,22 @@ export const CODE_SEARCH_PROMPT = {
   description: 'When and how to use codebase_search for semantic code exploration',
   content: `# Code Search (codebase_search)
 
-Use **codebase_search** to find code by meaning, not just keywords. It uses semantic search over the workspace index.
+As per server instructions: use codebase_search FIRST when exploring unfamiliar code (MUST use before any other search or file exploration in that area). Below: examples and tips only.
 
-## When to use
-
-- **Before** reading specific files when you do not know where something is implemented
-- Exploring unfamiliar codebases or new workspaces
-- Finding "where is X done?", "how does Y work?", "where do we handle Z?"
-
-## Usage
+## Example parameters
 
 - **query**: Natural language in English (e.g. "user authentication and password hashing", "database connection setup")
 - **path** (optional): Limit to a subdirectory (e.g. \`src\`, \`src/auth\`)
 - **workspace**: Workspace name (default: "default")
 
+## Example scenarios
+
+- Finding "where is X done?", "how does Y work?", "where do we handle Z?" → codebase_search then read_workspace_file with returned paths
+- New workspace or unfamiliar codebase → codebase_search first
+
 ## Tips
 
 - Phrase queries as questions or short descriptions; reuse the user's wording when it fits
-- After codebase_search, use read_workspace_file with the returned file paths to read full content
 - If the workspace has no index yet, the first codebase_search will index it (may take a moment)
 `,
 };

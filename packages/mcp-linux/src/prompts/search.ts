@@ -40,17 +40,7 @@ rg -c "pattern"
 rg -l "pattern"
 \`\`\`
 
-## Search File Content (grep)
-\`\`\`bash
-# Recursive grep
-grep -r "pattern" .
-
-# Case-insensitive with line numbers
-grep -rni "pattern" .
-
-# Exclude directories
-grep -r --exclude-dir=node_modules "pattern" .
-\`\`\`
+Alternative: \`grep -rni "pattern" .\` (prefer rg when possible).
 
 ## Find Files by Name
 \`\`\`bash

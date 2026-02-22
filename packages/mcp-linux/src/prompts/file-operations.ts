@@ -19,6 +19,7 @@ Commands execute relative to the active workspace directory.
   - Images or audio (returned as structured content for display/playback)
   - Large or binary files (tool returns a download link instead of dumping content)
   - A single file and you want workspace-scoped path resolution and clear errors
+  - Content is returned with line numbers for diffing; use optional \`line_ranges\` (e.g. \`[[1,50],[100,150]]\`) to read specific sections only.
 
 ## Reading Files
 \`\`\`bash
@@ -55,18 +56,13 @@ echo "content" > filename.txt
 touch filename.txt
 \`\`\`
 
-## Listing Directories
+## Listing directories
+
+Use **list_workspace_files**(workspace, path, recursive) for structured listing; use terminal when you need shell options (e.g. \`ls -lhS\`).
 \`\`\`bash
-# List files
 ls -la
-
-# Tree view (with depth limit)
 tree -L 2
-
-# List only directories
 ls -d */
-
-# List with file sizes (human-readable)
 ls -lhS
 \`\`\`
 

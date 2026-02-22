@@ -68,3 +68,22 @@ export function ensureFileExists(path: string): void {
     throw new Error(`Not a file: ${path} (is it a directory?)`);
   }
 }
+
+/**
+ * Checks if a path exists and is a directory.
+ *
+ * @param path - Absolute path to check
+ * @throws Error if path does not exist or is not a directory
+ */
+export function ensureDirExists(path: string): void {
+  let stat;
+  try {
+    stat = statSync(path);
+  } catch {
+    throw new Error(`Directory not found: ${path}`);
+  }
+
+  if (!stat.isDirectory()) {
+    throw new Error(`Not a directory: ${path}`);
+  }
+}
