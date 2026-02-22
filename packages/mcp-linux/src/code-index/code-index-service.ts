@@ -193,17 +193,35 @@ function loadIgnorePatterns(workspacePath: string): Ignore {
   return ig;
 }
 
+/**
+ * Reads and parses a file_hashes JSON file. Returns null if missing or invalid.
+ */
+function readHashesFile(fullPath: string): Record<string, string> | null {
+  if (!existsSync(fullPath)) return null;
+  try {
+    const raw = readFileSync(fullPath, 'utf-8');
+    const data = JSON.parse(raw) as Record<string, string>;
+    return typeof data === 'object' && data !== null ? data : null;
+  } catch {
+    return null;
+  }
+}
+
 function loadFileHashes(indexPath: string, workspacePath: string): Record<string, string> {
   const filename = fileHashesFilename(workspacePath);
-  const path = join(indexPath, filename);
-  if (!existsSync(path)) return {};
-  try {
-    const raw = readFileSync(path, 'utf-8');
-    const data = JSON.parse(raw) as Record<string, string>;
-    return typeof data === 'object' && data !== null ? data : {};
-  } catch {
-    return {};
+  const branchPath = join(indexPath, filename);
+  const fromBranch = readHashesFile(branchPath);
+  if (fromBranch) return fromBranch;
+
+  // First time on this branch: bootstrap from main or master to avoid full re-index
+  const fallbackBranches = ['main', 'master'];
+  for (const branch of fallbackBranches) {
+    const fallbackPath = join(indexPath, `${FILE_HASHES_BASENAME}.${branch}.json`);
+    const fromFallback = readHashesFile(fallbackPath);
+    if (fromFallback) return fromFallback;
   }
+
+  return {};
 }
 
 function saveFileHashes(indexPath: string, workspacePath: string, hashes: Record<string, string>): void {
