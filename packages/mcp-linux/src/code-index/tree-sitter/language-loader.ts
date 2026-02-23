@@ -77,11 +77,25 @@ export async function loadRequiredLanguageParsers(filesToParse: string[]): Promi
   const parsers: LanguageParser = {};
 
   for (const ext of extensionsToLoad) {
+    // Normalize module-style extensions to their base language where appropriate.
+    const normalizedExt = (() => {
+      switch (ext) {
+        case 'mjs':
+        case 'cjs':
+          return 'js';
+        case 'mts':
+        case 'cts':
+          return 'ts';
+        default:
+          return ext;
+      }
+    })();
+
     let language: LanguageT | null = null;
     let query: QueryT | null = null;
-    const parserKey = ext;
+    const parserKey = normalizedExt;
 
-    switch (ext) {
+    switch (normalizedExt) {
       case 'js':
       case 'jsx':
       case 'json': {

@@ -16,6 +16,8 @@ export const SHARED_INDEX_BASE_DIR = '/app/data/index-cache';
 export const SUPPORTED_EXTENSIONS = new Set([
   '.ts',
   '.tsx',
+  '.mts',
+  '.cts',
   '.js',
   '.jsx',
   '.mjs',
