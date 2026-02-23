@@ -16,6 +16,11 @@ import type { UserManager, UserMapping } from './user-manager.ts';
 /** Socket is in user's home so the unprivileged worker process can create it; server (root) connects to it. */
 const SOCKET_RELATIVE_PATH = '.mcp-linux/socket';
 const IDLE_TIMEOUT = parseInt(process.env.WORKER_IDLE_TIMEOUT || '1800000', 10); // 30 min default
+/** Max time to wait for a single worker request (e.g. create_workspace git clone uses 120s in worker). */
+const REQUEST_TIMEOUT_MS = Math.max(
+  30000,
+  parseInt(process.env.MCP_LINUX_WORKER_REQUEST_TIMEOUT_MS || '120000', 10),
+);
 
 export interface WorkerRequest {
   id: string;
@@ -169,7 +174,7 @@ export class WorkerManager {
       const timeout = setTimeout(() => {
         client.destroy();
         reject(new WorkerError(`Worker request timed out for ${email}`));
-      }, 60000); // 60s per request
+      }, REQUEST_TIMEOUT_MS);
 
       client.on('connect', () => {
         client.write(JSON.stringify(request) + '\n');

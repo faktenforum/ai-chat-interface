@@ -26,6 +26,13 @@ export const PLAN_MD_FILENAME = 'plan.md';
 export const TASKS_FILENAME = 'tasks.json';
 export const AGENTS_MD_FILENAME = 'AGENTS.md';
 export const CONFIG_FILENAME = 'config.json';
+export const SUBMODULES_STATUS_FILENAME = 'submodules_status.json';
+
+/** Submodule update status (stored in .mcp-linux/submodules_status.json). */
+export interface SubmodulesStatus {
+  status: 'idle' | 'updating' | 'done' | 'error' | 'none';
+  message?: string;
+}
 
 /** Per-workspace config (stored in .mcp-linux/config.json). Missing key = default (true for code_index_enabled). */
 export interface WorkspaceConfig {

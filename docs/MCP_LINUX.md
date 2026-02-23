@@ -30,9 +30,9 @@ LibreChat can use one app-level MCP connection (`startup: true`), so one MCP ses
 | Tool | Description |
 |------|-------------|
 | `list_workspaces` | Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use `get_workspace_status(workspace)` for full plan and tasks. |
-| `create_workspace` | Create workspace (empty or from git URL). When cloning, submodules are checked out recursively. Call list_workspaces first if unsure whether the name exists. |
+| `create_workspace` | Create workspace (empty or from git URL). When cloning, the main repo is cloned first; submodules are updated in the background (see **Submodules** below). Call list_workspaces first if unsure whether the name exists. |
 | `delete_workspace` | Delete workspace (not default) |
-| `get_workspace_status` | Full git status plus plan and tasks (each task: title, status). First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next. File lists may be truncated/collapsed (see **Status capping** below). |
+| `get_workspace_status` | Full git status, plan, tasks, **submodules** status, and **code_index** status. First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next. File lists may be truncated/collapsed (see **Status capping** below). |
 | `set_workspace_plan` | Set plan and/or tasks. Call before every handoff and at end of your turn so the next agent sees current state; if you omit this, context is lost. Pass full task list with updated statuses, or partial updates via `task_updates: [{ index, status }]` (0-based index from get_workspace_status). Tasks: `{ title, status? }` or string[]; status: pending, in_progress, done, cancelled. |
 | `clean_workspace_uploads` | Delete files in workspace `uploads/` older than N days (default 7; use 0 to delete all). Use to free space; uploads are ephemeral. |
 
@@ -44,6 +44,11 @@ LibreChat can use one app-level MCP connection (`startup: true`), so one MCP ses
 #### Plan and tasks
 
 Workspaces store a **plan** (goal/context) and **tasks** (steps) as the **single source of truth** for continuity across handoffs. Stored in `.mcp-linux/plan.md` (plan text) and `.mcp-linux/tasks.json` (tasks). Optional `AGENTS.md` in the workspace root (see [agents.md](https://agents.md)) provides entry instructions for expert workspaces; returned in `get_workspace_status` as `instructions` when present. Each task has `title` and `status` (pending | in_progress | done | cancelled). **Flow:** After a handoff use `get_workspace_status(workspace)` (workspace from handoff instructions; use `default` if none). If there is no or empty plan/tasks, set an initial plan and tasks from the handoff then continue. **Always** call `set_workspace_plan` before every handoff or when finishing your part so the next agent has current state; otherwise context is lost. To update only some statuses, use `task_updates` with 0-based indices from get_workspace_status (e.g. `task_updates: [{ index: 0, status: 'done' }, { index: 1, status: 'in_progress' }]`). Handoff instructions should contain the **workspace name** and optionally one short hint (e.g. "Continue from plan/tasks"); do not duplicate the full plan or task list in handoff text. Before creating a workspace call `list_workspaces` to avoid "already exists". Prefer tasks as string array (e.g. `["Step 1", "Step 2"]`); or `[{ title, status? }]`.
+
+#### Submodules and code_index in get_workspace_status
+
+- **`submodules`** — Status of background submodule checkout after clone: `status` is `none` (no .gitmodules), `idle` (not started), `updating`, `done`, or `error`; optional `message` on error. When cloning a repo with submodules, `create_workspace` returns immediately and submodules are updated in the background; poll `get_workspace_status` to see when `submodules.status` is `done` or `error`.
+- **`code_index`** — Semantic code index state. When indexing is disabled (global or per-workspace), `code_index` is `{ enabled: false }`. When enabled, `code_index` includes `enabled: true`, `status` (standby | indexing | indexed | error), `message`, `files_processed`, `files_total`, and `has_index` (whether the index has data and is complete).
 
 #### Status capping
 
@@ -156,6 +161,7 @@ If you run **both** stacks on one host they also share the external network `loa
 | `MCP_LINUX_PORT` | `3015` | Server port |
 | `MCP_LINUX_LOG_LEVEL` | `info` | Log level |
 | `MCP_LINUX_WORKER_IDLE_TIMEOUT` | `1800000` | Worker idle timeout (ms) |
+| `MCP_LINUX_WORKER_REQUEST_TIMEOUT_MS` | `120000` | Max time (ms) for a single worker request (e.g. `create_workspace` git clone). Increase if clones time out. |
 | `MCP_LINUX_GIT_SSH_KEY` | *(empty)* | Base64-encoded SSH private key for GitHub machine user |
 | `MCP_LINUX_GIT_USER_NAME` | *(user git config)* | Default Git author name for new/init repos. Falls back to user's `git config --global user.name`, then built-in default. |
 | `MCP_LINUX_GIT_USER_EMAIL` | *(user git config)* | Default Git author email for new/init repos. Falls back to user's `git config --global user.email`, then built-in default. |

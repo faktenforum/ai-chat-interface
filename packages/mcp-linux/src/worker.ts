@@ -13,13 +13,14 @@
 import { createServer, type Socket } from 'node:net';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, statSync, rmSync, unlinkSync } from 'node:fs';
 import { join, resolve, dirname, relative } from 'node:path';
-import { execSync, spawnSync } from 'node:child_process';
+import { execSync, spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { getDefaultGitIdentity } from './utils/git-config.ts';
 import { validateWorkspaceName, validateTerminalId } from './utils/security.ts';
 import {
   type PlanTask,
   type WorkspaceConfig,
+  type SubmodulesStatus,
   isTaskStatus,
   taskStatusFrom,
   PLAN_DIR,
@@ -27,6 +28,7 @@ import {
   TASKS_FILENAME,
   AGENTS_MD_FILENAME,
   CONFIG_FILENAME,
+  SUBMODULES_STATUS_FILENAME,
   LIST_WORKSPACES_PLAN_PREVIEW_LEN,
 } from './workspace-plan.ts';
 import {
@@ -252,6 +254,44 @@ function writeWorkspaceConfig(workspace: string, config: WorkspaceConfig): void 
   const dir = getPlanDir(workspace);
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, CONFIG_FILENAME), JSON.stringify(config, null, 2), 'utf-8');
+}
+
+function readSubmodulesStatus(workspace: string): SubmodulesStatus | null {
+  const path = join(getPlanDir(workspace), SUBMODULES_STATUS_FILENAME);
+  if (!existsSync(path)) return null;
+  try {
+    const raw = readFileSync(path, 'utf-8');
+    const data = JSON.parse(raw) as unknown;
+    if (data != null && typeof data === 'object' && !Array.isArray(data)) {
+      const obj = data as Record<string, unknown>;
+      const status = obj.status as string | undefined;
+      if (
+        status === 'idle' ||
+        status === 'updating' ||
+        status === 'done' ||
+        status === 'error' ||
+        status === 'none'
+      ) {
+        return {
+          status,
+          message: typeof obj.message === 'string' ? obj.message : undefined,
+        };
+      }
+    }
+  } catch {
+    /* parse or read error */
+  }
+  return null;
+}
+
+function writeSubmodulesStatus(workspace: string, data: SubmodulesStatus): void {
+  const dir = getPlanDir(workspace);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, SUBMODULES_STATUS_FILENAME),
+    JSON.stringify(data, null, 0),
+    'utf-8',
+  );
 }
 
 /** True if code index is enabled globally and not disabled for this workspace via config.json. */
@@ -707,7 +747,7 @@ const handlers: Record<string, Handler> = {
     }
 
     if (gitUrl) {
-      // Clone from remote
+      // Clone from remote (without submodules; submodules are updated in background)
       if (gitUrl.startsWith('-')) {
         throw new Error('Git URL cannot start with -');
       }
@@ -718,7 +758,7 @@ const handlers: Record<string, Handler> = {
 
       const result = spawnSync(
         'git',
-        ['clone', '--recurse-submodules', '--branch', branch, gitUrl, wsPath],
+        ['clone', '--branch', branch, gitUrl, wsPath],
         {
           stdio: 'pipe',
           timeout: 120000,
@@ -727,6 +767,31 @@ const handlers: Record<string, Handler> = {
       );
       if (result.status !== 0) {
         throw new Error(`Git clone failed: ${result.stderr}`);
+      }
+
+      // If repo has submodules, update them in background
+      const gitmodulesPath = join(wsPath, '.gitmodules');
+      if (existsSync(gitmodulesPath)) {
+        writeSubmodulesStatus(name, { status: 'updating', message: '' });
+        const child = spawn('git', ['submodule', 'update', '--init', '--recursive'], {
+          cwd: wsPath,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        let stderr = '';
+        child.stderr?.on('data', (chunk: Buffer) => {
+          stderr += chunk.toString();
+        });
+        child.on('exit', (code, signal) => {
+          if (code === 0) {
+            writeSubmodulesStatus(name, { status: 'done', message: '' });
+          } else {
+            const msg = stderr.trim() || `exit ${code ?? signal}`;
+            writeSubmodulesStatus(name, { status: 'error', message: msg });
+          }
+        });
+        child.on('error', (err) => {
+          writeSubmodulesStatus(name, { status: 'error', message: err.message });
+        });
       }
     } else {
       // Create empty repo
@@ -846,6 +911,25 @@ const handlers: Record<string, Handler> = {
     const capped = capAndCollapseStatusLists(staged, unstaged, untracked);
     const config = readWorkspaceConfig(workspace);
 
+    // Submodules status
+    const submodulesStatusFile = readSubmodulesStatus(workspace);
+    const hasGitmodules = existsSync(join(wsPath, '.gitmodules'));
+    const submodules =
+      submodulesStatusFile ??
+      (hasGitmodules
+        ? ({ status: 'idle' as const, message: '' } satisfies SubmodulesStatus)
+        : ({ status: 'none' as const, message: '' } satisfies SubmodulesStatus));
+
+    // Code index status (enabled + index state when enabled)
+    const codeIndexEnabled = isCodeIndexEnabledForWorkspace(workspace);
+    const code_index = codeIndexEnabled
+      ? {
+          enabled: true as const,
+          ...getIndexStatus(wsPath),
+          has_index: await hasIndex(wsPath),
+        }
+      : { enabled: false as const };
+
     return {
       workspace,
       branch: meta.branch,
@@ -864,6 +948,8 @@ const handlers: Record<string, Handler> = {
       tasks,
       instructions: instructions ?? null,
       config,
+      submodules,
+      code_index,
     };
   },
 
