@@ -9,6 +9,7 @@ export interface CodeBlock {
   content: string;
   file_hash: string;
   segment_hash: string;
+  language?: string;
 }
 
 export interface SearchResult {

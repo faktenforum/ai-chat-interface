@@ -15,6 +15,12 @@ import { loadRequiredLanguageParsers } from './tree-sitter/language-loader.ts';
 // min/max character heuristics. Kilo Code is licensed under the Apache License,
 // Version 2.0; see the upstream LICENSE for full terms.
 
+function detectLanguageFromPath(filePath: string): string | undefined {
+  const ext = extname(filePath).toLowerCase();
+  if (!ext) return undefined;
+  return ext.slice(1);
+}
+
 /**
  * Create SHA-256 hash of file content for change detection.
  */
@@ -59,6 +65,7 @@ export function chunkFile(
           content: chunkContent,
           file_hash: fileHash,
           segment_hash: segmentHash,
+          language: detectLanguageFromPath(filePath),
         });
       }
     }
@@ -88,6 +95,7 @@ export function chunkFile(
         content: segment,
         file_hash: fileHash,
         segment_hash: segmentHash,
+        language: detectLanguageFromPath(filePath),
       });
     }
   };
@@ -194,6 +202,7 @@ function chunkTextByLines(
           content: chunkContent,
           file_hash: fileHash,
           segment_hash: segmentHash,
+          language: detectLanguageFromPath(filePath),
         });
       }
     }
@@ -223,6 +232,7 @@ function chunkTextByLines(
         content: segment,
         file_hash: fileHash,
         segment_hash: segmentHash,
+        language: detectLanguageFromPath(filePath),
       });
     }
   };
@@ -319,8 +329,26 @@ export async function chunkFileWithAst(
 ): Promise<CodeBlock[]> {
   const ext = extname(filePath).toLowerCase();
 
-  // Only attempt AST-based chunking for a small set of well-supported extensions.
-  const astSupported = new Set(['.ts', '.tsx', '.js', '.jsx', '.json']);
+  // Only attempt AST-based chunking for a set of well-supported extensions.
+  const astSupported = new Set([
+    '.ts',
+    '.tsx',
+    '.js',
+    '.jsx',
+    '.json',
+    '.md',
+    '.markdown',
+    '.html',
+    '.htm',
+    '.css',
+    '.py',
+    '.java',
+    '.rs',
+    '.c',
+    '.h',
+    '.cpp',
+    '.hpp',
+  ]);
   if (!astSupported.has(ext)) {
     return chunkFile(filePath, content, fileHash);
   }
@@ -385,6 +413,7 @@ export async function chunkFileWithAst(
             content: chunkContent,
             file_hash: fileHash,
             segment_hash: segmentHash,
+            language: detectLanguageFromPath(filePath),
           });
         }
       }

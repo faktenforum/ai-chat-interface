@@ -8,6 +8,14 @@ import type { Parser as ParserT, Language as LanguageT, Query as QueryT } from '
 import javascriptQuery from './queries/javascript.ts';
 import typescriptQuery from './queries/typescript.ts';
 import tsxQuery from './queries/tsx.ts';
+import markdownQuery from './queries/markdown.ts';
+import htmlQuery from './queries/html.ts';
+import cssQuery from './queries/css.ts';
+import pythonQuery from './queries/python.ts';
+import javaQuery from './queries/java.ts';
+import rustQuery from './queries/rust.ts';
+import cQuery from './queries/c.ts';
+import cppQuery from './queries/cpp.ts';
 
 const require = createRequire(import.meta.url);
 
@@ -41,7 +49,7 @@ async function loadLanguage(langName: string): Promise<LanguageT> {
 
 /**
  * Load tree-sitter parsers for the given files.
- * Currently supports a subset of languages (TS/TSX/JS/JSX/JSON).
+ * Currently supports a subset of languages (TS/TSX/JS/JSX/JSON and selected others).
  * Returns a map keyed by file extension (without dot).
  */
 export async function loadRequiredLanguageParsers(filesToParse: string[]): Promise<LanguageParser> {
@@ -69,28 +77,77 @@ export async function loadRequiredLanguageParsers(filesToParse: string[]): Promi
   const parsers: LanguageParser = {};
 
   for (const ext of extensionsToLoad) {
-    let language: LanguageT;
-    let query: QueryT;
-    let parserKey = ext;
+    let language: LanguageT | null = null;
+    let query: QueryT | null = null;
+    const parserKey = ext;
 
     switch (ext) {
       case 'js':
       case 'jsx':
-      case 'json':
+      case 'json': {
         language = await loadLanguage('javascript');
         query = new Query(language, javascriptQuery);
         break;
-      case 'ts':
+      }
+      case 'ts': {
         language = await loadLanguage('typescript');
         query = new Query(language, typescriptQuery);
         break;
-      case 'tsx':
+      }
+      case 'tsx': {
         language = await loadLanguage('tsx');
         query = new Query(language, tsxQuery);
         break;
+      }
+      case 'md':
+      case 'markdown': {
+        language = await loadLanguage('markdown');
+        query = new Query(language, markdownQuery);
+        break;
+      }
+      case 'html':
+      case 'htm': {
+        language = await loadLanguage('html');
+        query = new Query(language, htmlQuery);
+        break;
+      }
+      case 'css': {
+        language = await loadLanguage('css');
+        query = new Query(language, cssQuery);
+        break;
+      }
+      case 'py': {
+        language = await loadLanguage('python');
+        query = new Query(language, pythonQuery);
+        break;
+      }
+      case 'java': {
+        language = await loadLanguage('java');
+        query = new Query(language, javaQuery);
+        break;
+      }
+      case 'rs': {
+        language = await loadLanguage('rust');
+        query = new Query(language, rustQuery);
+        break;
+      }
+      case 'c':
+      case 'h': {
+        language = await loadLanguage('c');
+        query = new Query(language, cQuery);
+        break;
+      }
+      case 'cpp':
+      case 'hpp': {
+        language = await loadLanguage('cpp');
+        query = new Query(language, cppQuery);
+        break;
+      }
       default:
-        continue;
+        break;
     }
+
+    if (!language || !query) continue;
 
     const parser = new Parser();
     parser.setLanguage(language);
