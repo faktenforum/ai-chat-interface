@@ -7,7 +7,7 @@ import { join, relative, extname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
 import ignore, { type Ignore } from 'ignore';
-import type { CodeBlock, SearchResult, IndexState, IndexStatus } from './types.ts';
+import type { CodeBlock, SearchResult, IndexState, IndexStatus, DebugChunkEntry } from './types.ts';
 import {
   INDEX_DIR,
   SHARED_INDEX_BASE_DIR,
@@ -438,5 +438,91 @@ export async function hasIndex(workspacePath: string): Promise<boolean> {
     return complete && hasData;
   } catch {
     return false;
+  }
+}
+
+/**
+ * List stored code index chunks for a given file path or path prefix in a workspace.
+ * Uses the existing LanceDB index; does not modify any data.
+ */
+export async function listChunksInIndex(
+  workspacePath: string,
+  pathFilter: string,
+  limit: number,
+): Promise<DebugChunkEntry[]> {
+  if (!isCodeIndexEnabled()) return [];
+  const indexPath = resolveIndexPath(workspacePath);
+  const vectorSize = getEmbeddingDimensions();
+  const store = new LanceDBStore({ dbPath: indexPath, vectorSize });
+
+  try {
+    await store.initialize();
+    const hasData = await store.hasData();
+    if (!hasData) {
+      await store.close();
+      return [];
+    }
+    const rows = await store.listChunksByPath(pathFilter, limit);
+    await store.close();
+    return rows.map((row) => {
+      const content = row.codeChunk ?? '';
+      const preview = content.slice(0, 200);
+      return {
+        file_path: row.filePath,
+        start_line: row.startLine,
+        end_line: row.endLine,
+        content_preview: preview,
+        segment_hash: row.id,
+        char_count: content.length,
+      };
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[CodeIndexService] listChunksInIndex failed:',
+      (err as Error).message ?? String(err),
+    );
+    await store.close().catch(() => {});
+    return [];
+  }
+}
+
+/**
+ * Re-chunk a single file using the active chunking logic (AST + fallback),
+ * without writing embeddings or modifying the index.
+ */
+export async function rechunkFileForDebug(
+  workspacePath: string,
+  relativePath: string,
+  limit = 50,
+): Promise<DebugChunkEntry[]> {
+  const absPath = join(workspacePath, relativePath);
+  try {
+    const stat = statSync(absPath);
+    if (!stat.isFile() || stat.size > MAX_FILE_SIZE_BYTES) {
+      return [];
+    }
+    const content = readFileSync(absPath, 'utf-8');
+    const fileHash = createFileHash(content);
+    const blocks = await chunkFileWithAst(relativePath, content, fileHash);
+    const limited = blocks.slice(0, limit);
+    return limited.map((block) => {
+      const preview = block.content.slice(0, 200);
+      return {
+        file_path: block.file_path,
+        start_line: block.start_line,
+        end_line: block.end_line,
+        content_preview: preview,
+        segment_hash: block.segment_hash,
+        char_count: block.content.length,
+      };
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[CodeIndexService] rechunkFileForDebug failed:',
+      (err as Error).message ?? String(err),
+    );
+    return [];
   }
 }

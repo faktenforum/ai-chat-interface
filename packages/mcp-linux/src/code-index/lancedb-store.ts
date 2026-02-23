@@ -229,6 +229,40 @@ export class LanceDBStore {
   }
 
   /**
+   * List stored code index chunks for a given file path or path prefix.
+   * Read-only helper for debugging and analysis.
+   */
+  async listChunksByPath(
+    pathFilter: string,
+    limit: number,
+  ): Promise<
+    Array<{ id: string; filePath: string; startLine: number; endLine: number; codeChunk: string }>
+  > {
+    try {
+      const table = await this.getTable();
+      const safeLimit = Math.max(1, Math.min(limit, 1000));
+      let whereExpr: string;
+      if (pathFilter.endsWith('/')) {
+        const escapedPrefix = escapeSqlLikePattern(pathFilter);
+        whereExpr = `filePath LIKE '${escapedPrefix}%'`;
+      } else {
+        const escapedPath = escapeSqlString(pathFilter);
+        whereExpr = `filePath = '${escapedPath}'`;
+      }
+      const rows = await table.query().where(whereExpr).limit(safeLimit).toArray();
+      return (rows as Array<{
+        id: string;
+        filePath: string;
+        startLine: number;
+        endLine: number;
+        codeChunk: string;
+      }>) ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Vector search with optional path prefix filter.
    */
   async search(

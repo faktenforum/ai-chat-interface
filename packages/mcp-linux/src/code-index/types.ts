@@ -19,6 +19,15 @@ export interface SearchResult {
   code_chunk: string;
 }
 
+export interface DebugChunkEntry {
+  file_path: string;
+  start_line: number;
+  end_line: number;
+  content_preview: string;
+  segment_hash: string;
+  char_count: number;
+}
+
 export type IndexStatus = 'standby' | 'indexing' | 'indexed' | 'error';
 
 export interface IndexState {

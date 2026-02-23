@@ -35,6 +35,8 @@ import {
   getIndexStatus,
   hasIndex,
   isCodeIndexEnabled,
+  listChunksInIndex,
+  rechunkFileForDebug,
 } from './code-index/code-index-service.ts';
 
 // Parse CLI arguments
@@ -980,6 +982,46 @@ const handlers: Record<string, Handler> = {
       ...state,
       has_index: hasIndexData,
       enabled: isCodeIndexEnabled(),
+    };
+  },
+
+  async debug_code_index_list_chunks(params) {
+    const workspace = (params.workspace as string) || 'default';
+    const pathFilter = (params.path as string) || '';
+    const limitParam = typeof params.limit === 'number' ? params.limit : undefined;
+    const limit = limitParam && limitParam > 0 && limitParam <= 200 ? limitParam : 50;
+    if (!pathFilter.trim()) {
+      return { chunk_count: 0, chunks: [], index_status: 'none' };
+    }
+    const wsPath = resolveWorkspacePath(workspace);
+    if (!existsSync(wsPath)) {
+      throw new Error(`Workspace "${workspace}" does not exist`);
+    }
+    const chunks = await listChunksInIndex(wsPath, pathFilter, limit);
+    const indexStatus = chunks.length > 0 ? 'indexed' : 'none';
+    return {
+      chunk_count: chunks.length,
+      chunks,
+      index_status: indexStatus,
+    };
+  },
+
+  async debug_code_index_rechunk_file(params) {
+    const workspace = (params.workspace as string) || 'default';
+    const relPath = (params.path as string) || '';
+    const limitParam = typeof params.limit === 'number' ? params.limit : undefined;
+    const limit = limitParam && limitParam > 0 && limitParam <= 200 ? limitParam : 50;
+    if (!relPath.trim()) {
+      return { chunk_count: 0, chunks: [] };
+    }
+    const wsPath = resolveWorkspacePath(workspace);
+    if (!existsSync(wsPath)) {
+      throw new Error(`Workspace "${workspace}" does not exist`);
+    }
+    const chunks = await rechunkFileForDebug(wsPath, relPath, limit);
+    return {
+      chunk_count: chunks.length,
+      chunks,
     };
   },
 

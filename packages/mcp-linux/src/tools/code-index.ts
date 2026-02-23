@@ -9,7 +9,12 @@ import { randomUUID } from 'node:crypto';
 import type { UserManager } from '../user-manager.ts';
 import type { WorkerManager } from '../worker-manager.ts';
 import { resolveEmail, errorResult } from './helpers.ts';
-import { CodebaseSearchSchema, GetCodeIndexStatusSchema } from '../schemas/code-index.schema.ts';
+import {
+  CodebaseSearchSchema,
+  GetCodeIndexStatusSchema,
+  DebugCodeIndexListChunksSchema,
+  DebugCodeIndexRechunkFileSchema,
+} from '../schemas/code-index.schema.ts';
 
 export function registerCodeIndexTools(
   server: McpServer,
@@ -86,6 +91,73 @@ export function registerCodeIndexTools(
         }
 
         return { content: [{ type: 'text', text: JSON.stringify(response.result, null, 2) }] };
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    'debug_code_index_list_chunks',
+    {
+      description:
+        'Debug tool: list stored code index chunks from LanceDB for a given file path or path prefix in a workspace. ' +
+        'Read-only; intended for testing and debugging chunking/indexing behaviour.',
+      inputSchema: DebugCodeIndexListChunksSchema.shape,
+    },
+    async (args, extra) => {
+      try {
+        const email = resolveEmail(extra);
+        const response = await workerManager.sendRequest(email, {
+          id: randomUUID(),
+          method: 'debug_code_index_list_chunks',
+          params: {
+            workspace: args.workspace ?? 'default',
+            path: args.path,
+            limit: args.limit,
+          },
+        });
+
+        if (response.error) {
+          return errorResult(response.error);
+        }
+
+        return {
+          content: [{ type: 'text', text: JSON.stringify(response.result, null, 2) }],
+        };
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    'debug_code_index_rechunk_file',
+    {
+      description:
+        'Debug tool: rechunk a single file using the active chunking logic (AST + fallback) without writing embeddings or modifying the index.',
+      inputSchema: DebugCodeIndexRechunkFileSchema.shape,
+    },
+    async (args, extra) => {
+      try {
+        const email = resolveEmail(extra);
+        const response = await workerManager.sendRequest(email, {
+          id: randomUUID(),
+          method: 'debug_code_index_rechunk_file',
+          params: {
+            workspace: args.workspace ?? 'default',
+            path: args.path,
+            limit: args.limit,
+          },
+        });
+
+        if (response.error) {
+          return errorResult(response.error);
+        }
+
+        return {
+          content: [{ type: 'text', text: JSON.stringify(response.result, null, 2) }],
+        };
       } catch (error) {
         return errorResult(error);
       }
