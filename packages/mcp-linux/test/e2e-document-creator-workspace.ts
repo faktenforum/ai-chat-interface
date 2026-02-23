@@ -2,7 +2,7 @@
  * E2E test: document-creator workspace workflow
  *
  * Spawns the worker with a temp home, clones the document-creator workspace,
- * asserts plan/instructions/tasks (plan.md + tasks.json + instructions.md),
+ * asserts plan/instructions/tasks (plan.md + tasks.json + AGENTS.md),
  * then simulates the document-creator agent by generating a minimal CV as PDF.
  *
  * Run from repo root: cd ai-chat-interface/packages/mcp-linux && node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/e2e-document-creator-workspace.ts
@@ -179,7 +179,7 @@ async function runE2E(): Promise<void> {
     const instructions = status.instructions as string | null | undefined;
     assert(
       typeof instructions === 'string' && instructions.length > 0,
-      'instructions.md should be present and non-empty for document-creator workspace',
+      'AGENTS.md should be present and non-empty in the document-creator workspace root',
     );
     assert(
       instructions != null &&

@@ -25,7 +25,7 @@ import {
   PLAN_DIR,
   PLAN_MD_FILENAME,
   TASKS_FILENAME,
-  INSTRUCTIONS_FILENAME,
+  AGENTS_MD_FILENAME,
   CONFIG_FILENAME,
   LIST_WORKSPACES_PLAN_PREVIEW_LEN,
 } from './workspace-plan.ts';
@@ -205,7 +205,7 @@ function readPlanData(workspace: string): PlanData {
 }
 
 function readInstructionsFile(workspace: string): string | null {
-  const path = join(getPlanDir(workspace), INSTRUCTIONS_FILENAME);
+  const path = join(resolveWorkspacePath(workspace), AGENTS_MD_FILENAME);
   if (!existsSync(path)) return null;
   try {
     const raw = readFileSync(path, 'utf-8').trim();

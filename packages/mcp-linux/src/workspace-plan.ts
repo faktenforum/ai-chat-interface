@@ -24,7 +24,7 @@ export function taskStatusFrom(status: unknown, done: boolean | undefined): Task
 export const PLAN_DIR = '.mcp-linux';
 export const PLAN_MD_FILENAME = 'plan.md';
 export const TASKS_FILENAME = 'tasks.json';
-export const INSTRUCTIONS_FILENAME = 'instructions.md';
+export const AGENTS_MD_FILENAME = 'AGENTS.md';
 export const CONFIG_FILENAME = 'config.json';
 
 /** Per-workspace config (stored in .mcp-linux/config.json). Missing key = default (true for code_index_enabled). */
