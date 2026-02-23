@@ -39,11 +39,11 @@ LibreChat can use one app-level MCP connection (`startup: true`), so one MCP ses
 #### When to use list_workspaces vs get_workspace_status
 
 - **`list_workspaces`** — Overview only: all workspace names, branch, dirty flag, remote_url, short plan_preview. Use when: choosing or creating a workspace, checking if a name exists, or deciding which workspace to pass in a handoff. When handing off to a workspace specialist, put the chosen workspace name in the handoff instructions so they call `get_workspace_status(workspace)` first.
-- **`get_workspace_status(workspace)`** — Full detail for **one** workspace: full plan, all tasks (title + status), optional instructions (from `.mcp-linux/instructions.md`), git status (with capping). Use when: after a handoff (to read plan/tasks), before/after `set_workspace_plan`, or when you need task-level context. Do not use for "list all workspaces".
+- **`get_workspace_status(workspace)`** — Full detail for **one** workspace: full plan, all tasks (title + status), optional instructions (from workspace-root `AGENTS.md`), git status (with capping). Use when: after a handoff (to read plan/tasks), before/after `set_workspace_plan`, or when you need task-level context. Do not use for "list all workspaces".
 
 #### Plan and tasks
 
-Workspaces store a **plan** (goal/context) and **tasks** (steps) as the **single source of truth** for continuity across handoffs. Stored in `.mcp-linux/plan.md` (plan text) and `.mcp-linux/tasks.json` (tasks). Optional `.mcp-linux/instructions.md` provides entry instructions for expert workspaces; returned in `get_workspace_status` as `instructions` when present. Each task has `title` and `status` (pending | in_progress | done | cancelled). **Flow:** After a handoff use `get_workspace_status(workspace)` (workspace from handoff instructions; use `default` if none). If there is no or empty plan/tasks, set an initial plan and tasks from the handoff then continue. **Always** call `set_workspace_plan` before every handoff or when finishing your part so the next agent has current state; otherwise context is lost. To update only some statuses, use `task_updates` with 0-based indices from get_workspace_status (e.g. `task_updates: [{ index: 0, status: 'done' }, { index: 1, status: 'in_progress' }]`). Handoff instructions should contain the **workspace name** and optionally one short hint (e.g. "Continue from plan/tasks"); do not duplicate the full plan or task list in handoff text. Before creating a workspace call `list_workspaces` to avoid "already exists". Prefer tasks as string array (e.g. `["Step 1", "Step 2"]`); or `[{ title, status? }]`.
+Workspaces store a **plan** (goal/context) and **tasks** (steps) as the **single source of truth** for continuity across handoffs. Stored in `.mcp-linux/plan.md` (plan text) and `.mcp-linux/tasks.json` (tasks). Optional `AGENTS.md` in the workspace root (see [agents.md](https://agents.md)) provides entry instructions for expert workspaces; returned in `get_workspace_status` as `instructions` when present. Each task has `title` and `status` (pending | in_progress | done | cancelled). **Flow:** After a handoff use `get_workspace_status(workspace)` (workspace from handoff instructions; use `default` if none). If there is no or empty plan/tasks, set an initial plan and tasks from the handoff then continue. **Always** call `set_workspace_plan` before every handoff or when finishing your part so the next agent has current state; otherwise context is lost. To update only some statuses, use `task_updates` with 0-based indices from get_workspace_status (e.g. `task_updates: [{ index: 0, status: 'done' }, { index: 1, status: 'in_progress' }]`). Handoff instructions should contain the **workspace name** and optionally one short hint (e.g. "Continue from plan/tasks"); do not duplicate the full plan or task list in handoff text. Before creating a workspace call `list_workspaces` to avoid "already exists". Prefer tasks as string array (e.g. `["Step 1", "Step 2"]`); or `[{ title, status? }]`.
 
 #### Status capping
 
@@ -92,6 +92,46 @@ Workspaces are persistent. Agents can save scripts (e.g. under `scripts/` in a w
 ### Agent Linux Expert
 
 The **Linux Expert** agent (id: `shared-agent-linux-expert`) is a general Linux assistant with full MCP Linux tool access. It handles: general Linux questions, shell commands, scripts, file operations; plus MCP Linux account/workspace administration (status, cleanup, reset, sessions). Users can select it directly or be routed from Main Assistant. It hands off to Code Assistant (code implementation), Data Analysis, File Converter, or Document Creator for those domains.
+
+## Code index and search
+
+The MCP Linux server can build a semantic **code index** for each workspace. The indexer:
+
+- Scans files under the workspace root, filtered by extension and ignore rules.
+- Splits content into **code chunks** and stores them with embeddings in LanceDB.
+- Exposes tools for search and debugging:
+  - `codebase_search` – semantic search over the indexed code.
+  - `debug_code_index_list_chunks` – list stored chunks for a file/path prefix.
+  - `debug_code_index_rechunk_file` – recompute chunks for a single file without touching the index.
+
+Chunking uses a hybrid strategy:
+
+- **AST-aware chunking (tree-sitter)** for a set of languages, with a strict fallback to line-based splitting.
+- **Line-based chunking** for everything else, or when parsing/boundary extraction fails.
+
+Current AST-backed languages (via tree-sitter):
+
+- TypeScript family: `.ts`, `.tsx`
+- JavaScript family: `.js`, `.jsx`, `.json`
+- Markdown: `.md`, `.markdown`
+- HTML: `.html`, `.htm`
+- CSS: `.css`
+- Python: `.py`
+- Java: `.java`
+- Rust: `.rs`
+- C / C headers: `.c`, `.h`
+- C++: `.cpp`, `.hpp`
+
+Every stored chunk is a `CodeBlock` with at least:
+
+- `file_path`: relative path in the workspace
+- `start_line`, `end_line`: 1-based line range in the original file
+- `content`: the chunk text
+- `file_hash`: SHA-256 of the source file
+- `segment_hash`: stable identifier for the chunk
+- `language` (optional): language hint derived from the file extension (e.g. `ts`, `md`, `py`, `java`)
+
+On parser errors, missing parsers, or empty AST boundaries, the indexer falls back to the same line-based splitter used for non-AST languages, so all supported files remain searchable.
 
 ## MCP transport and sessions
 
