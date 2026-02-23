@@ -9,8 +9,7 @@ export const FILE_OPERATIONS_PROMPT = {
   description: 'When to use terminal vs. read_workspace_file for reading; terminal command examples for file operations (read, write, copy, move, delete, permissions)',
   content: `# File Operations via Terminal
 
-All file operations are done through the terminal using standard Linux commands.
-Commands execute relative to the active workspace directory.
+File ops via Linux terminal in workspace root; use list_workspace_files/read_workspace_file when you need structured listings or line-numbered content.
 
 ## Reading file contents: terminal vs. read_workspace_file
 

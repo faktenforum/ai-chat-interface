@@ -14,7 +14,6 @@ Workspace + plan/tasks are the single source of truth for continuity across hand
 | handoff-simple | Minimal handoff (Transfer via lc_transfer_to; put context in instructions) |
 | execution-2 | Execution: ≤2 tool calls/batch; brief prose; no labels/tags. |
 | code-generation | Execution: ≤3 tool calls/batch; brief prose; no labels/tags. |
-| when-unclear | When unclear: One short clarifying question...; Language: match user. |
 | files-mcp | MCP upload/download (list_upload_sessions, read_workspace_file, create_download_link) |
 | paths-workspace | Paths: workspace-relative; same workspace for all tools. |
 | commit-push | Commit/push: Only stage/push repo-relevant files... |
@@ -42,7 +41,7 @@ Always call set_workspace_plan before handoff or when finishing your part so the
 ≤N tool calls/batch; brief prose; no labels/tags.
 
 **When unclear**  
-One short clarifying question or reasonable interpretation; do not hand back to Main Assistant for ambiguity. Language: match user.
+Inlined one-liner in each agent (and in think-first.md for dev agents): ask or interpret; do not hand back for ambiguity alone; match user language.
 
 **Files (MCP)**  
 Files: MCP upload → list_upload_sessions then read_workspace_file(workspace, uploads/<path>); output → create_download_link. Do not ask for LibreChat attach unless LLM must read content.

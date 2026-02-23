@@ -9,7 +9,7 @@ export const RUNTIME_MANAGEMENT_PROMPT = {
   description: 'Reference: install and manage runtimes beyond pre-installed Node.js, Python 3, and Git (nvm, uv, Deno, Bun, Rust)',
   content: `# Runtime Management (reference)
 
-Use this prompt when you need commands for runtimes beyond the pre-installed Node.js, Python 3, and Git. Users can install additional tools in their home directory.
+Use for runtimes beyond pre-installed Node.js, Python 3, Git; install tools in user home only (no sudo).
 
 ## Node.js (pre-installed)
 \`\`\`bash

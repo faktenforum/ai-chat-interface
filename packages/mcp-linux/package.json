@@ -8,7 +8,8 @@
     "start": "./src/server.ts",
     "dev": "node --watch --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
     "lint": "eslint . --ext .ts",
-    "test:e2e": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/e2e-document-creator-workspace.ts"
+    "test:e2e": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/e2e-document-creator-workspace.ts",
+    "check": "tsc --noEmit"
   },
   "dependencies": {
     "@lancedb/lancedb": "^0.26.2",
@@ -16,10 +17,12 @@
     "busboy": "^1.6.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "ignore": "^7.0.4",
+    "ignore": "^7.0.5",
     "node-pty": "^1.1.0",
     "pino": "^10.3.1",
     "pug": "^3.0.3",
+    "tree-sitter-wasms": "^0.1.13",
+    "web-tree-sitter": "^0.26.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -182,10 +182,11 @@ async function runE2E(): Promise<void> {
       'instructions.md should be present and non-empty for document-creator workspace',
     );
     assert(
-      instructions.includes('Document') || instructions.includes('Typst') || instructions.includes('PDF'),
+      instructions != null &&
+        (instructions.includes('Document') || instructions.includes('Typst') || instructions.includes('PDF')),
       'instructions should contain document-creation guidance',
     );
-    console.log('E2E: get_workspace_status -> instructions length', instructions.length);
+    console.log('E2E: get_workspace_status -> instructions length', instructions?.length ?? 0);
 
     assert('plan' in status, 'get_workspace_status must return plan');
     assert(Array.isArray(status.tasks), 'get_workspace_status must return tasks array');

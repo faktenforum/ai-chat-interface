@@ -20,7 +20,7 @@ import {
   DEFAULT_SEARCH_LIMIT,
   DEFAULT_MIN_SCORE,
 } from './constants.ts';
-import { createFileHash, chunkFile } from './chunking-service.ts';
+import { createFileHash, chunkFileWithAst } from './chunking-service.ts';
 import { embedBatch, getEmbeddingDimensions, isEmbeddingConfigured } from './embedding-service.ts';
 import { LanceDBStore } from './lancedb-store.ts';
 
@@ -358,7 +358,7 @@ export async function indexWorkspace(workspacePath: string, force = false): Prom
         const content = cached ?? readFileSync(join(workspacePath, relPath), 'utf-8');
         if (cached) contentCache.delete(relPath);
         const fileHash = currentHashes[relPath]!;
-        const blocks = chunkFile(relPath, content, fileHash);
+        const blocks = await chunkFileWithAst(relPath, content, fileHash);
         allBlocks.push(...blocks);
       }
       if (allBlocks.length > 0) {

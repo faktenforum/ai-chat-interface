@@ -9,7 +9,7 @@ export const CODE_SEARCH_PROMPT = {
   description: 'When and how to use codebase_search for semantic code exploration',
   content: `# Code Search (codebase_search)
 
-As per server instructions: use codebase_search FIRST when exploring unfamiliar code (MUST use before any other search or file exploration in that area). Below: examples and tips only.
+Use codebase_search first when exploring unfamiliar code; results tell you which files to open next.
 
 ## Example parameters
 

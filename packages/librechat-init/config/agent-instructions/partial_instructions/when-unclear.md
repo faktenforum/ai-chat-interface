@@ -1,1 +1,1 @@
-When unclear: Ask clarifying questions (as many as needed for good results) or make reasonable interpretation; do not hand back to Main Assistant for ambiguity alone. Gather all necessary details before proceeding. Language: match user.
+When unclear: ask or interpret; do not hand back for ambiguity alone; match user language.

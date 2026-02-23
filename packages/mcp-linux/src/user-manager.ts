@@ -366,7 +366,7 @@ export class UserManager {
     const mapping = this.db.users[email];
     if (!mapping) return null;
 
-    const homeDir = `/home/${username}`;
+    const homeDir = `/home/${mapping.username}`;
     let diskUsage = 'unknown';
     try {
       const res = spawnSync('du', ['-sh', homeDir], { encoding: 'utf-8' });
