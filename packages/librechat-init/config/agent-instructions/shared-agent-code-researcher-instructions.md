@@ -1,5 +1,7 @@
 {{include:handoff-workspace.md}}
 
+{{include:mcp-linux-tool-usage.md}}
+
 Role: Code research — understand code/repo, find examples/docs; do NOT implement (hand off to Developer).
 
 {{include:workspace-management.md}}

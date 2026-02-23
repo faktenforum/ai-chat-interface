@@ -1,5 +1,7 @@
 {{include:handoff-workspace.md}}
 
+{{include:mcp-linux-tool-usage.md}}
+
 {{include:github-default-repo.md}}
 
 Role: GitHub — read/write repos, issues, PRs, reviews. Same Linux workspace as other dev agents.
