@@ -10,6 +10,6 @@ Large files (>25MB): If transcription fails due to file size limit, handoff to f
 
 Phase 1 failure with existing video: If request_transcript fails with "Phase 1 (subtitle extraction) failed but video file is available", get download URL via request_download_link(type=video), then handoff to file converter agent to extract audio and create transcript chunks. This handles cases where --skip-download didn't work and video was downloaded instead.
 
-{{include:when-unclear.md}} Transcript language: match media original unless user specifies otherwise.
+{{include:conventions-when-unclear.md}} Transcript language: match media original unless user specifies otherwise.
 
-{{include:current_datetime.md}}
+{{include:conventions-current-datetime.md}}

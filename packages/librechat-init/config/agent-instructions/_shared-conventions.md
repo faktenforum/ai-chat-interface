@@ -1,6 +1,6 @@
 # Agent instruction conventions (maintainer reference)
 
-**Not loaded by any agent.** Canonical snippets live in `partial_instructions/` and are included in agent files via `{{include:partial-name.md}}` (e.g. `{{include:handoff-workspace.md}}`). The init process resolves these directives before storing instructions in LibreChat. See [shared-file-upload-types.md](shared-file-upload-types.md) for full upload/workspace/plan detail.
+**Not loaded by any agent.** Canonical snippets live in `partial_instructions/` and are included in agent files via `{{include:partial-name.md}}` (e.g. `{{include:mcp-linux-handoff-workspace.md}}`, `{{include:conventions-current-datetime.md}}`). The init process resolves these directives before storing instructions in LibreChat. See [shared-file-upload-types.md](shared-file-upload-types.md) for full upload/workspace/plan detail.
 
 ## Principle
 
@@ -10,18 +10,18 @@ Workspace + plan/tasks are the single source of truth for continuity across hand
 
 | Partial | Content |
 |---------|---------|
-| handoff-workspace | Full workspace handoff (Transfer, Before handoff, On receive, End of turn) |
+| mcp-linux-handoff-workspace | Full workspace handoff (Transfer, Before handoff, On receive, End of turn) |
 | handoff-simple | Minimal handoff (Transfer via lc_transfer_to; put context in instructions) |
 | execution-2 | Execution: ≤2 tool calls/batch; brief prose; no labels/tags. |
 | code-generation | Execution: ≤3 tool calls/batch; brief prose; no labels/tags. |
-| files-mcp | MCP upload/download (list_upload_sessions, read_workspace_file, create_download_link) |
+| mcp-linux-files-upload | MCP upload/download (list_upload_sessions, read_workspace_file, create_download_link) |
 | paths-workspace | Paths: workspace-relative; same workspace for all tools. |
-| commit-push | Commit/push: Only stage/push repo-relevant files... |
-| git-github-ssh | Git (GitHub): Use SSH only... |
-| github-default-repo | GitHub repo: faktenforum/ai-chat-interface (owner/repo constants) |
+| code-commit-push | Commit/push: Only stage/push repo-relevant files... |
+| code-git-ssh | Git (GitHub): Use SSH only... |
+| mcp-github-repo-default | GitHub repo: faktenforum/ai-chat-interface (owner/repo constants) |
 | before-handoff-workspace | Before handoff or when finishing: get_workspace_status; set_workspace_plan... |
-| when-unclear-router | When unclear (routers): wait for reply before transferring; do not hand off to same specialist again |
-| file-upload-types | LibreChat vs MCP upload, routing, Linux handoff (011); workspace agents use files-mcp |
+| conventions-when-unclear-router | When unclear (routers): wait for reply before transferring; do not hand off to same specialist again |
+| file-upload-types | LibreChat vs MCP upload, routing, Linux handoff (011); workspace agents use mcp-linux-files-upload |
 
 ## Canonical snippets (reference; edit partials, not this list)
 
@@ -72,6 +72,6 @@ Use SSH only for GitHub: remote URLs must be `git@github.com:org/repo.git`. Do n
 
 ## Section order (per file)
 
-HANDOFF → Role → Constraints → Workflow / Hand off → Execution → When unclear → {{include:current_datetime.md}}
+HANDOFF → Role → Constraints → Workflow / Hand off → Execution → When unclear → {{include:conventions-current-datetime.md}}
 
 Omit sections that do not apply.

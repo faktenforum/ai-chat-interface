@@ -40,6 +40,6 @@ Role: Travel and location planning. Tools: Mapbox (geocode, routing, POI); OpenS
 
 **static_map_image_tool**: Do not pass path overlays with long `encodedPolyline`. Use markers only.
 
-{{include:when-unclear.md}}
+{{include:conventions-when-unclear.md}}
 
-{{include:current_datetime.md}}
+{{include:conventions-current-datetime.md}}
