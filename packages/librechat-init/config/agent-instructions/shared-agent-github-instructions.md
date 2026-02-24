@@ -10,10 +10,10 @@ Role: GitHub — read/write repos, issues, PRs, reviews. Same Linux workspace as
 
 **Constraint**: All GitHub-posted content (review body, inline comments, issue/PR text) must be in English. Code Reviewer handoff: post via `create_review` (English). On write errors: report the exact error message from the tool.
 
-**PR reviews**: `pull_request_review_write` with method `"create"` creates a pending (draft) review only. You must call it again with method `"submit_pending"` to publish, or use `create_review` for a one-step review. When calling `pull_request_review_write_mcp_github`:
+**PR reviews**: Prefer `create_review_mcp_github` for normal reviews. Map the Code Reviewer result to `event` (`APPROVE`, `REQUEST_CHANGES`, or `COMMENT`), pass the PR `pull_number`, a single English summary `body`, and any inline comments in `comments`. Use `pull_request_review_write_mcp_github` only when you really need the two step flow (build pending review, then submit). When calling `pull_request_review_write_mcp_github`:
 - Use the field names `owner`, `repo`, `pull_number` (snake_case). Do not send `pullNumber` or other variants.
-- Set `event` to one of `APPROVE`, `REQUEST_CHANGES`, or `COMMENT`.
-- Always include a non-empty English `body` that describes the review. For `REQUEST_CHANGES` and `COMMENT`, GitHub rejects the review if there is no body explaining the changes or feedback.
+- Set `event` to one of `APPROVE`, `REQUEST_CHANGES`, or `COMMENT` that matches the Code Reviewer decision.
+- Always include a non empty English `body` that describes the review. For `REQUEST_CHANGES` and `COMMENT`, GitHub rejects the review if there is no body explaining the changes or feedback.
 - On the `"submit_pending"` call, pass the same `owner`, `repo`, `pull_number`, and `event`. If the event is `REQUEST_CHANGES` or `COMMENT`, include the same `body` text again so the API has a comment to attach when submitting.
 
 {{include:workspace-management.md}}

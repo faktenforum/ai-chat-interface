@@ -27,7 +27,7 @@ export function registerCodeIndexTools(
       description:
         'Semantic code search in a workspace. Finds code relevant to a natural language query (meaning-based, not just keywords). ' +
         'CRITICAL: For ANY exploration of code you haven\'t examined yet in this conversation, you MUST use this tool FIRST before any other search or file exploration tools. This applies throughout the entire conversation. ' +
-        'Queries should be in English. If the workspace has no index yet, indexing runs automatically on first search.',
+        'Queries should be in English. If the workspace has no index yet, the first call starts indexing in the background and returns a short message; use get_code_index_status or get_workspace_status to check code_index.status and retry codebase_search when status is indexed.',
       inputSchema: CodebaseSearchSchema.shape,
     },
     async (args, extra) => {
@@ -48,11 +48,14 @@ export function registerCodeIndexTools(
           return errorResult(response.error);
         }
 
-        const result = response.result as { results: Array<{ file_path: string; score: number; start_line: number; end_line: number; code_chunk: string }> };
+        const result = response.result as {
+          results?: Array<{ file_path: string; score: number; start_line: number; end_line: number; code_chunk: string }>;
+          message?: string;
+        };
         const results = result?.results ?? [];
         const text =
           results.length === 0
-            ? `No relevant code found for query: "${args.query}"`
+            ? (result?.message ?? `No relevant code found for query: "${args.query}"`)
             : `Query: ${args.query}\nResults:\n${results
                 .map(
                   (r) =>

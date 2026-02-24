@@ -1047,7 +1047,14 @@ const handlers: Record<string, Handler> = {
       return { results: [] };
     }
     if (isCodeIndexEnabledForWorkspace(workspace) && !(await hasIndex(wsPath))) {
-      await indexWorkspace(wsPath);
+      indexWorkspace(wsPath).catch((err) => {
+        console.error(`Code indexing failed for ${workspace}:`, (err as Error).message);
+      });
+      return {
+        results: [],
+        message:
+          'No index yet. Indexing has been started. Use get_workspace_status to check code_index.status and retry codebase_search when status is indexed.',
+      };
     }
     const results = await searchWorkspace(wsPath, query.trim(), {
       pathPrefix: pathPrefix?.trim() || undefined,
