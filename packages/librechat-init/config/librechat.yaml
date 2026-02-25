@@ -377,26 +377,6 @@ modelSpecs:
         endpointType: "agents"
         agent_id: "shared-agent-code-assistant"
 
-    - name: "agent-code-research"
-      label: "Code Research"
-      description: "Understands code and repositories, finds examples, searches documentation, Stack Overflow, npm and GitHub. No implementation – only analysis and research."
-      group: "Assistants"
-      order: 6
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-code-researcher"
-
-    - name: "agent-code-research-quality"
-      label: "Code Research (Claude Opus 4.6)"
-      description: "Code Research with OpenRouter Claude Opus 4.6 – for higher quality or fallback when the default variant is insufficient."
-      group: "Assistants"
-      order: 7
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-code-researcher-quality"
-
     - name: "agent-developer"
       label: "Developer"
       description: "Implements features and fixes bugs in the Linux workspace – full terminal and workspace access with Node.js, Python, Git."

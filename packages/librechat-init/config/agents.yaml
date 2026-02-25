@@ -64,10 +64,10 @@ agents:
         description: "Transfer to Research Assistant for broader research, web search, or when fact-check search is insufficient"
         prompt: "Summarize what was found via fact-checks and what additional research is needed"
     recursion_limit: 25
-    isCollaborative: true
+    isCollaborative: false # Not yet public
     permissions:
-      public: true
-      publicEdit: true
+      public: false # Not yet public
+      publicEdit: false # Not yet public
   - id: shared-agent-image-generation
     name: Image Generation Assistant
     description: Creates images from text descriptions using AI image generation
