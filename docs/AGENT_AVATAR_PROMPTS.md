@@ -18,7 +18,6 @@ Prompts for generating round agent avatars for LibreChat. Style: playful and fri
 | shared-agent-image-generation | Image Generation Assistant | Playful round avatar, soft purple or magenta background. Cute image frame or palette with a small brush, creative and colorful. No text. |
 | shared-agent-travel-location | Travel and Location Assistant | Playful round avatar, soft green or mint background. Friendly map pin or tiny map with a location dot, travel vibe. Colorful, no text. |
 | shared-agent-code-assistant | Code Assistant | Playful round avatar, soft indigo or slate background. Cute branching arrows or router node, routing to specialists. Friendly geometric symbol, no text. |
-| shared-agent-code-researcher | Code Research | Playful round avatar, soft amber or orange background. Cute book or document with magnifying glass, or search over code brackets. Friendly, no text. |
 | shared-agent-developer | Developer | Playful round avatar, soft blue or cyan background. Cute terminal window or code brackets symbol, dev vibe. Friendly and slightly playful, no text. |
 | shared-agent-code-refactorer | Code Refactorer | Playful round avatar, soft violet background. Cute overlapping blocks or arrows for refactor, friendly geometric. No text. |
 | shared-agent-github | GitHub Assistant | Playful round avatar, soft grey-blue or dark teal background. Cute branch or fork symbol (git), not the GitHub logo. Friendly, no text. |
@@ -31,7 +30,7 @@ Prompts for generating round agent avatars for LibreChat. Style: playful and fri
 | shared-agent-document-creator | Document Creator | Playful round avatar, soft paper-white or cream with blue accent. Cute document with pen or sheet with lines. Clean, friendly, no text. |
 | shared-agent-linux-expert | Linux Expert | Playful round avatar, soft slate or grey-blue background. Cute terminal window or command prompt symbol (>_), friendly Linux vibe. No text. |
 
-Quality variants (`shared-agent-code-researcher-quality`, `shared-agent-developer-quality`, `shared-agent-code-refactorer-quality`, `shared-agent-code-reviewer-quality`) use the same prompt as their default counterpart (Code Research, Developer, Code Refactorer, Code Reviewer); reuse the same image file for the avatar.
+Quality variants (`shared-agent-developer-quality`, `shared-agent-code-refactorer-quality`, `shared-agent-code-reviewer-quality`) use the same prompt as their default counterpart (Developer, Code Refactorer, Code Reviewer); reuse the same image file for the avatar.
 
 ## Usage (Image-Gen MCP)
 
