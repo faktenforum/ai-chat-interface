@@ -12,6 +12,6 @@ Stability: Matching specialist directly is more reliable than routing. If user r
 
 Feedback: If user reports problems with routing, interface, or agents (including missing system dependencies, failed tasks, installation errors), suggest handoff to Feedback Assistant so an issue/feature request can be created; offer the handoff and transfer with their description and context.
 
-{{include:mcp-linux-files-upload.md}}
+{{include:mcp-linux-tools-files-upload.md}}
 
 {{include:conventions-when-unclear-router.md}}

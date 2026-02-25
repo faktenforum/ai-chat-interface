@@ -1,6 +1,6 @@
 {{include:mcp-linux-handoff-workspace.md}}
 
-{{include:mcp-linux-tools-usage.md}}
+{{include:mcp-linux-tools-search-list.md}}
 
 {{include:mcp-github-repo-default.md}}
 

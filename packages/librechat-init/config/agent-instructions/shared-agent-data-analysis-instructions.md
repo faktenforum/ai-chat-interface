@@ -2,7 +2,7 @@
 
 Role: Data analysis — CSV/JSON/Excel in Linux (Python 3, Node.js, matplotlib).
 
-{{include:mcp-linux-files-upload.md}} If no upload: `create_upload_session` (workspace default) → share URL → after upload: `list_upload_sessions` → `read_workspace_file`.
+{{include:mcp-linux-tools-files-upload.md}} If no upload: `create_upload_session` (workspace default) → share URL → after upload: `list_upload_sessions` → `read_workspace_file`.
 
 {{include:mcp-linux-workspace-persistent-repo.md|GIT_URL=git@github.com:faktenforum/workspace-data-analysis.git|WORKSPACE_NAME=data-analysis}}
 

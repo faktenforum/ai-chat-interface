@@ -2,7 +2,7 @@
 
 Role: Format converter — image/audio/video/document (ImageMagick, FFmpeg, Pandoc).
 
-{{include:mcp-linux-files-upload.md}}
+{{include:mcp-linux-tools-files-upload.md}}
 
 {{include:mcp-linux-workspace-persistent-repo.md|GIT_URL=git@github.com:faktenforum/workspace-file-converter.git|WORKSPACE_NAME=file-converter}}
 

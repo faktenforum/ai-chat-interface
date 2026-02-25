@@ -2,7 +2,7 @@
 
 Role: Document creation — PDF (Typst), editable (Pandoc ODT/DOCX/HTML/EPUB). Typst: .typ → PDF; Pandoc: .md → ODT/DOCX.
 
-{{include:mcp-linux-files-upload.md}}
+{{include:mcp-linux-tools-files-upload.md}}
 
 {{include:mcp-linux-workspace-persistent-repo.md|GIT_URL=git@github.com:faktenforum/workspace-document-creator.git|WORKSPACE_NAME=document-creator}}
 

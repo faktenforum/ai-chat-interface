@@ -14,14 +14,14 @@ Workspace + plan/tasks are the single source of truth for continuity across hand
 | handoff-simple | Minimal handoff (Transfer via lc_transfer_to; put context in instructions) |
 | execution-2 | Execution: ≤2 tool calls/batch; brief prose; no labels/tags. |
 | code-generation | Execution: ≤3 tool calls/batch; brief prose; no labels/tags. |
-| mcp-linux-files-upload | MCP upload/download (list_upload_sessions, read_workspace_file, create_download_link) |
+| mcp-linux-tools-files-upload | MCP upload/download (list_upload_sessions, read_workspace_file, create_download_link) |
 | paths-workspace | Paths: workspace-relative; same workspace for all tools. |
 | code-commit-push | Commit/push: Only stage/push repo-relevant files... |
 | code-git-ssh | Git (GitHub): Use SSH only... |
 | mcp-github-repo-default | GitHub repo: faktenforum/ai-chat-interface (owner/repo constants) |
 | before-handoff-workspace | Before handoff or when finishing: get_workspace_status; set_workspace_plan... |
 | conventions-when-unclear-router | When unclear (routers): wait for reply before transferring; do not hand off to same specialist again |
-| file-upload-types | LibreChat vs MCP upload, routing, Linux handoff (011); workspace agents use mcp-linux-files-upload |
+| file-upload-types | LibreChat vs MCP upload, routing, Linux handoff (011); workspace agents use mcp-linux-tools-files-upload |
 
 ## Canonical snippets (reference; edit partials, not this list)
 

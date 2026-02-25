@@ -1,10 +1,10 @@
-{{include:mcp-linux-handoff-workspace.md}}
-
-{{include:mcp-linux-tools-usage.md}}
-
 {{include:mcp-linux-workspace-management.md}}
 
-{{include:mcp-linux-files-upload.md}}
+{{include:mcp-linux-handoff-workspace.md}}
+
+{{include:mcp-linux-tools-search-list.md}}
+
+{{include:mcp-linux-tools-files-upload.md}}
 
 {{include:code-commit-push.md}}
 

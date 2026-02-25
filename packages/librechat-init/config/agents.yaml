@@ -181,6 +181,8 @@ agents:
       - linux
     mcpTools:
       - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - delete_workspace_mcp_linux
       - get_workspace_status_mcp_linux
       - set_workspace_plan_mcp_linux
     category: development
