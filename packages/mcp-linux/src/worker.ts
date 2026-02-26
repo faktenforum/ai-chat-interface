@@ -35,6 +35,7 @@ import {
   indexWorkspace,
   searchWorkspace,
   getIndexStatus,
+  getIndexStats,
   hasIndex,
   isCodeIndexEnabled,
   listChunksInIndex,
@@ -922,12 +923,26 @@ const handlers: Record<string, Handler> = {
 
     // Code index status (enabled + index state when enabled)
     const codeIndexEnabled = isCodeIndexEnabledForWorkspace(workspace);
+    let codeIndexState = getIndexStatus(wsPath);
+    const hasIndexData = await hasIndex(wsPath);
+    if (
+      hasIndexData &&
+      codeIndexState.status === 'standby' &&
+      codeIndexState.files_total === 0 &&
+      codeIndexState.files_processed === 0
+    ) {
+      const stats = await getIndexStats(wsPath);
+      if (stats) {
+        codeIndexState = {
+          status: 'indexed',
+          message: 'Index complete',
+          files_processed: stats.fileCount,
+          files_total: stats.fileCount,
+        };
+      }
+    }
     const code_index = codeIndexEnabled
-      ? {
-          enabled: true as const,
-          ...getIndexStatus(wsPath),
-          has_index: await hasIndex(wsPath),
-        }
+      ? { enabled: true as const, ...codeIndexState, has_index: hasIndexData }
       : { enabled: false as const };
 
     return {
@@ -1069,8 +1084,24 @@ const handlers: Record<string, Handler> = {
     if (!existsSync(wsPath)) {
       throw new Error(`Workspace "${workspace}" does not exist`);
     }
-    const state = getIndexStatus(wsPath);
+    let state = getIndexStatus(wsPath);
     const hasIndexData = await hasIndex(wsPath);
+    if (
+      hasIndexData &&
+      state.status === 'standby' &&
+      state.files_total === 0 &&
+      state.files_processed === 0
+    ) {
+      const stats = await getIndexStats(wsPath);
+      if (stats) {
+        state = {
+          status: 'indexed',
+          message: 'Index complete',
+          files_processed: stats.fileCount,
+          files_total: stats.fileCount,
+        };
+      }
+    }
     return {
       ...state,
       has_index: hasIndexData,

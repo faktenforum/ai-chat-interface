@@ -10,11 +10,8 @@ import { logger } from '../utils/logger.ts';
 import type { UserManager } from '../user-manager.ts';
 import type { WorkerManager } from '../worker-manager.ts';
 import { resolveEmail, errorResult } from './helpers.ts';
-import {
-  GetAccountInfoSchema,
-  ResetAccountSchema,
-  GetSystemInfoSchema,
-} from '../schemas/account.schema.ts';
+import { GetAccountInfoSchema, ResetAccountSchema } from '../schemas/account.schema.ts';
+import { getStatusPageUrlWithToken } from '../utils/status-token.ts';
 
 /**
  * Registers all account tools on the MCP server
@@ -28,7 +25,8 @@ export function registerAccountTools(
   server.registerTool(
     'get_account_info',
     {
-      description: 'Get information about the current user account: username, home path, disk usage, installed runtimes, workspace count',
+      description:
+        'Get information about the current user account: username, home path, disk usage, installed runtimes, workspace count, and status page URL',
       inputSchema: GetAccountInfoSchema.shape,
     },
     async (args, extra) => {
@@ -82,6 +80,7 @@ export function registerAccountTools(
           workspace_count: workspaceCount,
           runtimes,
           created_at: info.createdAt,
+          status_page_url: getStatusPageUrlWithToken(email),
         };
 
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
@@ -94,7 +93,8 @@ export function registerAccountTools(
   server.registerTool(
     'reset_account',
     {
-      description: 'Reset the user account: wipes home directory (all workspaces, history, configs!), re-creates from defaults. Requires confirm: true.',
+      description:
+        'Reset the user account: wipes home directory (all workspaces, history, configs!), re-creates from defaults. Requires confirm: true.',
       inputSchema: ResetAccountSchema.shape,
     },
     async (args, extra) => {
@@ -112,34 +112,15 @@ export function registerAccountTools(
         await userManager.resetUser(email);
 
         return {
-          content: [{ type: 'text', text: JSON.stringify({ status: 'Account reset successfully. All data has been wiped and defaults restored.' }) }],
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                status: 'Account reset successfully. All data has been wiped and defaults restored.',
+              }),
+            },
+          ],
         };
-      } catch (error) {
-        return errorResult(error);
-      }
-    },
-  );
-
-  server.registerTool(
-    'get_system_info',
-    {
-      description: 'Get available system runtimes and their versions (Node.js, Python, Git, etc.)',
-      inputSchema: GetSystemInfoSchema.shape,
-    },
-    async (args, extra) => {
-      try {
-        const email = resolveEmail(extra);
-        const response = await workerManager.sendRequest(email, {
-          id: randomUUID(),
-          method: 'get_system_runtimes',
-          params: {},
-        });
-
-        if (response.error) {
-          return errorResult(response.error);
-        }
-
-        return { content: [{ type: 'text', text: JSON.stringify(response.result, null, 2) }] };
       } catch (error) {
         return errorResult(error);
       }

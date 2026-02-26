@@ -398,6 +398,9 @@ services:
       - "traefik.http.routers.mcp-linux-download.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/download`)"
       - "traefik.http.routers.mcp-linux-download.entrypoints=web"
       - "traefik.http.routers.mcp-linux-download.service=mcp-linux"
+      - "traefik.http.routers.mcp-linux-status.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/status`)"
+      - "traefik.http.routers.mcp-linux-status.entrypoints=web"
+      - "traefik.http.routers.mcp-linux-status.service=mcp-linux"
       - "traefik.http.services.mcp-linux.loadbalancer.server.port=3015"
 
   # Additional Services

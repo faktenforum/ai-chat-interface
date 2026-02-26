@@ -259,6 +259,11 @@ services:
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.tls=true"
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.tls.certresolver=le"
       - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-download.service=${STACK_NAME:-prod}-mcp-linux"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-status.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/status`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-status.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-status.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-status.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-mcp-linux-status.service=${STACK_NAME:-prod}-mcp-linux"
       - "traefik.http.services.${STACK_NAME:-prod}-mcp-linux.loadbalancer.server.port=3015"
 
   # YTPTube - download-only exposed via Traefik (only /api/download); Web UI and rest of API internal

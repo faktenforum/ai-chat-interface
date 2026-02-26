@@ -1,0 +1,17 @@
+{
+  "name": "@ai-chat-interface/mcp-linux-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frontend bundle for MCP Linux status pages (TypeScript + Rolldown).",
+  "type": "module",
+  "scripts": {
+    "build": "rolldown src/status/status-page.ts --format iife --file ../public/js/status.js && rolldown src/status/workspace-page.ts --format iife --file ../public/js/workspace-status.js && rolldown src/upload/upload-page.ts --format iife --file ../public/js/upload.js",
+    "build:watch": "rolldown src/status/status-page.ts --format iife --watch --file ../public/js/status.js & rolldown src/status/workspace-page.ts --format iife --watch --file ../public/js/workspace-status.js & rolldown src/upload/upload-page.ts --format iife --watch --file ../public/js/upload.js",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "rolldown": "^1.0.0-rc.5",
+    "typescript": "^5.9.3"
+  }
+}
+

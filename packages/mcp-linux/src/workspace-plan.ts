@@ -3,17 +3,15 @@
  * Single source of truth for task status values and plan/task shape.
  */
 
-export const TASK_STATUSES = ['pending', 'in_progress', 'done', 'cancelled'] as const;
-export type TaskStatus = (typeof TASK_STATUSES)[number];
+import { TASK_STATUSES } from './shared-types/plan.ts';
+import type { TaskStatus, PlanTask } from './shared-types/plan.ts';
+
+// Re-export shared task types so existing imports from workspace-plan keep working.
+export { TASK_STATUSES };
+export type { TaskStatus, PlanTask };
 
 export function isTaskStatus(s: unknown): s is TaskStatus {
   return typeof s === 'string' && (TASK_STATUSES as readonly string[]).includes(s);
-}
-
-/** Task as stored in tasks.json and returned by get_workspace_status. Status only; done is removed. */
-export interface PlanTask {
-  title: string;
-  status: TaskStatus;
 }
 
 /** Derive status from optional status/done (e.g. when reading from JSON or params). */

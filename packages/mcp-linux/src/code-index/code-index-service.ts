@@ -229,7 +229,10 @@ function saveFileHashes(indexPath: string, workspacePath: string, hashes: Record
   writeFileSync(join(indexPath, fileHashesFilename(workspacePath)), JSON.stringify(hashes, null, 0), 'utf-8');
 }
 
-const statusByWorkspace = new Map<string, { status: IndexStatus; message: string; files_processed: number; files_total: number }>();
+const statusByWorkspace = new Map<
+  string,
+  { status: IndexStatus; message: string; files_processed: number; files_total: number }
+>();
 
 function setStatus(
   workspacePath: string,
@@ -257,6 +260,28 @@ export function getIndexStatus(workspacePath: string): IndexState {
     files_processed: 0,
     files_total: 0,
   };
+}
+
+/**
+ * Returns indexed file count from store when index exists and is complete (for status display when no in-memory state).
+ */
+export async function getIndexStats(workspacePath: string): Promise<{ fileCount: number } | null> {
+  if (!isCodeIndexEnabled()) return null;
+  const indexPath = resolveIndexPath(workspacePath);
+  const vectorSize = getEmbeddingDimensions();
+  const store = new LanceDBStore({ dbPath: indexPath, vectorSize });
+  try {
+    await store.initialize();
+    const complete = await store.isIndexComplete();
+    const hasData = await store.hasData();
+    const fileCount = store.getIndexedFileCount();
+    await store.close();
+    if (!complete || !hasData) return null;
+    return { fileCount };
+  } catch {
+    await store.close().catch(() => {});
+    return null;
+  }
 }
 
 export function isCodeIndexEnabled(): boolean {
@@ -287,9 +312,10 @@ export async function indexWorkspace(workspacePath: string, force = false): Prom
     try {
       await checkStore.initialize();
       const complete = await checkStore.isIndexComplete();
+      const fileCount = checkStore.getIndexedFileCount();
       await checkStore.close();
       if (complete && !force) {
-        setStatus(workspacePath, 'indexed', 'Index complete (shared cache hit)', 0, 0);
+        setStatus(workspacePath, 'indexed', 'Index complete (shared cache hit)', fileCount, fileCount);
         return getIndexStatus(workspacePath);
       }
     } catch {
@@ -371,7 +397,7 @@ export async function indexWorkspace(workspacePath: string, force = false): Prom
     }
 
     saveFileHashes(indexPath, workspacePath, currentHashes);
-    await store.markIndexingComplete();
+    await store.markIndexingComplete(total);
     await store.optimize();
     await store.close();
     releaseLock();

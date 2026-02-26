@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "strict": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "lib": ["DOM", "ES2019"],
+    "allowJs": false,
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["src"]
+}
+

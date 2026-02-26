@@ -15,13 +15,20 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync, chmodSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'url';
-import express from 'express';
+import express, { type Request, type Response, type NextFunction } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { logger } from './utils/logger.ts';
-import { setupMcpEndpoints, setupGracefulShutdown, extractUserContext } from './utils/http-server.ts';
+import {
+  setupMcpEndpoints,
+  setupGracefulShutdown,
+  extractUserContext,
+  type UserContext,
+} from './utils/http-server.ts';
+import { verifyToken } from './utils/status-token.ts';
 import { UserManager } from './user-manager.ts';
 import { WorkerManager } from './worker-manager.ts';
+import { listWorkspaces } from './workspace-manager.ts';
 import { registerWorkspaceTools, sessionEmailMap } from './tools/workspace.ts';
 import { registerTerminalTools } from './tools/terminal.ts';
 import { registerAccountTools } from './tools/account.ts';
@@ -57,6 +64,47 @@ const downloadManager = new DownloadManager({
   baseUrl: process.env.MCP_LINUX_DOWNLOAD_BASE_URL || process.env.MCP_LINUX_UPLOAD_BASE_URL || `http://localhost:${PORT}`,
   defaultSessionTimeoutMin: parseInt(process.env.MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN || '60', 10),
 });
+
+interface StatusRequest extends Request {
+  userContext?: UserContext;
+}
+
+function requireUserContext(req: StatusRequest, res: Response, next: NextFunction): void {
+  const userContext = extractUserContext(req.headers);
+  if (!userContext) {
+    res.status(401).json({ error: 'Missing user context' });
+    return;
+  }
+  req.userContext = userContext;
+  next();
+}
+
+/** Resolves user from status token (query or body) or from X-User-* headers. Allows GET /status without auth so the page can load and show "open link from agent". */
+function requireUserContextOrStatusToken(req: StatusRequest, res: Response, next: NextFunction): void {
+  const tokenRaw =
+    (typeof req.query.token === 'string' ? req.query.token : null) ||
+    (typeof req.body?.auth_token === 'string' ? req.body.auth_token : null);
+  if (tokenRaw) {
+    const payload = verifyToken(tokenRaw);
+    if (payload) {
+      req.userContext = { userId: '', email: payload.email, username: '' };
+      next();
+      return;
+    }
+  }
+  const userContext = extractUserContext(req.headers);
+  if (userContext) {
+    req.userContext = userContext;
+    next();
+    return;
+  }
+  const isIndexGet = req.method === 'GET' && (req.path === '' || req.path === '/');
+  if (isIndexGet) {
+    next();
+    return;
+  }
+  res.status(401).json({ error: 'Missing user context or invalid/expired token' });
+}
 
 /**
  * Creates and configures the MCP server with all tool and prompt registrations
@@ -105,7 +153,9 @@ File Download:
 - create_download_link for a temporary download URL for any workspace file; share the URL with the user. Links are single-use, expire after 60 minutes by default. Cleanup: list_download_links, close_download_link to limit exposure.
 
 Reading Files:
-- read_workspace_file returns content with line numbers for diffing. Use optional line_ranges for specific sections. Text files are returned inline; images and audio as base64; large or binary files get a download link instead.`,
+- read_workspace_file returns content with line numbers for diffing. Use optional line_ranges for specific sections. Text files are returned inline; images and audio as base64; large or binary files get a download link instead.
+
+Status page: Users can view and manage their account (workspaces, upload/download sessions, terminals). Use get_account_info and give the user the status_page_url from the result (it includes a time-limited token). When the user wants to close sessions, revoke download links, kill terminals, or delete workspaces themselves, direct them to open that URL in a new tab. See the account_status prompt for when to refer users.`,
     },
   );
 
@@ -168,7 +218,7 @@ function createApp(): express.Application {
   app.set('views', join(appRoot, 'views'));
   app.set('view engine', 'pug');
 
-  // Static files (CSS, JS) for upload pages
+  // Static files (CSS, JS) for upload/status pages
   app.use(express.static(join(appRoot, 'public')));
 
   // Upload routes (before MCP endpoints, no JSON body parsing needed for multipart)
@@ -176,6 +226,391 @@ function createApp(): express.Application {
 
   // Download routes (file streaming)
   setupDownloadRoutes(app, downloadManager);
+
+  // Status routes (per-user overview and management UI)
+  const statusRouter = express.Router();
+
+  statusRouter.get('/', (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    const email = userContext?.email || '';
+    res.render('status', {
+      pageTitle: 'Account Status',
+      userEmail: email,
+    });
+  });
+
+  statusRouter.get('/workspace/:name', (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    if (!userContext) {
+      res.status(401).send('Missing user context');
+      return;
+    }
+    const name = req.params.name || '';
+    res.render('workspace-status', {
+      pageTitle: `Workspace: ${name}`,
+      workspaceName: name,
+    });
+  });
+
+  statusRouter.get('/api/workspace/:name', async (req: StatusRequest, res: Response) => {
+    try {
+      const userContext = req.userContext;
+      if (!userContext) {
+        res.status(401).json({ error: 'Missing user context' });
+        return;
+      }
+      const email = userContext.email;
+      const name = req.params.name || '';
+      if (!name) {
+        res.status(400).json({ error: 'workspace name is required' });
+        return;
+      }
+
+      await userManager.ensureUser(email);
+
+      const response = await workerManager.sendRequest(email, {
+        id: randomUUID(),
+        method: 'get_workspace_status',
+        params: { workspace: name },
+      });
+
+      if (response.error) {
+        res.status(400).json({ error: response.error });
+        return;
+      }
+
+      res.json(response.result ?? {});
+    } catch (error) {
+      logger.error({ error }, 'Failed to build workspace status overview');
+      res.status(500).json({ error: 'Failed to build workspace status overview' });
+    }
+  });
+
+  statusRouter.post('/api/reindex-workspace', async (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    if (!userContext) {
+      res.status(401).json({ error: 'Missing user context' });
+      return;
+    }
+
+    const name = typeof req.body?.name === 'string' ? req.body.name : '';
+    const force = req.body?.force === true;
+    if (!name) {
+      res.status(400).json({ error: 'name is required' });
+      return;
+    }
+
+    try {
+      const email = userContext.email;
+      const response = await workerManager.sendRequest(email, {
+        id: randomUUID(),
+        method: 'index_workspace_code',
+        params: { workspace: name, force },
+      });
+
+      if (response.error) {
+        res.status(400).json({ error: response.error });
+        return;
+      }
+
+      res.json({ success: true, result: response.result });
+    } catch (error) {
+      logger.error({ error }, 'Failed to start workspace reindex from status page');
+      res.status(500).json({ error: 'Failed to start code index rebuild' });
+    }
+  });
+
+  statusRouter.post('/api/workspace-search', async (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    if (!userContext) {
+      res.status(401).json({ error: 'Missing user context' });
+      return;
+    }
+
+    const name = typeof req.body?.name === 'string' ? req.body.name : '';
+    const query = typeof req.body?.query === 'string' ? req.body.query : '';
+    const path = typeof req.body?.path === 'string' ? req.body.path : undefined;
+    const limit =
+      typeof req.body?.limit === 'number' && req.body.limit > 0 && req.body.limit <= 100
+        ? req.body.limit
+        : 10;
+
+    if (!name) {
+      res.status(400).json({ error: 'name is required' });
+      return;
+    }
+    if (!query.trim()) {
+      res.status(400).json({ error: 'query is required' });
+      return;
+    }
+
+    try {
+      const email = userContext.email;
+      const response = await workerManager.sendRequest(email, {
+        id: randomUUID(),
+        method: 'codebase_search',
+        params: { workspace: name, query, path, limit },
+      });
+
+      if (response.error) {
+        res.status(400).json({ error: response.error });
+        return;
+      }
+
+      res.json(response.result ?? {});
+    } catch (error) {
+      logger.error({ error }, 'Failed to search codebase from workspace status page');
+      res.status(500).json({ error: 'Failed to search code' });
+    }
+  });
+
+  statusRouter.post('/api/update-plan', async (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    if (!userContext) {
+      res.status(401).json({ error: 'Missing user context' });
+      return;
+    }
+
+    const name = typeof req.body?.name === 'string' ? req.body.name : '';
+    if (!name) {
+      res.status(400).json({ error: 'name is required' });
+      return;
+    }
+
+    try {
+      const email = userContext.email;
+      const params: Record<string, unknown> = {
+        workspace: name,
+      };
+
+      if (typeof req.body?.plan === 'string') {
+        params.plan = req.body.plan;
+      }
+
+      if (Array.isArray(req.body?.tasks)) {
+        params.tasks = req.body.tasks;
+      }
+
+      if (Array.isArray(req.body?.task_updates)) {
+        params.task_updates = req.body.task_updates;
+      }
+
+      const response = await workerManager.sendRequest(email, {
+        id: randomUUID(),
+        method: 'set_workspace_plan',
+        params,
+      });
+
+      if (response.error) {
+        res.status(400).json({ error: response.error });
+        return;
+      }
+
+      res.json(response.result ?? {});
+    } catch (error) {
+      logger.error({ error }, 'Failed to update workspace plan from status page');
+      res.status(500).json({ error: 'Failed to update workspace plan' });
+    }
+  });
+
+  statusRouter.get('/api/overview', async (req: StatusRequest, res: Response) => {
+    try {
+      const userContext = req.userContext;
+      if (!userContext) {
+        res.status(401).json({ error: 'Missing user context' });
+        return;
+      }
+
+      const email = userContext.email;
+
+      await userManager.ensureUser(email);
+      const userInfo = await userManager.getUserInfo(email);
+
+      // Installed runtimes (Node, Python, Git, etc.)
+      let runtimes: Record<string, string> | undefined;
+      try {
+        const response = await workerManager.sendRequest(email, {
+          id: randomUUID(),
+          method: 'get_system_runtimes',
+          params: {},
+        });
+        if (!response.error && response.result) {
+          const result = response.result as { runtimes?: Record<string, string> };
+          runtimes = result.runtimes;
+        }
+      } catch {
+        runtimes = undefined;
+      }
+
+      let workspaces: string[] = [];
+      if (userInfo) {
+        workspaces = listWorkspaces(userInfo.home);
+      }
+
+      const uploadSessions = uploadManager.listSessions(email, false);
+      const downloadSessions = downloadManager.listSessions(email, false);
+
+      let terminals: unknown[] = [];
+      try {
+        const response = await workerManager.sendRequest(email, {
+          id: randomUUID(),
+          method: 'list_terminals',
+          params: {},
+        });
+        if (!response.error && response.result) {
+          const result = response.result as { terminals?: unknown[] };
+          terminals = result.terminals ?? [];
+        }
+      } catch {
+        terminals = [];
+      }
+
+      const user = userInfo
+        ? {
+            email,
+            username: userInfo.username,
+            uid: userInfo.uid,
+            home: userInfo.home,
+            diskUsage: userInfo.diskUsage,
+            createdAt: userInfo.createdAt,
+            runtimes,
+          }
+        : { email, runtimes };
+
+      res.json({
+        user,
+        workspaces,
+        upload_sessions: uploadSessions,
+        download_sessions: downloadSessions,
+        terminals,
+      });
+    } catch (error) {
+      logger.error({ error }, 'Failed to build status overview');
+      res.status(500).json({ error: 'Failed to build status overview' });
+    }
+  });
+
+  statusRouter.post('/api/close-upload-session', (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    if (!userContext) {
+      res.status(401).json({ error: 'Missing user context' });
+      return;
+    }
+
+    const token = typeof req.body?.token === 'string' ? req.body.token : '';
+    if (!token) {
+      res.status(400).json({ error: 'token is required' });
+      return;
+    }
+
+    const session = uploadManager.getSession(token);
+    if (!session) {
+      res.status(404).json({ error: 'Upload session not found' });
+      return;
+    }
+    if (session.email !== userContext.email) {
+      res.status(403).json({ error: 'Not allowed to modify this session' });
+      return;
+    }
+
+    const status = uploadManager.closeSession(token);
+    res.json({ status });
+  });
+
+  statusRouter.post('/api/close-download-link', (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    if (!userContext) {
+      res.status(401).json({ error: 'Missing user context' });
+      return;
+    }
+
+    const token = typeof req.body?.token === 'string' ? req.body.token : '';
+    if (!token) {
+      res.status(400).json({ error: 'token is required' });
+      return;
+    }
+
+    const session = downloadManager.getSession(token);
+    if (!session) {
+      res.status(404).json({ error: 'Download link not found' });
+      return;
+    }
+    if (session.email !== userContext.email) {
+      res.status(403).json({ error: 'Not allowed to modify this link' });
+      return;
+    }
+
+    const status = downloadManager.closeSession(token);
+    res.json({ status });
+  });
+
+  statusRouter.post('/api/kill-terminal', async (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    if (!userContext) {
+      res.status(401).json({ error: 'Missing user context' });
+      return;
+    }
+
+    const terminalId = typeof req.body?.terminal_id === 'string' ? req.body.terminal_id : '';
+    if (!terminalId) {
+      res.status(400).json({ error: 'terminal_id is required' });
+      return;
+    }
+
+    try {
+      const email = userContext.email;
+      const response = await workerManager.sendRequest(email, {
+        id: randomUUID(),
+        method: 'kill_terminal',
+        params: { terminal_id: terminalId },
+      });
+
+      if (response.error) {
+        res.status(400).json({ error: response.error });
+        return;
+      }
+
+      res.json({ success: true, result: response.result });
+    } catch (error) {
+      logger.error({ error }, 'Failed to kill terminal from status page');
+      res.status(500).json({ error: 'Failed to kill terminal' });
+    }
+  });
+
+  statusRouter.post('/api/delete-workspace', async (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    if (!userContext) {
+      res.status(401).json({ error: 'Missing user context' });
+      return;
+    }
+
+    const name = typeof req.body?.name === 'string' ? req.body.name : '';
+    if (!name) {
+      res.status(400).json({ error: 'name is required' });
+      return;
+    }
+
+    try {
+      const email = userContext.email;
+      const response = await workerManager.sendRequest(email, {
+        id: randomUUID(),
+        method: 'delete_workspace',
+        params: { name, confirm: true },
+      });
+
+      if (response.error) {
+        res.status(400).json({ error: response.error });
+        return;
+      }
+
+      res.json({ success: true, result: response.result });
+    } catch (error) {
+      logger.error({ error }, 'Failed to delete workspace from status page');
+      res.status(500).json({ error: 'Failed to delete workspace' });
+    }
+  });
+
+  app.use('/status', requireUserContextOrStatusToken, statusRouter);
 
   // User-context extraction middleware: maps session ID to user email
   app.use('/mcp', (req, _res, next) => {

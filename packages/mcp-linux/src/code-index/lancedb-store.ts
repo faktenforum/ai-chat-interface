@@ -16,6 +16,8 @@ interface MetadataJson {
   vector_size: number;
   indexing_complete: boolean;
   last_indexed_at: string;
+  /** Number of files in the index when last indexing completed (for status display). */
+  indexed_file_count?: number;
 }
 
 function escapeSqlString(value: string): string {
@@ -298,7 +300,7 @@ export class LanceDBStore {
     }));
   }
 
-  async markIndexingComplete(): Promise<void> {
+  async markIndexingComplete(fileCount?: number): Promise<void> {
     const meta = this.readMetadata() ?? {
       vector_size: this.vectorSize,
       indexing_complete: false,
@@ -309,6 +311,7 @@ export class LanceDBStore {
       vector_size: meta.vector_size ?? this.vectorSize,
       indexing_complete: true,
       last_indexed_at: new Date().toISOString(),
+      ...(fileCount !== undefined && { indexed_file_count: fileCount }),
     });
   }
 
@@ -329,6 +332,12 @@ export class LanceDBStore {
   async isIndexComplete(): Promise<boolean> {
     const meta = this.readMetadata();
     return meta?.indexing_complete === true;
+  }
+
+  /** Number of files in the index at last completion (from metadata). Returns 0 if not set. */
+  getIndexedFileCount(): number {
+    const meta = this.readMetadata();
+    return typeof meta?.indexed_file_count === 'number' ? meta.indexed_file_count : 0;
   }
 
   async hasData(): Promise<boolean> {

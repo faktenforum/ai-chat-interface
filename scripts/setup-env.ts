@@ -171,6 +171,7 @@ const AUTO_GENERATED: Record<string, () => string> = {
     'SEARXNG_SECRET_KEY': () => genSecret(32),
     'LIBRECHAT_SEARXNG_API_KEY': () => genSecret(32),
     'FIRECRAWL_BULL_AUTH_KEY': () => genSecret(16),
+    'MCP_LINUX_STATUS_TOKEN_SECRET': () => genBase64Secret(32),
     // n8n
     'N8N_ENCRYPTION_KEY': () => genBase64Secret(32), // 32 bytes = 44 base64 chars
     'N8N_POSTGRES_PASSWORD': () => genPassword(16),
