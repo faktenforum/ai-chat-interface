@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import type { UploadSession } from '../types/index';
+import type { CreateUploadResponse, UploadSession } from '../types/index';
 
 defineProps<{
   sessions: UploadSession[];
+  workspaces: string[];
 }>();
 
 const emit = defineEmits<{
   close: [token: string];
+  create: [response: CreateUploadResponse];
 }>();
+
+const showCreateForm = ref(false);
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -25,9 +29,27 @@ function badgeColor(status: string) {
 <template>
   <UCard>
     <template #header>
-      <span class="font-semibold">Upload Sessions</span>
+      <div class="flex items-center justify-between gap-2">
+        <span class="font-semibold">Upload Sessions</span>
+        <UButton
+          v-if="!showCreateForm"
+          variant="ghost"
+          size="xs"
+          icon="i-lucide-plus"
+          @click="showCreateForm = true"
+        >
+          New upload session
+        </UButton>
+      </div>
     </template>
-    <p v-if="!sessions.length" class="text-sm text-muted">No upload sessions.</p>
+    <CreateUploadForm
+      v-if="showCreateForm"
+      :workspaces="workspaces"
+      @created="(r) => { emit('create', r); showCreateForm = false; }"
+      @cancel="showCreateForm = false"
+    />
+    <template v-else>
+      <p v-if="!sessions.length" class="text-sm text-muted">No upload sessions.</p>
     <div v-else class="divide-y divide-default">
       <div
         v-for="s in sessions"
@@ -45,8 +67,17 @@ function badgeColor(status: string) {
             File: {{ s.uploaded_file.name }} ({{ formatBytes(s.uploaded_file.size) }})
           </span>
         </div>
-        <div v-if="s.status === 'active'">
+        <div class="flex flex-wrap items-center gap-2">
+          <NuxtLink
+            :to="`/upload/${s.token}`"
+            target="_blank"
+            class="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+          >
+            Open upload URL
+            <span class="i-lucide-external-link h-3 w-3 shrink-0" />
+          </NuxtLink>
           <UButton
+            v-if="s.status === 'active'"
             variant="ghost"
             color="error"
             size="xs"
@@ -57,5 +88,6 @@ function badgeColor(status: string) {
         </div>
       </div>
     </div>
+    </template>
   </UCard>
 </template>

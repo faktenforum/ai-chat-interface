@@ -214,20 +214,42 @@ function createApp(): express.Application {
   app.disable('x-powered-by');
 
   const appRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-  const spaDir = join(appRoot, 'frontend/.output/public');
+  const spaDirCwd = join(process.cwd(), 'frontend/.output/public');
+  const spaDirFromModule = join(appRoot, 'frontend/.output/public');
+  const spaDir = existsSync(join(spaDirFromModule, 'index.html'))
+    ? spaDirFromModule
+    : existsSync(join(spaDirCwd, 'index.html'))
+      ? spaDirCwd
+      : spaDirFromModule;
 
   function sendSpaIndex(_req: Request, res: Response): void {
-    res.sendFile(join(spaDir, 'index.html'));
+    const indexPath = join(spaDir, 'index.html');
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        logger.error({ err, spaDir, indexPath }, 'Failed to send SPA index');
+        if (!res.headersSent) res.status(500).send('SPA not available');
+      }
+    });
   }
 
-  // Static files from the built Nuxt SPA
-  app.use(express.static(spaDir));
+  // Restore path when proxy (e.g. Traefik) strips prefix and sets X-Forwarded-Prefix
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    const prefix = req.get('x-forwarded-prefix');
+    if (prefix && typeof prefix === 'string' && req.path && !req.path.startsWith(prefix)) {
+      const path = req.path === '/' ? '' : req.path;
+      req.url = (prefix.replace(/\/$/, '') + path) || '/';
+      logger.debug({ originalPath: req.path, prefix, newUrl: req.url }, 'Path rewritten from X-Forwarded-Prefix');
+    }
+    next();
+  });
 
-  // Upload routes (before MCP endpoints, no JSON body parsing needed for multipart)
+  // Upload and download routes first so GET /upload/:token and GET /download/:token
+  // are served (SPA page or file stream), not passed to static (which would 404).
   setupUploadRoutes(app, uploadManager, userManager, spaDir);
-
-  // Download routes (file streaming)
   setupDownloadRoutes(app, downloadManager, spaDir);
+
+  // Static files from the built Nuxt SPA (index, assets, etc.)
+  app.use(express.static(spaDir));
 
   // Status routes (per-user overview and management UI)
   const statusRouter = express.Router();
@@ -471,6 +493,130 @@ function createApp(): express.Application {
     } catch (error) {
       logger.error({ error }, 'Failed to build status overview');
       res.status(500).json({ error: 'Failed to build status overview' });
+    }
+  });
+
+  statusRouter.post('/api/create-upload-session', (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    if (!userContext) {
+      res.status(401).json({ error: 'Missing user context' });
+      return;
+    }
+
+    const workspace =
+      typeof req.body?.workspace === 'string' && req.body.workspace.trim()
+        ? req.body.workspace.trim()
+        : 'default';
+    const expiresInMinutes =
+      typeof req.body?.expires_in_minutes === 'number' &&
+      req.body.expires_in_minutes >= 1 &&
+      req.body.expires_in_minutes <= 60
+        ? req.body.expires_in_minutes
+        : 15;
+    const maxFileSizeMb =
+      typeof req.body?.max_file_size_mb === 'number' &&
+      req.body.max_file_size_mb >= 1 &&
+      req.body.max_file_size_mb <= 500
+        ? req.body.max_file_size_mb
+        : 100;
+    const allowedExtensions = Array.isArray(req.body?.allowed_extensions)
+      ? (req.body.allowed_extensions as string[]).filter((x) => typeof x === 'string')
+      : undefined;
+
+    try {
+      const { session } = uploadManager.createSession(userContext.email, {
+        workspace,
+        expiresInMinutes,
+        maxFileSizeMb,
+        allowedExtensions: allowedExtensions?.length ? allowedExtensions : undefined,
+      });
+      res.json(session);
+    } catch (error) {
+      logger.error({ error }, 'Failed to create upload session from status page');
+      res.status(400).json({ error: error instanceof Error ? error.message : 'Failed to create upload session' });
+    }
+  });
+
+  statusRouter.post('/api/create-download-link', async (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    if (!userContext) {
+      res.status(401).json({ error: 'Missing user context' });
+      return;
+    }
+
+    const workspace =
+      typeof req.body?.workspace === 'string' && req.body.workspace.trim()
+        ? req.body.workspace.trim()
+        : 'default';
+    const filePath = typeof req.body?.file_path === 'string' ? req.body.file_path.trim() : '';
+    if (!filePath) {
+      res.status(400).json({ error: 'file_path is required' });
+      return;
+    }
+    const expiresInMinutes =
+      typeof req.body?.expires_in_minutes === 'number' &&
+      req.body.expires_in_minutes >= 1 &&
+      req.body.expires_in_minutes <= 1440
+        ? req.body.expires_in_minutes
+        : 60;
+
+    try {
+      await userManager.ensureUser(userContext.email);
+      const mapping = await userManager.getUserInfo(userContext.email);
+      const username = mapping?.username ?? '';
+      if (!username) {
+        res.status(500).json({ error: 'User account not ready' });
+        return;
+      }
+      const { session } = downloadManager.createLink(
+        userContext.email,
+        username,
+        workspace,
+        filePath,
+        expiresInMinutes,
+      );
+      res.json(session);
+    } catch (error) {
+      logger.error({ error }, 'Failed to create download link from status page');
+      res.status(400).json({ error: error instanceof Error ? error.message : 'Failed to create download link' });
+    }
+  });
+
+  statusRouter.post('/api/execute-command', async (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    if (!userContext) {
+      res.status(401).json({ error: 'Missing user context' });
+      return;
+    }
+
+    const command = typeof req.body?.command === 'string' ? req.body.command.trim() : '';
+    if (!command) {
+      res.status(400).json({ error: 'command is required' });
+      return;
+    }
+    const workspace =
+      typeof req.body?.workspace === 'string' && req.body.workspace.trim()
+        ? req.body.workspace.trim()
+        : 'default';
+    const timeoutMs =
+      typeof req.body?.timeout_ms === 'number' && req.body.timeout_ms > 0 ? req.body.timeout_ms : 60000;
+
+    try {
+      const response = await workerManager.sendRequest(userContext.email, {
+        id: randomUUID(),
+        method: 'execute_command',
+        params: { command, workspace, timeout_ms: timeoutMs },
+      });
+
+      if (response.error) {
+        res.status(400).json({ error: response.error });
+        return;
+      }
+
+      res.json(response.result);
+    } catch (error) {
+      logger.error({ error }, 'Failed to execute command from status page');
+      res.status(500).json({ error: 'Failed to execute command' });
     }
   });
 

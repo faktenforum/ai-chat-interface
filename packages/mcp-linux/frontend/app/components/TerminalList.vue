@@ -1,21 +1,43 @@
 <script setup lang="ts">
-import type { TerminalInfo } from '../types/index';
+import type { ExecuteCommandResponse, TerminalInfo } from '../types/index';
 
 defineProps<{
   terminals: TerminalInfo[];
+  workspaces: string[];
 }>();
 
 const emit = defineEmits<{
   kill: [terminalId: string];
+  execute: [response: ExecuteCommandResponse];
 }>();
+
+const showExecuteForm = ref(false);
 </script>
 
 <template>
   <UCard>
     <template #header>
-      <span class="font-semibold">Active Terminals</span>
+      <div class="flex items-center justify-between gap-2">
+        <span class="font-semibold">Active Terminals</span>
+        <UButton
+          v-if="!showExecuteForm"
+          variant="ghost"
+          size="xs"
+          icon="i-lucide-terminal"
+          @click="showExecuteForm = true"
+        >
+          Execute command
+        </UButton>
+      </div>
     </template>
-    <p v-if="!terminals.length" class="text-sm text-muted">No active terminals.</p>
+    <ExecuteCommandForm
+      v-if="showExecuteForm"
+      :workspaces="workspaces"
+      @executed="(r) => { emit('execute', r); showExecuteForm = false; }"
+      @cancel="showExecuteForm = false"
+    />
+    <template v-else>
+      <p v-if="!terminals.length" class="text-sm text-muted">No active terminals.</p>
     <div v-else class="divide-y divide-default">
       <div
         v-for="t in terminals"
@@ -39,5 +61,6 @@ const emit = defineEmits<{
         </UButton>
       </div>
     </div>
+    </template>
   </UCard>
 </template>

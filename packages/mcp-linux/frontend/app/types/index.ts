@@ -140,3 +140,37 @@ export interface UploadConfig {
   workspace: string;
   status: string;
 }
+
+export interface CreateUploadResponse {
+  token: string;
+  upload_url: string;
+  workspace: string;
+  status: string;
+  created_at: string;
+  expires_at: string;
+  max_file_size_mb: number;
+  allowed_extensions?: string[];
+}
+
+export interface CreateDownloadResponse {
+  token: string;
+  download_url: string;
+  workspace: string;
+  file_path: string;
+  filename: string;
+  file_size: number;
+  mime_type: string;
+  status: string;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface ExecuteCommandResponse {
+  terminal_id: string;
+  output: string;
+  workspace: string;
+  cwd: string;
+  cwd_relative_to_workspace?: string;
+  branch?: string | null;
+  dirty?: boolean;
+}

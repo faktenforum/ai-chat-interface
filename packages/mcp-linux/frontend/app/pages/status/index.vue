@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { StatusOverview } from '../../types/index';
+import type { CreateDownloadResponse, CreateUploadResponse, ExecuteCommandResponse, StatusOverview } from '../../types/index';
 
 const { apiFetch, postJson, token } = useStatusApi();
 const toast = useToast();
@@ -75,6 +75,21 @@ function deleteWorkspace(name: string) {
   );
 }
 
+function onUploadCreated(res: CreateUploadResponse) {
+  toast.add({ title: 'Upload session created.', description: res.upload_url, color: 'success' });
+  refresh();
+}
+
+function onDownloadCreated(res: CreateDownloadResponse) {
+  toast.add({ title: 'Download link created.', description: res.download_url, color: 'success' });
+  refresh();
+}
+
+function onCommandExecuted(_res: ExecuteCommandResponse) {
+  toast.add({ title: 'Command executed.', color: 'success' });
+  refresh();
+}
+
 onMounted(() => refresh());
 </script>
 
@@ -133,11 +148,26 @@ onMounted(() => refresh());
         @delete="deleteWorkspace"
       />
 
-      <UploadSessionList :sessions="data.upload_sessions" @close="closeUploadSession" />
+      <UploadSessionList
+        :sessions="data.upload_sessions"
+        :workspaces="data.workspaces"
+        @close="closeUploadSession"
+        @create="onUploadCreated"
+      />
 
-      <DownloadSessionList :sessions="data.download_sessions" @close="closeDownloadLink" />
+      <DownloadSessionList
+        :sessions="data.download_sessions"
+        :workspaces="data.workspaces"
+        @close="closeDownloadLink"
+        @create="onDownloadCreated"
+      />
 
-      <TerminalList :terminals="data.terminals" @kill="killTerminal" />
+      <TerminalList
+        :terminals="data.terminals"
+        :workspaces="data.workspaces"
+        @kill="killTerminal"
+        @execute="onCommandExecuted"
+      />
     </template>
 
     <div v-else-if="loading" class="text-center py-8 text-sm text-muted">Loading...</div>

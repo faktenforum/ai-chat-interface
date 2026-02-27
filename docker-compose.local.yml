@@ -383,6 +383,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - "127.0.0.1:${MCP_LINUX_PORT:-3015}:${MCP_LINUX_PORT:-3015}"  # Cursor IDE – local only
+    volumes:
+      # Mount source and built frontend so code changes apply after restart (no image rebuild).
+      # Run once: cd packages/mcp-linux && npm run build:frontend
+      - ./packages/mcp-linux/src:/app/src
+      - ./packages/mcp-linux/frontend/.output/public:/app/frontend/.output/public
     networks:
       - app-net
       - traefik-net
@@ -392,15 +397,23 @@ services:
       - "traefik.http.routers.mcp-linux-upload.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/upload`)"
       - "traefik.http.routers.mcp-linux-upload.entrypoints=web"
       - "traefik.http.routers.mcp-linux-upload.service=mcp-linux"
+      - "traefik.http.routers.mcp-linux-upload.priority=10"
       - "traefik.http.routers.mcp-linux-assets.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/assets`)"
       - "traefik.http.routers.mcp-linux-assets.entrypoints=web"
       - "traefik.http.routers.mcp-linux-assets.service=mcp-linux"
+      - "traefik.http.routers.mcp-linux-assets.priority=10"
       - "traefik.http.routers.mcp-linux-download.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/download`)"
       - "traefik.http.routers.mcp-linux-download.entrypoints=web"
       - "traefik.http.routers.mcp-linux-download.service=mcp-linux"
+      - "traefik.http.routers.mcp-linux-download.priority=10"
       - "traefik.http.routers.mcp-linux-status.rule=Host(`mcp-linux.${DOMAIN:-localhost}`) && PathPrefix(`/status`)"
       - "traefik.http.routers.mcp-linux-status.entrypoints=web"
       - "traefik.http.routers.mcp-linux-status.service=mcp-linux"
+      - "traefik.http.routers.mcp-linux-status.priority=10"
+      - "traefik.http.routers.mcp-linux-default.rule=Host(`mcp-linux.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.mcp-linux-default.entrypoints=web"
+      - "traefik.http.routers.mcp-linux-default.service=mcp-linux"
+      - "traefik.http.routers.mcp-linux-default.priority=1"
       - "traefik.http.services.mcp-linux.loadbalancer.server.port=3015"
 
   # Additional Services
