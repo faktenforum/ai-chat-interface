@@ -87,7 +87,9 @@ async function submit() {
     </div>
     <div class="flex gap-2">
       <UButton size="sm" :loading="loading" @click="submit">Execute</UButton>
-      <UButton variant="ghost" size="sm" :disabled="loading" @click="emit('cancel')">Cancel</UButton>
+      <UButton variant="ghost" size="sm" :disabled="loading" @click="emit('cancel')">
+        {{ lastResult ? 'Close' : 'Cancel' }}
+      </UButton>
     </div>
   </div>
 </template>

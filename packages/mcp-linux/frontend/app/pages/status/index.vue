@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CreateDownloadResponse, CreateUploadResponse, ExecuteCommandResponse, StatusOverview } from '../../types/index';
+import type { CreateDownloadResponse, CreateUploadResponse, StatusOverview } from '../../types/index';
 
 const { apiFetch, postJson, token } = useStatusApi();
 const toast = useToast();
@@ -85,8 +85,7 @@ function onDownloadCreated(res: CreateDownloadResponse) {
   refresh();
 }
 
-function onCommandExecuted(_res: ExecuteCommandResponse) {
-  toast.add({ title: 'Command executed.', color: 'success' });
+function onCommandExecuted() {
   refresh();
 }
 
