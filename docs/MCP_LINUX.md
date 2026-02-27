@@ -57,7 +57,7 @@ Workspaces store a **plan** (goal/context) and **tasks** (steps) as the **single
 ### Account
 | Tool | Description |
 |------|-------------|
-| `get_account_info` | Username, home, disk usage, runtimes, status_page_url (status link with token) |
+| `get_status` | Username, home, disk usage, runtimes, status_page_url (status link with token) |
 | `reset_account` | Wipe and re-create home |
 
 ### File Upload
@@ -170,7 +170,7 @@ If you run **both** stacks on one host they also share the external network `loa
 | `MCP_LINUX_DOWNLOAD_BASE_URL` | *(falls back to upload URL)* | Public base URL for download links |
 | `MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN` | `60` | Download link expiry (min) |
 | `MCP_LINUX_STATUS_PAGE_URL` | *(upload base + /status)* | Public base URL for the status page |
-| `MCP_LINUX_STATUS_TOKEN_SECRET` | *(empty)* | Secret to sign status page tokens. If set, `get_account_info` returns a status URL with a time-limited token (same pattern as upload/download). If unset, status page only works when requests carry `X-User-*` headers (e.g. via proxy). |
+| `MCP_LINUX_STATUS_TOKEN_SECRET` | *(empty)* | Secret to sign status page tokens. If set, `get_status` returns a status URL with a time-limited token (same pattern as upload/download). If unset, status page only works when requests carry `X-User-*` headers (e.g. via proxy). |
 | `MCP_LINUX_STATUS_TOKEN_TTL_MIN` | `60` | Status link token lifetime (minutes) |
 | `MCP_LINUX_SESSION_IDLE_TIMEOUT_MIN` | `30` | MCP session idle timeout (min); sessions with no activity are evicted to prevent leak |
 | `MCP_LINUX_STATUS_MAX_FILES` | `50` | Max file entries per status category (staged/unstaged/untracked) before capping |
@@ -180,7 +180,7 @@ If you run **both** stacks on one host they also share the external network `loa
 
 ## Status page
 
-The status page (`/status`) lets users view and manage their account (workspaces, upload/download sessions, terminals) in the browser. Access is token-based: the agent gets a personal link via `get_account_info` (`status_page_url`), which includes a signed, time-limited token. The user opens that URL directly; no LibreChat proxy is required. Set `MCP_LINUX_STATUS_TOKEN_SECRET` so the server can issue and verify tokens.
+The status page (`/status`) lets users view and manage their account (workspaces, upload/download sessions, terminals) in the browser. Access is token-based: the agent gets a personal link via `get_status` (`status_page_url`), which includes a signed, time-limited token. The user opens that URL directly; no LibreChat proxy is required. Set `MCP_LINUX_STATUS_TOKEN_SECRET` so the server can issue and verify tokens.
 
 ## Traefik Routing
 

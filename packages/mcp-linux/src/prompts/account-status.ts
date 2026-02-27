@@ -1,7 +1,7 @@
 /**
  * MCP Prompt: Account Status Page
  *
- * Tells the LLM to use get_account_info for the user's status page URL (with token)
+ * Tells the LLM to use get_status for the user's status page URL (with token)
  * and when to refer users there.
  */
 
@@ -31,7 +31,7 @@ export const ACCOUNT_STATUS_PROMPT = {
 
 Users have a web interface to view and manage their Linux account.
 
-**How to give the user the link:** Call \`get_account_info\` and use the \`status_page_url\` from the result. That URL includes a time-limited token for the current user. Give that exact URL to the user when they want to manage things themselves.
+**How to give the user the link:** Call \`get_status\` and use the \`status_page_url\` from the result. That URL includes a time-limited token for the current user. Give that exact URL to the user when they want to manage things themselves.
 
 ## When to refer the user
 
@@ -40,6 +40,6 @@ Users have a web interface to view and manage their Linux account.
 - They want to delete a workspace or kill a terminal from a browser.
 - They ask where they can "see my workspaces" or "manage my sessions".
 
-Tell them to open the status URL (from get_account_info) in a new tab.
+Tell them to open the status URL (from get_status) in a new tab.
 `,
 };

@@ -253,7 +253,7 @@ agents:
       - delete_workspace_mcp_linux
       - get_workspace_status_mcp_linux
       - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -353,7 +353,7 @@ agents:
       - delete_workspace_mcp_linux
       - get_workspace_status_mcp_linux
       - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -448,7 +448,7 @@ agents:
       - delete_workspace_mcp_linux
       - get_workspace_status_mcp_linux
       - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -526,7 +526,7 @@ agents:
       - delete_workspace_mcp_linux
       - get_workspace_status_mcp_linux
       - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -705,7 +705,7 @@ agents:
       - get_code_index_status_mcp_linux
       - list_terminals_mcp_linux
       - kill_terminal_mcp_linux
-      - get_account_info_mcp_linux
+      - get_status_mcp_linux
       - pull_request_read_mcp_github
       - get_file_contents_mcp_github
       - list_commits_mcp_github
@@ -765,7 +765,7 @@ agents:
       - get_code_index_status_mcp_linux
       - list_terminals_mcp_linux
       - kill_terminal_mcp_linux
-      - get_account_info_mcp_linux
+      - get_status_mcp_linux
       - pull_request_read_mcp_github
       - get_file_contents_mcp_github
       - list_commits_mcp_github
@@ -961,7 +961,7 @@ agents:
       - create_workspace_mcp_linux
       - get_workspace_status_mcp_linux
       - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -1014,7 +1014,7 @@ agents:
       - create_workspace_mcp_linux
       - get_workspace_status_mcp_linux
       - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -1063,7 +1063,7 @@ agents:
       - create_workspace_mcp_linux
       - get_workspace_status_mcp_linux
       - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -1118,7 +1118,7 @@ agents:
       - delete_workspace_mcp_linux
       - get_workspace_status_mcp_linux
       - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
+      - get_status_mcp_linux
       - reset_account_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux

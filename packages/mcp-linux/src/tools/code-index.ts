@@ -1,7 +1,7 @@
 /**
  * Code index MCP tool registration
  *
- * Registers codebase_search and get_code_index_status tools that delegate to the worker.
+ * Registers codebase_search (and debug tools) that delegate to the worker.
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -11,7 +11,6 @@ import type { WorkerManager } from '../worker-manager.ts';
 import { resolveEmail, errorResult } from './helpers.ts';
 import {
   CodebaseSearchSchema,
-  GetCodeIndexStatusSchema,
   DebugCodeIndexListChunksSchema,
   DebugCodeIndexRechunkFileSchema,
 } from '../schemas/code-index.schema.ts';
@@ -27,7 +26,7 @@ export function registerCodeIndexTools(
       description:
         'Semantic code search in a workspace. Finds code relevant to a natural language query (meaning-based, not just keywords). ' +
         'CRITICAL: For ANY exploration of code you haven\'t examined yet in this conversation, you MUST use this tool FIRST before any other search or file exploration tools. This applies throughout the entire conversation. ' +
-        'Queries should be in English. If the workspace has no index yet, the first call starts indexing in the background and returns a short message; use get_code_index_status or get_workspace_status to check code_index.status and retry codebase_search when status is indexed.',
+        'Queries should be in English. If the workspace has no index yet, the first call starts indexing in the background and returns a short message; use get_workspace_status to check code_index.status and retry codebase_search when status is indexed.',
       inputSchema: CodebaseSearchSchema.shape,
     },
     async (args, extra) => {
@@ -64,36 +63,6 @@ export function registerCodeIndexTools(
                 .join('\n---\n')}`;
 
         return { content: [{ type: 'text', text }] };
-      } catch (error) {
-        return errorResult(error);
-      }
-    },
-  );
-
-  server.registerTool(
-    'get_code_index_status',
-    {
-      description:
-        'Get the code index status for a workspace: standby, indexing, indexed, or error. ' +
-        'Shows whether semantic code search is available and indexing progress.',
-      inputSchema: GetCodeIndexStatusSchema.shape,
-    },
-    async (args, extra) => {
-      try {
-        const email = resolveEmail(extra);
-        const response = await workerManager.sendRequest(email, {
-          id: randomUUID(),
-          method: 'get_code_index_status',
-          params: {
-            workspace: args.workspace ?? 'default',
-          },
-        });
-
-        if (response.error) {
-          return errorResult(response.error);
-        }
-
-        return { content: [{ type: 'text', text: JSON.stringify(response.result, null, 2) }] };
       } catch (error) {
         return errorResult(error);
       }

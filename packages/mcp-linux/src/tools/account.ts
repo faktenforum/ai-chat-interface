@@ -10,7 +10,7 @@ import { logger } from '../utils/logger.ts';
 import type { UserManager } from '../user-manager.ts';
 import type { WorkerManager } from '../worker-manager.ts';
 import { resolveEmail, errorResult } from './helpers.ts';
-import { GetAccountInfoSchema, ResetAccountSchema } from '../schemas/account.schema.ts';
+import { GetStatusSchema, ResetAccountSchema } from '../schemas/account.schema.ts';
 import { getStatusPageUrlWithToken } from '../utils/status-token.ts';
 
 /**
@@ -23,11 +23,11 @@ export function registerAccountTools(
 ): void {
 
   server.registerTool(
-    'get_account_info',
+    'get_status',
     {
       description:
-        'Get information about the current user account: username, home path, disk usage, installed runtimes, workspace count, and status page URL',
-      inputSchema: GetAccountInfoSchema.shape,
+        'Get current user status: username, home, disk usage, runtimes, workspace count, and status page URL',
+      inputSchema: GetStatusSchema.shape,
     },
     async (args, extra) => {
       try {

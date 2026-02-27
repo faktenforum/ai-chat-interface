@@ -143,7 +143,7 @@ OBJECTIVE
 CAPABILITIES
 - Each user has their own isolated Linux account: personal home directory with persistent bash history, Git-backed workspaces (a "default" workspace exists automatically), pre-installed runtimes (Node.js, Python 3, Git, Bash, ripgrep, and more), SSH access to GitHub via a shared machine user key. Users can install additional tools in their home (nvm, pip --user, etc.); see runtime_management prompt for details.
 - Use terminal tools (execute_command, write_terminal) to run any command. All commands run in the context of a workspace (default: "default"). File operations, search, and git are done via the terminal. Each terminal response includes workspace git metadata (branch, dirty status).
-- list_workspaces = overview (all workspaces, branch, dirty, plan_preview). get_workspace_status(workspace) = full detail (plan, tasks, optional workspace-root AGENTS.md, git status). Use the latter after handoffs or when you need task-level context; use the former to choose or create a workspace. get_workspace_status returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files.
+- list_workspaces = overview (all workspaces, branch, dirty, plan_preview). get_workspace_status(workspace) = full detail (plan, tasks, optional workspace-root AGENTS.md, git status). Use the latter after handoffs or when you need task-level context; use the former to choose or create a workspace. get_workspace_status(workspace, { summary_only: true }) for a short overview (plan_summary, task_counts). get_workspace_status returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files.
 - list_workspace_files: Use to explore directory structure; more effective than ls for getting a structured file list.
 - codebase_search: MUST use FIRST before read_workspace_file when exploring unfamiliar code. Queries in English.
 
@@ -156,7 +156,7 @@ File Download:
 Reading Files:
 - read_workspace_file returns content with line numbers for diffing. Use optional line_ranges for specific sections. Text files are returned inline; images and audio as base64; large or binary files get a download link instead.
 
-Status page: Users can view and manage their account (workspaces, upload/download sessions, terminals). Use get_account_info and give the user the status_page_url from the result (it includes a time-limited token). When the user wants to close sessions, revoke download links, kill terminals, or delete workspaces themselves, direct them to open that URL in a new tab. See the account_status prompt for when to refer users.`,
+Status page: Users can view and manage their account (workspaces, upload/download sessions, terminals). Use get_status and give the user the status_page_url from the result (it includes a time-limited token). When the user wants to close sessions, revoke download links, kill terminals, or delete workspaces themselves, direct them to open that URL in a new tab. See the account_status prompt for when to refer users.`,
     },
   );
 

@@ -132,7 +132,7 @@ export function registerWorkspaceTools(
     'get_workspace_status',
     {
       description:
-        'Full git status, plan, tasks, submodules status (idle/updating/done/error/none), and code_index status (enabled, status, progress). When AGENTS.md exists in the workspace root, returns its content as instructions. First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next.',
+        'Full git status, plan, tasks, submodules status (idle/updating/done/error/none), and code_index status (enabled, status, progress). When AGENTS.md exists in the workspace root, returns its content as instructions. First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next. Pass summary_only: true to get only a plan summary and task counts (done/in_progress/pending/cancelled) instead of the full plan and task list.',
       inputSchema: GetWorkspaceStatusSchema.shape,
     },
     async (args, extra) => {
@@ -143,6 +143,7 @@ export function registerWorkspaceTools(
           method: 'get_workspace_status',
           params: {
             workspace: args.workspace,
+            summary_only: args.summary_only,
           },
         });
 

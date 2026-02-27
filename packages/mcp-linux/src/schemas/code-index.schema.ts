@@ -16,10 +16,6 @@ export const CodebaseSearchSchema = z.object({
   limit: z.number().int().min(1).max(100).optional().describe('Maximum number of results (default: 20)'),
 });
 
-export const GetCodeIndexStatusSchema = z.object({
-  workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
-});
-
 export const DebugCodeIndexListChunksSchema = z.object({
   workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
   path: z

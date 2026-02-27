@@ -848,6 +848,7 @@ const handlers: Record<string, Handler> = {
 
   async get_workspace_status(params) {
     const workspace = (params.workspace as string) || 'default';
+    const summaryOnly = (params.summary_only as boolean) === true;
     const wsPath = resolveWorkspacePath(workspace);
 
     if (!existsSync(wsPath)) {
@@ -945,6 +946,42 @@ const handlers: Record<string, Handler> = {
     const code_index = codeIndexEnabled
       ? { enabled: true as const, ...codeIndexState, has_index: hasIndexData }
       : { enabled: false as const };
+
+    if (summaryOnly) {
+      const normalized = plan != null && plan.length > 0 ? plan.replace(/\s+/g, ' ').trim() : '';
+      const plan_summary =
+        normalized.length > 0
+          ? normalized.slice(0, LIST_WORKSPACES_PLAN_PREVIEW_LEN) +
+            (normalized.length > LIST_WORKSPACES_PLAN_PREVIEW_LEN ? '…' : '')
+          : null;
+      const task_counts = {
+        done: tasks.filter((t) => t.status === 'done').length,
+        in_progress: tasks.filter((t) => t.status === 'in_progress').length,
+        pending: tasks.filter((t) => t.status === 'pending').length,
+        cancelled: tasks.filter((t) => t.status === 'cancelled').length,
+      };
+      return {
+        workspace,
+        branch: meta.branch,
+        dirty: meta.dirty,
+        remote_url: remoteUrl || null,
+        staged: capped.staged,
+        unstaged: capped.unstaged,
+        untracked: capped.untracked,
+        staged_count: capped.staged_count,
+        unstaged_count: capped.unstaged_count,
+        untracked_count: capped.untracked_count,
+        truncated: capped.truncated,
+        ahead,
+        behind,
+        plan_summary,
+        task_counts,
+        instructions: instructions ?? null,
+        config,
+        submodules,
+        code_index,
+      };
+    }
 
     return {
       workspace,
@@ -1077,37 +1114,6 @@ const handlers: Record<string, Handler> = {
       limit,
     });
     return { results };
-  },
-
-  async get_code_index_status(params) {
-    const workspace = (params.workspace as string) || 'default';
-    const wsPath = resolveWorkspacePath(workspace);
-    if (!existsSync(wsPath)) {
-      throw new Error(`Workspace "${workspace}" does not exist`);
-    }
-    let state = getIndexStatus(wsPath);
-    const hasIndexData = await hasIndex(wsPath);
-    if (
-      hasIndexData &&
-      state.status === 'standby' &&
-      state.files_total === 0 &&
-      state.files_processed === 0
-    ) {
-      const stats = await getIndexStats(wsPath);
-      if (stats) {
-        state = {
-          status: 'indexed',
-          message: 'Index complete',
-          files_processed: stats.fileCount,
-          files_total: stats.fileCount,
-        };
-      }
-    }
-    return {
-      ...state,
-      has_index: hasIndexData,
-      enabled: isCodeIndexEnabled(),
-    };
   },
 
   async debug_code_index_list_chunks(params) {

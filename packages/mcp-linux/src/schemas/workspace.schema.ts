@@ -27,6 +27,11 @@ export const DeleteWorkspaceSchema = z.object({
 
 export const GetWorkspaceStatusSchema = z.object({
   workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
+  summary_only: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe('If true, return only plan_summary and task_counts instead of full plan and tasks.'),
 });
 
 export const CleanWorkspaceUploadsSchema = z.object({
