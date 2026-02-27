@@ -42,23 +42,26 @@ const showExecuteForm = ref(false);
         <div
           v-for="t in terminals"
           :key="t.terminal_id ?? t.id"
-          class="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0"
+          class="space-y-2 py-3 first:pt-0 last:pb-0"
         >
-          <div class="space-y-0.5">
-            <p class="text-sm font-medium">Terminal {{ t.terminal_id ?? t.id }}</p>
-            <div class="flex flex-wrap gap-x-3 text-xs text-muted">
-              <span v-if="t.workspace">Workspace: {{ t.workspace }}</span>
-              <span v-if="t.cwd">CWD: {{ t.cwd }}</span>
+          <div class="flex items-center justify-between gap-3">
+            <div class="space-y-0.5">
+              <p class="text-sm font-medium">Terminal {{ t.terminal_id ?? t.id }}</p>
+              <div class="flex flex-wrap gap-x-3 text-xs text-muted">
+                <span v-if="t.workspace">Workspace: {{ t.workspace }}</span>
+                <span v-if="t.cwd">CWD: {{ t.cwd }}</span>
+              </div>
             </div>
+            <UButton
+              variant="ghost"
+              color="error"
+              size="xs"
+              @click="emit('kill', t.terminal_id ?? t.id ?? '')"
+            >
+              Kill
+            </UButton>
           </div>
-          <UButton
-            variant="ghost"
-            color="error"
-            size="xs"
-            @click="emit('kill', t.terminal_id ?? t.id ?? '')"
-          >
-            Kill
-          </UButton>
+          <TerminalSession :terminal="t" />
         </div>
       </div>
     </template>

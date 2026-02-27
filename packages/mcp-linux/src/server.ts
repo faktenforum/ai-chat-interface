@@ -25,6 +25,7 @@ import {
   extractUserContext,
   type UserContext,
 } from './utils/http-server.ts';
+import { serveSpaIndex } from './utils/serve-spa.ts';
 import { verifyToken } from './utils/status-token.ts';
 import { UserManager } from './user-manager.ts';
 import { WorkerManager } from './worker-manager.ts';
@@ -222,14 +223,8 @@ function createApp(): express.Application {
       ? spaDirCwd
       : spaDirFromModule;
 
-  function sendSpaIndex(_req: Request, res: Response): void {
-    const indexPath = join(spaDir, 'index.html');
-    res.sendFile(indexPath, (err) => {
-      if (err) {
-        logger.error({ err, spaDir, indexPath }, 'Failed to send SPA index');
-        if (!res.headersSent) res.status(500).send('SPA not available');
-      }
-    });
+  async function handleSpaIndex(_req: Request, res: Response): Promise<void> {
+    await serveSpaIndex(spaDir, res, 'SPA index');
   }
 
   // Restore path when proxy (e.g. Traefik) strips prefix and sets X-Forwarded-Prefix
@@ -254,9 +249,9 @@ function createApp(): express.Application {
   // Status routes (per-user overview and management UI)
   const statusRouter = express.Router();
 
-  statusRouter.get('/', sendSpaIndex);
+  statusRouter.get('/', handleSpaIndex);
 
-  statusRouter.get('/workspace/:name', sendSpaIndex);
+  statusRouter.get('/workspace/:name', handleSpaIndex);
 
   statusRouter.get('/api/workspace/:name', async (req: StatusRequest, res: Response) => {
     try {
@@ -600,12 +595,16 @@ function createApp(): express.Application {
         : 'default';
     const timeoutMs =
       typeof req.body?.timeout_ms === 'number' && req.body.timeout_ms > 0 ? req.body.timeout_ms : 60000;
+    const terminalId =
+      typeof req.body?.terminal_id === 'string' && req.body.terminal_id.trim()
+        ? req.body.terminal_id.trim()
+        : undefined;
 
     try {
       const response = await workerManager.sendRequest(userContext.email, {
         id: randomUUID(),
         method: 'execute_command',
-        params: { command, workspace, timeout_ms: timeoutMs },
+        params: { command, workspace, timeout_ms: timeoutMs, terminal_id: terminalId },
       });
 
       if (response.error) {
@@ -617,6 +616,40 @@ function createApp(): express.Application {
     } catch (error) {
       logger.error({ error }, 'Failed to execute command from status page');
       res.status(500).json({ error: 'Failed to execute command' });
+    }
+  });
+
+  statusRouter.post('/api/read-terminal-output', async (req: StatusRequest, res: Response) => {
+    const userContext = req.userContext;
+    if (!userContext) {
+      res.status(401).json({ error: 'Missing user context' });
+      return;
+    }
+
+    const terminalId = typeof req.body?.terminal_id === 'string' ? req.body.terminal_id.trim() : '';
+    if (!terminalId) {
+      res.status(400).json({ error: 'terminal_id is required' });
+      return;
+    }
+    const offset = typeof req.body?.offset === 'number' && req.body.offset >= 0 ? req.body.offset : 0;
+    const length = typeof req.body?.length === 'number' && req.body.length > 0 ? req.body.length : undefined;
+
+    try {
+      const response = await workerManager.sendRequest(userContext.email, {
+        id: randomUUID(),
+        method: 'read_terminal_output',
+        params: { terminal_id: terminalId, offset, length },
+      });
+
+      if (response.error) {
+        res.status(400).json({ error: response.error });
+        return;
+      }
+
+      res.json(response.result);
+    } catch (error) {
+      logger.error({ error }, 'Failed to read terminal output from status page');
+      res.status(500).json({ error: 'Failed to read terminal output' });
     }
   });
 

@@ -9,9 +9,10 @@
 
 import { type Request, type Response } from 'express';
 import type express from 'express';
-import { createWriteStream, existsSync, mkdirSync, chownSync, readFileSync } from 'node:fs';
+import { createWriteStream, existsSync, mkdirSync, chownSync } from 'node:fs';
 import { join, resolve, extname, basename } from 'node:path';
 import Busboy from 'busboy';
+import { serveSpaIndex } from '../utils/serve-spa.ts';
 import { logger } from '../utils/logger.ts';
 import type { UploadManager } from './upload-manager.ts';
 import type { UserManager } from '../user-manager.ts';
@@ -77,24 +78,7 @@ export function setupUploadRoutes(
   userManager: UserManager,
   spaDir: string,
 ): void {
-  function sendSpa(res: Response): void {
-    const root = resolve(spaDir);
-    const indexPath = join(root, 'index.html');
-    if (!existsSync(indexPath)) {
-      logger.error({ spaDir: root, indexPath }, 'Upload SPA index.html not found (run: cd packages/mcp-linux && npm run build:frontend)');
-      res.status(503).setHeader('Content-Type', 'text/plain').send(
-        'Upload page not built. From repo root run: cd packages/mcp-linux && npm run build:frontend then restart the container.',
-      );
-      return;
-    }
-    try {
-      const html = readFileSync(indexPath, 'utf-8');
-      res.type('html').send(html);
-    } catch (err) {
-      logger.error({ err, spaDir: root, indexPath }, 'Failed to read/send upload SPA index');
-      if (!res.headersSent) res.status(500).send('Upload page not available');
-    }
-  }
+  const spaRoot = resolve(spaDir);
 
   function spaError(res: Response, status: number, title: string, message: string): void {
     const t = encodeURIComponent(title);
@@ -103,8 +87,8 @@ export function setupUploadRoutes(
   }
 
   // ── GET /upload/error — SPA error page (must be before /upload/:token so "error" is not used as token)
-  app.get('/upload/error', (_req: Request, res: Response) => {
-    sendSpa(res);
+  app.get('/upload/error', async (_req: Request, res: Response) => {
+    await serveSpaIndex(spaRoot, res, 'Upload SPA');
   });
 
   // ── GET /upload/:token/config — session config as JSON (used by SPA) ────────
@@ -128,7 +112,7 @@ export function setupUploadRoutes(
   });
 
   // ── GET /upload/:token — serve the SPA upload page ──────────────────────────
-  app.get('/upload/:token', (req: Request, res: Response) => {
+  app.get('/upload/:token', async (req: Request, res: Response) => {
     const token = paramString(req.params.token);
     logger.info({ token, path: req.path }, 'GET /upload/:token');
     const session = uploadManager.getSession(token);
@@ -159,7 +143,7 @@ export function setupUploadRoutes(
     }
 
     logger.info({ token }, 'Serving upload SPA');
-    sendSpa(res);
+    await serveSpaIndex(spaRoot, res, 'Upload SPA');
   });
 
   // ── GET /upload/:token/status — session status as JSON ─────────────────────

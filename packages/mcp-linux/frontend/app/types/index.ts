@@ -174,3 +174,11 @@ export interface ExecuteCommandResponse {
   branch?: string | null;
   dirty?: boolean;
 }
+
+export interface ReadTerminalOutputResponse {
+  terminal_id: string;
+  output: string;
+  total_length: number;
+  branch?: string | null;
+  dirty?: boolean;
+}

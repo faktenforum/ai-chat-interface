@@ -17,6 +17,7 @@ import { execSync, spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { getDefaultGitIdentity } from './utils/git-config.ts';
 import { validateWorkspaceName, validateTerminalId } from './utils/security.ts';
+import { stripAnsi } from './utils/strip-ansi.ts';
 import {
   type PlanTask,
   type WorkspaceConfig,
@@ -566,7 +567,7 @@ const handlers: Record<string, Handler> = {
 
     return {
       terminal_id: terminalId,
-      output: newOutput,
+      output: stripAnsi(newOutput),
       workspace,
       cwd,
       cwd_relative_to_workspace: cwdRelative || undefined,
@@ -593,7 +594,7 @@ const handlers: Record<string, Handler> = {
 
     return {
       terminal_id: terminalId,
-      output: slice,
+      output: stripAnsi(slice),
       total_length: fullOutput.length,
       ...meta,
     };
@@ -636,7 +637,7 @@ const handlers: Record<string, Handler> = {
 
     return {
       terminal_id: terminalId,
-      output: newOutput,
+      output: stripAnsi(newOutput),
       ...meta,
     };
   },
