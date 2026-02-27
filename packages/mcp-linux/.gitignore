@@ -4,3 +4,6 @@ dist/
 .env
 .DS_Store
 *.tsbuildinfo
+frontend/.output
+frontend/.nuxt
+frontend/dist

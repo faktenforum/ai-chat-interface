@@ -144,7 +144,13 @@ When **both** prod and dev stacks run on one host, they share the external netwo
 - **Service Docs**: Create `docs/{SERVICE}.md` for complex services (e.g., `docs/N8N.md`)
 - **Update**: Keep documentation in sync with implementation
 
-### 18. Testing
+### 18. Build cache (local)
+
+- **Cause**: Compose builds 12+ images (api, mcp-linux, mcp-calculator, etc.). BuildKit caches every layer per context; cache can reach 100GB+.
+- **Practice**: Build only the service you need: `docker compose -f docker-compose.local.yml build mcp-linux` (or `npm run rebuild:local -- mcp-linux`). Avoid full `docker compose build` unless needed.
+- **Prune**: Free disk with `docker builder prune -af`. Optional: prune cache older than 7 days: `docker builder prune -f --filter until=168h`. Check usage: `docker system df` and `docker builder du`.
+
+### 19. Testing
 
 - **Local**: Use `npm run setup:yes && docker compose down -v && sleep 3 && docker compose up -d` to make sure all services are restarted and all changes are applied.
 - **Production**: `docker compose --env-file .env.prod -f docker-compose.prod.yml up`

@@ -75,56 +75,64 @@ export function setupUploadRoutes(
   app: express.Application,
   uploadManager: UploadManager,
   userManager: UserManager,
+  spaDir: string,
 ): void {
-  // ── GET /upload/:token — serve the upload page ─────────────────────────────
+  function sendSpa(res: Response): void {
+    res.sendFile(join(spaDir, 'index.html'));
+  }
+
+  function spaError(res: Response, status: number, title: string, message: string): void {
+    const t = encodeURIComponent(title);
+    const m = encodeURIComponent(message);
+    res.status(status).redirect(`/upload/error?title=${t}&message=${m}`);
+  }
+
+  // ── GET /upload/:token/config — session config as JSON (used by SPA) ────────
+  app.get('/upload/:token/config', (req: Request, res: Response) => {
+    const token = paramString(req.params.token);
+    const session = uploadManager.getSession(token);
+
+    if (!session) {
+      res.status(404).json({ error: 'Session not found' });
+      return;
+    }
+
+    res.json({
+      token: session.token,
+      maxSizeMb: Math.round(session.maxFileSize / (1024 * 1024)),
+      allowedExtensions: session.allowedExtensions ?? [],
+      expiresAt: session.expiresAt.toISOString(),
+      workspace: session.workspace,
+      status: session.status,
+    });
+  });
+
+  // ── GET /upload/:token — serve the SPA upload page ──────────────────────────
   app.get('/upload/:token', (req: Request, res: Response) => {
     const token = paramString(req.params.token);
     const session = uploadManager.getSession(token);
 
     if (!session) {
-      res.status(404).render('upload-error', {
-        pageTitle: 'Session Not Found',
-        errorTitle: 'Session Not Found',
-        errorMessage: 'This upload link is invalid or has been removed.',
-      });
+      spaError(res, 404, 'Session Not Found', 'This upload link is invalid or has been removed.');
       return;
     }
 
     if (session.status === 'expired') {
-      res.status(410).render('upload-error', {
-        pageTitle: 'Session Expired',
-        errorTitle: 'Session Expired',
-        errorMessage: 'This upload session has expired. Please request a new upload link.',
-      });
+      spaError(res, 410, 'Session Expired', 'This upload session has expired. Please request a new upload link.');
       return;
     }
 
     if (session.status === 'completed') {
-      res.status(410).render('upload-error', {
-        pageTitle: 'Upload Complete',
-        errorTitle: 'Upload Complete',
-        errorMessage: 'A file has already been uploaded in this session. The session is now closed.',
-      });
+      spaError(res, 410, 'Upload Complete', 'A file has already been uploaded in this session. The session is now closed.');
       return;
     }
 
     if (session.status === 'closed') {
-      res.status(410).render('upload-error', {
-        pageTitle: 'Session Closed',
-        errorTitle: 'Session Closed',
-        errorMessage: 'This upload session has been closed. Please request a new upload link.',
-      });
+      spaError(res, 410, 'Session Closed', 'This upload session has been closed. Please request a new upload link.');
       return;
     }
 
-    res.render('upload', {
-      pageTitle: 'File Upload',
-      token: session.token,
-      workspace: session.workspace,
-      maxFileSizeMb: Math.round(session.maxFileSize / (1024 * 1024)),
-      allowedExtensions: session.allowedExtensions ?? [],
-      expiresAt: session.expiresAt.toISOString(),
-    });
+    sendSpa(res);
   });
 
   // ── GET /upload/:token/status — session status as JSON ─────────────────────

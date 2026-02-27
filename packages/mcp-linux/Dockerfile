@@ -1,6 +1,21 @@
+# ── Stage 1: Build the Nuxt frontend SPA ────────────────────────────────────
+FROM node:24-slim AS frontend-builder
+WORKDIR /app
+COPY frontend/package.json ./
+RUN npm install
+COPY frontend/nuxt.config.ts ./
+COPY frontend/app ./app
+RUN npm run build
+
+# ── Stage 2: Production image ────────────────────────────────────────────────
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+
+# Refresh keyring when Ubuntu rotates keys (avoids "invalid signature" / "not signed" in apt)
+RUN apt-get -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true update \
+    && apt-get -o Acquire::AllowInsecureRepositories=true install -y --no-install-recommends ubuntu-keyring \
+    && rm -rf /var/lib/apt/lists/*
 
 # System packages: user management, shells, dev tools, runtimes
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -121,8 +136,9 @@ RUN npm install --production --silent && npm cache clean --force
 COPY tsconfig.json ./
 COPY src ./src
 COPY assets ./assets
-COPY views ./views
-COPY public ./public
+
+# Copy pre-built frontend SPA from builder stage
+COPY --from=frontend-builder /app/.output/public ./frontend/.output/public
 
 # Create persistent data directories
 RUN mkdir -p /app/data /run/mcp-workers

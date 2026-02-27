@@ -9,8 +9,10 @@
     "dev": "node --watch --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
     "lint": "eslint . --ext .ts",
     "test:e2e": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/e2e-document-creator-workspace.ts",
-    "check": "tsc --noEmit",
+    "check": "npm run check:self && npm run check:frontend",
+    "check:self": "tsc --noEmit",
     "check:frontend": "cd frontend && npm run check",
+    "build": "npm run build:frontend",
     "build:frontend": "cd frontend && npm install && npm run build"
   },
   "dependencies": {
@@ -22,7 +24,6 @@
     "ignore": "^7.0.5",
     "node-pty": "^1.1.0",
     "pino": "^10.3.1",
-    "pug": "^3.0.3",
     "tree-sitter-wasms": "^0.1.13",
     "web-tree-sitter": "^0.26.6",
     "zod": "^4.3.6"
@@ -30,7 +31,7 @@
   "devDependencies": {
     "@types/busboy": "^1.5.4",
     "@types/express": "^5.0.6",
-    "@types/node": "^25.3.1",
+    "@types/node": "^25.3.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },

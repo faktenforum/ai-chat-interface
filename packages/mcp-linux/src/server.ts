@@ -213,44 +213,28 @@ function createApp(): express.Application {
   app.use(express.json({ limit: '10mb' }));
   app.disable('x-powered-by');
 
-  // Pug template engine for upload pages
   const appRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-  app.set('views', join(appRoot, 'views'));
-  app.set('view engine', 'pug');
+  const spaDir = join(appRoot, 'frontend/.output/public');
 
-  // Static files (CSS, JS) for upload/status pages
-  app.use(express.static(join(appRoot, 'public')));
+  function sendSpaIndex(_req: Request, res: Response): void {
+    res.sendFile(join(spaDir, 'index.html'));
+  }
+
+  // Static files from the built Nuxt SPA
+  app.use(express.static(spaDir));
 
   // Upload routes (before MCP endpoints, no JSON body parsing needed for multipart)
-  setupUploadRoutes(app, uploadManager, userManager);
+  setupUploadRoutes(app, uploadManager, userManager, spaDir);
 
   // Download routes (file streaming)
-  setupDownloadRoutes(app, downloadManager);
+  setupDownloadRoutes(app, downloadManager, spaDir);
 
   // Status routes (per-user overview and management UI)
   const statusRouter = express.Router();
 
-  statusRouter.get('/', (req: StatusRequest, res: Response) => {
-    const userContext = req.userContext;
-    const email = userContext?.email || '';
-    res.render('status', {
-      pageTitle: 'Account Status',
-      userEmail: email,
-    });
-  });
+  statusRouter.get('/', sendSpaIndex);
 
-  statusRouter.get('/workspace/:name', (req: StatusRequest, res: Response) => {
-    const userContext = req.userContext;
-    if (!userContext) {
-      res.status(401).send('Missing user context');
-      return;
-    }
-    const name = req.params.name || '';
-    res.render('workspace-status', {
-      pageTitle: `Workspace: ${name}`,
-      workspaceName: name,
-    });
-  });
+  statusRouter.get('/workspace/:name', sendSpaIndex);
 
   statusRouter.get('/api/workspace/:name', async (req: StatusRequest, res: Response) => {
     try {
