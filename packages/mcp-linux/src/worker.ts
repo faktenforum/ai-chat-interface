@@ -811,6 +811,17 @@ const handlers: Record<string, Handler> = {
     }
     ensureDefaultGitignore(wsPath);
 
+    const defaultConfig = params.default_workspace_config as { code_index_enabled?: boolean } | undefined;
+    if (defaultConfig != null && typeof defaultConfig === 'object') {
+      const workspaceConfig: WorkspaceConfig = {};
+      if (typeof defaultConfig.code_index_enabled === 'boolean') {
+        workspaceConfig.code_index_enabled = defaultConfig.code_index_enabled;
+      }
+      if (Object.keys(workspaceConfig).length > 0) {
+        writeWorkspaceConfig(name, workspaceConfig);
+      }
+    }
+
     if (isCodeIndexEnabledForWorkspace(name)) {
       indexWorkspace(wsPath).catch((err) => {
         console.error(`Code indexing failed for ${name}:`, (err as Error).message);
@@ -818,10 +829,21 @@ const handlers: Record<string, Handler> = {
     }
 
     const meta = getGitMetadata(name);
+    let remoteUrl = '';
+    try {
+      remoteUrl = execSync('git remote get-url origin 2>/dev/null', {
+        cwd: wsPath,
+        encoding: 'utf-8',
+        timeout: 5000,
+      }).trim();
+    } catch {
+      // No remote
+    }
     return {
       name,
       path: wsPath,
       ...meta,
+      remote_url: remoteUrl || null,
     };
   },
 

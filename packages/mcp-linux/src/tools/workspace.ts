@@ -12,6 +12,7 @@ import { extractUserContext } from '../utils/http-server.ts';
 import type { UserManager } from '../user-manager.ts';
 import type { WorkerManager } from '../worker-manager.ts';
 import { resolveEmail, errorResult } from './helpers.ts';
+import { getWorkspaceTemplate } from '../config.ts';
 import {
   ListWorkspacesSchema,
   CreateWorkspaceSchema,
@@ -78,13 +79,27 @@ export function registerWorkspaceTools(
     async (args, extra) => {
       try {
         const email = resolveEmail(extra);
+        let gitUrl = args.git_url;
+        let branch = args.branch;
+        let default_workspace_config: { code_index_enabled?: boolean } | undefined;
+        if (gitUrl == null || gitUrl === '') {
+          const template = getWorkspaceTemplate(args.name);
+          if (template) {
+            gitUrl = template.git_url;
+            branch = template.branch ?? branch;
+            default_workspace_config = {
+              code_index_enabled: template.code_index_enabled ?? true,
+            };
+          }
+        }
         const response = await workerManager.sendRequest(email, {
           id: randomUUID(),
           method: 'create_workspace',
           params: {
             name: args.name,
-            git_url: args.git_url,
-            branch: args.branch,
+            git_url: gitUrl,
+            branch,
+            ...(default_workspace_config != null && { default_workspace_config }),
           },
         });
 

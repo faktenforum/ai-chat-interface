@@ -137,6 +137,9 @@ COPY tsconfig.json ./
 COPY src ./src
 COPY assets ./assets
 
+# Server config: use example as default so workspace templates work out of the box
+COPY config.example.yaml ./config.yaml
+
 # Copy pre-built frontend SPA from builder stage
 COPY --from=frontend-builder /app/.output/public ./frontend/.output/public
 
