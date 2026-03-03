@@ -388,6 +388,13 @@ services:
       # Run once: cd packages/mcp-linux && npm run build:frontend
       - ./packages/mcp-linux/src:/app/src
       - ./packages/mcp-linux/frontend/.output/public:/app/frontend/.output/public
+      # Mount codebase-indexer core so @codebase-indexer/core resolves in the container.
+      # Run once: cd dev/codebase-indexer && pnpm build
+      - ./dev/codebase-indexer/packages/core:/app/node_modules/@codebase-indexer/core
+      # Mount the pnpm store so symlinks in core/node_modules/ resolve inside the container.
+      # Node.js resolves the core package's realpath to /dev/codebase-indexer/packages/core,
+      # and pnpm symlinks point to ../../../node_modules/.pnpm/ → /dev/codebase-indexer/node_modules/.pnpm/
+      - ./dev/codebase-indexer/node_modules:/dev/codebase-indexer/node_modules
     networks:
       - app-net
       - traefik-net

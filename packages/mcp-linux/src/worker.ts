@@ -32,16 +32,16 @@ import {
   SUBMODULES_STATUS_FILENAME,
   LIST_WORKSPACES_PLAN_PREVIEW_LEN,
 } from './workspace-plan.ts';
-import {
-  indexWorkspace,
-  searchWorkspace,
-  getIndexStatus,
-  getIndexStats,
-  hasIndex,
-  isCodeIndexEnabled,
-  listChunksInIndex,
-  rechunkFileForDebug,
-} from './code-index/code-index-service.ts';
+import { createFromEnv, type CodeIndexer } from '@codebase-indexer/core';
+
+// Lazy-initialized code indexer instance (created on first use)
+let _codeIndexer: CodeIndexer | null = null;
+function getCodeIndexer(): CodeIndexer {
+  if (!_codeIndexer) {
+    _codeIndexer = createFromEnv();
+  }
+  return _codeIndexer;
+}
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -298,7 +298,7 @@ function writeSubmodulesStatus(workspace: string, data: SubmodulesStatus): void 
 
 /** True if code index is enabled globally and not disabled for this workspace via config.json. */
 function isCodeIndexEnabledForWorkspace(workspace: string): boolean {
-  if (!isCodeIndexEnabled()) return false;
+  if (!getCodeIndexer().isEnabled()) return false;
   const config = readWorkspaceConfig(workspace);
   return config.code_index_enabled !== false;
 }
@@ -823,7 +823,7 @@ const handlers: Record<string, Handler> = {
     }
 
     if (isCodeIndexEnabledForWorkspace(name)) {
-      indexWorkspace(wsPath).catch((err) => {
+      getCodeIndexer().indexWorkspace(wsPath).catch((err) => {
         console.error(`Code indexing failed for ${name}:`, (err as Error).message);
       });
     }
@@ -947,15 +947,16 @@ const handlers: Record<string, Handler> = {
 
     // Code index status (enabled + index state when enabled)
     const codeIndexEnabled = isCodeIndexEnabledForWorkspace(workspace);
-    let codeIndexState = getIndexStatus(wsPath);
-    const hasIndexData = await hasIndex(wsPath);
+    const indexer = getCodeIndexer();
+    let codeIndexState = indexer.getIndexStatus(wsPath);
+    const hasIndexData = await indexer.hasIndex(wsPath);
     if (
       hasIndexData &&
       codeIndexState.status === 'standby' &&
       codeIndexState.files_total === 0 &&
       codeIndexState.files_processed === 0
     ) {
-      const stats = await getIndexStats(wsPath);
+      const stats = await indexer.getIndexStats(wsPath);
       if (stats) {
         codeIndexState = {
           status: 'indexed',
@@ -1105,7 +1106,7 @@ const handlers: Record<string, Handler> = {
         files_total: 0,
       };
     }
-    const state = await indexWorkspace(wsPath, force);
+    const state = await getCodeIndexer().indexWorkspace(wsPath, { force });
     return state;
   },
 
@@ -1121,8 +1122,9 @@ const handlers: Record<string, Handler> = {
     if (!query.trim()) {
       return { results: [] };
     }
-    if (isCodeIndexEnabledForWorkspace(workspace) && !(await hasIndex(wsPath))) {
-      indexWorkspace(wsPath).catch((err) => {
+    const indexer = getCodeIndexer();
+    if (isCodeIndexEnabledForWorkspace(workspace) && !(await indexer.hasIndex(wsPath))) {
+      indexer.indexWorkspace(wsPath).catch((err) => {
         console.error(`Code indexing failed for ${workspace}:`, (err as Error).message);
       });
       return {
@@ -1131,7 +1133,7 @@ const handlers: Record<string, Handler> = {
           'No index yet. Indexing has been started. Use get_workspace_status to check code_index.status and retry codebase_search when status is indexed.',
       };
     }
-    const results = await searchWorkspace(wsPath, query.trim(), {
+    const results = await indexer.searchWorkspace(wsPath, query.trim(), {
       pathPrefix: pathPrefix?.trim() || undefined,
       limit,
     });
@@ -1150,7 +1152,7 @@ const handlers: Record<string, Handler> = {
     if (!existsSync(wsPath)) {
       throw new Error(`Workspace "${workspace}" does not exist`);
     }
-    const chunks = await listChunksInIndex(wsPath, pathFilter, limit);
+    const chunks = await getCodeIndexer().listChunksInIndex(wsPath, pathFilter, limit);
     const indexStatus = chunks.length > 0 ? 'indexed' : 'none';
     return {
       chunk_count: chunks.length,
@@ -1171,7 +1173,7 @@ const handlers: Record<string, Handler> = {
     if (!existsSync(wsPath)) {
       throw new Error(`Workspace "${workspace}" does not exist`);
     }
-    const chunks = await rechunkFileForDebug(wsPath, relPath, limit);
+    const chunks = await getCodeIndexer().rechunkFileForDebug(wsPath, relPath, limit);
     return {
       chunk_count: chunks.length,
       chunks,

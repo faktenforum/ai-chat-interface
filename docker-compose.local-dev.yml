@@ -386,6 +386,10 @@ services:
       # Run once: cd packages/mcp-linux && npm run build:frontend
       - ./packages/mcp-linux/src:/app/src
       - ./packages/mcp-linux/frontend/.output/public:/app/frontend/.output/public
+      # Mount entire codebase-indexer so all packages are available.
+      # Ensure dist/ is built first: cd dev/codebase-indexer && pnpm build
+      - ./dev/codebase-indexer:/app/codebase-indexer
+      - ./dev/codebase-indexer/packages/core:/app/node_modules/@codebase-indexer/core
     networks:
       - app-net
       - traefik-net

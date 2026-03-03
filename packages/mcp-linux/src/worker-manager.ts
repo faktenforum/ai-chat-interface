@@ -121,12 +121,12 @@ export class WorkerManager {
     // Log worker output
     child.stdout?.on('data', (data: Buffer) => {
       const msg = data.toString().trim();
-      if (msg) logger.debug({ username: mapping.username, stream: 'stdout' }, msg);
+      if (msg) logger.info({ username: mapping.username, stream: 'stdout' }, msg);
     });
 
     child.stderr?.on('data', (data: Buffer) => {
       const msg = data.toString().trim();
-      if (msg) logger.debug({ username: mapping.username, stream: 'stderr' }, msg);
+      if (msg) logger.error({ username: mapping.username, stream: 'stderr' }, msg);
     });
 
     child.on('exit', (code, signal) => {

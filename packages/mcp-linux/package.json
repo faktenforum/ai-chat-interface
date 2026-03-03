@@ -16,17 +16,14 @@
     "build:frontend": "cd frontend && npm install && npm run build"
   },
   "dependencies": {
-    "@lancedb/lancedb": "^0.26.2",
+    "@codebase-indexer/core": "file:../../dev/codebase-indexer/packages/core",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "busboy": "^1.6.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "ignore": "^7.0.5",
     "js-yaml": "^4.1.1",
     "node-pty": "^1.1.0",
     "pino": "^10.3.1",
-    "tree-sitter-wasms": "^0.1.13",
-    "web-tree-sitter": "^0.26.6",
     "zod": "^4.3.6"
   },
   "devDependencies": {
