@@ -25,7 +25,7 @@ export const DeleteWorkspaceSchema = z.object({
   confirm: z.boolean().describe('Must be true to confirm deletion'),
 });
 
-export const GetWorkspaceStatusSchema = z.object({
+export const GetWorkspacesSchema = z.object({
   workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
   summary_only: z
     .boolean()
@@ -46,17 +46,17 @@ const TaskItemSchema = z.object({
   status: TaskStatusSchema.optional().describe('Default: pending.'),
 });
 
-/** Normalized task from set_workspace_plan input (re-export for callers). */
+/** Normalized task from update_workspace input (re-export for callers). */
 export type NormalizedTask = PlanTask;
 
 const TaskUpdateItemSchema = z
   .object({
-    index: z.number().int().min(0).describe('0-based task index from get_workspace_status'),
+    index: z.number().int().min(0).describe('0-based task index from get_workspaces'),
     status: TaskStatusSchema,
   })
   .describe('Partial update: set status of task at index');
 
-export const SetWorkspacePlanSchema = z.object({
+export const UpdateWorkspaceSchema = z.object({
   workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
   plan: z.string().optional().describe('Goal or context for this workspace (replaces existing when provided)'),
   tasks: z
@@ -76,11 +76,8 @@ export const SetWorkspacePlanSchema = z.object({
     .array(TaskUpdateItemSchema)
     .optional()
     .describe(
-      'Partial updates: set status of task at index (0-based). Use to mark tasks done/in_progress without sending the full task list. Indices from get_workspace_status.',
+      'Partial updates: set status of task at index (0-based). Use to mark tasks done/in_progress without sending the full task list. Indices from get_workspaces.',
     ),
-});
-
-export const SetWorkspaceConfigSchema = z.object({
-  workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
-  code_index_enabled: z.boolean().describe('Enable or disable code indexing for this workspace'),
+  code_index_enabled: z.boolean().optional().describe('Enable or disable code indexing for this workspace'),
+  reindex: z.boolean().optional().describe('If true, force rebuild the code index for this workspace'),
 });

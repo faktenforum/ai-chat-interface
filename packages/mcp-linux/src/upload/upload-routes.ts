@@ -9,7 +9,8 @@
 
 import { type Request, type Response } from 'express';
 import type express from 'express';
-import { createWriteStream, existsSync, mkdirSync, chownSync } from 'node:fs';
+import { createWriteStream } from 'node:fs';
+import fs from 'node:fs/promises';
 import { join, resolve, extname, basename } from 'node:path';
 import Busboy from 'busboy';
 import { serveSpaIndex } from '../utils/serve-spa.ts';
@@ -47,18 +48,17 @@ function sanitiseFilename(raw: string): string {
 /**
  * Resolves a non-colliding file path. Appends -1, -2, etc. if needed.
  */
-function resolveFilePath(dir: string, filename: string): string {
+async function resolveFilePath(dir: string, filename: string): Promise<string> {
   let target = join(dir, filename);
-  if (!existsSync(target)) return target;
+  try { await fs.access(target); } catch { return target; }
 
   const ext = extname(filename);
   const stem = filename.slice(0, filename.length - ext.length);
   let counter = 1;
-  while (existsSync(target)) {
+  while (true) {
     target = join(dir, `${stem}-${counter}${ext}`);
-    counter++;
+    try { await fs.access(target); counter++; } catch { return target; }
   }
-  return target;
 }
 
 /**
@@ -188,8 +188,8 @@ export function setupUploadRoutes(
 
     // Ensure uploads directory exists
     try {
-      mkdirSync(uploadsDir, { recursive: true });
-      chownSync(uploadsDir, mapping.uid, mapping.uid);
+      await fs.mkdir(uploadsDir, { recursive: true });
+      await fs.chown(uploadsDir, mapping.uid, mapping.uid);
     } catch (error) {
       logger.error({ error, uploadsDir }, 'Failed to create uploads directory');
       res.status(500).json({ error: 'Failed to prepare upload directory.' });
@@ -213,7 +213,7 @@ export function setupUploadRoutes(
     let uploadError: string | null = null;
 
     const uploadPromise = new Promise<{ filename: string; size: number; path: string } | null>((resolve) => {
-      busboy.on('file', (_fieldname: string, fileStream: NodeJS.ReadableStream, info: { filename: string; encoding: string; mimeType: string }) => {
+      busboy.on('file', (_fieldname: string, fileStream: NodeJS.ReadableStream, info: { filename: string; encoding: string; mimeType: string }) => { void (async () => {
         if (fileProcessed) {
           // Skip additional files
           (fileStream as NodeJS.ReadableStream & { resume: () => void }).resume();
@@ -234,7 +234,7 @@ export function setupUploadRoutes(
           }
         }
 
-        const targetPath = resolveFilePath(uploadsDir, sanitised);
+        const targetPath = await resolveFilePath(uploadsDir, sanitised);
         const finalName = basename(targetPath);
         const writeStream = createWriteStream(targetPath);
         let bytesWritten = 0;
@@ -246,11 +246,8 @@ export function setupUploadRoutes(
         (fileStream as NodeJS.ReadableStream & { on: (event: string, cb: () => void) => void }).on('limit', () => {
           fileTooLarge = true;
           writeStream.destroy();
-          // Clean up partial file
-          try {
-            const fs = require('node:fs');
-            fs.unlinkSync(targetPath);
-          } catch { /* ignore */ }
+          // Clean up partial file (fire-and-forget)
+          fs.unlink(targetPath).catch(() => { /* ignore */ });
         });
 
         fileStream.pipe(writeStream);
@@ -261,12 +258,10 @@ export function setupUploadRoutes(
             return;
           }
 
-          // Set correct ownership
-          try {
-            chownSync(targetPath, mapping.uid, mapping.uid);
-          } catch (error) {
+          // Set correct ownership (fire-and-forget within Promise callback)
+          fs.chown(targetPath, mapping.uid, mapping.uid).catch((error) => {
             logger.warn({ error, targetPath }, 'Failed to chown uploaded file');
-          }
+          });
 
           resolve({
             filename: finalName,
@@ -280,7 +275,7 @@ export function setupUploadRoutes(
           uploadError = 'Failed to write file to disk.';
           resolve(null);
         });
-      });
+      })(); });
 
       busboy.on('error', (error: Error) => {
         logger.error({ error }, 'Busboy parsing error');

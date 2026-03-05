@@ -11,9 +11,10 @@
  */
 
 import { createServer, type Socket } from 'node:net';
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, statSync, rmSync, unlinkSync } from 'node:fs';
+import fs from 'node:fs/promises';
 import { join, resolve, dirname, relative } from 'node:path';
-import { execSync, spawn, spawnSync } from 'node:child_process';
+import { execFile as execFileCb, spawn } from 'node:child_process';
+import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import { getDefaultGitIdentity } from './utils/git-config.ts';
 import { validateWorkspaceName, validateTerminalId } from './utils/security.ts';
@@ -33,6 +34,8 @@ import {
   LIST_WORKSPACES_PLAN_PREVIEW_LEN,
 } from './workspace-plan.ts';
 import { createFromEnv, type CodeIndexer } from '@codebase-indexer/core';
+
+const execFile = promisify(execFileCb);
 
 // Lazy-initialized code indexer instance (created on first use)
 let _codeIndexer: CodeIndexer | null = null;
@@ -90,7 +93,7 @@ async function getPty(): Promise<typeof import('node-pty')> {
 async function createTerminal(workspace: string, terminalId?: string): Promise<string> {
   const pty = await getPty();
   const id = terminalId || randomUUID().slice(0, 8);
-  
+
   // Validate ID if provided
   if (terminalId) {
     const error = validateTerminalId(terminalId);
@@ -99,7 +102,9 @@ async function createTerminal(workspace: string, terminalId?: string): Promise<s
 
   const cwd = resolveWorkspacePath(workspace);
 
-  if (!existsSync(cwd)) {
+  try {
+    await fs.access(cwd);
+  } catch {
     throw new Error(`Workspace directory does not exist: ${workspace}`);
   }
 
@@ -166,78 +171,72 @@ function getPlanDir(workspace: string): string {
   return join(resolveWorkspacePath(workspace), PLAN_DIR);
 }
 
-function readPlanData(workspace: string): PlanData {
+async function readPlanData(workspace: string): Promise<PlanData> {
   const dir = getPlanDir(workspace);
   let plan: string | null = null;
   const planPath = join(dir, PLAN_MD_FILENAME);
-  if (existsSync(planPath)) {
-    try {
-      const raw = readFileSync(planPath, 'utf-8').trim();
-      plan = raw.length > 0 ? raw : null;
-    } catch {
-      /* ignore read error */
-    }
+  try {
+    const raw = (await fs.readFile(planPath, 'utf-8')).trim();
+    plan = raw.length > 0 ? raw : null;
+  } catch {
+    /* file not found or read error */
   }
 
   let tasks: PlanTask[] = [];
   const tasksPath = join(dir, TASKS_FILENAME);
-  if (existsSync(tasksPath)) {
-    try {
-      const raw = readFileSync(tasksPath, 'utf-8');
-      const data = JSON.parse(raw) as unknown;
-      const arr =
-        data != null && typeof data === 'object' && !Array.isArray(data) && 'tasks' in data && Array.isArray((data as { tasks: unknown }).tasks)
-          ? (data as { tasks: unknown[] }).tasks
-          : Array.isArray(data)
-            ? data
-            : [];
-      tasks = arr
-        .filter(
-          (t): t is Record<string, unknown> =>
-            t != null && typeof t === 'object' && typeof (t as Record<string, unknown>).title === 'string',
-        )
-        .map((t): PlanTask => {
-          const title = String(t.title);
-          const status = taskStatusFrom(t.status, t.done === true);
-          return { title, status };
-        });
-    } catch {
-      /* parse or read error */
-    }
+  try {
+    const raw = await fs.readFile(tasksPath, 'utf-8');
+    const data = JSON.parse(raw) as unknown;
+    const arr =
+      data != null && typeof data === 'object' && !Array.isArray(data) && 'tasks' in data && Array.isArray((data as { tasks: unknown }).tasks)
+        ? (data as { tasks: unknown[] }).tasks
+        : Array.isArray(data)
+          ? data
+          : [];
+    tasks = arr
+      .filter(
+        (t): t is Record<string, unknown> =>
+          t != null && typeof t === 'object' && typeof (t as Record<string, unknown>).title === 'string',
+      )
+      .map((t): PlanTask => {
+        const title = String(t.title);
+        const status = taskStatusFrom(t.status, t.done === true);
+        return { title, status };
+      });
+  } catch {
+    /* parse or read error */
   }
   return { plan, tasks };
 }
 
-function readInstructionsFile(workspace: string): string | null {
+async function readInstructionsFile(workspace: string): Promise<string | null> {
   const path = join(resolveWorkspacePath(workspace), AGENTS_MD_FILENAME);
-  if (!existsSync(path)) return null;
   try {
-    const raw = readFileSync(path, 'utf-8').trim();
+    const raw = (await fs.readFile(path, 'utf-8')).trim();
     return raw.length > 0 ? raw : null;
   } catch {
     return null;
   }
 }
 
-function writePlanData(workspace: string, data: PlanData): void {
+async function writePlanData(workspace: string, data: PlanData): Promise<void> {
   const dir = getPlanDir(workspace);
-  mkdirSync(dir, { recursive: true });
+  await fs.mkdir(dir, { recursive: true });
 
   const planPath = join(dir, PLAN_MD_FILENAME);
   if (data.plan != null && data.plan.length > 0) {
-    writeFileSync(planPath, data.plan, 'utf-8');
-  } else if (existsSync(planPath)) {
-    unlinkSync(planPath);
+    await fs.writeFile(planPath, data.plan, 'utf-8');
+  } else {
+    try { await fs.unlink(planPath); } catch { /* ignore */ }
   }
 
-  writeFileSync(join(dir, TASKS_FILENAME), JSON.stringify({ tasks: data.tasks }, null, 2), 'utf-8');
+  await fs.writeFile(join(dir, TASKS_FILENAME), JSON.stringify({ tasks: data.tasks }, null, 2), 'utf-8');
 }
 
-function readWorkspaceConfig(workspace: string): WorkspaceConfig {
+async function readWorkspaceConfig(workspace: string): Promise<WorkspaceConfig> {
   const path = join(getPlanDir(workspace), CONFIG_FILENAME);
-  if (!existsSync(path)) return {};
   try {
-    const raw = readFileSync(path, 'utf-8');
+    const raw = await fs.readFile(path, 'utf-8');
     const data = JSON.parse(raw) as unknown;
     if (data != null && typeof data === 'object' && !Array.isArray(data)) {
       const obj = data as Record<string, unknown>;
@@ -252,17 +251,16 @@ function readWorkspaceConfig(workspace: string): WorkspaceConfig {
   return {};
 }
 
-function writeWorkspaceConfig(workspace: string, config: WorkspaceConfig): void {
+async function writeWorkspaceConfig(workspace: string, config: WorkspaceConfig): Promise<void> {
   const dir = getPlanDir(workspace);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, CONFIG_FILENAME), JSON.stringify(config, null, 2), 'utf-8');
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(join(dir, CONFIG_FILENAME), JSON.stringify(config, null, 2), 'utf-8');
 }
 
-function readSubmodulesStatus(workspace: string): SubmodulesStatus | null {
+async function readSubmodulesStatus(workspace: string): Promise<SubmodulesStatus | null> {
   const path = join(getPlanDir(workspace), SUBMODULES_STATUS_FILENAME);
-  if (!existsSync(path)) return null;
   try {
-    const raw = readFileSync(path, 'utf-8');
+    const raw = await fs.readFile(path, 'utf-8');
     const data = JSON.parse(raw) as unknown;
     if (data != null && typeof data === 'object' && !Array.isArray(data)) {
       const obj = data as Record<string, unknown>;
@@ -286,10 +284,10 @@ function readSubmodulesStatus(workspace: string): SubmodulesStatus | null {
   return null;
 }
 
-function writeSubmodulesStatus(workspace: string, data: SubmodulesStatus): void {
+async function writeSubmodulesStatus(workspace: string, data: SubmodulesStatus): Promise<void> {
   const dir = getPlanDir(workspace);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(
     join(dir, SUBMODULES_STATUS_FILENAME),
     JSON.stringify(data, null, 0),
     'utf-8',
@@ -297,9 +295,9 @@ function writeSubmodulesStatus(workspace: string, data: SubmodulesStatus): void 
 }
 
 /** True if code index is enabled globally and not disabled for this workspace via config.json. */
-function isCodeIndexEnabledForWorkspace(workspace: string): boolean {
+async function isCodeIndexEnabledForWorkspace(workspace: string): Promise<boolean> {
   if (!getCodeIndexer().isEnabled()) return false;
-  const config = readWorkspaceConfig(workspace);
+  const config = await readWorkspaceConfig(workspace);
   return config.code_index_enabled !== false;
 }
 
@@ -323,7 +321,7 @@ function escapeForDoubleQuotedShell(path: string): string {
   return path.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
-function getGitMetadata(workspace: string): { branch: string; dirty: boolean } {
+async function getGitMetadata(workspace: string): Promise<{ branch: string; dirty: boolean }> {
   // Validate workspace name to prevent path traversal
   const error = validateWorkspaceName(workspace);
   if (error) return { branch: 'main', dirty: false };
@@ -333,22 +331,21 @@ function getGitMetadata(workspace: string): { branch: string; dirty: boolean } {
   let dirty = false;
 
   try {
-    branch = execSync('git rev-parse --abbrev-ref HEAD 2>/dev/null', {
+    const { stdout } = await execFile('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
       cwd,
-      encoding: 'utf-8',
       timeout: 5000,
-    }).trim() || 'main';
+    });
+    branch = stdout.trim() || 'main';
   } catch {
     // Not a git repo or no commits
   }
 
   try {
-    const status = execSync('git status --porcelain 2>/dev/null', {
+    const { stdout } = await execFile('git', ['status', '--porcelain'], {
       cwd,
-      encoding: 'utf-8',
       timeout: 5000,
-    }).trim();
-    dirty = status.length > 0;
+    });
+    dirty = stdout.trim().length > 0;
   } catch {
     // Not a git repo
   }
@@ -361,11 +358,16 @@ const DEFAULT_STATUS_COLLAPSE_DIRS = 'uploads,venv,.venv';
 
 const DEFAULT_GITIGNORE = 'uploads/\nvenv/\n.venv/\n';
 
-function ensureDefaultGitignore(wsPath: string): void {
+async function ensureDefaultGitignore(wsPath: string): Promise<void> {
   const gitignorePath = join(wsPath, '.gitignore');
-  if (existsSync(gitignorePath)) return;
   try {
-    writeFileSync(gitignorePath, DEFAULT_GITIGNORE, 'utf-8');
+    await fs.access(gitignorePath);
+    return; // already exists
+  } catch {
+    // does not exist, create it
+  }
+  try {
+    await fs.writeFile(gitignorePath, DEFAULT_GITIGNORE, 'utf-8');
   } catch {
     // Non-fatal
   }
@@ -452,28 +454,75 @@ function capAndCollapseStatusLists(
  * Deletes files in uploadsDir older than olderThanDays (0 = delete all).
  * Removes empty subdirs. Returns number of files deleted.
  */
-function purgeUploadsByAge(uploadsDir: string, olderThanDays: number): number {
+async function purgeUploadsByAge(uploadsDir: string, olderThanDays: number): Promise<number> {
   const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
   let deleted = 0;
-  const entries = readdirSync(uploadsDir, { withFileTypes: true });
+  const entries = await fs.readdir(uploadsDir, { withFileTypes: true });
   for (const entry of entries) {
     const full = join(uploadsDir, entry.name);
     if (entry.isDirectory()) {
-      deleted += purgeUploadsByAge(full, olderThanDays);
+      deleted += await purgeUploadsByAge(full, olderThanDays);
       try {
-        if (readdirSync(full).length === 0) rmSync(full, { recursive: true });
+        const remaining = await fs.readdir(full);
+        if (remaining.length === 0) await fs.rm(full, { recursive: true });
       } catch { /* ignore */ }
     } else {
       try {
-        const mtime = statSync(full).mtimeMs;
-        if (olderThanDays === 0 || mtime < cutoff) {
-          unlinkSync(full);
+        const stat = await fs.stat(full);
+        if (olderThanDays === 0 || stat.mtimeMs < cutoff) {
+          await fs.unlink(full);
           deleted++;
         }
       } catch { /* ignore */ }
     }
   }
   return deleted;
+}
+
+/**
+ * Spawns a child process with a timeout, returning stdout/stderr.
+ * Used for long-running operations like git clone.
+ */
+function spawnWithTimeout(
+  command: string,
+  args: string[],
+  options: { timeout?: number; cwd?: string } = {},
+): Promise<{ stdout: string; stderr: string }> {
+  const { timeout = 120000, cwd } = options;
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let stdout = '';
+    let stderr = '';
+    let killed = false;
+
+    const timer = setTimeout(() => {
+      killed = true;
+      child.kill('SIGTERM');
+    }, timeout);
+
+    child.stdout?.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
+    child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+
+    child.on('exit', (code, signal) => {
+      clearTimeout(timer);
+      if (killed) {
+        reject(new Error(`Process timed out after ${timeout}ms`));
+      } else if (code !== 0) {
+        reject(new Error(stderr || `Process exited with code ${code ?? signal}`));
+      } else {
+        resolve({ stdout, stderr });
+      }
+    });
+  });
 }
 
 // ── Request Handlers ─────────────────────────────────────────────────────────
@@ -552,10 +601,8 @@ const handlers: Record<string, Handler> = {
 
     let cwd = workspaceRoot;
     try {
-      if (existsSync(cwdFile)) {
-        cwd = readFileSync(cwdFile, 'utf-8').trim() || workspaceRoot;
-        unlinkSync(cwdFile);
-      }
+      cwd = (await fs.readFile(cwdFile, 'utf-8')).trim() || workspaceRoot;
+      await fs.unlink(cwdFile);
     } catch {
       // Keep workspaceRoot as fallback
     }
@@ -563,7 +610,7 @@ const handlers: Record<string, Handler> = {
     const cwdRelative =
       cwd === workspaceRoot ? '' : relative(workspaceRoot, cwd).replace(/^\//, '') || '';
 
-    const meta = getGitMetadata(workspace);
+    const meta = await getGitMetadata(workspace);
 
     return {
       terminal_id: terminalId,
@@ -590,7 +637,7 @@ const handlers: Record<string, Handler> = {
 
     const fullOutput = session.output.join('');
     const slice = length ? fullOutput.slice(offset, offset + length) : fullOutput.slice(offset);
-    const meta = getGitMetadata(session.workspace);
+    const meta = await getGitMetadata(session.workspace);
 
     return {
       terminal_id: terminalId,
@@ -633,7 +680,7 @@ const handlers: Record<string, Handler> = {
     });
 
     const newOutput = session.output.slice(outputBefore).join('');
-    const meta = getGitMetadata(session.workspace);
+    const meta = await getGitMetadata(session.workspace);
 
     return {
       terminal_id: terminalId,
@@ -680,35 +727,37 @@ const handlers: Record<string, Handler> = {
   // Workspace Tools ───────────────────────────────────────────────────────────
 
   async list_workspaces() {
-    if (!existsSync(workspacesDir)) {
+    let entries;
+    try {
+      entries = await fs.readdir(workspacesDir, { withFileTypes: true });
+    } catch {
       return { workspaces: [] };
     }
 
-    const entries = readdirSync(workspacesDir, { withFileTypes: true });
     const workspaces = [];
 
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
 
       const wsPath = join(workspacesDir, entry.name);
-      
+
       // Skip invalid workspace names (e.g. hidden files)
       if (validateWorkspaceName(entry.name)) continue;
 
-      const meta = getGitMetadata(entry.name);
+      const meta = await getGitMetadata(entry.name);
 
       let remoteUrl = '';
       try {
-        remoteUrl = execSync('git remote get-url origin 2>/dev/null', {
+        const { stdout } = await execFile('git', ['remote', 'get-url', 'origin'], {
           cwd: wsPath,
-          encoding: 'utf-8',
           timeout: 5000,
-        }).trim();
+        });
+        remoteUrl = stdout.trim();
       } catch {
         // No remote
       }
 
-      const { plan } = readPlanData(entry.name);
+      const { plan } = await readPlanData(entry.name);
       const normalized = plan != null && plan.length > 0 ? plan.replace(/\s+/g, ' ').trim() : '';
       const plan_preview =
         normalized.length > 0
@@ -742,10 +791,14 @@ const handlers: Record<string, Handler> = {
 
     const wsPath = join(workspacesDir, name);
 
-    if (existsSync(wsPath)) {
+    try {
+      await fs.access(wsPath);
       throw new Error(
-        `Workspace "${name}" already exists. Call list_workspaces to see existing workspaces; use get_workspace_status("${name}") to continue in it.`,
+        `Workspace "${name}" already exists. Call list_workspaces to see existing workspaces; use get_workspaces("${name}") to continue in it.`,
       );
+    } catch (e) {
+      if (e instanceof Error && e.message.includes('already exists')) throw e;
+      // ENOENT: does not exist, proceed
     }
 
     if (gitUrl) {
@@ -758,23 +811,17 @@ const handlers: Record<string, Handler> = {
         throw new Error('Branch name cannot start with -');
       }
 
-      const result = spawnSync(
+      await spawnWithTimeout(
         'git',
         ['clone', '--branch', branch, gitUrl, wsPath],
-        {
-          stdio: 'pipe',
-          timeout: 120000,
-          encoding: 'utf-8',
-        },
+        { timeout: 120000 },
       );
-      if (result.status !== 0) {
-        throw new Error(`Git clone failed: ${result.stderr}`);
-      }
 
       // If repo has submodules, update them in background
       const gitmodulesPath = join(wsPath, '.gitmodules');
-      if (existsSync(gitmodulesPath)) {
-        writeSubmodulesStatus(name, { status: 'updating', message: '' });
+      try {
+        await fs.access(gitmodulesPath);
+        await writeSubmodulesStatus(name, { status: 'updating', message: '' });
         const child = spawn('git', ['submodule', 'update', '--init', '--recursive'], {
           cwd: wsPath,
           stdio: ['ignore', 'pipe', 'pipe'],
@@ -785,31 +832,32 @@ const handlers: Record<string, Handler> = {
         });
         child.on('exit', (code, signal) => {
           if (code === 0) {
-            writeSubmodulesStatus(name, { status: 'done', message: '' });
+            writeSubmodulesStatus(name, { status: 'done', message: '' }).catch(() => {});
           } else {
             const msg = stderr.trim() || `exit ${code ?? signal}`;
-            writeSubmodulesStatus(name, { status: 'error', message: msg });
+            writeSubmodulesStatus(name, { status: 'error', message: msg }).catch(() => {});
           }
         });
         child.on('error', (err) => {
-          writeSubmodulesStatus(name, { status: 'error', message: err.message });
+          writeSubmodulesStatus(name, { status: 'error', message: err.message }).catch(() => {});
         });
+      } catch {
+        // No .gitmodules
       }
     } else {
       // Create empty repo
-      mkdirSync(wsPath, { recursive: true });
-      const { name: gitName, email: gitEmail } = getDefaultGitIdentity();
-      
+      await fs.mkdir(wsPath, { recursive: true });
+      const { name: gitName, email: gitEmail } = await getDefaultGitIdentity();
+
       if (branch.startsWith('-')) {
         throw new Error('Branch name cannot start with -');
       }
 
-      // Use spawnSync for safety instead of execSync with shell string
-      spawnSync('git', ['init', '-b', branch], { cwd: wsPath, stdio: 'ignore' });
-      spawnSync('git', ['config', 'user.email', gitEmail], { cwd: wsPath, stdio: 'ignore' });
-      spawnSync('git', ['config', 'user.name', gitName], { cwd: wsPath, stdio: 'ignore' });
+      await execFile('git', ['init', '-b', branch], { cwd: wsPath });
+      await execFile('git', ['config', 'user.email', gitEmail], { cwd: wsPath });
+      await execFile('git', ['config', 'user.name', gitName], { cwd: wsPath });
     }
-    ensureDefaultGitignore(wsPath);
+    await ensureDefaultGitignore(wsPath);
 
     const defaultConfig = params.default_workspace_config as { code_index_enabled?: boolean } | undefined;
     if (defaultConfig != null && typeof defaultConfig === 'object') {
@@ -818,24 +866,24 @@ const handlers: Record<string, Handler> = {
         workspaceConfig.code_index_enabled = defaultConfig.code_index_enabled;
       }
       if (Object.keys(workspaceConfig).length > 0) {
-        writeWorkspaceConfig(name, workspaceConfig);
+        await writeWorkspaceConfig(name, workspaceConfig);
       }
     }
 
-    if (isCodeIndexEnabledForWorkspace(name)) {
+    if (await isCodeIndexEnabledForWorkspace(name)) {
       getCodeIndexer().indexWorkspace(wsPath).catch((err) => {
         console.error(`Code indexing failed for ${name}:`, (err as Error).message);
       });
     }
 
-    const meta = getGitMetadata(name);
+    const meta = await getGitMetadata(name);
     let remoteUrl = '';
     try {
-      remoteUrl = execSync('git remote get-url origin 2>/dev/null', {
+      const { stdout } = await execFile('git', ['remote', 'get-url', 'origin'], {
         cwd: wsPath,
-        encoding: 'utf-8',
         timeout: 5000,
-      }).trim();
+      });
+      remoteUrl = stdout.trim();
     } catch {
       // No remote
     }
@@ -860,24 +908,28 @@ const handlers: Record<string, Handler> = {
     }
 
     const wsPath = resolveWorkspacePath(name);
-    if (!existsSync(wsPath)) {
+    try {
+      await fs.access(wsPath);
+    } catch {
       throw new Error(`Workspace "${name}" does not exist`);
     }
 
-    rmSync(wsPath, { recursive: true, force: true });
+    await fs.rm(wsPath, { recursive: true, force: true });
     return { deleted: name };
   },
 
-  async get_workspace_status(params) {
+  async get_workspaces(params) {
     const workspace = (params.workspace as string) || 'default';
     const summaryOnly = (params.summary_only as boolean) === true;
     const wsPath = resolveWorkspacePath(workspace);
 
-    if (!existsSync(wsPath)) {
+    try {
+      await fs.access(wsPath);
+    } catch {
       throw new Error(`Workspace "${workspace}" does not exist`);
     }
 
-    const meta = getGitMetadata(workspace);
+    const meta = await getGitMetadata(workspace);
 
     // Get detailed git status
     let statusOutput = '';
@@ -885,21 +937,24 @@ const handlers: Record<string, Handler> = {
     let remoteUrl = '';
 
     try {
-      statusOutput = execSync('git status --porcelain 2>/dev/null', {
-        cwd: wsPath, encoding: 'utf-8', timeout: 5000,
-      }).trim();
+      const { stdout } = await execFile('git', ['status', '--porcelain'], {
+        cwd: wsPath, timeout: 5000,
+      });
+      statusOutput = stdout.trim();
     } catch { /* not a git repo */ }
 
     try {
-      aheadBehind = execSync('git rev-list --left-right --count HEAD...@{upstream} 2>/dev/null', {
-        cwd: wsPath, encoding: 'utf-8', timeout: 5000,
-      }).trim();
+      const { stdout } = await execFile('git', ['rev-list', '--left-right', '--count', 'HEAD...@{upstream}'], {
+        cwd: wsPath, timeout: 5000,
+      });
+      aheadBehind = stdout.trim();
     } catch { /* no upstream */ }
 
     try {
-      remoteUrl = execSync('git remote get-url origin 2>/dev/null', {
-        cwd: wsPath, encoding: 'utf-8', timeout: 5000,
-      }).trim();
+      const { stdout } = await execFile('git', ['remote', 'get-url', 'origin'], {
+        cwd: wsPath, timeout: 5000,
+      });
+      remoteUrl = stdout.trim();
     } catch { /* no remote */ }
 
     // Parse status
@@ -930,15 +985,19 @@ const handlers: Record<string, Handler> = {
       behind = parseInt(parts[1] || '0', 10);
     }
 
-    const { plan, tasks } = readPlanData(workspace);
-    const instructions = readInstructionsFile(workspace);
+    const { plan, tasks } = await readPlanData(workspace);
+    const instructions = await readInstructionsFile(workspace);
 
     const capped = capAndCollapseStatusLists(staged, unstaged, untracked);
-    const config = readWorkspaceConfig(workspace);
+    const config = await readWorkspaceConfig(workspace);
 
     // Submodules status
-    const submodulesStatusFile = readSubmodulesStatus(workspace);
-    const hasGitmodules = existsSync(join(wsPath, '.gitmodules'));
+    const submodulesStatusFile = await readSubmodulesStatus(workspace);
+    let hasGitmodules = false;
+    try {
+      await fs.access(join(wsPath, '.gitmodules'));
+      hasGitmodules = true;
+    } catch { /* no .gitmodules */ }
     const submodules =
       submodulesStatusFile ??
       (hasGitmodules
@@ -946,7 +1005,7 @@ const handlers: Record<string, Handler> = {
         : ({ status: 'none' as const, message: '' } satisfies SubmodulesStatus));
 
     // Code index status (enabled + index state when enabled)
-    const codeIndexEnabled = isCodeIndexEnabledForWorkspace(workspace);
+    const codeIndexEnabled = await isCodeIndexEnabledForWorkspace(workspace);
     const indexer = getCodeIndexer();
     let codeIndexState = indexer.getIndexStatus(wsPath);
     const hasIndexData = await indexer.hasIndex(wsPath);
@@ -1029,64 +1088,83 @@ const handlers: Record<string, Handler> = {
     };
   },
 
-  async set_workspace_config(params) {
+  async update_workspace(params) {
     const workspace = (params.workspace as string) || 'default';
     const wsPath = resolveWorkspacePath(workspace);
 
-    if (!existsSync(wsPath)) {
+    try {
+      await fs.access(wsPath);
+    } catch {
       throw new Error(`Workspace "${workspace}" does not exist`);
     }
 
-    const current = readWorkspaceConfig(workspace);
+    const result: Record<string, unknown> = {};
+
+    // --- Config updates (first, so reindex sees new state) ---
     const codeIndexEnabled = params.code_index_enabled as boolean | undefined;
-
-    const next: WorkspaceConfig = { ...current };
     if (codeIndexEnabled !== undefined) {
-      next.code_index_enabled = codeIndexEnabled;
-    }
-    writeWorkspaceConfig(workspace, next);
-    return { config: next };
-  },
-
-  async set_workspace_plan(params) {
-    const workspace = (params.workspace as string) || 'default';
-    const wsPath = resolveWorkspacePath(workspace);
-
-    if (!existsSync(wsPath)) {
-      throw new Error(`Workspace "${workspace}" does not exist`);
+      const current = await readWorkspaceConfig(workspace);
+      const next: WorkspaceConfig = { ...current, code_index_enabled: codeIndexEnabled };
+      await writeWorkspaceConfig(workspace, next);
+      result.config = next;
     }
 
-    const current = readPlanData(workspace);
+    // --- Plan/tasks updates ---
     const planProvided = params.plan !== undefined && params.plan !== null;
     const tasksProvided = params.tasks !== undefined && Array.isArray(params.tasks);
     const taskUpdates = params.task_updates as Array<{ index: number; status: string }> | undefined;
     const hasTaskUpdates = taskUpdates != null && taskUpdates.length > 0;
 
-    const nextPlan = planProvided ? (params.plan as string) : current.plan;
-    let nextTasks: PlanTask[];
-    if (hasTaskUpdates) {
-      nextTasks = applyTaskUpdates(current.tasks, taskUpdates);
-    } else if (tasksProvided) {
-      nextTasks = (params.tasks as PlanTask[]).map((t): PlanTask => ({
-        title: String(t.title),
-        status: isTaskStatus(t.status) ? t.status : 'pending',
-      }));
-    } else {
-      nextTasks = current.tasks;
+    if (planProvided || tasksProvided || hasTaskUpdates) {
+      const current = await readPlanData(workspace);
+      const nextPlan = planProvided ? (params.plan as string) : current.plan;
+      let nextTasks: PlanTask[];
+      if (hasTaskUpdates) {
+        nextTasks = applyTaskUpdates(current.tasks, taskUpdates);
+      } else if (tasksProvided) {
+        nextTasks = (params.tasks as PlanTask[]).map((t): PlanTask => ({
+          title: String(t.title),
+          status: isTaskStatus(t.status) ? t.status : 'pending',
+        }));
+      } else {
+        nextTasks = current.tasks;
+      }
+      const data: PlanData = { plan: nextPlan, tasks: nextTasks };
+      await writePlanData(workspace, data);
+      result.plan = data.plan;
+      result.tasks = data.tasks;
     }
 
-    const data: PlanData = { plan: nextPlan, tasks: nextTasks };
-    writePlanData(workspace, data);
+    // --- Reindex action ---
+    if (params.reindex === true) {
+      if (!(await isCodeIndexEnabledForWorkspace(workspace))) {
+        result.reindex = { status: 'skipped', message: 'Code index is disabled for this workspace' };
+      } else {
+        const state = await getCodeIndexer().indexWorkspace(wsPath, { force: true });
+        result.reindex = state;
+      }
+    }
 
-    return { plan: data.plan, tasks: data.tasks };
+    // If nothing was updated, return current state
+    if (Object.keys(result).length === 0) {
+      const config = await readWorkspaceConfig(workspace);
+      const { plan, tasks } = await readPlanData(workspace);
+      return { config, plan, tasks };
+    }
+
+    return result;
   },
 
   async clean_workspace_uploads(params) {
     const workspace = (params.workspace as string) || 'default';
     const olderThanDays = typeof params.olderThanDays === 'number' ? params.olderThanDays : 7;
     const uploadsDir = join(workspacesDir, workspace, 'uploads');
-    if (!existsSync(uploadsDir)) return { deleted: 0 };
-    return { deleted: purgeUploadsByAge(uploadsDir, olderThanDays) };
+    try {
+      await fs.access(uploadsDir);
+    } catch {
+      return { deleted: 0 };
+    }
+    return { deleted: await purgeUploadsByAge(uploadsDir, olderThanDays) };
   },
 
   // Code Index ─────────────────────────────────────────────────────────────────
@@ -1095,10 +1173,12 @@ const handlers: Record<string, Handler> = {
     const workspace = (params.workspace as string) || 'default';
     const force = params.force === true;
     const wsPath = resolveWorkspacePath(workspace);
-    if (!existsSync(wsPath)) {
+    try {
+      await fs.access(wsPath);
+    } catch {
       throw new Error(`Workspace "${workspace}" does not exist`);
     }
-    if (!isCodeIndexEnabledForWorkspace(workspace)) {
+    if (!(await isCodeIndexEnabledForWorkspace(workspace))) {
       return {
         status: 'standby',
         message: 'Code index disabled (global or workspace config)',
@@ -1116,21 +1196,23 @@ const handlers: Record<string, Handler> = {
     const pathPrefix = params.path as string | undefined;
     const limit = typeof params.limit === 'number' ? params.limit : undefined;
     const wsPath = resolveWorkspacePath(workspace);
-    if (!existsSync(wsPath)) {
+    try {
+      await fs.access(wsPath);
+    } catch {
       throw new Error(`Workspace "${workspace}" does not exist`);
     }
     if (!query.trim()) {
       return { results: [] };
     }
     const indexer = getCodeIndexer();
-    if (isCodeIndexEnabledForWorkspace(workspace) && !(await indexer.hasIndex(wsPath))) {
+    if ((await isCodeIndexEnabledForWorkspace(workspace)) && !(await indexer.hasIndex(wsPath))) {
       indexer.indexWorkspace(wsPath).catch((err) => {
         console.error(`Code indexing failed for ${workspace}:`, (err as Error).message);
       });
       return {
         results: [],
         message:
-          'No index yet. Indexing has been started. Use get_workspace_status to check code_index.status and retry codebase_search when status is indexed.',
+          'No index yet. Indexing has been started. Use get_workspaces to check code_index.status and retry codebase_search when status is indexed.',
       };
     }
     const results = await indexer.searchWorkspace(wsPath, query.trim(), {
@@ -1149,7 +1231,9 @@ const handlers: Record<string, Handler> = {
       return { chunk_count: 0, chunks: [], index_status: 'none' };
     }
     const wsPath = resolveWorkspacePath(workspace);
-    if (!existsSync(wsPath)) {
+    try {
+      await fs.access(wsPath);
+    } catch {
       throw new Error(`Workspace "${workspace}" does not exist`);
     }
     const chunks = await getCodeIndexer().listChunksInIndex(wsPath, pathFilter, limit);
@@ -1170,7 +1254,9 @@ const handlers: Record<string, Handler> = {
       return { chunk_count: 0, chunks: [] };
     }
     const wsPath = resolveWorkspacePath(workspace);
-    if (!existsSync(wsPath)) {
+    try {
+      await fs.access(wsPath);
+    } catch {
       throw new Error(`Workspace "${workspace}" does not exist`);
     }
     const chunks = await getCodeIndexer().rechunkFileForDebug(wsPath, relPath, limit);
@@ -1183,14 +1269,22 @@ const handlers: Record<string, Handler> = {
   async clean_all_workspace_uploads(params) {
     const olderThanDays = typeof params.olderThanDays === 'number' ? params.olderThanDays : 7;
     let totalDeleted = 0;
-    if (!existsSync(workspacesDir)) return { deleted: 0 };
-    const entries = readdirSync(workspacesDir, { withFileTypes: true });
+    let entries;
+    try {
+      entries = await fs.readdir(workspacesDir, { withFileTypes: true });
+    } catch {
+      return { deleted: 0 };
+    }
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       if (validateWorkspaceName(entry.name)) continue;
       const uploadsDir = join(workspacesDir, entry.name, 'uploads');
-      if (!existsSync(uploadsDir)) continue;
-      totalDeleted += purgeUploadsByAge(uploadsDir, olderThanDays);
+      try {
+        await fs.access(uploadsDir);
+      } catch {
+        continue;
+      }
+      totalDeleted += await purgeUploadsByAge(uploadsDir, olderThanDays);
     }
     return { deleted: totalDeleted };
   },
@@ -1200,20 +1294,34 @@ const handlers: Record<string, Handler> = {
   async get_system_runtimes() {
     const runtimes: Record<string, string> = {};
 
-    const checks: Array<[string, string]> = [
-      ['node', 'node --version'],
-      ['npm', 'npm --version'],
-      ['python3', 'python3 --version'],
-      ['pip3', 'pip3 --version'],
-      ['git', 'git --version'],
-      ['bash', 'bash --version | head -1'],
-      ['rg', 'rg --version | head -1'],
+    const checks: Array<[string, string, string[]]> = [
+      ['node', 'node', ['--version']],
+      ['npm', 'npm', ['--version']],
+      ['python3', 'python3', ['--version']],
+      ['pip3', 'pip3', ['--version']],
+      ['git', 'git', ['--version']],
+      ['bash', 'bash', ['--version']],
+      ['rg', 'rg', ['--version']],
     ];
 
-    for (const [name, cmd] of checks) {
-      try {
-        runtimes[name] = execSync(cmd, { encoding: 'utf-8', timeout: 5000 }).trim();
-      } catch {
+    const results = await Promise.allSettled(
+      checks.map(async ([name, cmd, args]) => {
+        const { stdout } = await execFile(cmd, args, { timeout: 5000 });
+        // Take first line only (equivalent to `| head -1` for bash/rg)
+        const firstLine = stdout.trim().split('\n')[0] || '';
+        return [name, firstLine] as [string, string];
+      }),
+    );
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        const [name, version] = result.value;
+        runtimes[name] = version;
+      }
+    }
+    // Fill in missing with 'not installed'
+    for (const [name] of checks) {
+      if (!(name in runtimes)) {
         runtimes[name] = 'not installed';
       }
     }
@@ -1275,14 +1383,12 @@ async function processRequest(request: { id: string; method: string; params: Rec
 /**
  * Starts the IPC server
  */
-function startServer(): void {
+async function startServer(): Promise<void> {
   const socketDir = dirname(socketPath);
-  mkdirSync(socketDir, { recursive: true });
+  await fs.mkdir(socketDir, { recursive: true });
 
   // Clean up stale socket
-  if (existsSync(socketPath)) {
-    try { unlinkSync(socketPath); } catch { /* ignore */ }
-  }
+  try { await fs.unlink(socketPath); } catch { /* ignore */ }
 
   const server = createServer(handleConnection);
 
@@ -1310,7 +1416,15 @@ function startServer(): void {
   process.on('SIGINT', shutdown);
 }
 
-// Ensure workspaces directory exists
-mkdirSync(workspacesDir, { recursive: true });
+// ── Main ─────────────────────────────────────────────────────────────────────
 
-startServer();
+async function main(): Promise<void> {
+  // Ensure workspaces directory exists
+  await fs.mkdir(workspacesDir, { recursive: true });
+  await startServer();
+}
+
+main().catch((err) => {
+  console.error('Worker failed to start:', err);
+  process.exit(1);
+});

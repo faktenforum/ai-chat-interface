@@ -8,7 +8,8 @@
 
 import { type Request, type Response } from 'express';
 import type express from 'express';
-import { createReadStream, existsSync } from 'node:fs';
+import { createReadStream } from 'node:fs';
+import fs from 'node:fs/promises';
 import { logger } from '../utils/logger.ts';
 import type { DownloadManager } from './download-manager.ts';
 
@@ -36,7 +37,7 @@ export function setupDownloadRoutes(
   }
 
   // ── GET /download/:token — stream the file ─────────────────────────────────
-  app.get('/download/:token', (req: Request, res: Response) => {
+  app.get('/download/:token', async (req: Request, res: Response) => {
     const token = paramString(req.params.token);
     const session = downloadManager.getSession(token);
 
@@ -61,7 +62,9 @@ export function setupDownloadRoutes(
     }
 
     // Verify the file still exists
-    if (!existsSync(session.absolutePath)) {
+    try {
+      await fs.access(session.absolutePath);
+    } catch {
       logger.error({ token, path: session.absolutePath }, 'Download file no longer exists');
       spaError(res, 404, 'File Not Found', 'The file is no longer available. It may have been moved or deleted.');
       return;

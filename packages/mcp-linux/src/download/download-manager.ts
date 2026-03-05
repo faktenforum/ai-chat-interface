@@ -8,7 +8,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { statSync } from 'node:fs';
+import fs from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { logger } from '../utils/logger.ts';
 import { resolveSafePath, ensureFileExists } from '../utils/fs-helper.ts';
@@ -123,18 +123,18 @@ export class DownloadManager {
    * Creates a new download session for a workspace file.
    * Validates the file exists and is within the workspace.
    */
-  createLink(
+  async createLink(
     email: string,
     username: string,
     workspace: string,
     filePath: string,
     expiresInMinutes?: number,
-  ): { token: string; url: string; session: DownloadSessionInfo } {
+  ): Promise<{ token: string; url: string; session: DownloadSessionInfo }> {
     // Resolve and validate the file path
-    const absolutePath = resolveSafePath(username, workspace, filePath);
-    ensureFileExists(absolutePath);
+    const absolutePath = await resolveSafePath(username, workspace, filePath);
+    await ensureFileExists(absolutePath);
 
-    const stat = statSync(absolutePath);
+    const stat = await fs.stat(absolutePath);
     const token = randomUUID();
     const now = new Date();
     const timeout = expiresInMinutes ?? this.defaultSessionTimeoutMin;

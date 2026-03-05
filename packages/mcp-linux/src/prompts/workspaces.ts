@@ -10,14 +10,14 @@ export const WORKSPACES_PROMPT = {
   description: 'How workspaces work: plan and tasks for handoffs, setup, and git workflow',
   content: `# Workspaces
 
-As per server instructions: list_workspaces first when choosing/creating; get_workspace_status(workspace) for plan and tasks; set_workspace_plan before every handoff. Workspaces live under \`~/workspaces/\`; one workspace = one task context. Paths in terminal and file tools are relative to the workspace root.
+As per server instructions: list_workspaces first when choosing/creating; get_workspaces(workspace) for plan and tasks; update_workspace before every handoff. Workspaces live under \`~/workspaces/\`; one workspace = one task context. Paths in terminal and file tools are relative to the workspace root.
 
 ## Creating a workspace (examples)
 
 list_workspaces first, then create_workspace:
 - Empty repo: \`create_workspace(name: "my-project")\`
 - Clone: \`create_workspace(name: "my-project", git_url: "git@github.com:org/repo.git")\` — submodules checked out recursively
-- Plan/tasks: \`set_workspace_plan\` accepts \`plan\`, \`tasks\` (e.g. \`["Step 1", "Step 2"]\` or \`[{ title, status? }]\`), or \`task_updates: [{ index, status }]\` for status-only updates.
+- Plan/tasks: \`update_workspace\` accepts \`plan\`, \`tasks\` (e.g. \`["Step 1", "Step 2"]\` or \`[{ title, status? }]\`), or \`task_updates: [{ index, status }]\` for status-only updates.
 
 ## Project setup (terminal)
 

@@ -17,9 +17,8 @@ import {
   ListWorkspacesSchema,
   CreateWorkspaceSchema,
   DeleteWorkspaceSchema,
-  GetWorkspaceStatusSchema,
-  SetWorkspacePlanSchema,
-  SetWorkspaceConfigSchema,
+  GetWorkspacesSchema,
+  UpdateWorkspaceSchema,
   CleanWorkspaceUploadsSchema,
 } from '../schemas/workspace.schema.ts';
 
@@ -47,7 +46,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'list_workspaces',
     {
-      description: 'Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use get_workspace_status(workspace) for full plan and tasks. When handing off to a workspace specialist, put the chosen workspace name in the handoff instructions so they call get_workspace_status(workspace) first.',
+      description: 'Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use get_workspaces(workspace) for full plan and tasks. When handing off to a workspace specialist, put the chosen workspace name in the handoff instructions so they call get_workspaces(workspace) first.',
       inputSchema: ListWorkspacesSchema.shape,
     },
     async (args, extra) => {
@@ -83,7 +82,7 @@ export function registerWorkspaceTools(
         let branch = args.branch;
         let default_workspace_config: { code_index_enabled?: boolean } | undefined;
         if (gitUrl == null || gitUrl === '') {
-          const template = getWorkspaceTemplate(args.name);
+          const template = await getWorkspaceTemplate(args.name);
           if (template) {
             gitUrl = template.git_url;
             branch = template.branch ?? branch;
@@ -144,18 +143,18 @@ export function registerWorkspaceTools(
   );
 
   server.registerTool(
-    'get_workspace_status',
+    'get_workspaces',
     {
       description:
         'Full git status, plan, tasks, submodules status (idle/updating/done/error/none), and code_index status (enabled, status, progress). When AGENTS.md exists in the workspace root, returns its content as instructions. First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next. Pass summary_only: true to get only a plan summary and task counts (done/in_progress/pending/cancelled) instead of the full plan and task list.',
-      inputSchema: GetWorkspaceStatusSchema.shape,
+      inputSchema: GetWorkspacesSchema.shape,
     },
     async (args, extra) => {
       try {
         const email = resolveEmail(extra);
         const response = await workerManager.sendRequest(email, {
           id: randomUUID(),
-          method: 'get_workspace_status',
+          method: 'get_workspaces',
           params: {
             workspace: args.workspace,
             summary_only: args.summary_only,
@@ -174,53 +173,25 @@ export function registerWorkspaceTools(
   );
 
   server.registerTool(
-    'set_workspace_plan',
+    'update_workspace',
     {
       description:
-        'Set plan and/or tasks. Plan is stored in .mcp-linux/plan.md, tasks in .mcp-linux/tasks.json. AGENTS.md in the workspace root is not modified by tools. Call before every handoff and at end of your turn so the next agent sees current state; if you omit this, context is lost. Pass full task list with updated statuses (done | in_progress | pending). Alternatively pass task_updates: [{ index, status }] to update only specific task statuses (0-based index from get_workspace_status) without sending the full list. Next agent reads via get_workspace_status. Tasks: prefer string[] e.g. ["Step 1","Step 2"] or [{ title, status? }]; status: pending | in_progress | done | cancelled.',
-      inputSchema: SetWorkspacePlanSchema.shape,
+        'Update workspace plan, tasks, config, and/or trigger reindex. All params optional. Set plan/tasks before every handoff so the next agent sees current state. Use task_updates: [{index, status}] for partial status changes (0-based index from get_workspaces). Set code_index_enabled to toggle indexing. Set reindex: true to force rebuild the code index.',
+      inputSchema: UpdateWorkspaceSchema.shape,
     },
     async (args, extra) => {
       try {
         const email = resolveEmail(extra);
         const response = await workerManager.sendRequest(email, {
           id: randomUUID(),
-          method: 'set_workspace_plan',
+          method: 'update_workspace',
           params: {
             workspace: args.workspace,
             plan: args.plan,
             tasks: args.tasks,
             task_updates: args.task_updates,
-          },
-        });
-
-        if (response.error) {
-          return errorResult(response.error);
-        }
-
-        return { content: [{ type: 'text', text: JSON.stringify(response.result, null, 2) }] };
-      } catch (error) {
-        return errorResult(error);
-      }
-    },
-  );
-
-  server.registerTool(
-    'set_workspace_config',
-    {
-      description:
-        'Set per-workspace config (stored in .mcp-linux/config.json). Use code_index_enabled: false to disable semantic code indexing for this workspace only. get_workspace_status returns the current config.',
-      inputSchema: SetWorkspaceConfigSchema.shape,
-    },
-    async (args, extra) => {
-      try {
-        const email = resolveEmail(extra);
-        const response = await workerManager.sendRequest(email, {
-          id: randomUUID(),
-          method: 'set_workspace_config',
-          params: {
-            workspace: args.workspace,
             code_index_enabled: args.code_index_enabled,
+            reindex: args.reindex,
           },
         });
 

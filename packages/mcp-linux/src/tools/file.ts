@@ -6,7 +6,7 @@
  * auto-creates a download link for large/binary files).
  */
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import fs from 'node:fs/promises';
 import { extname, join, relative } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { UserManager } from '../user-manager.ts';
@@ -111,10 +111,10 @@ export function registerFileTools(
         const email = resolveEmail(extra);
         const mapping = await userManager.ensureUser(email);
 
-        const absolutePath = resolveSafePath(mapping.username, args.workspace, args.file_path);
-        ensureFileExists(absolutePath);
+        const absolutePath = await resolveSafePath(mapping.username, args.workspace, args.file_path);
+        await ensureFileExists(absolutePath);
 
-        const stat = statSync(absolutePath);
+        const stat = await fs.stat(absolutePath);
         const ext = extname(absolutePath).toLowerCase();
         const fileSize = stat.size;
 
@@ -129,7 +129,7 @@ export function registerFileTools(
             );
           }
 
-          const rawContent = readFileSync(absolutePath, 'utf-8');
+          const rawContent = await fs.readFile(absolutePath, 'utf-8');
           const text = formatTextWithLineNumbers(rawContent, args.line_ranges);
           return {
             content: [{ type: 'text' as const, text }],
@@ -146,7 +146,7 @@ export function registerFileTools(
             );
           }
 
-          const data = readFileSync(absolutePath).toString('base64');
+          const data = (await fs.readFile(absolutePath)).toString('base64');
           return {
             content: [{ type: 'image' as const, data, mimeType: IMAGE_EXTENSIONS[ext] }],
           };
@@ -162,7 +162,7 @@ export function registerFileTools(
             );
           }
 
-          const data = readFileSync(absolutePath).toString('base64');
+          const data = (await fs.readFile(absolutePath)).toString('base64');
           return {
             content: [{ type: 'audio' as const, data, mimeType: AUDIO_EXTENSIONS[ext] }],
           };
@@ -193,11 +193,11 @@ export function registerFileTools(
         const email = resolveEmail(extra);
         const mapping = await userManager.ensureUser(email);
         const dirPath = args.path || '.';
-        const absoluteDir = resolveSafePath(mapping.username, args.workspace, dirPath);
-        ensureDirExists(absoluteDir);
+        const absoluteDir = await resolveSafePath(mapping.username, args.workspace, dirPath);
+        await ensureDirExists(absoluteDir);
 
         const workspaceRoot = join('/home', mapping.username, 'workspaces', args.workspace);
-        const entries = listWorkspaceFiles(absoluteDir, workspaceRoot, args.recursive);
+        const entries = await listWorkspaceFiles(absoluteDir, workspaceRoot, args.recursive);
         const text = JSON.stringify(entries, null, 2);
         return { content: [{ type: 'text' as const, text }] };
       } catch (error) {
@@ -207,15 +207,15 @@ export function registerFileTools(
   );
 }
 
-function listWorkspaceFiles(
+async function listWorkspaceFiles(
   dir: string,
   baseDir: string,
   recursive: boolean,
-): Array<{ path: string; type: 'file' | 'dir' }> {
+): Promise<Array<{ path: string; type: 'file' | 'dir' }>> {
   const results: Array<{ path: string; type: 'file' | 'dir' }> = [];
   let entries;
   try {
-    entries = readdirSync(dir, { withFileTypes: true });
+    entries = await fs.readdir(dir, { withFileTypes: true });
   } catch {
     return results;
   }
@@ -227,7 +227,7 @@ function listWorkspaceFiles(
       if (entry.name.startsWith('.') || SKIP_DIR_NAMES.has(entry.name)) continue;
       results.push({ path: relPath, type: 'dir' });
       if (recursive) {
-        const sub = listWorkspaceFiles(join(dir, entry.name), baseDir, true);
+        const sub = await listWorkspaceFiles(join(dir, entry.name), baseDir, true);
         results.push(...sub);
       }
     }
@@ -246,7 +246,7 @@ async function createDownloadFallback(
   downloadManager: DownloadManager,
   reason: string,
 ): Promise<{ content: ContentBlock[] }> {
-  const { session } = downloadManager.createLink(email, username, workspace, filePath);
+  const { session } = await downloadManager.createLink(email, username, workspace, filePath);
 
   return {
     content: [

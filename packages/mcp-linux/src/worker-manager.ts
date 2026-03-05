@@ -7,7 +7,7 @@
 
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer, createConnection, type Server } from 'node:net';
-import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
+import fs from 'node:fs/promises';
 import { join } from 'node:path';
 import { logger } from './utils/logger.ts';
 import { WorkerError } from './utils/errors.ts';
@@ -63,23 +63,21 @@ export class WorkerManager {
 
     // Ensure user exists
     const mapping = await this.userManager.ensureUser(email);
-    return this.startWorker(email, mapping);
+    return await this.startWorker(email, mapping);
   }
 
   /**
    * Starts a new worker process for a user.
    */
-  private startWorker(email: string, mapping: UserMapping): string {
+  private async startWorker(email: string, mapping: UserMapping): Promise<string> {
     const homeDir = `/home/${mapping.username}`;
     const socketPath = join(homeDir, SOCKET_RELATIVE_PATH);
 
     // Clean up stale socket
-    if (existsSync(socketPath)) {
-      try {
-        unlinkSync(socketPath);
-      } catch {
-        // Ignore
-      }
+    try {
+      await fs.unlink(socketPath);
+    } catch {
+      // Ignore (ENOENT or other)
     }
 
     const workerScript = join(process.cwd(), 'src', 'worker.ts');
@@ -220,7 +218,8 @@ export class WorkerManager {
   private async waitForSocket(socketPath: string, timeoutMs: number): Promise<void> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
-      if (existsSync(socketPath)) {
+      try {
+        await fs.access(socketPath);
         // Try to connect
         try {
           await new Promise<void>((resolve, reject) => {
@@ -237,6 +236,8 @@ export class WorkerManager {
         } catch {
           // Socket exists but not ready yet
         }
+      } catch {
+        // Socket file does not exist yet
       }
       await new Promise((r) => setTimeout(r, 100));
     }
@@ -293,12 +294,10 @@ export class WorkerManager {
     }
 
     // Clean up socket
-    if (existsSync(state.socketPath)) {
-      try {
-        unlinkSync(state.socketPath);
-      } catch {
-        // Ignore
-      }
+    try {
+      await fs.unlink(state.socketPath);
+    } catch {
+      // Ignore
     }
 
     this.workers.delete(email);

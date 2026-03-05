@@ -19,7 +19,7 @@ Workspace + plan/tasks are the single source of truth for continuity across hand
 | code-commit-push | Commit/push: Only stage/push repo-relevant files... |
 | code-git-ssh | Git (GitHub): Use SSH only... |
 | mcp-github-repo-default | GitHub repo: faktenforum/ai-chat-interface (owner/repo constants) |
-| before-handoff-workspace | Before handoff or when finishing: get_workspace_status; set_workspace_plan... |
+| before-handoff-workspace | Before handoff or when finishing: get_workspaces; update_workspace... |
 | conventions-when-unclear-router | When unclear (routers): wait for reply before transferring; do not hand off to same specialist again |
 | file-upload-types | LibreChat vs MCP upload, routing, Linux handoff (011); workspace agents use mcp-linux-tools-files-upload |
 
@@ -29,13 +29,13 @@ Workspace + plan/tasks are the single source of truth for continuity across hand
 Transfer only via lc_transfer_to_<agentId>; put context in the tool's instructions param. Chat text does not trigger transfer.
 
 **Before handoff (workspace agents)**  
-Before handoff: update plan/tasks with set_workspace_plan (mark completed done, next in_progress); then hand off with workspace name in instructions. Optionally add one short hint (e.g. "Continue from plan/tasks").
+Before handoff: update plan/tasks with update_workspace (mark completed done, next in_progress); then hand off with workspace name in instructions. Optionally add one short hint (e.g. "Continue from plan/tasks").
 
 **On receive (workspace)**  
-On receive: use workspace from instructions → get_workspace_status → follow plan/tasks; if none/empty → set_workspace_plan from instructions, then proceed. Plan and tasks are the source of truth for what to do next.
+On receive: use workspace from instructions → get_workspaces → follow plan/tasks; if none/empty → update_workspace from instructions, then proceed. Plan and tasks are the source of truth for what to do next.
 
 **End of turn (workspace)**  
-Always call set_workspace_plan before handoff or when finishing your part so the next agent has current state; otherwise context is lost.
+Always call update_workspace before handoff or when finishing your part so the next agent has current state; otherwise context is lost.
 
 **Execution**  
 ≤N tool calls/batch; brief prose; no labels/tags.

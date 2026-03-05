@@ -2,7 +2,7 @@
  * Server-wide config (config.yaml). Loaded by the MCP server only.
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import fs from 'node:fs/promises';
 import { join } from 'node:path';
 import { load as yamlLoad } from 'js-yaml';
 import { ConfigSchema, type Config, type WorkspaceTemplate } from './schemas/config.schema.ts';
@@ -10,6 +10,7 @@ import { ConfigSchema, type Config, type WorkspaceTemplate } from './schemas/con
 export type { WorkspaceTemplate };
 
 let cached: Config | null = null;
+let loading: Promise<Config> | null = null;
 
 function getConfigPath(): string {
   const fromEnv = process.env.MCP_LINUX_CONFIG;
@@ -17,34 +18,42 @@ function getConfigPath(): string {
   return join(process.cwd(), 'config.yaml');
 }
 
-function loadConfig(): Config {
+async function loadConfig(): Promise<Config> {
   if (cached !== null) return cached;
-  let path = getConfigPath();
-  if (!existsSync(path)) {
-    const examplePath = join(process.cwd(), 'config.example.yaml');
-    if (existsSync(examplePath)) path = examplePath;
-  }
-  if (!existsSync(path)) {
-    cached = { administrators: [], workspace_templates: {} };
-    return cached;
-  }
-  try {
-    const raw = readFileSync(path, 'utf-8');
-    const parsed = yamlLoad(raw) as unknown;
-    cached = ConfigSchema.parse(parsed ?? {});
-    return cached;
-  } catch {
-    cached = { administrators: [], workspace_templates: {} };
-    return cached;
-  }
+  if (loading) return loading;
+  loading = (async () => {
+    let path = getConfigPath();
+    try {
+      await fs.access(path);
+    } catch {
+      const examplePath = join(process.cwd(), 'config.example.yaml');
+      try {
+        await fs.access(examplePath);
+        path = examplePath;
+      } catch {
+        cached = { administrators: [], workspace_templates: {} };
+        return cached;
+      }
+    }
+    try {
+      const raw = await fs.readFile(path, 'utf-8');
+      const parsed = yamlLoad(raw) as unknown;
+      cached = ConfigSchema.parse(parsed ?? {});
+      return cached;
+    } catch {
+      cached = { administrators: [], workspace_templates: {} };
+      return cached;
+    }
+  })();
+  return loading;
 }
 
-export function getWorkspaceTemplate(name: string): WorkspaceTemplate | undefined {
-  const config = loadConfig();
+export async function getWorkspaceTemplate(name: string): Promise<WorkspaceTemplate | undefined> {
+  const config = await loadConfig();
   return config.workspace_templates[name];
 }
 
-export function getAdministrators(): string[] {
-  const config = loadConfig();
+export async function getAdministrators(): Promise<string[]> {
+  const config = await loadConfig();
   return config.administrators ?? [];
 }

@@ -183,8 +183,8 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
     category: development
     conversation_starters:
       - I need help with a development project
@@ -251,8 +251,8 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
@@ -351,8 +351,8 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
@@ -446,8 +446,8 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
@@ -524,8 +524,8 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
@@ -634,8 +634,8 @@ agents:
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
       - list_workspaces_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - read_workspace_file_mcp_linux
       - list_workspace_files_mcp_linux
       - codebase_search_mcp_linux
@@ -695,8 +695,8 @@ agents:
     mcpTools:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
       - read_workspace_file_mcp_linux
@@ -755,8 +755,8 @@ agents:
     mcpTools:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
       - read_workspace_file_mcp_linux
@@ -812,8 +812,8 @@ agents:
       - linux
     mcpTools:
       - list_workspaces_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
     category: general
     conversation_starters:
       - I want to report an error in the chat
@@ -824,7 +824,7 @@ agents:
         description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-github
         description: "Create the issue with prepared title and body (English)"
-        prompt: "workspace: feedback — call `get_workspace_status('feedback')` to read issue details from the plan, then create the issue via `create_issue_mcp_github(owner='faktenforum', repo='ai-chat-interface', title=..., body=...)` using title and body from the plan (English). If the plan contains structured issue details, use those. Otherwise, use the title and body provided in this handoff instructions. Do not pass German text for title/body."
+        prompt: "workspace: feedback — call `get_workspaces('feedback')` to read issue details from the plan, then create the issue via `create_issue_mcp_github(owner='faktenforum', repo='ai-chat-interface', title=..., body=...)` using title and body from the plan (English). If the plan contains structured issue details, use those. Otherwise, use the title and body provided in this handoff instructions. Do not pass German text for title/body."
       - agent: shared-agent-developer
         description: "Primary path: Developer researches bug (find duplicates, analyze code) in faktenforum/ai-chat-interface before issue creation. Prefer this unless the user emphasizes quality or a previous attempt failed."
         prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code, and propose fixes; after research follow plan to hand off to GitHub Assistant"
@@ -833,7 +833,7 @@ agents:
         prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code, and propose fixes; after research follow plan to hand off to GitHub Assistant"
       - agent: shared-agent-code-assistant
         description: "User wants to fix the bug, not only report. Transfer to Code Assistant."
-        prompt: "workspace: feedback — call `get_workspace_status('feedback')` to read bug details from the plan. User wants to fix the reported bug in faktenforum/ai-chat-interface. Summarize error, steps to reproduce, expected vs actual behavior, and what needs to be fixed (debug, implement fix). Pass workspace name and relevant context from the plan to the appropriate developer specialist."
+        prompt: "workspace: feedback — call `get_workspaces('feedback')` to read bug details from the plan. User wants to fix the reported bug in faktenforum/ai-chat-interface. Summarize error, steps to reproduce, expected vs actual behavior, and what needs to be fixed (debug, implement fix). Pass workspace name and relevant context from the plan to the appropriate developer specialist."
     recursion_limit: 50
     isCollaborative: true
     permissions:
@@ -959,8 +959,8 @@ agents:
       - kill_terminal_mcp_linux
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
@@ -1012,8 +1012,8 @@ agents:
       - kill_terminal_mcp_linux
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
@@ -1061,8 +1061,8 @@ agents:
       - kill_terminal_mcp_linux
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
@@ -1116,8 +1116,8 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - get_status_mcp_linux
       - reset_account_mcp_linux
       - list_upload_sessions_mcp_linux
@@ -1180,8 +1180,8 @@ agents:
     mcpTools:
       - list_workspaces_mcp_linux
       - list_upload_sessions_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - create_upload_session_mcp_linux
     handoffs:
       - agent: shared-agent-research

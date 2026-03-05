@@ -25,6 +25,6 @@ Use codebase_search first when exploring unfamiliar code; results tell you which
 ## Tips
 
 - Phrase queries as questions or short descriptions; reuse the user's wording when it fits
-- If the workspace has no index yet, the first codebase_search starts indexing in the background and returns a message; check get_workspace_status (code_index) and retry when status is indexed
+- If the workspace has no index yet, the first codebase_search starts indexing in the background and returns a message; check get_workspaces (code_index) and retry when status is indexed
 `,
 };

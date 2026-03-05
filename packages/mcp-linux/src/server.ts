@@ -12,7 +12,7 @@
 
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, chmodSync, existsSync } from 'node:fs';
+import fs from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'url';
 import express, { type Request, type Response, type NextFunction } from 'express';
@@ -143,7 +143,7 @@ OBJECTIVE
 CAPABILITIES
 - Each user has their own isolated Linux account: personal home directory with persistent bash history, Git-backed workspaces (a "default" workspace exists automatically), pre-installed runtimes (Node.js, Python 3, Git, Bash, ripgrep, and more), SSH access to GitHub via a shared machine user key. Users can install additional tools in their home (nvm, pip --user, etc.); see runtime_management prompt for details.
 - Use terminal tools (execute_command, write_terminal) to run any command. All commands run in the context of a workspace (default: "default"). File operations, search, and git are done via the terminal. Each terminal response includes workspace git metadata (branch, dirty status).
-- list_workspaces = overview (all workspaces, branch, dirty, plan_preview). get_workspace_status(workspace) = full detail (plan, tasks, optional workspace-root AGENTS.md, git status). Use the latter after handoffs or when you need task-level context; use the former to choose or create a workspace. get_workspace_status(workspace, { summary_only: true }) for a short overview (plan_summary, task_counts). get_workspace_status returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files.
+- list_workspaces = overview (all workspaces, branch, dirty, plan_preview). get_workspaces(workspace) = full detail (plan, tasks, optional workspace-root AGENTS.md, git status). Use the latter after handoffs or when you need task-level context; use the former to choose or create a workspace. get_workspaces(workspace, { summary_only: true }) for a short overview (plan_summary, task_counts). get_workspaces returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files. update_workspace to set plan, tasks, config, or trigger reindex — all in one call.
 - list_workspace_files: Use to explore directory structure; more effective than ls for getting a structured file list.
 - codebase_search: MUST use FIRST before read_workspace_file when exploring unfamiliar code. Queries in English.
 
@@ -209,7 +209,7 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
 /**
  * Creates and configures the Express application
  */
-function createApp(): express.Application {
+async function createApp(): Promise<express.Application> {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
   app.disable('x-powered-by');
@@ -217,11 +217,17 @@ function createApp(): express.Application {
   const appRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
   const spaDirCwd = join(process.cwd(), 'frontend/.output/public');
   const spaDirFromModule = join(appRoot, 'frontend/.output/public');
-  const spaDir = existsSync(join(spaDirFromModule, 'index.html'))
-    ? spaDirFromModule
-    : existsSync(join(spaDirCwd, 'index.html'))
-      ? spaDirCwd
-      : spaDirFromModule;
+  let spaDir = spaDirFromModule;
+  try {
+    await fs.access(join(spaDirFromModule, 'index.html'));
+  } catch {
+    try {
+      await fs.access(join(spaDirCwd, 'index.html'));
+      spaDir = spaDirCwd;
+    } catch {
+      // fallback to spaDirFromModule
+    }
+  }
 
   async function handleSpaIndex(_req: Request, res: Response): Promise<void> {
     await serveSpaIndex(spaDir, res, 'SPA index');
@@ -271,7 +277,7 @@ function createApp(): express.Application {
 
       const response = await workerManager.sendRequest(email, {
         id: randomUUID(),
-        method: 'get_workspace_status',
+        method: 'get_workspaces',
         params: { workspace: name },
       });
 
@@ -398,7 +404,7 @@ function createApp(): express.Application {
 
       const response = await workerManager.sendRequest(email, {
         id: randomUUID(),
-        method: 'set_workspace_plan',
+        method: 'update_workspace',
         params,
       });
 
@@ -445,7 +451,7 @@ function createApp(): express.Application {
 
       let workspaces: string[] = [];
       if (userInfo) {
-        workspaces = listWorkspaces(userInfo.home);
+        workspaces = await listWorkspaces(userInfo.home);
       }
 
       const uploadSessions = uploadManager.listSessions(email, false);
@@ -563,7 +569,7 @@ function createApp(): express.Application {
         res.status(500).json({ error: 'User account not ready' });
         return;
       }
-      const { session } = downloadManager.createLink(
+      const { session } = await downloadManager.createLink(
         userContext.email,
         username,
         workspace,
@@ -810,13 +816,11 @@ function createApp(): express.Application {
  * Creates the shared index cache directory with sticky-bit permissions (0o1777).
  * All worker users can create entries; no user can delete another's entries.
  */
-function ensureSharedIndexDir(): void {
+async function ensureSharedIndexDir(): Promise<void> {
   const sharedDir = process.env.CODE_INDEX_SHARED_DIR?.trim() || '/app/data/index-cache';
   try {
-    if (!existsSync(sharedDir)) {
-      mkdirSync(sharedDir, { recursive: true });
-    }
-    chmodSync(sharedDir, 0o1777);
+    await fs.mkdir(sharedDir, { recursive: true });
+    await fs.chmod(sharedDir, 0o1777);
   } catch (err) {
     logger.warn({ error: err, sharedDir }, 'Could not create/chmod shared index cache dir; shared indexing may not work');
   }
@@ -825,9 +829,10 @@ function ensureSharedIndexDir(): void {
 async function main(): Promise<void> {
   try {
     // Ensure shared index cache directory exists and is world-writable with sticky bit
-    ensureSharedIndexDir();
+    await ensureSharedIndexDir();
 
-    // Restore existing users from persistent mapping on startup
+    // Initialize user manager DB and restore existing users
+    await userManager.initialize();
     await userManager.restoreUsers();
     logger.info('User restoration complete');
 
@@ -886,7 +891,7 @@ async function main(): Promise<void> {
       cleanupTimer.unref();
     }
 
-    const app = createApp();
+    const app = await createApp();
     const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info({ port: PORT, server: SERVER_NAME, version: SERVER_VERSION }, 'MCP Linux Server started');
     });
