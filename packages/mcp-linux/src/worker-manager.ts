@@ -80,7 +80,7 @@ export class WorkerManager {
       // Ignore (ENOENT or other)
     }
 
-    const workerScript = join(process.cwd(), 'src', 'worker.ts');
+    const workerScript = join(process.cwd(), 'src', 'worker', 'index.ts');
 
     const child = spawn('runuser', [
       '-u', mapping.username, '--',

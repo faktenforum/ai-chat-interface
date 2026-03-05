@@ -104,7 +104,7 @@ async function runE2E(): Promise<void> {
 
   mkdirSync(join(homeDir, 'workspaces'), { recursive: true });
 
-  const workerScript = join(cwd, 'src', 'worker.ts');
+  const workerScript = join(cwd, 'src', 'worker', 'index.ts');
   const child: ChildProcess = spawn(
     'node',
     [

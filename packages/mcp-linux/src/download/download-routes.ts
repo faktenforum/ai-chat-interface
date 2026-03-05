@@ -11,15 +11,8 @@ import type express from 'express';
 import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import { logger } from '../utils/logger.ts';
+import { paramString, spaErrorRedirect } from '../utils/route-helpers.ts';
 import type { DownloadManager } from './download-manager.ts';
-
-/**
- * Extracts a route param as a single string (Express 5 params may be string | string[]).
- */
-function paramString(value: string | string[] | undefined): string {
-  if (Array.isArray(value)) return value[0] ?? '';
-  return value ?? '';
-}
 
 /**
  * Registers download routes on the Express app.
@@ -31,9 +24,7 @@ export function setupDownloadRoutes(
   _spaDir: string,
 ): void {
   function spaError(res: Response, status: number, title: string, message: string): void {
-    const t = encodeURIComponent(title);
-    const m = encodeURIComponent(message);
-    res.status(status).redirect(`/download/error?title=${t}&message=${m}`);
+    spaErrorRedirect(res, 'download', status, title, message);
   }
 
   // ── GET /download/:token — stream the file ─────────────────────────────────

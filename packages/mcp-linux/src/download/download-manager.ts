@@ -12,6 +12,7 @@ import fs from 'node:fs/promises';
 import { basename, extname } from 'node:path';
 import { logger } from '../utils/logger.ts';
 import { resolveSafePath, ensureFileExists } from '../utils/fs-helper.ts';
+import { BaseSessionManager } from '../session/base-session-manager.ts';
 
 /** Download session state */
 export type DownloadSessionStatus = 'active' | 'downloaded' | 'expired' | 'closed';
@@ -46,8 +47,6 @@ export interface DownloadSessionInfo {
   created_at: string;
   expires_at: string;
 }
-
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 /** MIME type lookup by extension */
 const MIME_TYPES: Record<string, string> = {
@@ -102,21 +101,19 @@ function guessMimeType(filename: string): string {
   return MIME_TYPES[ext] || 'application/octet-stream';
 }
 
-export class DownloadManager {
-  private sessions = new Map<string, DownloadSession>();
-  private cleanupTimer: ReturnType<typeof setInterval>;
-  private baseUrl: string;
+export class DownloadManager extends BaseSessionManager<DownloadSession, DownloadSessionInfo> {
+  protected readonly logLabel = 'Download';
+  protected readonly completedStatus = 'downloaded';
+  protected readonly alreadyCompletedResult = 'already_downloaded';
+
   private defaultSessionTimeoutMin: number;
 
   constructor(options: {
     baseUrl: string;
     defaultSessionTimeoutMin?: number;
   }) {
-    this.baseUrl = options.baseUrl.replace(/\/+$/, '');
+    super({ baseUrl: options.baseUrl });
     this.defaultSessionTimeoutMin = options.defaultSessionTimeoutMin ?? 60;
-
-    this.cleanupTimer = setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS);
-    this.cleanupTimer.unref();
   }
 
   /**
@@ -130,7 +127,6 @@ export class DownloadManager {
     filePath: string,
     expiresInMinutes?: number,
   ): Promise<{ token: string; url: string; session: DownloadSessionInfo }> {
-    // Resolve and validate the file path
     const absolutePath = await resolveSafePath(username, workspace, filePath);
     await ensureFileExists(absolutePath);
 
@@ -166,30 +162,6 @@ export class DownloadManager {
   }
 
   /**
-   * Returns a session for the given token, or null.
-   * Automatically marks expired sessions.
-   */
-  getSession(token: string): DownloadSession | null {
-    const session = this.sessions.get(token);
-    if (!session) return null;
-
-    if (session.status === 'active' && new Date() > session.expiresAt) {
-      session.status = 'expired';
-      logger.info({ token }, 'Download session expired');
-    }
-
-    return session;
-  }
-
-  /**
-   * Returns an active (non-expired, non-closed, non-downloaded) session, or null.
-   */
-  getActiveSession(token: string): DownloadSession | null {
-    const session = this.getSession(token);
-    return session?.status === 'active' ? session : null;
-  }
-
-  /**
    * Marks a session as downloaded after successful file delivery.
    */
   completeSession(token: string): boolean {
@@ -201,45 +173,7 @@ export class DownloadManager {
     return true;
   }
 
-  /**
-   * Manually closes / revokes a download session.
-   */
-  closeSession(token: string): 'closed' | 'not_found' | 'already_downloaded' {
-    const session = this.sessions.get(token);
-    if (!session) return 'not_found';
-    if (session.status === 'downloaded') return 'already_downloaded';
-
-    session.status = 'closed';
-    logger.info({ token }, 'Download session closed');
-    return 'closed';
-  }
-
-  /**
-   * Lists sessions for a given user email.
-   */
-  listSessions(email: string, activeOnly = true): DownloadSessionInfo[] {
-    const results: DownloadSessionInfo[] = [];
-
-    for (const session of this.sessions.values()) {
-      if (session.email !== email) continue;
-
-      // Refresh expiry status
-      if (session.status === 'active' && new Date() > session.expiresAt) {
-        session.status = 'expired';
-      }
-
-      if (activeOnly && session.status !== 'active') continue;
-
-      results.push(this.toSessionInfo(session));
-    }
-
-    return results;
-  }
-
-  /**
-   * Converts an internal session to a serialisable info object.
-   */
-  private toSessionInfo(session: DownloadSession): DownloadSessionInfo {
+  protected toSessionInfo(session: DownloadSession): DownloadSessionInfo {
     return {
       token: session.token,
       download_url: `${this.baseUrl}/download/${session.token}`,
@@ -252,35 +186,5 @@ export class DownloadManager {
       created_at: session.createdAt.toISOString(),
       expires_at: session.expiresAt.toISOString(),
     };
-  }
-
-  /**
-   * Removes expired and completed sessions older than 1 hour.
-   */
-  private cleanup(): void {
-    const cutoff = new Date(Date.now() - 60 * 60 * 1000);
-    let removed = 0;
-
-    for (const [token, session] of this.sessions.entries()) {
-      if (session.status === 'active' && new Date() > session.expiresAt) {
-        session.status = 'expired';
-      }
-
-      if (session.status !== 'active' && session.createdAt < cutoff) {
-        this.sessions.delete(token);
-        removed++;
-      }
-    }
-
-    if (removed > 0) {
-      logger.info({ removed, remaining: this.sessions.size }, 'Download session cleanup');
-    }
-  }
-
-  /**
-   * Clears the periodic cleanup timer. Call on server shutdown.
-   */
-  dispose(): void {
-    clearInterval(this.cleanupTimer);
   }
 }

@@ -10,6 +10,7 @@
 import { randomUUID } from 'node:crypto';
 import { logger } from '../utils/logger.ts';
 import { validateWorkspaceName } from '../utils/security.ts';
+import { BaseSessionManager } from '../session/base-session-manager.ts';
 
 /** Information about a successfully uploaded file */
 export interface UploadedFileInfo {
@@ -55,12 +56,11 @@ export interface SessionInfo {
   uploaded_file?: { name: string; size: number; path: string };
 }
 
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+export class UploadManager extends BaseSessionManager<UploadSession, SessionInfo> {
+  protected readonly logLabel = 'Upload';
+  protected readonly completedStatus = 'completed';
+  protected readonly alreadyCompletedResult = 'already_completed';
 
-export class UploadManager {
-  private sessions = new Map<string, UploadSession>();
-  private cleanupTimer: ReturnType<typeof setInterval>;
-  private baseUrl: string;
   private defaultMaxFileSizeMb: number;
   private defaultSessionTimeoutMin: number;
 
@@ -69,13 +69,9 @@ export class UploadManager {
     defaultMaxFileSizeMb?: number;
     defaultSessionTimeoutMin?: number;
   }) {
-    this.baseUrl = options.baseUrl.replace(/\/+$/, ''); // strip trailing slash
+    super({ baseUrl: options.baseUrl });
     this.defaultMaxFileSizeMb = options.defaultMaxFileSizeMb ?? 100;
     this.defaultSessionTimeoutMin = options.defaultSessionTimeoutMin ?? 15;
-
-    // Periodic cleanup of expired sessions
-    this.cleanupTimer = setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS);
-    this.cleanupTimer.unref(); // don't prevent process exit
   }
 
   /**
@@ -118,31 +114,6 @@ export class UploadManager {
   }
 
   /**
-   * Returns an active session for the given token, or null.
-   * Automatically marks expired sessions.
-   */
-  getSession(token: string): UploadSession | null {
-    const session = this.sessions.get(token);
-    if (!session) return null;
-
-    // Check expiry
-    if (session.status === 'active' && new Date() > session.expiresAt) {
-      session.status = 'expired';
-      logger.info({ token }, 'Upload session expired');
-    }
-
-    return session;
-  }
-
-  /**
-   * Returns an active (non-expired, non-closed, non-completed) session, or null.
-   */
-  getActiveSession(token: string): UploadSession | null {
-    const session = this.getSession(token);
-    return session?.status === 'active' ? session : null;
-  }
-
-  /**
    * Marks a session as completed after a successful upload.
    */
   completeSession(token: string, fileInfo: UploadedFileInfo): boolean {
@@ -155,46 +126,7 @@ export class UploadManager {
     return true;
   }
 
-  /**
-   * Manually closes / revokes a session.
-   * Returns the final status description.
-   */
-  closeSession(token: string): 'closed' | 'not_found' | 'already_completed' {
-    const session = this.sessions.get(token);
-    if (!session) return 'not_found';
-    if (session.status === 'completed') return 'already_completed';
-
-    session.status = 'closed';
-    logger.info({ token }, 'Upload session closed');
-    return 'closed';
-  }
-
-  /**
-   * Lists sessions for a given user email.
-   */
-  listSessions(email: string, activeOnly = true): SessionInfo[] {
-    const results: SessionInfo[] = [];
-
-    for (const session of this.sessions.values()) {
-      if (session.email !== email) continue;
-
-      // Refresh expiry status
-      if (session.status === 'active' && new Date() > session.expiresAt) {
-        session.status = 'expired';
-      }
-
-      if (activeOnly && session.status !== 'active') continue;
-
-      results.push(this.toSessionInfo(session));
-    }
-
-    return results;
-  }
-
-  /**
-   * Converts an internal session to a serialisable info object.
-   */
-  private toSessionInfo(session: UploadSession): SessionInfo {
+  protected toSessionInfo(session: UploadSession): SessionInfo {
     const info: SessionInfo = {
       token: session.token,
       upload_url: `${this.baseUrl}/upload/${session.token}`,
@@ -215,37 +147,5 @@ export class UploadManager {
         : {}),
     };
     return info;
-  }
-
-  /**
-   * Removes expired and completed sessions older than 1 hour.
-   */
-  private cleanup(): void {
-    const cutoff = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
-    let removed = 0;
-
-    for (const [token, session] of this.sessions.entries()) {
-      // Expire active sessions past their deadline
-      if (session.status === 'active' && new Date() > session.expiresAt) {
-        session.status = 'expired';
-      }
-
-      // Remove non-active sessions older than cutoff
-      if (session.status !== 'active' && session.createdAt < cutoff) {
-        this.sessions.delete(token);
-        removed++;
-      }
-    }
-
-    if (removed > 0) {
-      logger.info({ removed, remaining: this.sessions.size }, 'Upload session cleanup');
-    }
-  }
-
-  /**
-   * Clears the periodic cleanup timer. Call on server shutdown.
-   */
-  dispose(): void {
-    clearInterval(this.cleanupTimer);
   }
 }

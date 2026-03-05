@@ -15,6 +15,7 @@ import { join, resolve, extname, basename } from 'node:path';
 import Busboy from 'busboy';
 import { serveSpaIndex } from '../utils/serve-spa.ts';
 import { logger } from '../utils/logger.ts';
+import { paramString, spaErrorRedirect } from '../utils/route-helpers.ts';
 import type { UploadManager } from './upload-manager.ts';
 import type { UserManager } from '../user-manager.ts';
 
@@ -62,14 +63,6 @@ async function resolveFilePath(dir: string, filename: string): Promise<string> {
 }
 
 /**
- * Extracts a route param as a single string (Express 5 params may be string | string[]).
- */
-function paramString(value: string | string[] | undefined): string {
-  if (Array.isArray(value)) return value[0] ?? '';
-  return value ?? '';
-}
-
-/**
  * Registers upload routes on the Express app.
  */
 export function setupUploadRoutes(
@@ -81,9 +74,7 @@ export function setupUploadRoutes(
   const spaRoot = resolve(spaDir);
 
   function spaError(res: Response, status: number, title: string, message: string): void {
-    const t = encodeURIComponent(title);
-    const m = encodeURIComponent(message);
-    res.status(status).redirect(`/upload/error?title=${t}&message=${m}`);
+    spaErrorRedirect(res, 'upload', status, title, message);
   }
 
   // ── GET /upload/error — SPA error page (must be before /upload/:token so "error" is not used as token)
