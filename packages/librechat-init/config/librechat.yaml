@@ -111,11 +111,11 @@ endpoints:
         # Note: Open Source models should use Scaleway (Europe) for better privacy
         default: [
           "anthropic/claude-opus-4.6",        # Strongest coding/agent model (1M Context)
-          "anthropic/claude-sonnet-4.5",      # Top proprietary model (Vision, 200K Context)
-          "openai/gpt-5.2",                   # Latest GPT-5 series (Vision, 400K Context)
+          "anthropic/claude-sonnet-4.6",      # Top proprietary model (Vision, 1M Context)
+          "openai/gpt-5.4",                   # Latest GPT-5 series (Vision, 1M Context)
           "google/gemini-2.5-flash-lite",    # Google's lightweight reasoning model (Vision)
           "google/gemini-3-flash-preview",   # Google Gemini 3 Flash (Preview from Google)
-          "google/gemini-3-pro-preview",     # Google Gemini 3 Pro (Preview from Google)
+          "google/gemini-3.1-pro-preview",   # Google Gemini 3.1 Pro (Preview from Google)
           "mistralai/mistral-large-2411",     # European premium option (French)
           "glm/glm-4.7"                       # Advanced reasoning model
         ]
@@ -255,21 +255,21 @@ endpoints:
 #    - Pricing: $5/M input, $25/M output tokens
 #    - Special feature: Strongest Anthropic model, optimized for agents and entire codebases
 #
-# 2. claude-sonnet-4.5 (Anthropic)
-#    - Context: 200K, Output: 64K
+# 2. claude-sonnet-4.6 (Anthropic)
+#    - Context: 1M, Output: 64K
 #    - License: Closed Source (Proprietary)
 #    - Use Case: Top performance for complex tasks, programming, reasoning
 #    - Vision: Yes
 #    - Pricing: $3/M input, $15/M output tokens
 #    - Special feature: Excellent reasoning, very good code generation
 #
-# 3. openai/gpt-5.2 (OpenAI)
-#    - Context: 400K, Output: 128K
+# 3. openai/gpt-5.4 (OpenAI)
+#    - Context: 1M, Output: 128K
 #    - License: Closed Source (Proprietary)
 #    - Use Case: Top performance, Dynamic Reasoning, complex problem solving
 #    - Vision: Yes
-#    - Pricing: $1.25/M input, $10/M output tokens
-#    - Special feature: ~80% fewer hallucinations than o3, 74.9% SWE-Bench accuracy
+#    - Pricing: $2.50/M input, $15/M output tokens
+#    - Special feature: Latest GPT-5 series, strong coding and reasoning
 #
 # 4. google/gemini-2.5-flash-lite (Google)
 #    - Context: Variable, Output: Variable
@@ -292,7 +292,7 @@ endpoints:
 #
 # Exception (Preview from vendor, not provider — included explicitly):
 # - gemma-3-27b-it (Scaleway) — Google Gemma 3 27B
-# - google/gemini-3-flash-preview, google/gemini-3-pro-preview (OpenRouter) — Google Gemini 3
+# - google/gemini-3-flash-preview, google/gemini-3.1-pro-preview (OpenRouter) — Google Gemini 3
 #
 # RECOMMENDATIONS BY USE CASE:
 # ----------------------------------
@@ -304,8 +304,8 @@ endpoints:
 #
 # Top performance needed → Premium Models (OpenRouter)
 #   - Best Coding/Agents: claude-opus-4.6 (1M Context)
-#   - Best Overall: claude-sonnet-4.5
-#   - Largest Context: openai/gpt-5.2 (400K)
+#   - Best Overall: claude-sonnet-4.6
+#   - Largest Context: openai/gpt-5.4 (1M)
 #   - Fast & Cheap: google/gemini-2.5-flash-lite
 #   - European Premium: mistral-large-2411
 #   - Reasoning: glm/glm-4.7
@@ -672,17 +672,17 @@ modelSpecs:
         # effort: optional adaptive thinking (Opus 4.6); values: "" (auto), "low", "medium", "high", "max"
         effort: ""
 
-    - name: "claude-sonnet-4.5"
-      label: "Claude Sonnet 4.5"
-      description: "Top-Performance Modell für komplexe Aufgaben, Programmierung und Reasoning. 200K Context, 64K Output. Unterstützt Vision. Closed Source (Anthropic)."
+    - name: "claude-sonnet-4.6"
+      label: "Claude Sonnet 4.6"
+      description: "Top-Performance Modell für komplexe Aufgaben, Programmierung und Reasoning. 1M Context, 64K Output. Unterstützt Vision. Closed Source (Anthropic)."
       group: "Premium-Modelle"
       order: 3
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "anthropic/claude-sonnet-4.5"
-        maxContextTokens: 200000
+        model: "anthropic/claude-sonnet-4.6"
+        maxContextTokens: 1000000
         maxOutputTokens: 64000
 
     - name: "deepseek-v3.2"
@@ -723,16 +723,16 @@ modelSpecs:
         maxContextTokens: 1048576
         maxOutputTokens: 65536
 
-    - name: "google-gemini-3-pro-preview"
-      label: "Gemini 3 Pro (Preview)"
-      description: "Google's powerful Gemini-3 model (Preview). For demanding tasks and reasoning. Exception: Preview label from Google, not from provider. Via OpenRouter."
+    - name: "google-gemini-3.1-pro-preview"
+      label: "Gemini 3.1 Pro (Preview)"
+      description: "Google's powerful Gemini-3.1 model (Preview). For demanding tasks and reasoning. Exception: Preview label from Google, not from provider. Via OpenRouter."
       group: "Premium-Modelle"
       order: 7
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "google/gemini-3-pro-preview"
+        model: "google/gemini-3.1-pro-preview"
         maxContextTokens: 1048576
         maxOutputTokens: 65536
 
@@ -748,30 +748,30 @@ modelSpecs:
         maxContextTokens: 200000
         maxOutputTokens: 128000
 
-    - name: "openai-gpt5-2"
-      label: "GPT-5.2"
-      description: "OpenAI's neuestes Top-Modell. 400K Context, 128K Output. Dynamic Reasoning, ~80% weniger Halluzinationen als o3. Unterstützt Vision. Closed Source (OpenAI)."
+    - name: "openai-gpt5-4"
+      label: "GPT-5.4"
+      description: "OpenAI's neuestes Top-Modell. 1M Context, 128K Output. Starkes Reasoning und Coding. Unterstützt Vision. Closed Source (OpenAI)."
       group: "Premium-Modelle"
       order: 9
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "openai/gpt-5.2"
-        maxContextTokens: 400000
+        model: "openai/gpt-5.4"
+        maxContextTokens: 1050000
         maxOutputTokens: 128000
 
-    - name: "openai-gpt5-2-pro"
-      label: "GPT-5.2 Pro"
-      description: "OpenAI's leistungsstärkstes Modell für anspruchsvolle Reasoning- und Agent-Aufgaben. 400K Context, 128K Output. Starke Verbesserungen bei Coding und Langkontext. Vision. Closed Source (OpenAI)."
+    - name: "openai-gpt5-4-pro"
+      label: "GPT-5.4 Pro"
+      description: "OpenAI's leistungsstärkstes Modell für anspruchsvolle Reasoning- und Agent-Aufgaben. 1M Context, 128K Output. Starke Verbesserungen bei Coding und Langkontext. Vision. Closed Source (OpenAI)."
       group: "Premium-Modelle"
       order: 10
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "openai/gpt-5.2-pro"
-        maxContextTokens: 400000
+        model: "openai/gpt-5.4-pro"
+        maxContextTokens: 1050000
         maxOutputTokens: 128000
 
     - name: "mistral-large-2411"
@@ -1175,30 +1175,13 @@ ocr:
   baseURL: "${OCR_BASEURL}"
   strategy: "mistral_ocr"
 
-# File Configuration - Define supported MIME types for OCR and other file operations
-fileConfig:
-  ocr:
-    # Mistral OCR supports: PNG, JPEG/JPG, AVIF (images) + PDF, DOCX, PPTX (documents)
-    # Using image/.* to allow all image formats - unsupported ones will fall back to text parsing
-    supportedMimeTypes:
-      - "image/.*"
-      - "application/pdf"
-      - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"  # DOCX
-      - "application/vnd.openxmlformats-officedocument.presentationml.presentation"  # PPTX
-      - "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"  # XLSX
-  text:
-    # All text/* MIME types (covers: plain, javascript, python, html, markdown, css, csv, etc.)
-    # Plus specific application/* MIME types for text-based formats
-    supportedMimeTypes:
-      - "text/.*"
-      - "application/json"
-      - "application/yaml"
-      - "application/csv"
-      - "application/typescript"
-      - "application/sql"
-      - "application/xml"
-      - "application/x-sh"
-      - "application/vnd.coffeescript"
+# File Configuration
+# Using defaults from codebase (defaultOCRMimeTypes, defaultTextMimeTypes) which cover:
+# - OCR: images, PDF, DOCX, PPTX, XLSX/XLS, EPUB, ODS/ODT/ODP/ODG, DOC/PPT (legacy)
+# - Text: all MIME types (wildcard match)
+# - Local document_parser (v0.8.3+) handles PDF/DOCX/XLSX/XLS/ODS without Mistral API
+# fileConfig:
+
   stt:
     # Audio formats supported by Azure OpenAI STT and other STT providers
     # Formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, webm, aac, opus, wma

@@ -500,15 +500,15 @@ agents:
       publicEdit: true
 
   - id: shared-agent-code-refactorer-quality
-    name: Code Refactorer (Gemini 3 Pro Preview)
+    name: Code Refactorer (Gemini 3.1 Pro Preview)
     description: Refactoring and optimization of code – structure, style, tests, readability. Full Linux workspace access. Quality variant (OpenRouter).
     instructionsFile: shared-agent-code-refactorer-instructions.md
     provider: OpenRouter
-    model: google/gemini-3-pro-preview
+    model: google/gemini-3.1-pro-preview
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 1048576   # Gemini 3 Pro Preview
+      maxContextTokens: 1048576   # Gemini 3.1 Pro Preview
       maxOutputTokens: 65536
     tools:
       - web_search
@@ -738,15 +738,15 @@ agents:
       publicEdit: true
 
   - id: shared-agent-code-reviewer-quality
-    name: Code Reviewer (Gemini 3 Pro Preview)
+    name: Code Reviewer (Gemini 3.1 Pro Preview)
     description: Analyzes pull requests – clones the repo, checks the diff, reads the codebase and creates a structured review. Posts the review via the GitHub Assistant if needed. Quality variant (OpenRouter).
     instructionsFile: shared-agent-code-reviewer-instructions.md
     provider: OpenRouter
-    model: google/gemini-3-pro-preview
+    model: google/gemini-3.1-pro-preview
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 1048576   # Gemini 3 Pro Preview
+      maxContextTokens: 1048576   # Gemini 3.1 Pro Preview
       maxOutputTokens: 65536
     tools: []
     mcpServers:
