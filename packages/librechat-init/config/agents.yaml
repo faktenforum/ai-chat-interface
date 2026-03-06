@@ -1176,6 +1176,9 @@ agents:
       maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
     # Global limit for whole run (e.g. Main Assistant→Code Assistant→specialist). 200 allows long PR review and multi-step dev chains.
     recursion_limit: 100
+    tools:
+      - web_search
+      - file_search
     mcpServers:
       - linux
     mcpTools:
