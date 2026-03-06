@@ -30,20 +30,25 @@ LibreChat can use one app-level MCP connection (`startup: true`), so one MCP ses
 | Tool | Description |
 |------|-------------|
 | `list_workspaces` | Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use `get_workspace_status(workspace)` for full plan and tasks. |
-| `create_workspace` | Create workspace (empty or from git URL). Call list_workspaces first if unsure whether the name exists. |
+| `create_workspace` | Create workspace (empty or from git URL). When cloning, the main repo is cloned first; submodules are updated in the background (see **Submodules** below). Call list_workspaces first if unsure whether the name exists. |
 | `delete_workspace` | Delete workspace (not default) |
-| `get_workspace_status` | Full git status plus plan and tasks (each task: title, status). First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next. File lists may be truncated/collapsed (see **Status capping** below). |
+| `get_workspace_status` | Full git status, plan, tasks, **submodules** status, and **code_index** status. First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next. File lists may be truncated/collapsed (see **Status capping** below). |
 | `set_workspace_plan` | Set plan and/or tasks. Call before every handoff and at end of your turn so the next agent sees current state; if you omit this, context is lost. Pass full task list with updated statuses, or partial updates via `task_updates: [{ index, status }]` (0-based index from get_workspace_status). Tasks: `{ title, status? }` or string[]; status: pending, in_progress, done, cancelled. |
 | `clean_workspace_uploads` | Delete files in workspace `uploads/` older than N days (default 7; use 0 to delete all). Use to free space; uploads are ephemeral. |
 
 #### When to use list_workspaces vs get_workspace_status
 
 - **`list_workspaces`** — Overview only: all workspace names, branch, dirty flag, remote_url, short plan_preview. Use when: choosing or creating a workspace, checking if a name exists, or deciding which workspace to pass in a handoff. When handing off to a workspace specialist, put the chosen workspace name in the handoff instructions so they call `get_workspace_status(workspace)` first.
-- **`get_workspace_status(workspace)`** — Full detail for **one** workspace: full plan, all tasks (title + status), git status (with capping). Use when: after a handoff (to read plan/tasks), before/after `set_workspace_plan`, or when you need task-level context. Do not use for "list all workspaces".
+- **`get_workspace_status(workspace)`** — Full detail for **one** workspace: full plan, all tasks (title + status), optional instructions (from workspace-root `AGENTS.md`), git status (with capping). Use when: after a handoff (to read plan/tasks), before/after `set_workspace_plan`, or when you need task-level context. Do not use for "list all workspaces".
 
 #### Plan and tasks
 
-Workspaces store a **plan** (goal/context) and **tasks** (steps) as the **single source of truth** for continuity across handoffs. Stored in `.mcp-linux/plan.json` per workspace. Each task has `title` and `status` (pending | in_progress | done | cancelled). **Flow:** After a handoff use `get_workspace_status(workspace)` (workspace from handoff instructions; use `default` if none). If there is no or empty plan/tasks, set an initial plan and tasks from the handoff then continue. **Always** call `set_workspace_plan` before every handoff or when finishing your part so the next agent has current state; otherwise context is lost. To update only some statuses, use `task_updates` with 0-based indices from get_workspace_status (e.g. `task_updates: [{ index: 0, status: 'done' }, { index: 1, status: 'in_progress' }]`). Handoff instructions should contain the **workspace name** and optionally one short hint (e.g. "Continue from plan/tasks"); do not duplicate the full plan or task list in handoff text. Before creating a workspace call `list_workspaces` to avoid "already exists". Prefer tasks as string array (e.g. `["Step 1", "Step 2"]`); or `[{ title, status? }]`.
+Workspaces store a **plan** (goal/context) and **tasks** (steps) as the **single source of truth** for continuity across handoffs. Stored in `.mcp-linux/plan.md` (plan text) and `.mcp-linux/tasks.json` (tasks). Optional `AGENTS.md` in the workspace root (see [agents.md](https://agents.md)) provides entry instructions for expert workspaces; returned in `get_workspace_status` as `instructions` when present. Each task has `title` and `status` (pending | in_progress | done | cancelled). **Flow:** After a handoff use `get_workspace_status(workspace)` (workspace from handoff instructions; use `default` if none). If there is no or empty plan/tasks, set an initial plan and tasks from the handoff then continue. **Always** call `set_workspace_plan` before every handoff or when finishing your part so the next agent has current state; otherwise context is lost. To update only some statuses, use `task_updates` with 0-based indices from get_workspace_status (e.g. `task_updates: [{ index: 0, status: 'done' }, { index: 1, status: 'in_progress' }]`). Handoff instructions should contain the **workspace name** and optionally one short hint (e.g. "Continue from plan/tasks"); do not duplicate the full plan or task list in handoff text. Before creating a workspace call `list_workspaces` to avoid "already exists". Prefer tasks as string array (e.g. `["Step 1", "Step 2"]`); or `[{ title, status? }]`.
+
+#### Submodules and code_index in get_workspace_status
+
+- **`submodules`** — Status of background submodule checkout after clone: `status` is `none` (no .gitmodules), `idle` (not started), `updating`, `done`, or `error`; optional `message` on error. When cloning a repo with submodules, `create_workspace` returns immediately and submodules are updated in the background; poll `get_workspace_status` to see when `submodules.status` is `done` or `error`.
+- **`code_index`** — Semantic code index state. When indexing is disabled (global or per-workspace), `code_index` is `{ enabled: false }`. When enabled, `code_index` includes `enabled: true`, `status` (standby | indexing | indexed | error), `message`, `files_processed`, `files_total`, and `has_index` (whether the index has data and is complete).
 
 #### Status capping
 
@@ -52,9 +57,8 @@ Workspaces store a **plan** (goal/context) and **tasks** (steps) as the **single
 ### Account
 | Tool | Description |
 |------|-------------|
-| `get_account_info` | Username, home, disk usage, runtimes |
+| `get_status` | Username, home, disk usage, runtimes, status_page_url (status link with token) |
 | `reset_account` | Wipe and re-create home |
-| `get_system_info` | Available runtime versions |
 
 ### File Upload
 | Tool | Description |
@@ -93,6 +97,46 @@ Workspaces are persistent. Agents can save scripts (e.g. under `scripts/` in a w
 
 The **Linux Expert** agent (id: `shared-agent-linux-expert`) is a general Linux assistant with full MCP Linux tool access. It handles: general Linux questions, shell commands, scripts, file operations; plus MCP Linux account/workspace administration (status, cleanup, reset, sessions). Users can select it directly or be routed from Main Assistant. It hands off to Code Assistant (code implementation), Data Analysis, File Converter, or Document Creator for those domains.
 
+## Code index and search
+
+The MCP Linux server can build a semantic **code index** for each workspace. The indexer:
+
+- Scans files under the workspace root, filtered by extension and ignore rules.
+- Splits content into **code chunks** and stores them with embeddings in LanceDB.
+- Exposes tools for search and debugging:
+  - `codebase_search` – semantic search over the indexed code.
+  - `debug_code_index_list_chunks` – list stored chunks for a file/path prefix.
+  - `debug_code_index_rechunk_file` – recompute chunks for a single file without touching the index.
+
+Chunking uses a hybrid strategy:
+
+- **AST-aware chunking (tree-sitter)** for a set of languages, with a strict fallback to line-based splitting.
+- **Line-based chunking** for everything else, or when parsing/boundary extraction fails.
+
+Current AST-backed languages (via tree-sitter):
+
+- TypeScript family: `.ts`, `.tsx`
+- JavaScript family: `.js`, `.jsx`, `.json`
+- Markdown: `.md`, `.markdown`
+- HTML: `.html`, `.htm`
+- CSS: `.css`
+- Python: `.py`
+- Java: `.java`
+- Rust: `.rs`
+- C / C headers: `.c`, `.h`
+- C++: `.cpp`, `.hpp`
+
+Every stored chunk is a `CodeBlock` with at least:
+
+- `file_path`: relative path in the workspace
+- `start_line`, `end_line`: 1-based line range in the original file
+- `content`: the chunk text
+- `file_hash`: SHA-256 of the source file
+- `segment_hash`: stable identifier for the chunk
+- `language` (optional): language hint derived from the file extension (e.g. `ts`, `md`, `py`, `java`)
+
+On parser errors, missing parsers, or empty AST boundaries, the indexer falls back to the same line-based splitter used for non-AST languages, so all supported files remain searchable.
+
 ## MCP transport and sessions
 
 The server uses **Streamable HTTP** (POST for JSON-RPC, GET for SSE). Each client gets a **session** (created on `initialize`); sessions are **in-memory only** and are lost on server restart or process exit.
@@ -116,6 +160,7 @@ If you run **both** stacks on one host they also share the external network `loa
 | `MCP_LINUX_PORT` | `3015` | Server port |
 | `MCP_LINUX_LOG_LEVEL` | `info` | Log level |
 | `MCP_LINUX_WORKER_IDLE_TIMEOUT` | `1800000` | Worker idle timeout (ms) |
+| `MCP_LINUX_WORKER_REQUEST_TIMEOUT_MS` | `120000` | Max time (ms) for a single worker request (e.g. `create_workspace` git clone). Increase if clones time out. |
 | `MCP_LINUX_GIT_SSH_KEY` | *(empty)* | Base64-encoded SSH private key for GitHub machine user |
 | `MCP_LINUX_GIT_USER_NAME` | *(user git config)* | Default Git author name for new/init repos. Falls back to user's `git config --global user.name`, then built-in default. |
 | `MCP_LINUX_GIT_USER_EMAIL` | *(user git config)* | Default Git author email for new/init repos. Falls back to user's `git config --global user.email`, then built-in default. |
@@ -124,15 +169,22 @@ If you run **both** stacks on one host they also share the external network `loa
 | `MCP_LINUX_UPLOAD_SESSION_TIMEOUT_MIN` | `15` | Upload session expiry (min) |
 | `MCP_LINUX_DOWNLOAD_BASE_URL` | *(falls back to upload URL)* | Public base URL for download links |
 | `MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN` | `60` | Download link expiry (min) |
+| `MCP_LINUX_STATUS_PAGE_URL` | *(upload base + /status)* | Public base URL for the status page |
+| `MCP_LINUX_STATUS_TOKEN_SECRET` | *(empty)* | Secret to sign status page tokens. If set, `get_status` returns a status URL with a time-limited token (same pattern as upload/download). If unset, status page only works when requests carry `X-User-*` headers (e.g. via proxy). |
+| `MCP_LINUX_STATUS_TOKEN_TTL_MIN` | `60` | Status link token lifetime (minutes) |
 | `MCP_LINUX_SESSION_IDLE_TIMEOUT_MIN` | `30` | MCP session idle timeout (min); sessions with no activity are evicted to prevent leak |
 | `MCP_LINUX_STATUS_MAX_FILES` | `50` | Max file entries per status category (staged/unstaged/untracked) before capping |
 | `MCP_LINUX_STATUS_COLLAPSE_DIRS` | `uploads,venv,.venv` | Comma-separated dirs whose paths are collapsed to one summary line in status |
 | `MCP_LINUX_RESOURCE_LIST_DIRS` | `uploads,outputs` | Comma-separated dirs listed in MCP resources (allowlist); only these appear in list |
 | `MCP_LINUX_UPLOADS_MAX_AGE_DAYS` | `0` (disabled) | If > 0, server runs daily cleanup of `uploads/` files older than N days |
 
+## Status page
+
+The status page (`/status`) lets users view and manage their account (workspaces, upload/download sessions, terminals) in the browser. Access is token-based: the agent gets a personal link via `get_status` (`status_page_url`), which includes a signed, time-limited token. The user opens that URL directly; no LibreChat proxy is required. Set `MCP_LINUX_STATUS_TOKEN_SECRET` so the server can issue and verify tokens.
+
 ## Traefik Routing
 
-Upload and download routes are exposed publicly via Traefik (`/upload/*`, `/download/*`). The MCP endpoint (`/mcp`) remains internal (Docker network only). Production base URLs must point to the public Traefik host (e.g. `https://mcp-linux.faktenforum.org`).
+Upload, download, and status routes are exposed publicly via Traefik (`/upload/*`, `/download/*`, `/status`). The MCP endpoint (`/mcp`) remains internal (Docker network only). Production base URLs must point to the public Traefik host (e.g. `https://mcp-linux.faktenforum.org`).
 
 ## Git Access
 

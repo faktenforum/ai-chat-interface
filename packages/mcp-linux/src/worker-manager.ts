@@ -7,7 +7,7 @@
 
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer, createConnection, type Server } from 'node:net';
-import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
+import fs from 'node:fs/promises';
 import { join } from 'node:path';
 import { logger } from './utils/logger.ts';
 import { WorkerError } from './utils/errors.ts';
@@ -16,6 +16,11 @@ import type { UserManager, UserMapping } from './user-manager.ts';
 /** Socket is in user's home so the unprivileged worker process can create it; server (root) connects to it. */
 const SOCKET_RELATIVE_PATH = '.mcp-linux/socket';
 const IDLE_TIMEOUT = parseInt(process.env.WORKER_IDLE_TIMEOUT || '1800000', 10); // 30 min default
+/** Max time to wait for a single worker request (e.g. create_workspace git clone uses 120s in worker). */
+const REQUEST_TIMEOUT_MS = Math.max(
+  30000,
+  parseInt(process.env.MCP_LINUX_WORKER_REQUEST_TIMEOUT_MS || '120000', 10),
+);
 
 export interface WorkerRequest {
   id: string;
@@ -58,26 +63,24 @@ export class WorkerManager {
 
     // Ensure user exists
     const mapping = await this.userManager.ensureUser(email);
-    return this.startWorker(email, mapping);
+    return await this.startWorker(email, mapping);
   }
 
   /**
    * Starts a new worker process for a user.
    */
-  private startWorker(email: string, mapping: UserMapping): string {
+  private async startWorker(email: string, mapping: UserMapping): Promise<string> {
     const homeDir = `/home/${mapping.username}`;
     const socketPath = join(homeDir, SOCKET_RELATIVE_PATH);
 
     // Clean up stale socket
-    if (existsSync(socketPath)) {
-      try {
-        unlinkSync(socketPath);
-      } catch {
-        // Ignore
-      }
+    try {
+      await fs.unlink(socketPath);
+    } catch {
+      // Ignore (ENOENT or other)
     }
 
-    const workerScript = join(process.cwd(), 'src', 'worker.ts');
+    const workerScript = join(process.cwd(), 'src', 'worker', 'index.ts');
 
     const child = spawn('runuser', [
       '-u', mapping.username, '--',
@@ -102,18 +105,26 @@ export class WorkerManager {
         LOG_LEVEL: process.env.LOG_LEVEL || 'info',
         MCP_LINUX_STATUS_MAX_FILES: process.env.MCP_LINUX_STATUS_MAX_FILES ?? '',
         MCP_LINUX_STATUS_COLLAPSE_DIRS: process.env.MCP_LINUX_STATUS_COLLAPSE_DIRS ?? '',
+        CODE_INDEX_ENABLED: process.env.CODE_INDEX_ENABLED ?? '',
+        CODE_INDEX_EMBEDDING_PROVIDER: process.env.CODE_INDEX_EMBEDDING_PROVIDER ?? '',
+        CODE_INDEX_EMBEDDING_MODEL: process.env.CODE_INDEX_EMBEDDING_MODEL ?? '',
+        CODE_INDEX_EMBEDDING_API_KEY: process.env.CODE_INDEX_EMBEDDING_API_KEY ?? '',
+        CODE_INDEX_EMBEDDING_BASE_URL: process.env.CODE_INDEX_EMBEDDING_BASE_URL ?? '',
+        CODE_INDEX_EMBEDDING_DIMENSIONS: process.env.CODE_INDEX_EMBEDDING_DIMENSIONS ?? '',
+        CODE_INDEX_EMBEDDING_BATCH_SIZE: process.env.CODE_INDEX_EMBEDDING_BATCH_SIZE ?? '',
+        CODE_INDEX_SHARED_DIR: process.env.CODE_INDEX_SHARED_DIR ?? '',
       },
     });
 
     // Log worker output
     child.stdout?.on('data', (data: Buffer) => {
       const msg = data.toString().trim();
-      if (msg) logger.debug({ username: mapping.username, stream: 'stdout' }, msg);
+      if (msg) logger.info({ username: mapping.username, stream: 'stdout' }, msg);
     });
 
     child.stderr?.on('data', (data: Buffer) => {
       const msg = data.toString().trim();
-      if (msg) logger.debug({ username: mapping.username, stream: 'stderr' }, msg);
+      if (msg) logger.error({ username: mapping.username, stream: 'stderr' }, msg);
     });
 
     child.on('exit', (code, signal) => {
@@ -161,7 +172,7 @@ export class WorkerManager {
       const timeout = setTimeout(() => {
         client.destroy();
         reject(new WorkerError(`Worker request timed out for ${email}`));
-      }, 60000); // 60s per request
+      }, REQUEST_TIMEOUT_MS);
 
       client.on('connect', () => {
         client.write(JSON.stringify(request) + '\n');
@@ -207,7 +218,8 @@ export class WorkerManager {
   private async waitForSocket(socketPath: string, timeoutMs: number): Promise<void> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
-      if (existsSync(socketPath)) {
+      try {
+        await fs.access(socketPath);
         // Try to connect
         try {
           await new Promise<void>((resolve, reject) => {
@@ -224,6 +236,8 @@ export class WorkerManager {
         } catch {
           // Socket exists but not ready yet
         }
+      } catch {
+        // Socket file does not exist yet
       }
       await new Promise((r) => setTimeout(r, 100));
     }
@@ -280,12 +294,10 @@ export class WorkerManager {
     }
 
     // Clean up socket
-    if (existsSync(state.socketPath)) {
-      try {
-        unlinkSync(state.socketPath);
-      } catch {
-        // Ignore
-      }
+    try {
+      await fs.unlink(state.socketPath);
+    } catch {
+      // Ignore
     }
 
     this.workers.delete(email);

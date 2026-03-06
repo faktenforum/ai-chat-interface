@@ -9,8 +9,7 @@ export const FILE_OPERATIONS_PROMPT = {
   description: 'When to use terminal vs. read_workspace_file for reading; terminal command examples for file operations (read, write, copy, move, delete, permissions)',
   content: `# File Operations via Terminal
 
-All file operations are done through the terminal using standard Linux commands.
-Commands execute relative to the active workspace directory.
+File ops via Linux terminal in workspace root; use list_workspace_files/read_workspace_file when you need structured listings or line-numbered content.
 
 ## Reading file contents: terminal vs. read_workspace_file
 
@@ -19,6 +18,7 @@ Commands execute relative to the active workspace directory.
   - Images or audio (returned as structured content for display/playback)
   - Large or binary files (tool returns a download link instead of dumping content)
   - A single file and you want workspace-scoped path resolution and clear errors
+  - Content is returned with line numbers for diffing; use optional \`line_ranges\` (e.g. \`[[1,50],[100,150]]\`) to read specific sections only.
 
 ## Reading Files
 \`\`\`bash
@@ -55,18 +55,13 @@ echo "content" > filename.txt
 touch filename.txt
 \`\`\`
 
-## Listing Directories
+## Listing directories
+
+Use **list_workspace_files**(workspace, path, recursive) for structured listing; use terminal when you need shell options (e.g. \`ls -lhS\`).
 \`\`\`bash
-# List files
 ls -la
-
-# Tree view (with depth limit)
 tree -L 2
-
-# List only directories
 ls -d */
-
-# List with file sizes (human-readable)
 ls -lhS
 \`\`\`
 

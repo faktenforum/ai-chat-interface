@@ -5,7 +5,7 @@ Development requests are routed by **Code Assistant** to task-specific specialis
 ## Router hierarchy
 
 ```
-Main Assistant ──► Code Assistant ──► Code Research | Developer | Code Refactorer
+Main Assistant ──► Code Assistant ──► Developer | Code Refactorer
                                  ──► GitHub Assistant | Code Reviewer
                                  ──► Main Assistant (back)
 ```
@@ -19,13 +19,11 @@ Specialists do **not** hand off back to the router; they hand off to Main Assist
 
 ## Agents
 
-Each of the four Code specialists (Code Research, Developer, Code Refactorer, Code Reviewer) has two variants: a **default** (OpenSource, Scaleway devstral) and a **quality** variant (OpenRouter, name includes model). Use the default first; use the quality variant when the user explicitly emphasizes quality or when the default could not fulfill the task (fallback).
+Each of the three Code specialists (Developer, Code Refactorer, Code Reviewer) has two variants: a **default** (OpenSource, Scaleway devstral) and a **quality** variant (OpenRouter, name includes model). Use the default first; use the quality variant when the user explicitly emphasizes quality or when the default could not fulfill the task (fallback).
 
 | Agent | ID | Provider | Model | Tools | Role |
 |-------|----|----------|-------|-------|------|
 | **Code Assistant** | `shared-agent-code-assistant` | Scaleway | devstral-2-123b | list_workspaces, get_workspace_status (MCP Linux) | Route to specialist; uses tools only to pass explicit workspace name in handoff. |
-| **Code Research** (default) | `shared-agent-code-researcher` | Scaleway | devstral-2-123b | ~35 (Linux subset, GitHub, Docs, SO, npm, web_search) | Understand code, find examples, search docs. No implementation. |
-| **Code Research (Claude Opus 4.6)** (quality) | `shared-agent-code-researcher-quality` | OpenRouter | anthropic/claude-opus-4.6 | same | Same role; use when user wants higher quality or default failed. |
 | **Developer** (default) | `shared-agent-developer` | Scaleway | devstral-2-123b | 18 (Linux full, web_search) | Implement, fix bugs. |
 | **Developer (Claude Opus 4.6)** (quality) | `shared-agent-developer-quality` | OpenRouter | anthropic/claude-opus-4.6 | same | Same role; use when user wants higher quality or default failed. |
 | **Code Refactorer** (default) | `shared-agent-code-refactorer` | Scaleway | devstral-2-123b | 18 (Linux full, web_search) | Refactor, polish, restructure. |
@@ -42,14 +40,14 @@ No automatic chains. All transitions between specialists are via explicit handof
 
 Each specialist can hand off to Main Assistant and to 2–3 relevant specialists (e.g. Developer → Code Research, GitHub Assistant). Specialists do **not** hand off back to Code Assistant. Handoff: call the transfer tool (runtime name `lc_transfer_to_<api_id>`), pass context in the **instructions** parameter. Main Assistant has no GitHub tools; for bug reports only hand off to Feedback Assistant.
 
-For the four Code specialists (Code Research, Developer, Code Refactorer, Code Reviewer), handoffs include **both** the default and the quality variant. The handoff **description** in `agents.yaml` guides the LLM: prefer the default; use the quality variant only when the user explicitly emphasizes quality or when the default could not fulfill the task.
+For the three Code specialists (Developer, Code Refactorer, Code Reviewer), handoffs include **both** the default and the quality variant. The handoff **description** in `agents.yaml` guides the LLM: prefer the default; use the quality variant only when the user explicitly emphasizes quality or when the default could not fulfill the task.
 
 **Loops:** Main Assistant asks once when unclear then transfers; specialists return to Main Assistant only when task done, user asks for another assistant, or request is clearly out of domain—not when merely ambiguous.
 
 - **Developer → Code Refactorer**: Polish or restructure code (readability, structure, tests, style).
 - **Code Refactorer → Developer**: Implement missing code, tests, or behavior found during refactoring.
 - **Code Refactorer → Code Reviewer**: Read PR/review comments and fix issues (Code Refactorer has no GitHub API).
-- **Feedback Assistant → GitHub Assistant**: Create issue (title + body in English); → Code Research (similar issues); → Code Assistant (user wants to fix).
+- **Feedback Assistant → GitHub Assistant**: Create issue (title + body in English); → Code Assistant (user wants to fix).
 
 ## Code review flow
 
@@ -63,7 +61,7 @@ Optional handoffs: Code Reviewer → Code Research (codebase context) or → Dev
 
 ## Feedback / Bug reports
 
-**Feedback Assistant** (`shared-agent-feedback`): Chat-interface bug reports. Repo always **faktenforum/ai-chat-interface**. No GitHub tools → hand off to **GitHub Assistant** (title + body in English). On create_issue error, GitHub Assistant reports the error. Optional: **Code Research** (similar issues), **Code Assistant** (user wants to fix). Entry: Main Assistant or preset “Feedback / Report error”.
+**Feedback Assistant** (`shared-agent-feedback`): Chat-interface bug reports. Repo always **faktenforum/ai-chat-interface**. No GitHub tools → hand off to **GitHub Assistant** (title + body in English). On create_issue error, GitHub Assistant reports the error. Optional: **Code Assistant** (user wants to fix). Entry: Main Assistant or preset “Feedback / Report error”.
 
 ## GitHub tools
 

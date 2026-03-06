@@ -8,9 +8,8 @@
  * The "default" workspace is auto-created and cannot be deleted.
  */
 
-import { existsSync, readdirSync, mkdirSync, rmSync } from 'node:fs';
+import fs from 'node:fs/promises';
 import { join } from 'node:path';
-import { execSync } from 'node:child_process';
 import { WorkspaceError } from './utils/errors.ts';
 import { sanitizeWorkspaceName, validateWorkspaceName } from './utils/security.ts';
 
@@ -31,18 +30,20 @@ export function getWorkspacesDir(homeDir: string): string {
 /**
  * Lists all workspaces for a user
  */
-export function listWorkspaces(homeDir: string): string[] {
+export async function listWorkspaces(homeDir: string): Promise<string[]> {
   const dir = getWorkspacesDir(homeDir);
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  } catch {
+    return [];
+  }
 }
 
 /**
  * Validates workspace parameters for creation
  */
-export function validateCreateWorkspace(name: string, homeDir: string): string {
+export async function validateCreateWorkspace(name: string, homeDir: string): Promise<string> {
   const sanitized = sanitizeWorkspaceName(name);
   const error = validateWorkspaceName(sanitized);
   if (error) {
@@ -50,8 +51,12 @@ export function validateCreateWorkspace(name: string, homeDir: string): string {
   }
 
   const wsPath = resolveWorkspacePath(homeDir, sanitized);
-  if (existsSync(wsPath)) {
+  try {
+    await fs.access(wsPath);
     throw new WorkspaceError(`Workspace "${sanitized}" already exists`);
+  } catch (e) {
+    if (e instanceof WorkspaceError) throw e;
+    // ENOENT: does not exist, proceed
   }
 
   return sanitized;
@@ -60,13 +65,15 @@ export function validateCreateWorkspace(name: string, homeDir: string): string {
 /**
  * Validates workspace parameters for deletion
  */
-export function validateDeleteWorkspace(name: string, homeDir: string): string {
+export async function validateDeleteWorkspace(name: string, homeDir: string): Promise<string> {
   if (name === 'default') {
     throw new WorkspaceError('Cannot delete the default workspace');
   }
 
   const wsPath = resolveWorkspacePath(homeDir, name);
-  if (!existsSync(wsPath)) {
+  try {
+    await fs.access(wsPath);
+  } catch {
     throw new WorkspaceError(`Workspace "${name}" does not exist`);
   }
 

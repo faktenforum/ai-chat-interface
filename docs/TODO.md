@@ -41,7 +41,7 @@
   - Consider creating agents named after their LLM models (with the corresponding LLM behind them)
   - Create a minimal general-purpose agent with common functions like web search
 
-- [ ] Replace Jina reranker with RAG API reranker once LibreChat PR [#10574](https://github.com/danny-avila/LibreChat/pull/10574) is merged (adds `rerankerType: "simple"` support)
+- [ ] Replace Jina reranker with RAG API reranker (see [Upstream Contributions](#upstream-contributions))
 
 ### RAG API - OpenRouter Embeddings Support
 - [ ] Create feature request for OpenRouter provider support in RAG API
@@ -79,8 +79,7 @@
 
 ### MCP Docs (Grounded Docs)
 
-- [ ] Open PR for configurable embedding dimension (fork branch `vector-dimension`)
-  - Upstream [arabold/docs-mcp-server](https://github.com/arabold/docs-mcp-server): support configurable `documents_vec` for Scaleway (3584), OpenRouter (1536). Fork [faktenforum/docs-mcp-server](https://github.com/faktenforum/docs-mcp-server); PR `vector-dimension` → `arabold/docs-mcp-server:main`.
+- [ ] Open PR for configurable embedding dimension (see [Upstream Contributions](#upstream-contributions))
 - [ ] Reuse Firecrawl playwright-service for docs-mcp-server browser rendering
   - Optional remote Playwright mode (e.g. `MCP_DOCS_PLAYWRIGHT_URL`): docs-mcp calls playwright-service `POST /scrape`, feed HTML into existing pipeline. Single browser pool, no Chromium in docs-mcp image. Risk: Firecrawl contract may change. Ref: [MCP_DOCS.md](MCP_DOCS.md), `dev/firecrawl/apps/playwright-service-ts`.
 
@@ -89,8 +88,6 @@
 - [x] Fix MCP image generation tools sending artifacts to non-vision models
   - LibreChat issue [#11413](https://github.com/danny-avila/LibreChat/issues/11413)
   - Fixed by: [LibreChat PR #11504](https://github.com/danny-avila/LibreChat/pull/11504) (vision toggle for agents) and [agents PR #48](https://github.com/danny-avila/agents/pull/48) (filter base64 image artifacts)
-- [ ] Fix negative max_tokens error with Scaleway/Mistral provider
-  - LibreChat issue [#11435](https://github.com/danny-avila/LibreChat/issues/11435)
 - [ ] Reduce SSE stream disconnection error logs
   - Known issue: `streamable-http` MCP servers use stateless HTTP POST while LibreChat's `StreamableHTTPClientTransport` attempts SSE streams, causing "Bad Request" errors. Servers function correctly. Log rotation configured.
   - Related: [LibreChat Discussion #11230](https://github.com/danny-avila/LibreChat/discussions/11230)
@@ -99,17 +96,11 @@
   - The tool is very helpful for reading special URLs, but connection issues prevent reliable usage
   - Waiting for fix before re-enabling in `librechat.yaml` and `agents.yaml`
   - Related to SSE stream disconnection issue above
-- [ ] Update OpenStreetMap MCP server to use official version after PR merge
-  - Status: Currently using fork `faktenforum/open-streetmap-mcp` with merged `bump-fastmcp` branch
-  - Fork includes HTTP transport support and Dockerfile from PR [#10](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/10)
-  - Our improvements submitted as PR [#11](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/11): Docker port configuration and FastMCP 0.2.0+ compatibility
-  - Once PRs #10 and #11 are merged upstream, consider switching to official version
+- [ ] Update OpenStreetMap MCP server to official version once upstream PRs are merged (see [Upstream Contributions](#upstream-contributions))
+  - Currently using fork `faktenforum/open-streetmap-mcp` with merged `bump-fastmcp` branch
 - [ ] Find alternative to passing cookies.txt via LLM for MCP (e.g. YTPTube/YouTube)
   - Current approach of sending cookies.txt through the LLM (as prompt/content) is inefficient and error-prone: the file is already very long for YouTube alone, blows up context and can break or truncate.
   - Goal: support file upload and pass file content directly to the tool/LLM (e.g. as attachment or tool resource) instead of in the user prompt.
-- [x] Fix MCP tools returning malformed responses mixing text and JSON
-  - Issue: [LibreChat #11494](https://github.com/danny-avila/LibreChat/issues/11494) - MCP image responses with mixed text content are not displayed
-  - Fixed by: [LibreChat PR #11499](https://github.com/danny-avila/LibreChat/pull/11499) (automatic detection of OpenAI-compatible endpoints for MCP formatting)
   - Affected tools:
     - Mapbox MCP: [mapbox/mcp-server#103](https://github.com/mapbox/mcp-server/issues/103) - Tool responses mix text and JSON instead of using structured content arrays
     - Playwright MCP: [microsoft/playwright-mcp#1324](https://github.com/microsoft/playwright-mcp/issues/1324) - Screenshot responses mix Markdown/JSON format
@@ -132,17 +123,36 @@
 
 ## Upstream Contributions
 
-### Agents - Handoff Fix
+### danny-avila/LibreChat
 
-- [ ] Bring fix for "400 Unexpected role 'user' after role 'tool'" error upstream
-  - Branch: `fix/user-after-tool` in `dev/agents`
-  - Fix: Add bridge AIMessage in `formatAgentMessages` when last message is a ToolMessage to prevent API errors with legacy conversations
-  - Repository: [danny-avila/agents](https://github.com/danny-avila/agents)
-  - Related: Upstream issue #54, PR #59
+| Status | Branch | PR | Description |
+|--------|--------|----|-------------|
+| Draft | `feat/vision` | [#11501](https://github.com/danny-avila/LibreChat/pull/11501) | Add vision capability flag to modelSpecs configuration |
+| Open | `fix/mcp-parser` | [#12103](https://github.com/danny-avila/LibreChat/pull/12103) | Auto-detect OpenAI-compatible custom endpoints in formatToolContent |
+| Open | `feat/stt` | [#11528](https://github.com/danny-avila/LibreChat/pull/11528) | Prefer ogg/wav in external STT recording for backend compatibility |
+| Waiting | — | depends on [#10574](https://github.com/danny-avila/LibreChat/pull/10574) | Replace Jina reranker with RAG API reranker (`rerankerType: "simple"`) |
 
-### Vision (WIP / draft PRs, not merged)
+### danny-avila/agents
 
-- [ ] Add vision capability flag to modelSpecs configuration (draft PR, WIP) – [LibreChat PR #11501](https://github.com/danny-avila/LibreChat/pull/11501)
-- [ ] Filter base64 image artifacts based on agent vision capability (draft PR, WIP) – [agents PR #48](https://github.com/danny-avila/agents/pull/48)
+| Status | Branch | PR | Description |
+|--------|--------|----|-------------|
+| Draft | — | [#48](https://github.com/danny-avila/agents/pull/48) | Filter base64 image artifacts based on agent vision capability |
+| Open | `fix/user-after-tool` | [#59](https://github.com/danny-avila/agents/pull/59) | Fix "400 Unexpected role 'user' after role 'tool'" (bridge AIMessage in `formatAgentMessages`) |
+| Open | `fix/wrong-agent-id` | [#61](https://github.com/danny-avila/agents/pull/61) | Fix handoff: return wrong-tool correction to LLM instead of silent execute |
 
-Vision is re-enabled in `packages/librechat-init/config/librechat.yaml` as **experimental/WIP**. Requires `feat/vision` in `dev/librechat` and `dev/agents`. See [WIP Documentation](wip/README.md).
+### arabold/docs-mcp-server
+
+| Status | Branch | PR | Description |
+|--------|--------|----|-------------|
+| TODO | `vector-dimension` | — | Configurable embedding dimension (`documents_vec` for Scaleway 3584, OpenRouter 1536) |
+
+### jagan-shanmugam/open-streetmap-mcp
+
+| Status | Branch | PR | Description |
+|--------|--------|----|-------------|
+| Open | — | [#11](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/11) | Docker port configuration and FastMCP 0.2.0+ compatibility |
+| Waiting | — | depends on [#10](https://github.com/jagan-shanmugam/open-streetmap-mcp/pull/10) | HTTP transport support and Dockerfile (not our PR) |
+
+### Notes
+
+- Vision is re-enabled in `packages/librechat-init/config/librechat.yaml` as **experimental/WIP**. Requires `feat/vision` in `dev/librechat` and `dev/agents`. See [WIP Documentation](wip/README.md).

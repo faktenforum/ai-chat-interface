@@ -74,3 +74,6 @@
 	path = workspaces/linux-expert
 	url = git@github.com:faktenforum/workspace-linux-expert.git
 	branch = main
+[submodule "dev/codebase-indexer"]
+	path = dev/codebase-indexer
+	url = git@github.com:faktenforum/codebase-indexer.git

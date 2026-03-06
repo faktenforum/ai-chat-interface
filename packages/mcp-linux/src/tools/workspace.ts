@@ -12,12 +12,13 @@ import { extractUserContext } from '../utils/http-server.ts';
 import type { UserManager } from '../user-manager.ts';
 import type { WorkerManager } from '../worker-manager.ts';
 import { resolveEmail, errorResult } from './helpers.ts';
+import { getWorkspaceTemplate } from '../config.ts';
 import {
   ListWorkspacesSchema,
   CreateWorkspaceSchema,
   DeleteWorkspaceSchema,
-  GetWorkspaceStatusSchema,
-  SetWorkspacePlanSchema,
+  GetWorkspacesSchema,
+  UpdateWorkspaceSchema,
   CleanWorkspaceUploadsSchema,
 } from '../schemas/workspace.schema.ts';
 
@@ -45,7 +46,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'list_workspaces',
     {
-      description: 'Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use get_workspace_status(workspace) for full plan and tasks. When handing off to a workspace specialist, put the chosen workspace name in the handoff instructions so they call get_workspace_status(workspace) first.',
+      description: 'Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use get_workspaces(workspace) for full plan and tasks. When handing off to a workspace specialist, put the chosen workspace name in the handoff instructions so they call get_workspaces(workspace) first.',
       inputSchema: ListWorkspacesSchema.shape,
     },
     async (args, extra) => {
@@ -71,19 +72,33 @@ export function registerWorkspaceTools(
   server.registerTool(
     'create_workspace',
     {
-      description: 'Create a new workspace (empty repo or clone from git_url). Call list_workspaces first if unsure whether the name already exists.',
+      description: 'Create a new workspace (empty repo or clone from git_url). When cloning, submodules are checked out recursively (--recurse-submodules). Call list_workspaces first if unsure whether the name already exists.',
       inputSchema: CreateWorkspaceSchema.shape,
     },
     async (args, extra) => {
       try {
         const email = resolveEmail(extra);
+        let gitUrl = args.git_url;
+        let branch = args.branch;
+        let default_workspace_config: { code_index_enabled?: boolean } | undefined;
+        if (gitUrl == null || gitUrl === '') {
+          const template = await getWorkspaceTemplate(args.name);
+          if (template) {
+            gitUrl = template.git_url;
+            branch = template.branch ?? branch;
+            default_workspace_config = {
+              code_index_enabled: template.code_index_enabled ?? true,
+            };
+          }
+        }
         const response = await workerManager.sendRequest(email, {
           id: randomUUID(),
           method: 'create_workspace',
           params: {
             name: args.name,
-            git_url: args.git_url,
-            branch: args.branch,
+            git_url: gitUrl,
+            branch,
+            ...(default_workspace_config != null && { default_workspace_config }),
           },
         });
 
@@ -128,19 +143,21 @@ export function registerWorkspaceTools(
   );
 
   server.registerTool(
-    'get_workspace_status',
+    'get_workspaces',
     {
-      description: 'Full git status plus plan and tasks (each task: title, status). First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next.',
-      inputSchema: GetWorkspaceStatusSchema.shape,
+      description:
+        'Full git status, plan, tasks, submodules status (idle/updating/done/error/none), and code_index status (enabled, status, progress). When AGENTS.md exists in the workspace root, returns its content as instructions. First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next. Pass summary_only: true to get only a plan summary and task counts (done/in_progress/pending/cancelled) instead of the full plan and task list.',
+      inputSchema: GetWorkspacesSchema.shape,
     },
     async (args, extra) => {
       try {
         const email = resolveEmail(extra);
         const response = await workerManager.sendRequest(email, {
           id: randomUUID(),
-          method: 'get_workspace_status',
+          method: 'get_workspaces',
           params: {
             workspace: args.workspace,
+            summary_only: args.summary_only,
           },
         });
 
@@ -156,22 +173,25 @@ export function registerWorkspaceTools(
   );
 
   server.registerTool(
-    'set_workspace_plan',
+    'update_workspace',
     {
-      description: 'Set plan and/or tasks. Call before every handoff and at end of your turn so the next agent sees current state; if you omit this, context is lost. Pass full task list with updated statuses (done | in_progress | pending). Alternatively pass task_updates: [{ index, status }] to update only specific task statuses (0-based index from get_workspace_status) without sending the full list. Next agent reads via get_workspace_status. Tasks: prefer string[] e.g. ["Step 1","Step 2"] or [{ title, status? }]; status: pending | in_progress | done | cancelled.',
-      inputSchema: SetWorkspacePlanSchema.shape,
+      description:
+        'Update workspace plan, tasks, config, and/or trigger reindex. All params optional. Set plan/tasks before every handoff so the next agent sees current state. Use task_updates: [{index, status}] for partial status changes (0-based index from get_workspaces). Set code_index_enabled to toggle indexing. Set reindex: true to force rebuild the code index.',
+      inputSchema: UpdateWorkspaceSchema.shape,
     },
     async (args, extra) => {
       try {
         const email = resolveEmail(extra);
         const response = await workerManager.sendRequest(email, {
           id: randomUUID(),
-          method: 'set_workspace_plan',
+          method: 'update_workspace',
           params: {
             workspace: args.workspace,
             plan: args.plan,
             tasks: args.tasks,
             task_updates: args.task_updates,
+            code_index_enabled: args.code_index_enabled,
+            reindex: args.reindex,
           },
         });
 

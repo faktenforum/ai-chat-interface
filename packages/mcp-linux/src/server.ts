@@ -12,21 +12,30 @@
 
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'url';
-import express from 'express';
+import express, { type Request, type Response, type NextFunction } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { logger } from './utils/logger.ts';
-import { setupMcpEndpoints, setupGracefulShutdown, extractUserContext } from './utils/http-server.ts';
+import {
+  setupMcpEndpoints,
+  setupGracefulShutdown,
+  extractUserContext,
+  type UserContext,
+} from './utils/http-server.ts';
+import { verifyToken } from './utils/status-token.ts';
 import { UserManager } from './user-manager.ts';
 import { WorkerManager } from './worker-manager.ts';
+import { createStatusRouter } from './status-routes.ts';
 import { registerWorkspaceTools, sessionEmailMap } from './tools/workspace.ts';
 import { registerTerminalTools } from './tools/terminal.ts';
 import { registerAccountTools } from './tools/account.ts';
 import { registerUploadTools } from './tools/upload.ts';
 import { registerDownloadTools } from './tools/download.ts';
 import { registerFileTools } from './tools/file.ts';
+import { registerCodeIndexTools } from './tools/code-index.ts';
 import { registerPrompts } from './prompts/index.ts';
 import { registerWorkspaceResources } from './resources/workspace-resources.ts';
 import { UploadManager } from './upload/upload-manager.ts';
@@ -56,6 +65,47 @@ const downloadManager = new DownloadManager({
   defaultSessionTimeoutMin: parseInt(process.env.MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN || '60', 10),
 });
 
+interface StatusRequest extends Request {
+  userContext?: UserContext;
+}
+
+function requireUserContext(req: StatusRequest, res: Response, next: NextFunction): void {
+  const userContext = extractUserContext(req.headers);
+  if (!userContext) {
+    res.status(401).json({ error: 'Missing user context' });
+    return;
+  }
+  req.userContext = userContext;
+  next();
+}
+
+/** Resolves user from status token (query or body) or from X-User-* headers. Allows GET /status without auth so the page can load and show "open link from agent". */
+function requireUserContextOrStatusToken(req: StatusRequest, res: Response, next: NextFunction): void {
+  const tokenRaw =
+    (typeof req.query.token === 'string' ? req.query.token : null) ||
+    (typeof req.body?.auth_token === 'string' ? req.body.auth_token : null);
+  if (tokenRaw) {
+    const payload = verifyToken(tokenRaw);
+    if (payload) {
+      req.userContext = { userId: '', email: payload.email, username: '' };
+      next();
+      return;
+    }
+  }
+  const userContext = extractUserContext(req.headers);
+  if (userContext) {
+    req.userContext = userContext;
+    next();
+    return;
+  }
+  const isIndexGet = req.method === 'GET' && (req.path === '' || req.path === '/');
+  if (isIndexGet) {
+    next();
+    return;
+  }
+  res.status(401).json({ error: 'Missing user context or invalid/expired token' });
+}
+
 /**
  * Creates and configures the MCP server with all tool and prompt registrations
  */
@@ -73,41 +123,39 @@ function createMcpServer() {
       },
       instructions: `You have access to a Linux terminal environment via the MCP Linux server.
 
-Each user has their own isolated Linux account with:
-- A personal home directory with persistent bash history
-- Git-backed workspaces (a "default" workspace exists automatically)
-- Pre-installed runtimes: Node.js, Python 3, Git, Bash, ripgrep, and more
-- SSH access to GitHub via a shared machine user key
+TOOL USE
+- You have access to tools executed in a Linux workspace context. Use one tool at a time; each step should be informed by the previous result.
+- Assess what information you need, then choose the most appropriate tool. For example: list_workspace_files is more effective than running ls in the terminal for exploring directory structure.
 
-Usage guidelines:
-- Use the terminal tools (execute_command, write_terminal) to run any command
-- All commands run in the context of a workspace (default: "default")
-- Use workspace tools to manage projects (create from git clone or empty repo)
-- File operations, search, and git are all done via the terminal
-- Each terminal response includes workspace git metadata (branch, dirty status)
-- list_workspaces = overview (all workspaces, branch, dirty, plan_preview). get_workspace_status(workspace) = full detail for one workspace (plan, tasks, git status). Use the latter after handoffs or when you need task-level context; use the former to choose or create a workspace.
-- get_workspace_status returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files.
-- Users can install additional tools in their home (nvm, pip --user, etc.)
+Tool Use Guidelines
+1. Assess what information you already have and what you need to proceed.
+2. Choose the most appropriate tool (e.g. list_workspace_files over ls, codebase_search before read_workspace_file when exploring unfamiliar code).
+3. After each tool use, use the result (output, errors, git status) to decide the next step. Do not assume success without seeing the result.
+
+====
+
+OBJECTIVE
+- Accomplish the user's task iteratively. Break it into clear steps; use one tool at a time; let each step be informed by the previous tool result. Do not assume a tool succeeded without seeing its result.
+
+====
+
+CAPABILITIES
+- Each user has their own isolated Linux account: personal home directory with persistent bash history, Git-backed workspaces (a "default" workspace exists automatically), pre-installed runtimes (Node.js, Python 3, Git, Bash, ripgrep, and more), SSH access to GitHub via a shared machine user key. Users can install additional tools in their home (nvm, pip --user, etc.); see runtime_management prompt for details.
+- Use terminal tools (execute_command, write_terminal) to run any command. All commands run in the context of a workspace (default: "default"). File operations, search, and git are done via the terminal. Each terminal response includes workspace git metadata (branch, dirty status).
+- list_workspaces = overview (all workspaces, branch, dirty, plan_preview). get_workspaces(workspace) = full detail (plan, tasks, optional workspace-root AGENTS.md, git status). Use the latter after handoffs or when you need task-level context; use the former to choose or create a workspace. get_workspaces(workspace, { summary_only: true }) for a short overview (plan_summary, task_counts). get_workspaces returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files. update_workspace to set plan, tasks, config, or trigger reindex — all in one call.
+- list_workspace_files: Use to explore directory structure; more effective than ls for getting a structured file list.
+- codebase_search: MUST use FIRST before read_workspace_file when exploring unfamiliar code. Queries in English.
 
 File Upload:
-- Use create_upload_session to generate a unique upload URL for the user
-- Share the URL with the user so they can upload files via their browser
-- Uploaded files are saved to ~/workspaces/{workspace}/uploads/. Uploads are ephemeral (may be purged); use clean_workspace_uploads to free space or move/download important outputs.
-- Upload sessions auto-close after successful upload and expire after 15 minutes by default
-- User uploaded → list_upload_sessions (default all), find completed session with uploaded_file, then read_workspace_file(workspace, e.g. uploads/filename). Never read_workspace_file without path from list_upload_sessions when user just uploaded.
-- Close unnecessary active sessions with close_upload_session when appropriate (e.g. after explaining or when cleaning up)
+- create_upload_session to generate a unique upload URL for the user. Uploaded files are saved to ~/workspaces/{workspace}/uploads/. Uploads are ephemeral (may be purged); use clean_workspace_uploads to free space or move/download important outputs. Sessions auto-close after upload and expire after 15 minutes by default. User uploaded → list_upload_sessions, find completed session with uploaded_file, then read_workspace_file(workspace, e.g. uploads/filename). Never read_workspace_file without path from list_upload_sessions when user just uploaded. Close unnecessary active sessions with close_upload_session when appropriate.
 
 File Download:
-- Use create_download_link to generate a temporary download URL for any workspace file; share the URL with the user.
-- Download links are single-use and expire after 60 minutes by default.
-- Cleanup: Check list_download_links (e.g. after creating links or at end of task); close unused links with close_download_link to limit exposure and follow security practice.
+- create_download_link for a temporary download URL for any workspace file; share the URL with the user. Links are single-use, expire after 60 minutes by default. Cleanup: list_download_links, close_download_link to limit exposure.
 
 Reading Files:
-- Use read_workspace_file to read a file and get its contents as structured content
-- Text files (.txt, .csv, .json, .py, .js, etc.) are returned inline as text
-- Images (.png, .jpg, .gif, .webp) are returned as base64 image content
-- Audio files (.wav, .mp3, .ogg) are returned as base64 audio content
-- Large or binary files automatically get a download link instead`,
+- read_workspace_file returns content with line numbers for diffing. Use optional line_ranges for specific sections. Text files are returned inline; images and audio as base64; large or binary files get a download link instead.
+
+Status page: Users can view and manage their account (workspaces, upload/download sessions, terminals). Use get_status and give the user the status_page_url from the result (it includes a time-limited token). When the user wants to close sessions, revoke download links, kill terminals, or delete workspaces themselves, direct them to open that URL in a new tab. See the account_status prompt for when to refer users.`,
     },
   );
 
@@ -118,6 +166,7 @@ Reading Files:
   registerUploadTools(server, userManager, uploadManager);
   registerDownloadTools(server, userManager, downloadManager);
   registerFileTools(server, userManager, downloadManager);
+  registerCodeIndexTools(server, userManager, workerManager);
 
   // Register resources
   registerWorkspaceResources(server, userManager);
@@ -159,24 +208,51 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
 /**
  * Creates and configures the Express application
  */
-function createApp(): express.Application {
+async function createApp(): Promise<express.Application> {
   const app = express();
   app.use(express.json({ limit: '10mb' }));
   app.disable('x-powered-by');
 
-  // Pug template engine for upload pages
   const appRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-  app.set('views', join(appRoot, 'views'));
-  app.set('view engine', 'pug');
+  const spaDirCwd = join(process.cwd(), 'frontend/.output/public');
+  const spaDirFromModule = join(appRoot, 'frontend/.output/public');
+  let spaDir = spaDirFromModule;
+  try {
+    await fs.access(join(spaDirFromModule, 'index.html'));
+  } catch {
+    try {
+      await fs.access(join(spaDirCwd, 'index.html'));
+      spaDir = spaDirCwd;
+    } catch {
+      // fallback to spaDirFromModule
+    }
+  }
 
-  // Static files (CSS, JS) for upload pages
-  app.use(express.static(join(appRoot, 'public')));
+  // Restore path when proxy (e.g. Traefik) strips prefix and sets X-Forwarded-Prefix
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    const prefix = req.get('x-forwarded-prefix');
+    if (prefix && typeof prefix === 'string' && req.path && !req.path.startsWith(prefix)) {
+      const path = req.path === '/' ? '' : req.path;
+      req.url = (prefix.replace(/\/$/, '') + path) || '/';
+      logger.debug({ originalPath: req.path, prefix, newUrl: req.url }, 'Path rewritten from X-Forwarded-Prefix');
+    }
+    next();
+  });
 
-  // Upload routes (before MCP endpoints, no JSON body parsing needed for multipart)
-  setupUploadRoutes(app, uploadManager, userManager);
+  // Upload and download routes first so GET /upload/:token and GET /download/:token
+  // are served (SPA page or file stream), not passed to static (which would 404).
+  setupUploadRoutes(app, uploadManager, userManager, spaDir);
+  setupDownloadRoutes(app, downloadManager, spaDir);
 
-  // Download routes (file streaming)
-  setupDownloadRoutes(app, downloadManager);
+  // Static files from the built Nuxt SPA (index, assets, etc.)
+  app.use(express.static(spaDir));
+
+  // Status routes (per-user overview and management UI)
+  const statusRouter = createStatusRouter(
+    { userManager, workerManager, uploadManager, downloadManager },
+    spaDir,
+  );
+  app.use('/status', requireUserContextOrStatusToken, statusRouter);
 
   // User-context extraction middleware: maps session ID to user email
   app.use('/mcp', (req, _res, next) => {
@@ -209,9 +285,27 @@ function createApp(): express.Application {
 /**
  * Main entry point
  */
+/**
+ * Creates the shared index cache directory with sticky-bit permissions (0o1777).
+ * All worker users can create entries; no user can delete another's entries.
+ */
+async function ensureSharedIndexDir(): Promise<void> {
+  const sharedDir = process.env.CODE_INDEX_SHARED_DIR?.trim() || '/app/data/index-cache';
+  try {
+    await fs.mkdir(sharedDir, { recursive: true });
+    await fs.chmod(sharedDir, 0o1777);
+  } catch (err) {
+    logger.warn({ error: err, sharedDir }, 'Could not create/chmod shared index cache dir; shared indexing may not work');
+  }
+}
+
 async function main(): Promise<void> {
   try {
-    // Restore existing users from persistent mapping on startup
+    // Ensure shared index cache directory exists and is world-writable with sticky bit
+    await ensureSharedIndexDir();
+
+    // Initialize user manager DB and restore existing users
+    await userManager.initialize();
     await userManager.restoreUsers();
     logger.info('User restoration complete');
 
@@ -270,7 +364,7 @@ async function main(): Promise<void> {
       cleanupTimer.unref();
     }
 
-    const app = createApp();
+    const app = await createApp();
     const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info({ port: PORT, server: SERVER_NAME, version: SERVER_VERSION }, 'MCP Linux Server started');
     });

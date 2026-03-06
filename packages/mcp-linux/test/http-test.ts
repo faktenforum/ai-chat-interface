@@ -43,7 +43,7 @@ async function mcpPost(body: unknown, extraHeaders?: Record<string, string>) {
 }
 
 async function runTests(): Promise<void> {
-  const app = createApp();
+  const app = await createApp();
   const server = app.listen(PORT);
 
   try {

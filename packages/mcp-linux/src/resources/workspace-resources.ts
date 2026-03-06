@@ -8,7 +8,7 @@
  * - resources/read: Reads a file and returns it as a text or blob resource
  */
 
-import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
+import fs from 'node:fs/promises';
 import { join, resolve, extname, relative } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -78,20 +78,20 @@ const SKIP_DIR_NAMES = new Set(['node_modules', 'venv', '.venv']);
  * Recursively list files in a directory (up to a depth limit and entry limit).
  * Skips hidden, node_modules, venv, .venv.
  */
-function listFilesRecursive(
+async function listFilesRecursive(
   dir: string,
   baseDir: string,
   maxDepth: number,
   maxEntries: number,
   depth = 0,
-): Array<{ relativePath: string; size: number; mimeType: string }> {
+): Promise<Array<{ relativePath: string; size: number; mimeType: string }>> {
   if (depth > maxDepth) return [];
 
   const results: Array<{ relativePath: string; size: number; mimeType: string }> = [];
 
   let entries;
   try {
-    entries = readdirSync(dir, { withFileTypes: true });
+    entries = await fs.readdir(dir, { withFileTypes: true });
   } catch {
     return results;
   }
@@ -104,14 +104,14 @@ function listFilesRecursive(
     const fullPath = join(dir, entry.name);
 
     if (entry.isFile()) {
-      const stat = statSync(fullPath);
+      const stat = await fs.stat(fullPath);
       results.push({
         relativePath: relative(baseDir, fullPath),
         size: stat.size,
         mimeType: guessMimeType(entry.name),
       });
     } else if (entry.isDirectory() && depth < maxDepth) {
-      const subResults = listFilesRecursive(fullPath, baseDir, maxDepth, maxEntries - results.length, depth + 1);
+      const subResults = await listFilesRecursive(fullPath, baseDir, maxDepth, maxEntries - results.length, depth + 1);
       results.push(...subResults);
     }
   }
@@ -143,9 +143,8 @@ export function registerWorkspaceResources(
 
         let workspaces: string[];
         try {
-          workspaces = readdirSync(workspacesRoot, { withFileTypes: true })
-            .filter((d) => d.isDirectory())
-            .map((d) => d.name);
+          const wsEntries = await fs.readdir(workspacesRoot, { withFileTypes: true });
+          workspaces = wsEntries.filter((d) => d.isDirectory()).map((d) => d.name);
         } catch {
           workspaces = [];
         }
@@ -159,8 +158,14 @@ export function registerWorkspaceResources(
           const wsPath = join(workspacesRoot, ws);
           for (const dirName of allowedDirs) {
             const dirPath = join(wsPath, dirName);
-            if (!existsSync(dirPath) || !statSync(dirPath).isDirectory()) continue;
-            const files = listFilesRecursive(
+            let dirStat;
+            try {
+              dirStat = await fs.stat(dirPath);
+            } catch {
+              continue;
+            }
+            if (!dirStat.isDirectory()) continue;
+            const files = await listFilesRecursive(
               dirPath,
               wsPath,
               RESOURCE_LIST_MAX_DEPTH,
@@ -221,11 +226,13 @@ export function registerWorkspaceResources(
           throw new Error('Path traversal denied');
         }
 
-        if (!existsSync(absolutePath)) {
+        try {
+          await fs.access(absolutePath);
+        } catch {
           throw new Error(`File not found: ${filePath} in workspace "${workspace}"`);
         }
 
-        const stat = statSync(absolutePath);
+        const stat = await fs.stat(absolutePath);
         if (!stat.isFile()) {
           throw new Error(`Not a file: ${filePath}`);
         }
@@ -235,7 +242,7 @@ export function registerWorkspaceResources(
 
         if (TEXT_EXTENSIONS.has(ext) || ext === '') {
           // Return as text resource
-          const content = readFileSync(absolutePath, 'utf-8');
+          const content = await fs.readFile(absolutePath, 'utf-8');
           return {
             contents: [
               {
@@ -248,7 +255,7 @@ export function registerWorkspaceResources(
         }
 
         // Return as blob resource (base64)
-        const data = readFileSync(absolutePath).toString('base64');
+        const data = (await fs.readFile(absolutePath)).toString('base64');
         return {
           contents: [
             {
@@ -274,4 +281,3 @@ export function registerWorkspaceResources(
     },
   );
 }
-

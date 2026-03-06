@@ -9,10 +9,13 @@
 
 import { type Request, type Response } from 'express';
 import type express from 'express';
-import { createWriteStream, existsSync, mkdirSync, chownSync } from 'node:fs';
-import { join, extname, basename } from 'node:path';
+import { createWriteStream } from 'node:fs';
+import fs from 'node:fs/promises';
+import { join, resolve, extname, basename } from 'node:path';
 import Busboy from 'busboy';
+import { serveSpaIndex } from '../utils/serve-spa.ts';
 import { logger } from '../utils/logger.ts';
+import { paramString, spaErrorRedirect } from '../utils/route-helpers.ts';
 import type { UploadManager } from './upload-manager.ts';
 import type { UserManager } from '../user-manager.ts';
 
@@ -46,26 +49,17 @@ function sanitiseFilename(raw: string): string {
 /**
  * Resolves a non-colliding file path. Appends -1, -2, etc. if needed.
  */
-function resolveFilePath(dir: string, filename: string): string {
+async function resolveFilePath(dir: string, filename: string): Promise<string> {
   let target = join(dir, filename);
-  if (!existsSync(target)) return target;
+  try { await fs.access(target); } catch { return target; }
 
   const ext = extname(filename);
   const stem = filename.slice(0, filename.length - ext.length);
   let counter = 1;
-  while (existsSync(target)) {
+  while (true) {
     target = join(dir, `${stem}-${counter}${ext}`);
-    counter++;
+    try { await fs.access(target); counter++; } catch { return target; }
   }
-  return target;
-}
-
-/**
- * Extracts a route param as a single string (Express 5 params may be string | string[]).
- */
-function paramString(value: string | string[] | undefined): string {
-  if (Array.isArray(value)) return value[0] ?? '';
-  return value ?? '';
 }
 
 /**
@@ -75,56 +69,72 @@ export function setupUploadRoutes(
   app: express.Application,
   uploadManager: UploadManager,
   userManager: UserManager,
+  spaDir: string,
 ): void {
-  // ── GET /upload/:token — serve the upload page ─────────────────────────────
-  app.get('/upload/:token', (req: Request, res: Response) => {
+  const spaRoot = resolve(spaDir);
+
+  function spaError(res: Response, status: number, title: string, message: string): void {
+    spaErrorRedirect(res, 'upload', status, title, message);
+  }
+
+  // ── GET /upload/error — SPA error page (must be before /upload/:token so "error" is not used as token)
+  app.get('/upload/error', async (_req: Request, res: Response) => {
+    await serveSpaIndex(spaRoot, res, 'Upload SPA');
+  });
+
+  // ── GET /upload/:token/config — session config as JSON (used by SPA) ────────
+  app.get('/upload/:token/config', (req: Request, res: Response) => {
     const token = paramString(req.params.token);
     const session = uploadManager.getSession(token);
 
     if (!session) {
-      res.status(404).render('upload-error', {
-        pageTitle: 'Session Not Found',
-        errorTitle: 'Session Not Found',
-        errorMessage: 'This upload link is invalid or has been removed.',
-      });
+      res.status(404).json({ error: 'Session not found' });
+      return;
+    }
+
+    res.json({
+      token: session.token,
+      maxSizeMb: Math.round(session.maxFileSize / (1024 * 1024)),
+      allowedExtensions: session.allowedExtensions ?? [],
+      expiresAt: session.expiresAt.toISOString(),
+      workspace: session.workspace,
+      status: session.status,
+    });
+  });
+
+  // ── GET /upload/:token — serve the SPA upload page ──────────────────────────
+  app.get('/upload/:token', async (req: Request, res: Response) => {
+    const token = paramString(req.params.token);
+    logger.info({ token, path: req.path }, 'GET /upload/:token');
+    const session = uploadManager.getSession(token);
+
+    if (!session) {
+      spaError(
+        res,
+        404,
+        'Session Not Found',
+        'This upload link is invalid or has been removed. Sessions are lost on server restart; create a new upload session from the status page.',
+      );
       return;
     }
 
     if (session.status === 'expired') {
-      res.status(410).render('upload-error', {
-        pageTitle: 'Session Expired',
-        errorTitle: 'Session Expired',
-        errorMessage: 'This upload session has expired. Please request a new upload link.',
-      });
+      spaError(res, 410, 'Session Expired', 'This upload session has expired. Please request a new upload link.');
       return;
     }
 
     if (session.status === 'completed') {
-      res.status(410).render('upload-error', {
-        pageTitle: 'Upload Complete',
-        errorTitle: 'Upload Complete',
-        errorMessage: 'A file has already been uploaded in this session. The session is now closed.',
-      });
+      spaError(res, 410, 'Upload Complete', 'A file has already been uploaded in this session. The session is now closed.');
       return;
     }
 
     if (session.status === 'closed') {
-      res.status(410).render('upload-error', {
-        pageTitle: 'Session Closed',
-        errorTitle: 'Session Closed',
-        errorMessage: 'This upload session has been closed. Please request a new upload link.',
-      });
+      spaError(res, 410, 'Session Closed', 'This upload session has been closed. Please request a new upload link.');
       return;
     }
 
-    res.render('upload', {
-      pageTitle: 'File Upload',
-      token: session.token,
-      workspace: session.workspace,
-      maxFileSizeMb: Math.round(session.maxFileSize / (1024 * 1024)),
-      allowedExtensions: session.allowedExtensions ?? [],
-      expiresAt: session.expiresAt.toISOString(),
-    });
+    logger.info({ token }, 'Serving upload SPA');
+    await serveSpaIndex(spaRoot, res, 'Upload SPA');
   });
 
   // ── GET /upload/:token/status — session status as JSON ─────────────────────
@@ -169,8 +179,8 @@ export function setupUploadRoutes(
 
     // Ensure uploads directory exists
     try {
-      mkdirSync(uploadsDir, { recursive: true });
-      chownSync(uploadsDir, mapping.uid, mapping.uid);
+      await fs.mkdir(uploadsDir, { recursive: true });
+      await fs.chown(uploadsDir, mapping.uid, mapping.uid);
     } catch (error) {
       logger.error({ error, uploadsDir }, 'Failed to create uploads directory');
       res.status(500).json({ error: 'Failed to prepare upload directory.' });
@@ -194,7 +204,7 @@ export function setupUploadRoutes(
     let uploadError: string | null = null;
 
     const uploadPromise = new Promise<{ filename: string; size: number; path: string } | null>((resolve) => {
-      busboy.on('file', (_fieldname: string, fileStream: NodeJS.ReadableStream, info: { filename: string; encoding: string; mimeType: string }) => {
+      busboy.on('file', (_fieldname: string, fileStream: NodeJS.ReadableStream, info: { filename: string; encoding: string; mimeType: string }) => { void (async () => {
         if (fileProcessed) {
           // Skip additional files
           (fileStream as NodeJS.ReadableStream & { resume: () => void }).resume();
@@ -215,7 +225,7 @@ export function setupUploadRoutes(
           }
         }
 
-        const targetPath = resolveFilePath(uploadsDir, sanitised);
+        const targetPath = await resolveFilePath(uploadsDir, sanitised);
         const finalName = basename(targetPath);
         const writeStream = createWriteStream(targetPath);
         let bytesWritten = 0;
@@ -227,11 +237,8 @@ export function setupUploadRoutes(
         (fileStream as NodeJS.ReadableStream & { on: (event: string, cb: () => void) => void }).on('limit', () => {
           fileTooLarge = true;
           writeStream.destroy();
-          // Clean up partial file
-          try {
-            const fs = require('node:fs');
-            fs.unlinkSync(targetPath);
-          } catch { /* ignore */ }
+          // Clean up partial file (fire-and-forget)
+          fs.unlink(targetPath).catch(() => { /* ignore */ });
         });
 
         fileStream.pipe(writeStream);
@@ -242,12 +249,10 @@ export function setupUploadRoutes(
             return;
           }
 
-          // Set correct ownership
-          try {
-            chownSync(targetPath, mapping.uid, mapping.uid);
-          } catch (error) {
+          // Set correct ownership (fire-and-forget within Promise callback)
+          fs.chown(targetPath, mapping.uid, mapping.uid).catch((error) => {
             logger.warn({ error, targetPath }, 'Failed to chown uploaded file');
-          }
+          });
 
           resolve({
             filename: finalName,
@@ -261,7 +266,7 @@ export function setupUploadRoutes(
           uploadError = 'Failed to write file to disk.';
           resolve(null);
         });
-      });
+      })(); });
 
       busboy.on('error', (error: Error) => {
         logger.error({ error }, 'Busboy parsing error');

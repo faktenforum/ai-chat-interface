@@ -64,10 +64,10 @@ agents:
         description: "Transfer to Research Assistant for broader research, web search, or when fact-check search is insufficient"
         prompt: "Summarize what was found via fact-checks and what additional research is needed"
     recursion_limit: 25
-    isCollaborative: true
+    isCollaborative: false # Not yet public
     permissions:
-      public: true
-      publicEdit: true
+      public: false # Not yet public
+      publicEdit: false # Not yet public
   - id: shared-agent-image-generation
     name: Image Generation Assistant
     description: Creates images from text descriptions using AI image generation
@@ -181,8 +181,10 @@ agents:
       - linux
     mcpTools:
       - list_workspaces_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - create_workspace_mcp_linux
+      - delete_workspace_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
     category: development
     conversation_starters:
       - I need help with a development project
@@ -190,12 +192,6 @@ agents:
       - I want to have a PR reviewed
       - Help me with debugging
     handoffs:
-      - agent: shared-agent-code-researcher
-        description: "Transfer to Code Research (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Describe the code research task: what needs to be understood, which repo/library, or what error/question needs investigation"
-      - agent: shared-agent-code-researcher-quality
-        description: "Transfer to Code Research (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code Research could not fulfill the task."
-        prompt: "Describe the code research task: what needs to be understood, which repo/library, or what error/question needs investigation"
       - agent: shared-agent-developer
         description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Describe what needs to be implemented or fixed, including repo URLs, language/framework, and requirements"
@@ -226,173 +222,7 @@ agents:
       public: true
       publicEdit: true
 
-  - id: shared-agent-code-researcher
-    name: Code Research
-    description: Understands code and repositories, finds examples, searches documentation, Stack Overflow, npm and GitHub. No implementation – only analysis and research.
-    instructionsFile: shared-agent-code-researcher-instructions.md
-    provider: Scaleway
-    model: devstral-2-123b-instruct-2512
-    model_parameters:
-      temperature: 0.5
-      top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
-    tools:
-      - web_search
-    mcpServers:
-      - linux
-      - github
-      - docs
-      - stackoverflow
-      - npm-search
-    mcpTools:
-      - list_workspaces_mcp_linux
-      - create_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - read_workspace_file_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
-      - search_code_mcp_github
-      - search_repositories_mcp_github
-      - search_issues_mcp_github
-      - search_pull_requests_mcp_github
-      - get_file_contents_mcp_github
-      - list_commits_mcp_github
-      - issue_read_mcp_github
-      - pull_request_read_mcp_github
-      - get_latest_release_mcp_github
-      - get_release_by_tag_mcp_github
-      - list_branches_mcp_github
-      - list_tags_mcp_github
-      - get_commit_mcp_github
-      - scrape_docs_mcp_docs
-      - search_docs_mcp_docs
-      - list_libraries_mcp_docs
-      - list_jobs_mcp_docs
-      - get_job_info_mcp_docs
-      - fetch_url_mcp_docs
-      - refresh_version_mcp_docs
-      - find_version_mcp_docs
-      - remove_docs_mcp_docs
-      - cancel_job_mcp_docs
-      - search_by_error_mcp_stackoverflow
-      - search_by_tags_mcp_stackoverflow
-      - analyze_stack_trace_mcp_stackoverflow
-      - search_npm_packages_mcp_npm-search
-    category: development
-    conversation_starters:
-      - I have an error in my code, can you help?
-      - Search for npm packages for form validation
-      - Show me example code for React Hooks
-      - Search Stack Overflow for solutions to TypeScript type errors
-      - Search documentation for Vue
-      - Index new library documentation
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-      - agent: shared-agent-developer
-        description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Summarize the research findings and describe what needs to be implemented or fixed"
-      - agent: shared-agent-developer-quality
-        description: "Transfer to Developer (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
-        prompt: "Summarize the research findings and describe what needs to be implemented or fixed"
-      - agent: shared-agent-github
-        description: "Transfer to GitHub assistant for creating PRs, issues, or posting reviews"
-        prompt: "Describe the GitHub action needed based on the research"
-    # Dev: many read ops (docs, GitHub, workspace)
-    recursion_limit: 100
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
 
-  - id: shared-agent-code-researcher-quality
-    name: Code Research (Claude Opus 4.6)
-    description: Understands code and repositories, finds examples, searches documentation, Stack Overflow, npm and GitHub. No implementation – only analysis and research. Quality variant (OpenRouter).
-    instructionsFile: shared-agent-code-researcher-instructions.md
-    provider: OpenRouter
-    model: anthropic/claude-opus-4.6
-    model_parameters:
-      temperature: 0.5
-      top_p: 0.9
-      maxContextTokens: 1000000   # Claude Opus 4.6
-      maxOutputTokens: 128000
-    tools:
-      - web_search
-    mcpServers:
-      - linux
-      - github
-      - docs
-      - stackoverflow
-      - npm-search
-    mcpTools:
-      - list_workspaces_mcp_linux
-      - create_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - read_workspace_file_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
-      - search_code_mcp_github
-      - search_repositories_mcp_github
-      - search_issues_mcp_github
-      - search_pull_requests_mcp_github
-      - get_file_contents_mcp_github
-      - list_commits_mcp_github
-      - issue_read_mcp_github
-      - pull_request_read_mcp_github
-      - get_latest_release_mcp_github
-      - get_release_by_tag_mcp_github
-      - list_branches_mcp_github
-      - list_tags_mcp_github
-      - get_commit_mcp_github
-      - scrape_docs_mcp_docs
-      - search_docs_mcp_docs
-      - list_libraries_mcp_docs
-      - list_jobs_mcp_docs
-      - get_job_info_mcp_docs
-      - fetch_url_mcp_docs
-      - refresh_version_mcp_docs
-      - find_version_mcp_docs
-      - remove_docs_mcp_docs
-      - cancel_job_mcp_docs
-      - search_by_error_mcp_stackoverflow
-      - search_by_tags_mcp_stackoverflow
-      - analyze_stack_trace_mcp_stackoverflow
-      - search_npm_packages_mcp_npm-search
-    category: development
-    conversation_starters:
-      - I have an error in my code, can you help?
-      - Search for npm packages for form validation
-      - Show me example code for React Hooks
-      - Search Stack Overflow for solutions to TypeScript type errors
-      - Search documentation for Vue
-      - Index new library documentation
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-      - agent: shared-agent-developer
-        description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Summarize the research findings and describe what needs to be implemented or fixed"
-      - agent: shared-agent-developer-quality
-        description: "Transfer to Developer (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
-        prompt: "Summarize the research findings and describe what needs to be implemented or fixed"
-      - agent: shared-agent-github
-        description: "Transfer to GitHub assistant for creating PRs, issues, or posting reviews"
-        prompt: "Describe the GitHub action needed based on the research"
-    recursion_limit: 80
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
 
   - id: shared-agent-developer
     name: Developer
@@ -408,6 +238,10 @@ agents:
       - web_search
     mcpServers:
       - linux
+      - github
+      - docs
+      - stackoverflow
+      - npm-search
     mcpTools:
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
@@ -417,10 +251,9 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -428,6 +261,36 @@ agents:
       - list_download_links_mcp_linux
       - close_download_link_mcp_linux
       - read_workspace_file_mcp_linux
+      - list_workspace_files_mcp_linux
+      - codebase_search_mcp_linux
+      - get_code_index_status_mcp_linux
+      - search_code_mcp_github
+      - search_repositories_mcp_github
+      - search_issues_mcp_github
+      - search_pull_requests_mcp_github
+      - get_file_contents_mcp_github
+      - list_commits_mcp_github
+      - issue_read_mcp_github
+      - pull_request_read_mcp_github
+      - get_latest_release_mcp_github
+      - get_release_by_tag_mcp_github
+      - list_branches_mcp_github
+      - list_tags_mcp_github
+      - get_commit_mcp_github
+      - scrape_docs_mcp_docs
+      - search_docs_mcp_docs
+      - list_libraries_mcp_docs
+      - list_jobs_mcp_docs
+      - get_job_info_mcp_docs
+      - fetch_url_mcp_docs
+      - refresh_version_mcp_docs
+      - find_version_mcp_docs
+      - remove_docs_mcp_docs
+      - cancel_job_mcp_docs
+      - search_by_error_mcp_stackoverflow
+      - search_by_tags_mcp_stackoverflow
+      - analyze_stack_trace_mcp_stackoverflow
+      - search_npm_packages_mcp_npm-search
     category: development
     conversation_starters:
       - Implement a new feature in my project
@@ -435,15 +298,15 @@ agents:
       - Clone a repository and set up the project
       - Create a new Python project with tests
       - Run a Node.js script and show the output
+      - I have an error in my code, can you help?
+      - Search for npm packages for form validation
+      - Show me example code for React Hooks
+      - Search Stack Overflow for solutions to TypeScript type errors
+      - Search documentation for Vue
+      - Index new library documentation
     handoffs:
       - agent: shared-agent-main-assistant
         description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-      - agent: shared-agent-code-researcher
-        description: "Transfer to Code Research (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Describe what needs to be researched or understood before continuing implementation"
-      - agent: shared-agent-code-researcher-quality
-        description: "Transfer to Code Research (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code Research could not fulfill the task."
-        prompt: "Describe what needs to be researched or understood before continuing implementation"
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for creating PRs, opening issues, or posting reviews"
         prompt: "Include workspace name (e.g. ai-chat-interface), repo, branch, and what was implemented or what action is needed"
@@ -475,6 +338,10 @@ agents:
       - web_search
     mcpServers:
       - linux
+      - github
+      - docs
+      - stackoverflow
+      - npm-search
     mcpTools:
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
@@ -484,10 +351,9 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -495,6 +361,36 @@ agents:
       - list_download_links_mcp_linux
       - close_download_link_mcp_linux
       - read_workspace_file_mcp_linux
+      - list_workspace_files_mcp_linux
+      - codebase_search_mcp_linux
+      - get_code_index_status_mcp_linux
+      - search_code_mcp_github
+      - search_repositories_mcp_github
+      - search_issues_mcp_github
+      - search_pull_requests_mcp_github
+      - get_file_contents_mcp_github
+      - list_commits_mcp_github
+      - issue_read_mcp_github
+      - pull_request_read_mcp_github
+      - get_latest_release_mcp_github
+      - get_release_by_tag_mcp_github
+      - list_branches_mcp_github
+      - list_tags_mcp_github
+      - get_commit_mcp_github
+      - scrape_docs_mcp_docs
+      - search_docs_mcp_docs
+      - list_libraries_mcp_docs
+      - list_jobs_mcp_docs
+      - get_job_info_mcp_docs
+      - fetch_url_mcp_docs
+      - refresh_version_mcp_docs
+      - find_version_mcp_docs
+      - remove_docs_mcp_docs
+      - cancel_job_mcp_docs
+      - search_by_error_mcp_stackoverflow
+      - search_by_tags_mcp_stackoverflow
+      - analyze_stack_trace_mcp_stackoverflow
+      - search_npm_packages_mcp_npm-search
     category: development
     conversation_starters:
       - Implement a new feature in my project
@@ -502,15 +398,15 @@ agents:
       - Clone a repository and set up the project
       - Create a new Python project with tests
       - Run a Node.js script and show the output
+      - I have an error in my code, can you help?
+      - Search for npm packages for form validation
+      - Show me example code for React Hooks
+      - Search Stack Overflow for solutions to TypeScript type errors
+      - Search documentation for Vue
+      - Index new library documentation
     handoffs:
       - agent: shared-agent-main-assistant
         description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-      - agent: shared-agent-code-researcher
-        description: "Transfer to Code Research (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Describe what needs to be researched or understood before continuing implementation"
-      - agent: shared-agent-code-researcher-quality
-        description: "Transfer to Code Research (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code Research could not fulfill the task."
-        prompt: "Describe what needs to be researched or understood before continuing implementation"
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for creating PRs, opening issues, or posting reviews"
         prompt: "Include workspace name (e.g. ai-chat-interface), repo, branch, and what was implemented or what action is needed"
@@ -540,6 +436,7 @@ agents:
       - web_search
     mcpServers:
       - linux
+      - github
     mcpTools:
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
@@ -549,10 +446,9 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -560,6 +456,17 @@ agents:
       - list_download_links_mcp_linux
       - close_download_link_mcp_linux
       - read_workspace_file_mcp_linux
+      - list_workspace_files_mcp_linux
+      - codebase_search_mcp_linux
+      - get_code_index_status_mcp_linux
+      - search_code_mcp_github
+      - search_repositories_mcp_github
+      - get_file_contents_mcp_github
+      - issue_read_mcp_github
+      - pull_request_read_mcp_github
+      - list_commits_mcp_github
+      - list_branches_mcp_github
+      - get_commit_mcp_github
     category: development
     conversation_starters:
       - Refactor this code for better readability
@@ -570,12 +477,6 @@ agents:
     handoffs:
       - agent: shared-agent-main-assistant
         description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-      - agent: shared-agent-code-researcher
-        description: "Transfer to Code Research (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Describe what needs to be researched to inform the refactoring"
-      - agent: shared-agent-code-researcher-quality
-        description: "Transfer to Code Research (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code Research could not fulfill the task."
-        prompt: "Describe what needs to be researched to inform the refactoring"
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for creating a PR with the refactored code"
         prompt: "Describe the refactoring changes and the PR that should be created"
@@ -599,20 +500,21 @@ agents:
       publicEdit: true
 
   - id: shared-agent-code-refactorer-quality
-    name: Code Refactorer (Gemini 3 Pro Preview)
+    name: Code Refactorer (Gemini 3.1 Pro Preview)
     description: Refactoring and optimization of code – structure, style, tests, readability. Full Linux workspace access. Quality variant (OpenRouter).
     instructionsFile: shared-agent-code-refactorer-instructions.md
     provider: OpenRouter
-    model: google/gemini-3-pro-preview
+    model: google/gemini-3.1-pro-preview
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 1048576   # Gemini 3 Pro Preview
+      maxContextTokens: 1048576   # Gemini 3.1 Pro Preview
       maxOutputTokens: 65536
     tools:
       - web_search
     mcpServers:
       - linux
+      - github
     mcpTools:
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
@@ -622,10 +524,9 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -633,6 +534,17 @@ agents:
       - list_download_links_mcp_linux
       - close_download_link_mcp_linux
       - read_workspace_file_mcp_linux
+      - list_workspace_files_mcp_linux
+      - codebase_search_mcp_linux
+      - get_code_index_status_mcp_linux
+      - search_code_mcp_github
+      - search_repositories_mcp_github
+      - get_file_contents_mcp_github
+      - issue_read_mcp_github
+      - pull_request_read_mcp_github
+      - list_commits_mcp_github
+      - list_branches_mcp_github
+      - get_commit_mcp_github
     category: development
     conversation_starters:
       - Refactor this code for better readability
@@ -643,12 +555,6 @@ agents:
     handoffs:
       - agent: shared-agent-main-assistant
         description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-      - agent: shared-agent-code-researcher
-        description: "Transfer to Code Research (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Describe what needs to be researched to inform the refactoring"
-      - agent: shared-agent-code-researcher-quality
-        description: "Transfer to Code Research (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code Research could not fulfill the task."
-        prompt: "Describe what needs to be researched to inform the refactoring"
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for creating a PR with the refactored code"
         prompt: "Describe the refactoring changes and the PR that should be created"
@@ -728,9 +634,12 @@ agents:
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
       - list_workspaces_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - read_workspace_file_mcp_linux
+      - list_workspace_files_mcp_linux
+      - codebase_search_mcp_linux
+      - get_code_index_status_mcp_linux
       - create_download_link_mcp_linux
       - list_terminals_mcp_linux
       - kill_terminal_mcp_linux
@@ -786,15 +695,17 @@ agents:
     mcpTools:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
       - read_workspace_file_mcp_linux
+      - list_workspace_files_mcp_linux
+      - codebase_search_mcp_linux
+      - get_code_index_status_mcp_linux
       - list_terminals_mcp_linux
       - kill_terminal_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
+      - get_status_mcp_linux
       - pull_request_read_mcp_github
       - get_file_contents_mcp_github
       - list_commits_mcp_github
@@ -813,12 +724,6 @@ agents:
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant to post the review on the PR (only when the user requested posting)"
         prompt: "Include the workspace name you are using, the review body, and any inline comments for the PR."
-      - agent: shared-agent-code-researcher
-        description: "Transfer to Code Research (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Explain how the relevant module/function works in this codebase"
-      - agent: shared-agent-code-researcher-quality
-        description: "Transfer to Code Research (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code Research could not fulfill the task."
-        prompt: "Explain how the relevant module/function works in this codebase"
       - agent: shared-agent-developer
         description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
@@ -833,15 +738,15 @@ agents:
       publicEdit: true
 
   - id: shared-agent-code-reviewer-quality
-    name: Code Reviewer (Gemini 3 Pro Preview)
+    name: Code Reviewer (Gemini 3.1 Pro Preview)
     description: Analyzes pull requests – clones the repo, checks the diff, reads the codebase and creates a structured review. Posts the review via the GitHub Assistant if needed. Quality variant (OpenRouter).
     instructionsFile: shared-agent-code-reviewer-instructions.md
     provider: OpenRouter
-    model: google/gemini-3-pro-preview
+    model: google/gemini-3.1-pro-preview
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 1048576   # Gemini 3 Pro Preview
+      maxContextTokens: 1048576   # Gemini 3.1 Pro Preview
       maxOutputTokens: 65536
     tools: []
     mcpServers:
@@ -850,15 +755,17 @@ agents:
     mcpTools:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - execute_command_mcp_linux
       - read_terminal_output_mcp_linux
       - read_workspace_file_mcp_linux
+      - list_workspace_files_mcp_linux
+      - codebase_search_mcp_linux
+      - get_code_index_status_mcp_linux
       - list_terminals_mcp_linux
       - kill_terminal_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
+      - get_status_mcp_linux
       - pull_request_read_mcp_github
       - get_file_contents_mcp_github
       - list_commits_mcp_github
@@ -877,12 +784,6 @@ agents:
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant to post the review on the PR (only when the user requested posting)"
         prompt: "Include the workspace name you are using, the review body, and any inline comments for the PR."
-      - agent: shared-agent-code-researcher
-        description: "Transfer to Code Research (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Explain how the relevant module/function works in this codebase"
-      - agent: shared-agent-code-researcher-quality
-        description: "Transfer to Code Research (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code Research could not fulfill the task."
-        prompt: "Explain how the relevant module/function works in this codebase"
       - agent: shared-agent-developer
         description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
@@ -911,8 +812,8 @@ agents:
       - linux
     mcpTools:
       - list_workspaces_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
     category: general
     conversation_starters:
       - I want to report an error in the chat
@@ -923,16 +824,16 @@ agents:
         description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
       - agent: shared-agent-github
         description: "Create the issue with prepared title and body (English)"
-        prompt: "workspace: feedback — call `get_workspace_status('feedback')` to read issue details from the plan, then create the issue via `create_issue_mcp_github(owner='faktenforum', repo='ai-chat-interface', title=..., body=...)` using title and body from the plan (English). If the plan contains structured issue details, use those. Otherwise, use the title and body provided in this handoff instructions. Do not pass German text for title/body."
-      - agent: shared-agent-code-researcher
-        description: "Primary path: research bug (find duplicates, analyze code) in faktenforum/ai-chat-interface before issue creation. Prefer this unless the user emphasizes quality or a previous attempt failed."
-        prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code; after research follow plan to hand off to GitHub Assistant"
-      - agent: shared-agent-code-researcher-quality
-        description: "Use Code Research (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Code Research could not fulfill the research task."
-        prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code; after research follow plan to hand off to GitHub Assistant"
+        prompt: "workspace: feedback — call `get_workspaces('feedback')` to read issue details from the plan, then create the issue via `create_issue_mcp_github(owner='faktenforum', repo='ai-chat-interface', title=..., body=...)` using title and body from the plan (English). If the plan contains structured issue details, use those. Otherwise, use the title and body provided in this handoff instructions. Do not pass German text for title/body."
+      - agent: shared-agent-developer
+        description: "Primary path: Developer researches bug (find duplicates, analyze code) in faktenforum/ai-chat-interface before issue creation. Prefer this unless the user emphasizes quality or a previous attempt failed."
+        prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code, and propose fixes; after research follow plan to hand off to GitHub Assistant"
+      - agent: shared-agent-developer-quality
+        description: "Use Developer (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Developer could not fulfill the research task."
+        prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code, and propose fixes; after research follow plan to hand off to GitHub Assistant"
       - agent: shared-agent-code-assistant
         description: "User wants to fix the bug, not only report. Transfer to Code Assistant."
-        prompt: "workspace: feedback — call `get_workspace_status('feedback')` to read bug details from the plan. User wants to fix the reported bug in faktenforum/ai-chat-interface. Summarize error, steps to reproduce, expected vs actual behavior, and what needs to be fixed (debug, implement fix). Pass workspace name and relevant context from the plan to the appropriate developer specialist."
+        prompt: "workspace: feedback — call `get_workspaces('feedback')` to read bug details from the plan. User wants to fix the reported bug in faktenforum/ai-chat-interface. Summarize error, steps to reproduce, expected vs actual behavior, and what needs to be fixed (debug, implement fix). Pass workspace name and relevant context from the plan to the appropriate developer specialist."
     recursion_limit: 50
     isCollaborative: true
     permissions:
@@ -1058,10 +959,9 @@ agents:
       - kill_terminal_mcp_linux
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -1069,6 +969,9 @@ agents:
       - list_download_links_mcp_linux
       - close_download_link_mcp_linux
       - read_workspace_file_mcp_linux
+      - list_workspace_files_mcp_linux
+      - codebase_search_mcp_linux
+      - get_code_index_status_mcp_linux
     category: productivity
     conversation_starters:
       - I have a CSV file that I want to filter
@@ -1109,10 +1012,9 @@ agents:
       - kill_terminal_mcp_linux
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -1120,6 +1022,9 @@ agents:
       - list_download_links_mcp_linux
       - close_download_link_mcp_linux
       - read_workspace_file_mcp_linux
+      - list_workspace_files_mcp_linux
+      - codebase_search_mcp_linux
+      - get_code_index_status_mcp_linux
     category: productivity
     conversation_starters:
       - Convert my PNG to WEBP
@@ -1156,10 +1061,9 @@ agents:
       - kill_terminal_mcp_linux
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
+      - get_status_mcp_linux
       - create_upload_session_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -1167,6 +1071,9 @@ agents:
       - list_download_links_mcp_linux
       - close_download_link_mcp_linux
       - read_workspace_file_mcp_linux
+      - list_workspace_files_mcp_linux
+      - codebase_search_mcp_linux
+      - get_code_index_status_mcp_linux
     category: productivity
     conversation_starters:
       - Write a formal letter to ...
@@ -1209,10 +1116,9 @@ agents:
       - list_workspaces_mcp_linux
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
-      - get_account_info_mcp_linux
-      - get_system_info_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
+      - get_status_mcp_linux
       - reset_account_mcp_linux
       - list_upload_sessions_mcp_linux
       - close_upload_session_mcp_linux
@@ -1227,6 +1133,9 @@ agents:
       - list_terminals_mcp_linux
       - kill_terminal_mcp_linux
       - read_workspace_file_mcp_linux
+      - list_workspace_files_mcp_linux
+      - codebase_search_mcp_linux
+      - get_code_index_status_mcp_linux
     category: productivity
     conversation_starters:
       - How do I create a backup with tar?
@@ -1259,20 +1168,24 @@ agents:
     description: General assistant – automatically recognizes which specialist best fits and routes the request.
     instructionsFile: shared-agent-main-assistant-instructions.md
     provider: Scaleway
-    model: devstral-2-123b-instruct-2512
+    model: mistral-small-3.2-24b-instruct-2506
+    vision: true
     model_parameters:
       temperature: 0.3
       top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
     # Global limit for whole run (e.g. Main Assistant→Code Assistant→specialist). 200 allows long PR review and multi-step dev chains.
     recursion_limit: 100
+    tools:
+      - web_search
+      - file_search
     mcpServers:
       - linux
     mcpTools:
       - list_workspaces_mcp_linux
       - list_upload_sessions_mcp_linux
-      - get_workspace_status_mcp_linux
-      - set_workspace_plan_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
       - create_upload_session_mcp_linux
     handoffs:
       - agent: shared-agent-research

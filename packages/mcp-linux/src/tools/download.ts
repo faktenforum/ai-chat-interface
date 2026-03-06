@@ -36,7 +36,7 @@ export function registerDownloadTools(
         const email = resolveEmail(extra);
         const mapping = await userManager.ensureUser(email);
 
-        const { token, url, session } = downloadManager.createLink(
+        const { token, url, session } = await downloadManager.createLink(
           email,
           mapping.username,
           args.workspace,

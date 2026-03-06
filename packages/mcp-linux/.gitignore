@@ -2,5 +2,9 @@ node_modules/
 dist/
 *.log
 .env
+config.yaml
 .DS_Store
 *.tsbuildinfo
+frontend/.output
+frontend/.nuxt
+frontend/dist

@@ -9,7 +9,7 @@ export const SEARCH_FILES_PROMPT = {
   description: 'Examples of terminal commands for searching files and content (ripgrep, grep, find)',
   content: `# Search via Terminal
 
-Use these commands to find files and search content. ripgrep (rg) is pre-installed and recommended.
+Use ripgrep (rg) for most content searches; fall back to grep/find only when needed.
 
 ## Search File Content (ripgrep - recommended)
 \`\`\`bash
@@ -40,17 +40,7 @@ rg -c "pattern"
 rg -l "pattern"
 \`\`\`
 
-## Search File Content (grep)
-\`\`\`bash
-# Recursive grep
-grep -r "pattern" .
-
-# Case-insensitive with line numbers
-grep -rni "pattern" .
-
-# Exclude directories
-grep -r --exclude-dir=node_modules "pattern" .
-\`\`\`
+Alternative: \`grep -rni "pattern" .\` (prefer rg when possible).
 
 ## Find Files by Name
 \`\`\`bash

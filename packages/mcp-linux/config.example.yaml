@@ -1,0 +1,25 @@
+# Server-wide config for mcp-linux.
+#
+# Activate: Copy to config.yaml, or set MCP_LINUX_CONFIG to this file's path.
+# In Docker the image uses this file as default config. Templates apply only when
+# creating a NEW workspace without passing git_url (e.g. create_workspace(name: "data-analysis")).
+
+administrators: [localdev@example.com]
+
+workspace_templates:
+  data-analysis:
+    git_url: git@github.com:faktenforum/workspace-data-analysis.git
+    branch: main
+    code_index_enabled: true
+  document-creator:
+    git_url: git@github.com:faktenforum/workspace-document-creator.git
+    branch: main
+    code_index_enabled: true
+  file-converter:
+    git_url: git@github.com:faktenforum/workspace-file-converter.git
+    branch: main
+    code_index_enabled: true
+  linux-expert:
+    git_url: git@github.com:faktenforum/workspace-linux-expert.git
+    branch: main
+    code_index_enabled: true

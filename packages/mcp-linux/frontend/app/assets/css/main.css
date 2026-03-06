@@ -1,0 +1,33 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+:root {
+  --ui-primary: var(--ui-color-primary-600);
+}
+.dark {
+  --ui-primary: var(--ui-color-primary-400);
+}
+
+@theme {
+  --breakpoint-xs: 375px;
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    @apply border-default;
+  }
+}
+
+.focus {
+  @apply outline-none focus:inset-ring-1 focus:inset-ring-primary focus:border-primary;
+  @apply focus-visible:inset-ring-1 focus-visible:inset-ring-primary focus-visible:border-primary;
+}
+
+.scroll-area {
+  overflow-y: auto;
+  scrollbar-width: thin;
+}

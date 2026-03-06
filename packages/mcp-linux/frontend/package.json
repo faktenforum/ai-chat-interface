@@ -1,0 +1,28 @@
+{
+  "name": "@ai-chat-interface/mcp-linux-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "check": "vue-tsc --noEmit",
+    "clean": "rm -rf .output dist .nuxt"
+  },
+  "dependencies": {
+    "@nuxt/ui": "^4.5.0",
+    "@pinia/nuxt": "^0.11.3",
+    "@tailwindcss/vite": "^4.2.1",
+    "nuxt": "^4.3.1",
+    "pinia": "^3.0.4",
+    "tailwindcss": "^4.2.1",
+    "vue": "^3.5.29"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.15.2",
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.2.5"
+  }
+}

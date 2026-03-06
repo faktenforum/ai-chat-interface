@@ -5,7 +5,7 @@
  */
 
 import { join, resolve } from 'node:path';
-import { statSync, realpathSync } from 'node:fs';
+import fs from 'node:fs/promises';
 import { validateWorkspaceName } from './security.ts';
 
 /**
@@ -17,7 +17,7 @@ import { validateWorkspaceName } from './security.ts';
  * @returns Absolute path to the file
  * @throws Error if workspace name is invalid or path traversal is detected
  */
-export function resolveSafePath(username: string, workspace: string, relativePath: string): string {
+export async function resolveSafePath(username: string, workspace: string, relativePath: string): Promise<string> {
   const wsError = validateWorkspaceName(workspace);
   if (wsError) {
     throw new Error(wsError);
@@ -34,8 +34,8 @@ export function resolveSafePath(username: string, workspace: string, relativePat
   // Security: prevent symlink traversal (if file exists)
   try {
     // Resolve real paths for both workspace root and target file
-    const realWorkspaceRoot = realpathSync(workspaceRoot);
-    const realPath = realpathSync(absolutePath);
+    const realWorkspaceRoot = await fs.realpath(workspaceRoot);
+    const realPath = await fs.realpath(absolutePath);
 
     if (!realPath.startsWith(realWorkspaceRoot + '/') && realPath !== realWorkspaceRoot) {
       throw new Error('Path traversal denied: symlink targets outside workspace');
@@ -56,15 +56,34 @@ export function resolveSafePath(username: string, workspace: string, relativePat
  * @param path - Absolute path to check
  * @throws Error if file does not exist or is not a file
  */
-export function ensureFileExists(path: string): void {
+export async function ensureFileExists(path: string): Promise<void> {
   let stat;
   try {
-    stat = statSync(path);
+    stat = await fs.stat(path);
   } catch {
     throw new Error(`File not found: ${path}`);
   }
 
   if (!stat.isFile()) {
     throw new Error(`Not a file: ${path} (is it a directory?)`);
+  }
+}
+
+/**
+ * Checks if a path exists and is a directory.
+ *
+ * @param path - Absolute path to check
+ * @throws Error if path does not exist or is not a directory
+ */
+export async function ensureDirExists(path: string): Promise<void> {
+  let stat;
+  try {
+    stat = await fs.stat(path);
+  } catch {
+    throw new Error(`Directory not found: ${path}`);
+  }
+
+  if (!stat.isDirectory()) {
+    throw new Error(`Not a directory: ${path}`);
   }
 }

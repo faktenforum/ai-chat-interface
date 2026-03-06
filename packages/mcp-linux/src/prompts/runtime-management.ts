@@ -6,156 +6,44 @@
 
 export const RUNTIME_MANAGEMENT_PROMPT = {
   name: 'runtime_management',
-  description: 'How to install and manage programming language runtimes (nvm, pip, Node.js, Python, Deno, Bun)',
-  content: `# Runtime Management
+  description: 'Reference: install and manage runtimes beyond pre-installed Node.js, Python 3, and Git (nvm, uv, Deno, Bun, Rust)',
+  content: `# Runtime Management (reference)
 
-The system comes with Node.js, Python 3, and Git pre-installed.
-Users can install additional tools in their home directory.
+Use for runtimes beyond pre-installed Node.js, Python 3, Git; install tools in user home only (no sudo).
 
 ## Node.js (pre-installed)
 \`\`\`bash
-# Check version
-node --version
-npm --version
-
-# Run scripts
+node --version && npm --version
 node script.js
-node --experimental-strip-types script.ts
-
-# Install packages
-npm init -y
-npm install package-name
+npm init -y && npm install package-name
 \`\`\`
 
 ## NVM (Node Version Manager)
 \`\`\`bash
-# Install nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
 source ~/.bashrc
-
-# Install specific Node version
-nvm install 22
-nvm install 24
-nvm use 22
+nvm install 22 && nvm use 22
 \`\`\`
 
 ## Python 3 & uv (pre-installed) — RECOMMENDED
-**Use uv for all Python dependencies and tools (NO sudo required)**
+Use uv for Python (no sudo). Never use \`sudo pip\` or \`pip install --user\`.
 \`\`\`bash
-# Check versions
-python3 --version
-uv --version
-
-# Run Python scripts
-python3 script.py
-uv run script.py              # with automatic dependency resolution
-
-# Create project with dependencies
-uv init myproject
-cd myproject
-uv add pandas matplotlib      # adds dependencies to pyproject.toml
-
-# Install CLI tools (alternative to pipx)
-uv tool install weasyprint    # HTML to PDF
-uv tool install pygments      # syntax highlighting
-uv tool install black ruff    # code formatters
-
-# Run tool without installing
-uv tool run weasyprint input.html output.pdf
-uv tool run black script.py
-
-# Install from requirements.txt
+python3 --version && uv --version
+uv run script.py
+uv init myproject && cd myproject && uv add pandas matplotlib
+uv tool install black ruff && uv tool run black script.py
 uv pip install -r requirements.txt
-
-# Examples for document creation
-uv tool install weasyprint
-uv tool run weasyprint input.html output.pdf
-
-# Examples for data analysis
-uv add pandas matplotlib seaborn numpy
-uv run analysis.py
 \`\`\`
+Legacy venv (if uv unavailable): \`python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt\`
 
-**Why uv?**
-- ✅ No sudo required
-- ✅ Fast (Rust-based, 10-100x faster than pip)
-- ✅ Automatic virtual environments
-- ✅ No PATH conflicts
-- ✅ Tool isolation
-- ✅ Compatible with pip/requirements.txt
+## Other runtimes (install in user home)
+- **Deno:** \`curl -fsSL https://deno.land/install.sh | sh\` then \`deno run script.ts\`
+- **Bun:** \`curl -fsSL https://bun.sh/install | bash\` then \`bun run script.ts\`
+- **Rust:** \`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y\` then \`source ~/.cargo/env\`, \`cargo build\`, \`cargo run\`
 
-**NEVER use:**
-- ❌ \`sudo pip install\` (requires root)
-- ❌ \`sudo apt-get install pipx\` (requires root)
-- ❌ \`pip install --user\` (can cause conflicts)
-
-**Legacy alternative (only if uv unavailable):**
+## Shell scripts
 \`\`\`bash
-# Manual venv (not recommended, use uv instead)
-python3 -m venv .venv
-source .venv/bin/activate
-pip install package-name
-\`\`\`
-
-## Deno
-\`\`\`bash
-# Install Deno
-curl -fsSL https://deno.land/install.sh | sh
-source ~/.bashrc
-
-# Run scripts
-deno run script.ts
-deno run --allow-all script.ts
-\`\`\`
-
-## Bun
-\`\`\`bash
-# Install Bun
-curl -fsSL https://bun.sh/install | bash
-source ~/.bashrc
-
-# Run scripts
-bun run script.ts
-bun install
-\`\`\`
-
-## Rust & Cargo
-\`\`\`bash
-# Install Rust via rustup (recommended, no sudo required)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-source ~/.cargo/env
-
-# Check version
-rustc --version
-cargo --version
-
-# Create new project
-cargo new myproject
-cd myproject
-
-# Build and run
-cargo build
-cargo run
-
-# Add dependencies (edit Cargo.toml)
-cargo add serde tokio
-
-# Update toolchain
-rustup update
-
-# Install additional targets
-rustup target add wasm32-unknown-unknown
-\`\`\`
-
-## Shell Scripts
-\`\`\`bash
-# Create and run shell script
-cat > script.sh << 'EOF'
-#!/bin/bash
-echo "Hello from bash"
-EOF
-chmod +x script.sh
-./script.sh
+chmod +x script.sh && ./script.sh
 \`\`\`
 `,
 };

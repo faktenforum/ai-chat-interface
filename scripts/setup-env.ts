@@ -171,6 +171,7 @@ const AUTO_GENERATED: Record<string, () => string> = {
     'SEARXNG_SECRET_KEY': () => genSecret(32),
     'LIBRECHAT_SEARXNG_API_KEY': () => genSecret(32),
     'FIRECRAWL_BULL_AUTH_KEY': () => genSecret(16),
+    'MCP_LINUX_STATUS_TOKEN_SECRET': () => genBase64Secret(32),
     // n8n
     'N8N_ENCRYPTION_KEY': () => genBase64Secret(32), // 32 bytes = 44 base64 chars
     'N8N_POSTGRES_PASSWORD': () => genPassword(16),
@@ -243,6 +244,9 @@ const PROMPTS: Record<string, PromptConfig> = {
     'CHECKBOT_RAG_MCP_URL': { message: 'Checkbot RAG MCP URL (optional; e.g. http://checkbot-rag.localhost/mcp):', type: 'input', defaultGen: () => '' },
     'CHECKBOT_RAG_MCP_API_KEY': { message: 'Checkbot RAG MCP API key (optional; must match external Checkbot):', type: 'password', defaultGen: () => '' },
     'CHECKBOT_RAG_MCP_DOMAIN': { message: 'Checkbot RAG MCP domain for allowlist (optional; e.g. checkbot-rag.localhost):', type: 'input', defaultGen: () => '' },
+
+    // MCP Linux - Code index (semantic code search; optional)
+    'CODE_INDEX_EMBEDDING_API_KEY': { message: 'Code index embedding API key (optional; OpenRouter or Scaleway for semantic code search):', type: 'password', defaultGen: () => '' },
 };
 
 /**

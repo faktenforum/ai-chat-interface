@@ -1,0 +1,1 @@
+Multi-agent workflows: Different tasks may require different agents; each agent focuses on their specialty, completes their part, then hands off via lc_transfer_to_<agentId> to the next appropriate specialist instead of handling tasks outside their domain.
