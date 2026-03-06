@@ -243,6 +243,7 @@ const PROMPTS: Record<string, PromptConfig> = {
     // Checkbot RAG (external MCP; optional)
     'CHECKBOT_RAG_MCP_URL': { message: 'Checkbot RAG MCP URL (optional; e.g. http://checkbot-rag.localhost/mcp):', type: 'input', defaultGen: () => '' },
     'CHECKBOT_RAG_MCP_API_KEY': { message: 'Checkbot RAG MCP API key (optional; must match external Checkbot):', type: 'password', defaultGen: () => '' },
+    'CHECKBOT_RAG_API_KEY': { message: 'Checkbot RAG REST API key (optional; must match external Checkbot):', type: 'password', defaultGen: () => '' },
     'CHECKBOT_RAG_MCP_DOMAIN': { message: 'Checkbot RAG MCP domain for allowlist (optional; e.g. checkbot-rag.localhost):', type: 'input', defaultGen: () => '' },
 
     // MCP Linux - Code index (semantic code search; optional)
