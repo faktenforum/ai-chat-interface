@@ -201,7 +201,6 @@ const PROMPTS: Record<string, PromptConfig> = {
     'GID': { message: 'Docker Host Group ID (GID):', type: 'input', defaultGen: () => '1000' },
     'DOMAIN': { message: 'Domain or IP (e.g. localhost or ai.faktenforum.org):', type: 'input' },
     'OPENROUTER_KEY': { message: 'OpenRouter API Key:', type: 'password' },
-    'LIBRECHAT_JINA_API_KEY': { message: 'Jina API Key (optional, press enter to skip):', type: 'input' },
     'LIBRECHAT_OCR_API_KEY': { message: 'Mistral OCR API Key (optional, press enter to skip):', type: 'password' },
 
     // DB Timetable MCP Server
@@ -260,6 +259,8 @@ const MIGRATIONS: Record<string, string> = {
     'SEARXNG_API_KEY': 'LIBRECHAT_SEARXNG_API_KEY',
     'JINA_API_KEY': 'LIBRECHAT_JINA_API_KEY',
     'JINA_API_URL': 'LIBRECHAT_JINA_API_URL',
+    'LIBRECHAT_JINA_API_KEY': 'LIBRECHAT_CUSTOM_RERANKER_API_KEY',
+    'LIBRECHAT_JINA_API_URL': 'LIBRECHAT_CUSTOM_RERANKER_API_URL',
     'USE_DB_AUTHENTICATION': 'FIRECRAWL_USE_DB_AUTHENTICATION',
     'PLAYWRIGHT_MICROSERVICE_URL': 'FIRECRAWL_PLAYWRIGHT_MICROSERVICE_URL',
     'WEBHOOK_URL': 'N8N_WEBHOOK_URL',

@@ -809,9 +809,10 @@ webSearch:
   firecrawlApiKey: "$${FIRECRAWL_API_KEY}"
   firecrawlApiUrl: "$${FIRECRAWL_API_URL}"
   firecrawlVersion: "$${FIRECRAWL_VERSION}"
-  jinaApiKey: "$${LIBRECHAT_JINA_API_KEY}"
-  jinaApiUrl: "$${LIBRECHAT_JINA_API_URL}"
-  rerankerType: "jina"
+  customRerankerApiUrl: "$${LIBRECHAT_CUSTOM_RERANKER_API_URL}"
+  customRerankerApiKey: "$${LIBRECHAT_CUSTOM_RERANKER_API_KEY}"
+  customRerankerModel: "$${LIBRECHAT_CUSTOM_RERANKER_MODEL}"
+  rerankerType: "custom"
   scraperTimeout: 7500
   safeSearch: 1
 
