@@ -124,36 +124,6 @@ services:
     extends: { file: docker-compose.rag.yml, service: rag_api }
     container_name: ${STACK_NAME:-prod}-rag-api
 
-  n8n-postgres:
-    extends: { file: docker-compose.n8n.yml, service: n8n-postgres }
-    container_name: ${STACK_NAME:-prod}-n8n-postgres
-
-  n8n-init:
-    extends: { file: docker-compose.n8n.yml, service: n8n-init }
-    container_name: ${STACK_NAME:-prod}-n8n-init
-
-  n8n:
-    extends: { file: docker-compose.n8n.yml, service: n8n }
-    container_name: ${STACK_NAME:-prod}-n8n
-    depends_on:
-      n8n-postgres:
-        condition: service_healthy
-    networks:
-      - app-net
-      - traefik-net
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=loadbalancer-net"
-      - "traefik.http.routers.${STACK_NAME:-prod}-n8n.rule=Host(`n8n.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.${STACK_NAME:-prod}-n8n.entrypoints=web"
-      - "traefik.http.routers.${STACK_NAME:-prod}-n8n.service=${STACK_NAME:-prod}-n8n"
-      - "traefik.http.services.${STACK_NAME:-prod}-n8n.loadbalancer.server.port=5678"
-      - "traefik.http.routers.${STACK_NAME:-prod}-n8n-secure.rule=Host(`n8n.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.${STACK_NAME:-prod}-n8n-secure.entrypoints=websecure"
-      - "traefik.http.routers.${STACK_NAME:-prod}-n8n-secure.service=${STACK_NAME:-prod}-n8n"
-      - "traefik.http.routers.${STACK_NAME:-prod}-n8n-secure.tls=true"
-      - "traefik.http.routers.${STACK_NAME:-prod}-n8n-secure.tls.certresolver=le"
-
   # MCP Services
   mcp-calculator:
     extends: { file: docker-compose.mcp-calculator.yml, service: mcp-calculator }
@@ -316,10 +286,6 @@ volumes:
     name: ${STACK_NAME:-prod}-librechat-config
   searxng-config:
     name: ${STACK_NAME:-prod}-searxng-config
-  n8n_pgdata:
-    name: ${STACK_NAME:-prod}-n8n-pgdata
-  n8n_data:
-    name: ${STACK_NAME:-prod}-n8n-data
   ytptube_config:
     name: ${STACK_NAME:-prod}-ytptube-config
   ytptube_downloads:

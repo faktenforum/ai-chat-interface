@@ -44,7 +44,6 @@ They are baked into the init image and written into the config volume at startup
 
 - **[Portainer Configuration](PORTAINER-CONFIG.md)** - Portainer deployment with GitOps
 - **[SearXNG Engines](SEARXNG_ENGINES.md)** - SearXNG configuration
-- **[n8n Setup Notes](N8N.md)** - n8n owner setup and configuration
 
 ## Development
 

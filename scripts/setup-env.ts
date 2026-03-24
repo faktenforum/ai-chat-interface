@@ -172,11 +172,6 @@ const AUTO_GENERATED: Record<string, () => string> = {
     'LIBRECHAT_SEARXNG_API_KEY': () => genSecret(32),
     'FIRECRAWL_BULL_AUTH_KEY': () => genSecret(16),
     'MCP_LINUX_STATUS_TOKEN_SECRET': () => genBase64Secret(32),
-    // n8n
-    'N8N_ENCRYPTION_KEY': () => genBase64Secret(32), // 32 bytes = 44 base64 chars
-    'N8N_POSTGRES_PASSWORD': () => genPassword(16),
-    'N8N_OWNER_EMAIL': () => `admin-${crypto.randomBytes(4).toString('hex')}@n8n.local`,
-    'N8N_OWNER_PASSWORD': () => genPassword(16),
 };
 
 /** Values that trigger auto-generation for specific keys (in addition to empty / change-me) */
@@ -263,7 +258,6 @@ const MIGRATIONS: Record<string, string> = {
     'LIBRECHAT_JINA_API_URL': 'LIBRECHAT_CUSTOM_RERANKER_API_URL',
     'USE_DB_AUTHENTICATION': 'FIRECRAWL_USE_DB_AUTHENTICATION',
     'PLAYWRIGHT_MICROSERVICE_URL': 'FIRECRAWL_PLAYWRIGHT_MICROSERVICE_URL',
-    'WEBHOOK_URL': 'N8N_WEBHOOK_URL',
 };
 
 // ============================================================================

@@ -14,7 +14,6 @@ This document provides suggestions for additional Agents and MCP Servers that co
 
 ### Available Services
 - MongoDB (with MCP integration)
-- n8n (workflow automation)
 - RAG API (vector database)
 - Firecrawl (web scraping)
 - SearXNG (metasearch)
@@ -144,26 +143,7 @@ This document provides suggestions for additional Agents and MCP Servers that co
 
 ---
 
-### 7. **mcp-n8n** - n8n Workflow Integration
-**Purpose:** Trigger and manage n8n workflows via MCP
-
-**Tools:**
-- `trigger_workflow` - Execute n8n workflow
-- `list_workflows` - List available workflows
-- `get_workflow_status` - Check execution status
-- `get_workflow_result` - Retrieve workflow results
-
-**Use Cases:**
-- Workflow automation
-- Task orchestration
-- Integration with external services
-- Automated data processing
-
-**Integration:** Use existing n8n service, create HTTP bridge
-
----
-
-### 8. **mcp-translation** - Translation Services
+### 7. **mcp-translation** - Translation Services
 **Purpose:** Translate text between languages
 
 **Tools:**
@@ -365,22 +345,7 @@ This document provides suggestions for additional Agents and MCP Servers that co
 
 ---
 
-### 8. **Workflow-Automatisierungs-Assistent** - Workflow Automation Assistant
-**Category:** automation
-
-**Description:** Creates and manages automated workflows
-
-**Tools:**
-- `mcpServers: ["n8n"]`
-- `web_search`
-
-**Instructions:** Automation expert. Design efficient workflows. Integrate multiple services. Handle errors gracefully. Optimize workflow performance. Document workflow logic.
-
-**Model:** Claude Sonnet 4.5
-
----
-
-### 9. **Datenbank-Assistent** - Database Assistant
+### 8. **Datenbank-Assistent** - Database Assistant
 **Category:** data
 
 **Description:** Manages database operations and queries
@@ -422,8 +387,7 @@ This document provides suggestions for additional Agents and MCP Servers that co
 
 ### Medium Priority (Good Value)
 6. **mcp-firecrawl** - Integrates existing service
-7. **mcp-n8n** - Workflow automation potential
-8. **mcp-git** - Useful for code management
+7. **mcp-git** - Useful for code management
 9. **Content-Schreiber** - Content creation value
 10. **Dokumentations-Assistent** - Documentation maintenance
 

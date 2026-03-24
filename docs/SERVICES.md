@@ -15,14 +15,12 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 | **LibreChat** | Main AI chat interface | ✅ `http://chat.localhost` | ✅ `https://chat.{DOMAIN}` | ❌ |
 | **SearXNG** | Meta search engine for web search | ✅ `http://searxng.localhost` | ❌ Not exposed | ✅ Internal only |
 | **Firecrawl API** | Web scraping service | ✅ `http://firecrawl.localhost` | ❌ Not exposed | ✅ Internal only (prod/dev) |
-| **n8n** | Workflow automation platform | ✅ `http://n8n.localhost` | ✅ `https://n8n.{DOMAIN}` | ❌ |
 | **MailDev** | Development mail server | ✅ `http://maildev.localhost` | ❌ Not in production | ❌ |
 | **Traefik** | Reverse proxy and load balancer | ✅ `http://localhost:8080` (API) | External (separate container) | ❌ |
 | **MongoDB** | LibreChat database | ❌ | ❌ | ✅ Internal only |
 | **Meilisearch** | LibreChat search index | ❌ | ❌ | ✅ Internal only |
 | **VectorDB** | RAG vector database (PostgreSQL + pgvector) | ❌ | ❌ | ✅ Internal only |
 | **RAG API** | Retrieval-Augmented Generation API | ❌ | ❌ | ✅ Internal only |
-| **n8n PostgreSQL** | n8n database | ❌ | ❌ | ✅ Internal only |
 | **YTPTube** | Web UI for yt-dlp (audio/video downloads); used by MCP YTPTube | ✅ Local: `http://ytptube.{DOMAIN}` | ✅ Prod/dev: only `https://ytptube.{DOMAIN}/api/download/*` (download-only router) | ✅ Web UI and rest of API internal in prod/dev |
 | **Firecrawl Services** | Internal Firecrawl dependencies | ❌ | ❌ | ✅ Internal only |
 | **playwright-service** | Browser automation | ❌ | ❌ | ✅ Internal only |
@@ -56,14 +54,6 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 - **Internal Dependencies**: playwright-service, redis, nuq-postgres, rabbitmq
 - **Note**: No need to expose publicly; all consumers use the internal hostname.
 
-**n8n**
-- **Local**: `http://n8n.localhost`
-- **Production**: `https://n8n.{DOMAIN}`
-- **Purpose**: Workflow automation platform
-- **Network**: `traefik-net` + `app-net`
-- **Internal Dependencies**: n8n PostgreSQL, n8n-init (init container)
-- **Init Container**: `n8n-init` automatically creates owner account via API if credentials are provided
-
 **MailDev**
 - **Local**: `http://maildev.localhost`
 - **Production**: ❌ Not in production stack
@@ -82,10 +72,6 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 **RAG API** — Retrieval-Augmented Generation service for document search. Network: `app-net`. Access: LibreChat API only.
 
 **Checkbot RAG (external)** — LibreChat connects to an **external** Checkbot RAG instance via MCP. No Checkbot services run in this stack. Configure `CHECKBOT_RAG_MCP_URL`, `CHECKBOT_RAG_MCP_API_KEY`, and `CHECKBOT_RAG_MCP_DOMAIN` in env. To run or deploy Checkbot RAG, see [Checkbot RAG docs](../dev/checkbot-rag/README.md).
-
-**n8n PostgreSQL** — n8n's database. Network: `app-net`. Access: n8n only.
-
-**n8n-init** — Init container that creates n8n owner account via API. Network: `app-net`. Waits for n8n readiness, then calls `/rest/owner/setup` if credentials are provided.
 
 **YTPTube** — yt-dlp Web UI; queues downloads. MCP YTPTube uses it for audio/transcripts. Network: `app-net` + `traefik-net` (prod/dev: download-only router `PathPrefix(/api/download)` at `https://ytptube.{DOMAIN}/api/download/*`); local/local-dev: full host `http://ytptube.{DOMAIN}`. Image: `ghcr.io/arabcoders/ytptube:latest`
 
@@ -173,10 +159,10 @@ When using the **local** stack (`docker-compose -f docker-compose.local.yml …`
 ### Networks
 
 1. **`traefik-net`** (Local: bridge, Production: external `loadbalancer-net`)
-   - Services with external HTTP/HTTPS: LibreChat, SearXNG (local only), Firecrawl API, n8n, MailDev (local only)
+   - Services with external HTTP/HTTPS: LibreChat, SearXNG (local only), Firecrawl API, MailDev (local only)
 
 2. **`app-net`** (Bridge)
-   - LibreChat and related services: LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API, n8n, n8n-init, n8n PostgreSQL, YTPTube
+   - LibreChat and related services: LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API, YTPTube
    - All internal MCP servers: mcp-calculator, mcp-image-gen, mcp-openstreetmap, mcp-weather, mcp-playwright, mcp-db-timetable, mcp-stackoverflow, mcp-npm-search, mcp-chefkoch, mcp-linux, mcp-ytptube, mcp-docs, mcp-firecrawl (when enabled)
 
 3. **`firecrawl-network`** (Bridge)
