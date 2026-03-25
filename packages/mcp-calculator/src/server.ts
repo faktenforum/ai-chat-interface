@@ -55,11 +55,11 @@ Usage guidelines:
    */
   const withErrorHandler = (
     toolName: string,
-    handler: (args: { a: number; b: number }) => Promise<{ content: Array<{ type: 'text'; text: string }> }>,
+    handler: (args: { a: number; b: number }) => { content: Array<{ type: 'text'; text: string }> } | { content: Array<{ type: 'text'; text: string }>; isError: boolean },
   ) => {
-    return async (args: { a: number; b: number }) => {
+    return (args: { a: number; b: number }) => {
       try {
-        return await handler(args);
+        return handler(args);
       } catch (error) {
         logger.error(
           { tool: toolName, args, error: error instanceof Error ? error.message : String(error) },
@@ -68,7 +68,7 @@ Usage guidelines:
         return {
           content: [
             {
-              type: 'text',
+              type: 'text' as const,
               text:
                 error instanceof CalculatorError
                   ? `Error: ${error.message}`

@@ -181,31 +181,6 @@ services:
     container_name: ${STACK_NAME:-local}-rag-api
     env_file: .env.local
 
-  # n8n Services
-  n8n-postgres:
-    extends: { file: docker-compose.n8n.yml, service: n8n-postgres }
-    container_name: ${STACK_NAME:-local}-n8n-postgres
-    env_file: .env.local
-
-  n8n-init:
-    extends: { file: docker-compose.n8n.yml, service: n8n-init }
-    container_name: ${STACK_NAME:-local}-n8n-init
-    env_file: .env.local
-
-  n8n:
-    extends: { file: docker-compose.n8n.yml, service: n8n }
-    container_name: ${STACK_NAME:-local}-n8n
-    env_file: .env.local
-    depends_on:
-      n8n-postgres:
-        condition: service_healthy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=ai-chat-interface_traefik-net"
-      - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN:-localhost}`)"
-      - "traefik.http.routers.n8n.entrypoints=web"
-      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
-
   # YTPTube - video/audio download via yt-dlp (for MCP YTPTube)
   ytptube:
     extends: { file: docker-compose.ytptube.yml, service: ytptube }
@@ -446,8 +421,6 @@ volumes:
   mongoconfig:
   pgdata2:
   searxng-config:
-  n8n_pgdata:
-  n8n_data:
   ytptube_config:
   ytptube_downloads:
   mcp_linux_homes:

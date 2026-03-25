@@ -5,15 +5,15 @@
   "type": "module",
   "description": "LibreChat initialization service",
   "dependencies": {
-    "mongoose": "^9.1.5",
-    "nanoid": "^5.1.6",
+    "mongoose": "^9.3.2",
+    "nanoid": "^5.1.7",
     "jsonwebtoken": "^9.0.3",
-    "yaml": "^2.8.2"
+    "yaml": "^2.8.3"
   },
   "devDependencies": {
-    "@types/node": "^25.0.9",
+    "@types/node": "^25.5.0",
     "@types/jsonwebtoken": "^9.0.10",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.2"
   },
   "scripts": {
     "start": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/init.ts",

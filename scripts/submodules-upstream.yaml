@@ -95,9 +95,6 @@ submodules:
   - path: dev/searxng
     description: "SearXNG metasearch engine"
 
-  - path: dev/n8n
-    description: "n8n workflow automation platform"
-
   - path: dev/mcp-youtube-transcript
     description: "YouTube Transcript MCP server (video URL → transcript via youtube-transcript-api)"
 

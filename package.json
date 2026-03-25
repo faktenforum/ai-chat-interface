@@ -44,8 +44,8 @@
 },
     "license": "MIT",
     "devDependencies": {
-        "@inquirer/prompts": "^8.2.0",
-        "@types/node": "^25.0.9",
-        "dotenv": "^17.2.3"
+        "@inquirer/prompts": "^8.3.2",
+        "@types/node": "^25.5.0",
+        "dotenv": "^17.3.1"
     }
 }

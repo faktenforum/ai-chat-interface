@@ -75,7 +75,7 @@ Identical compose structure for local and production. Differences: environment f
 - **Volume Names**: Production uses `${STACK_NAME:-prod}-{volume}`; local uses `{volume}` only
 - **Network Names**: Production uses `${STACK_NAME:-prod}-{network}`; local uses `{network}` only
 - **Traefik Routers**: Production uses `${STACK_NAME:-prod}-{service}`; local uses `{service}` only
-- **Service Names**: Use lowercase with hyphens (e.g., `n8n-postgres`, not `n8n_postgres`)
+- **Service Names**: Use lowercase with hyphens (e.g., `firecrawl-redis`, not `firecrawl_redis`)
 
 ### 11. Traefik Configuration
 - **Local**: `traefik.docker.network=ai-chat-interface_traefik-net` (bridge network name)
@@ -141,7 +141,7 @@ When **both** prod and dev stacks run on one host, they share the external netwo
 ### 17. Documentation Requirements
 - **SERVICES.md**: Add service to matrix table, add details section
 - **README.md**: Add link to service-specific docs if created
-- **Service Docs**: Create `docs/{SERVICE}.md` for complex services (e.g., `docs/N8N.md`)
+- **Service Docs**: Create `docs/{SERVICE}.md` for complex services (e.g., `docs/MCP_LINUX.md`)
 - **Update**: Keep documentation in sync with implementation
 
 ### 18. Build cache (local)
