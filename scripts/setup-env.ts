@@ -234,11 +234,11 @@ const PROMPTS: Record<string, PromptConfig> = {
     'MCP_MAPBOX_ACCESS_TOKEN': { message: 'Mapbox Access Token (optional; for Mapbox MCP):', type: 'password', defaultGen: () => '' },
     'MCP_LINUX_GIT_SSH_KEY': { message: 'MCP Linux GitHub SSH Key base64 (optional; for git access):', type: 'password', defaultGen: () => '' },
 
-    // Checkbot RAG (external MCP; optional)
-    'CHECKBOT_RAG_MCP_URL': { message: 'Checkbot RAG MCP URL (optional; e.g. http://checkbot-rag.localhost/mcp):', type: 'input', defaultGen: () => '' },
-    'CHECKBOT_RAG_MCP_API_KEY': { message: 'Checkbot RAG MCP API key (optional; must match external Checkbot):', type: 'password', defaultGen: () => '' },
-    'CHECKBOT_RAG_API_KEY': { message: 'Checkbot RAG REST API key (optional; must match external Checkbot):', type: 'password', defaultGen: () => '' },
-    'CHECKBOT_RAG_MCP_DOMAIN': { message: 'Checkbot RAG MCP domain for allowlist (optional; e.g. checkbot-rag.localhost):', type: 'input', defaultGen: () => '' },
+    // Faktenforum Search (external MCP; optional)
+    'SEARCH_MCP_URL': { message: 'Search MCP URL (optional; e.g. http://search.localhost/mcp):', type: 'input', defaultGen: () => '' },
+    'SEARCH_MCP_API_KEY': { message: 'Search MCP API key (optional; must match external Search):', type: 'password', defaultGen: () => '' },
+    'SEARCH_API_KEY': { message: 'Search REST API key (optional; must match external Search):', type: 'password', defaultGen: () => '' },
+    'SEARCH_MCP_DOMAIN': { message: 'Search MCP domain for allowlist (optional; e.g. search.localhost):', type: 'input', defaultGen: () => '' },
 
     // MCP Linux - Code index (semantic code search; optional)
     'CODE_INDEX_EMBEDDING_API_KEY': { message: 'Code index embedding API key (optional; OpenRouter or Scaleway for semantic code search):', type: 'password', defaultGen: () => '' },
@@ -258,6 +258,10 @@ const MIGRATIONS: Record<string, string> = {
     'LIBRECHAT_JINA_API_URL': 'LIBRECHAT_CUSTOM_RERANKER_API_URL',
     'USE_DB_AUTHENTICATION': 'FIRECRAWL_USE_DB_AUTHENTICATION',
     'PLAYWRIGHT_MICROSERVICE_URL': 'FIRECRAWL_PLAYWRIGHT_MICROSERVICE_URL',
+    'CHECKBOT_RAG_MCP_URL': 'SEARCH_MCP_URL',
+    'CHECKBOT_RAG_MCP_API_KEY': 'SEARCH_MCP_API_KEY',
+    'CHECKBOT_RAG_API_KEY': 'SEARCH_API_KEY',
+    'CHECKBOT_RAG_MCP_DOMAIN': 'SEARCH_MCP_DOMAIN',
 };
 
 // ============================================================================

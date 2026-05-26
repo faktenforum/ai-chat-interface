@@ -96,15 +96,15 @@ async function main() {
         console.log(`✓ Merged override: librechat.${libreachEnv}.yaml`);
       }
 
-      // Omit Checkbot RAG MCP server when URL is not set (avoids "Invalid URL" in LibreChat)
-      const checkbotRagUrl = process.env.CHECKBOT_RAG_MCP_URL?.trim();
+      // Omit Search MCP server when URL is not set (avoids "Invalid URL" in LibreChat)
+      const searchMcpUrl = process.env.SEARCH_MCP_URL?.trim();
       const mcpServers = configObj?.mcpServers as Record<string, { url?: string }> | undefined;
-      if (mcpServers && 'checkbot-rag' in mcpServers) {
-        if (!checkbotRagUrl) {
-          delete mcpServers['checkbot-rag'];
-          console.log('✓ Checkbot RAG MCP omitted (CHECKBOT_RAG_MCP_URL not set)');
+      if (mcpServers && 'search' in mcpServers) {
+        if (!searchMcpUrl) {
+          delete mcpServers['search'];
+          console.log('✓ Search MCP omitted (SEARCH_MCP_URL not set)');
         } else {
-          mcpServers['checkbot-rag'].url = checkbotRagUrl;
+          mcpServers['search'].url = searchMcpUrl;
         }
       }
 
