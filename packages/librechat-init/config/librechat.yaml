@@ -938,7 +938,7 @@ mcpSettings:
     - '$${STACK_NAME:-prod}-mcp-linux'                # MCP Linux service (Docker network)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     - 'mcp.mapbox.com'           # Mapbox MCP Server (remote hosted)
-    - '$${CHECKBOT_RAG_MCP_DOMAIN}'  # Checkbot RAG (external; host only, e.g. checkbot-rag.localhost)
+    - '$${SEARCH_MCP_DOMAIN}'  # Faktenforum Search (external; host only, e.g. search.localhost)
     # - '*.example.com'           # Wildcard subdomain
     # - 'https://secure.api.com'  # Protocol-restricted
     # - 'http://internal:8080'    # Protocol and port restricted
@@ -1123,14 +1123,14 @@ mcpServers:
     startup: true
     serverInstructions: true
 
-  checkbot-rag:
+  search:
     type: streamable-http
-    url: ${CHECKBOT_RAG_MCP_URL}
-    title: Checkbot RAG
-    description: Search German fact-checks (Faktenforum); hybrid semantic and full-text search
-    iconPath: /images/mcp-checkbot-rag-icon.svg
+    url: ${SEARCH_MCP_URL}
+    title: Search
+    description: Search German fact-checks from Faktenforum; hybrid semantic and full-text search
+    iconPath: /images/mcp-search-icon.svg
     headers:
-      Authorization: "Bearer ${CHECKBOT_RAG_MCP_API_KEY}"
+      Authorization: "Bearer ${SEARCH_MCP_API_KEY}"
     initTimeout: 120000
     chatMenu: true
     startup: true

@@ -71,7 +71,7 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 
 **RAG API** — Retrieval-Augmented Generation service for document search. Network: `app-net`. Access: LibreChat API only.
 
-**Checkbot RAG (external)** — LibreChat connects to an **external** Checkbot RAG instance via MCP. No Checkbot services run in this stack. Configure `CHECKBOT_RAG_MCP_URL`, `CHECKBOT_RAG_MCP_API_KEY`, and `CHECKBOT_RAG_MCP_DOMAIN` in env. To run or deploy Checkbot RAG, see [Checkbot RAG docs](../dev/checkbot-rag/README.md).
+**Faktenforum Search (external)** — LibreChat connects to an **external** Faktenforum Search instance via MCP. No Search services run in this stack. Configure `SEARCH_MCP_URL`, `SEARCH_MCP_API_KEY`, and `SEARCH_MCP_DOMAIN` in env. To run or deploy Search, see [Search docs](../dev/search/README.md).
 
 **YTPTube** — yt-dlp Web UI; queues downloads. MCP YTPTube uses it for audio/transcripts. Network: `app-net` + `traefik-net` (prod/dev: download-only router `PathPrefix(/api/download)` at `https://ytptube.{DOMAIN}/api/download/*`); local/local-dev: full host `http://ytptube.{DOMAIN}`. Image: `ghcr.io/arabcoders/ytptube:latest`
 

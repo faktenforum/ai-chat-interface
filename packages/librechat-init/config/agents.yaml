@@ -13,7 +13,7 @@ agents:
       - web_search
       - file_search
     mcpServers:
-      - checkbot-rag
+      - search
     category: general
     conversation_starters:
       - Research current information on climate change
@@ -46,11 +46,11 @@ agents:
       maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
     tools: []
     mcpServers:
-      - checkbot-rag
+      - search
     mcpTools:
-      - search_factchecks_mcp_checkbot-rag
-      - get_factcheck_mcp_checkbot-rag
-      - list_categories_mcp_checkbot-rag
+      - search_factchecks_mcp_search
+      - get_factcheck_mcp_search
+      - list_categories_mcp_search
     category: general
     conversation_starters:
       - Gibt es einen Faktencheck zu diesem Thema?
