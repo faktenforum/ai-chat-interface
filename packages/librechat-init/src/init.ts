@@ -13,6 +13,8 @@ import {
   ASSETS_DIR,
   IMAGES_DIR,
   INIT_TIME_ENV_VARS,
+  SEARCH_MCP_SERVER_NAME,
+  SEARCH_DEPENDENT_AGENT_ID,
 } from './utils/constants.ts';
 import {
   loadAgentIdMap,
@@ -96,15 +98,31 @@ async function main() {
         console.log(`✓ Merged override: librechat.${libreachEnv}.yaml`);
       }
 
-      // Omit Search MCP server when URL is not set (avoids "Invalid URL" in LibreChat)
+      // Optional Faktenforum Search: when SEARCH_MCP_URL is not set, omit the Search MCP
+      // server (avoids "Invalid URL" in LibreChat) and the Faktencheck model spec. The
+      // matching agent is dropped in init-agents.ts.
       const searchMcpUrl = process.env.SEARCH_MCP_URL?.trim();
       const mcpServers = configObj?.mcpServers as Record<string, { url?: string }> | undefined;
-      if (mcpServers && 'search' in mcpServers) {
+      if (mcpServers && SEARCH_MCP_SERVER_NAME in mcpServers) {
         if (!searchMcpUrl) {
-          delete mcpServers['search'];
+          delete mcpServers[SEARCH_MCP_SERVER_NAME];
           console.log('✓ Search MCP omitted (SEARCH_MCP_URL not set)');
         } else {
-          mcpServers['search'].url = searchMcpUrl;
+          mcpServers[SEARCH_MCP_SERVER_NAME].url = searchMcpUrl;
+        }
+      }
+      if (!searchMcpUrl) {
+        const modelSpecs = configObj?.modelSpecs as
+          | { list?: Array<{ preset?: { agent_id?: string } }> }
+          | undefined;
+        if (Array.isArray(modelSpecs?.list)) {
+          const before = modelSpecs.list.length;
+          modelSpecs.list = modelSpecs.list.filter(
+            (spec) => spec?.preset?.agent_id !== SEARCH_DEPENDENT_AGENT_ID
+          );
+          if (modelSpecs.list.length < before) {
+            console.log('✓ Faktencheck model spec omitted (SEARCH_MCP_URL not set)');
+          }
         }
       }
 

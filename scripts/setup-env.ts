@@ -235,10 +235,10 @@ const PROMPTS: Record<string, PromptConfig> = {
     'MCP_LINUX_GIT_SSH_KEY': { message: 'MCP Linux GitHub SSH Key base64 (optional; for git access):', type: 'password', defaultGen: () => '' },
 
     // Faktenforum Search (external MCP; optional)
-    'SEARCH_MCP_URL': { message: 'Search MCP URL (optional; e.g. http://search.localhost/mcp):', type: 'input', defaultGen: () => '' },
+    'SEARCH_MCP_URL': { message: 'Search MCP URL (optional; empty disables; e.g. https://dev-api.faktenforum.org/search/mcp):', type: 'input', defaultGen: () => '' },
     'SEARCH_MCP_API_KEY': { message: 'Search MCP API key (optional; must match external Search):', type: 'password', defaultGen: () => '' },
     'SEARCH_API_KEY': { message: 'Search REST API key (optional; must match external Search):', type: 'password', defaultGen: () => '' },
-    'SEARCH_MCP_DOMAIN': { message: 'Search MCP domain for allowlist (optional; e.g. search.localhost):', type: 'input', defaultGen: () => '' },
+    'SEARCH_MCP_DOMAIN': { message: 'Search MCP domain for allowlist (optional; e.g. dev-api.faktenforum.org):', type: 'input', defaultGen: () => '' },
 
     // MCP Linux - Code index (semantic code search; optional)
     'CODE_INDEX_EMBEDDING_API_KEY': { message: 'Code index embedding API key (optional; OpenRouter or Scaleway for semantic code search):', type: 'password', defaultGen: () => '' },

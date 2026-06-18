@@ -25,6 +25,7 @@ import {
   MCP_DELIMITER,
   MCP_SERVER,
   MCP_ALL,
+  SEARCH_MCP_SERVER_NAME,
   DEFAULT_API_URL,
 } from './utils/constants.ts';
 import {
@@ -133,6 +134,43 @@ function buildToolsArray(agentConfig: AgentConfig): string[] {
   }
 
   return tools;
+}
+
+/**
+ * Gates agents on the optional Faktenforum Search integration. When SEARCH_MCP_URL is
+ * not set, init.ts omits the Search MCP server, so agents must not reference it: strip
+ * the "search" server (and its tools) from every agent, and drop agents that depend on
+ * Search exclusively (the Faktencheck agent has no other tools).
+ */
+function gateOptionalSearchAgents(agents: AgentConfig[]): AgentConfig[] {
+  if (process.env.SEARCH_MCP_URL?.trim()) {
+    return agents;
+  }
+
+  const searchToolSuffix = `${MCP_DELIMITER}${SEARCH_MCP_SERVER_NAME}`;
+  const kept: AgentConfig[] = [];
+
+  for (const agent of agents) {
+    if (!agent.mcpServers?.includes(SEARCH_MCP_SERVER_NAME)) {
+      kept.push(agent);
+      continue;
+    }
+
+    const mcpServers = agent.mcpServers.filter((s) => s !== SEARCH_MCP_SERVER_NAME);
+    const mcpTools = (agent.mcpTools || []).filter((t) => !t.endsWith(searchToolSuffix));
+    const hasOtherCapabilities =
+      mcpServers.length > 0 || mcpTools.length > 0 || (agent.tools?.length ?? 0) > 0;
+
+    if (!hasOtherCapabilities) {
+      console.log(`  ✓ Agent "${agent.name}" omitted (depends on Search; SEARCH_MCP_URL not set)`);
+      continue;
+    }
+
+    console.log(`  ✓ Stripped Search MCP from agent "${agent.name}" (SEARCH_MCP_URL not set)`);
+    kept.push({ ...agent, mcpServers, mcpTools });
+  }
+
+  return kept;
 }
 
 /**
@@ -524,7 +562,8 @@ function resolveAgentReferences(
  */
 export async function initializeAgents(): Promise<void> {
   try {
-    const { agents: allAgents, publicCount, privateCount } = loadAgentConfigs();
+    const { agents: loadedAgents, publicCount, privateCount } = loadAgentConfigs();
+    const allAgents = gateOptionalSearchAgents(loadedAgents);
 
     if (allAgents.length === 0) {
       console.log('ℹ No agents configured - skipping agent initialization');
