@@ -125,22 +125,24 @@
 
 ### danny-avila/LibreChat
 
-| Status | Branch | PR | Description |
+Status verified and customizations decided during the 2026-06 upstream sync (forks merged up to upstream/main).
+
+| Status | Branch | PR | Description / sync decision |
 |--------|--------|----|-------------|
-| Draft | `feat/vision` | [#11501](https://github.com/danny-avila/LibreChat/pull/11501) | Add vision capability flag to modelSpecs configuration |
-| Open | `fix/mcp-parser` | [#12103](https://github.com/danny-avila/LibreChat/pull/12103) | Auto-detect OpenAI-compatible custom endpoints in formatToolContent |
-| Open | `feat/stt` | [#11528](https://github.com/danny-avila/LibreChat/pull/11528) | Prefer ogg/wav in external STT recording for backend compatibility |
-| Waiting | — | depends on [#10574](https://github.com/danny-avila/LibreChat/pull/10574) | Replace Jina reranker with RAG API reranker (`rerankerType: "simple"`) |
-| Open | `feat/custom-reranker-provider` | [#12121](https://github.com/danny-avila/LibreChat/pull/12121) | Add custom reranker provider support (configurable URL + model, e.g. Scaleway) — depends on [agents#66](https://github.com/danny-avila/agents/pull/66) |
+| Closed (rejected) | `feat/vision` | [#11501](https://github.com/danny-avila/LibreChat/pull/11501) | Vision capability flag for modelSpecs. **Kept as fork divergence** — load-bearing (non-vision Scaleway/OpenRouter models error on image input) and upstream has no agent-vision equivalent. Vision capability type made optional. |
+| Open | `fix/mcp-parser` | [#12103](https://github.com/danny-avila/LibreChat/pull/12103) | Auto-detect OpenAI-compatible custom endpoints in formatToolContent. **Kept** (Scaleway depends on it); merged with upstream's new MCP image-size validation. |
+| Open | `feat/stt` | [#11528](https://github.com/danny-avila/LibreChat/pull/11528) | Prefer ogg/wav in external STT recording. Not affected by the sync. |
+| Open | — | depends on [#10574](https://github.com/danny-avila/LibreChat/pull/10574) | Replace Jina reranker with RAG API reranker (`rerankerType: "simple"`); not our PR. |
+| Open | `feat/custom-reranker-provider` | [#12121](https://github.com/danny-avila/LibreChat/pull/12121) | Custom reranker provider (configurable URL + model, e.g. Scaleway). **Kept** — depends on [agents#66](https://github.com/danny-avila/agents/pull/66). |
 
 ### danny-avila/agents
 
-| Status | Branch | PR | Description |
+| Status | Branch | PR | Description / sync decision |
 |--------|--------|----|-------------|
-| Draft | — | [#48](https://github.com/danny-avila/agents/pull/48) | Filter base64 image artifacts based on agent vision capability |
-| Open | `fix/user-after-tool` | [#59](https://github.com/danny-avila/agents/pull/59) | Fix "400 Unexpected role 'user' after role 'tool'" (bridge AIMessage in `formatAgentMessages`) |
-| Open | `fix/wrong-agent-id` | [#61](https://github.com/danny-avila/agents/pull/61) | Fix handoff: return wrong-tool correction to LLM instead of silent execute |
-| Open | `feat/custom-reranker-provider` | [#66](https://github.com/danny-avila/agents/pull/66) | Add custom reranker provider with configurable URL and model name |
+| Open | — | [#48](https://github.com/danny-avila/agents/pull/48) | Filter base64 image artifacts based on agent vision capability. **Kept** — re-engineered onto upstream's delegating stream: images stripped once via `stripImagesFromMessages()` before `super._streamResponseChunks`. |
+| Closed (rejected) | `fix/user-after-tool` | [#55](https://github.com/danny-avila/agents/pull/55) | "400 Unexpected role 'user' after role 'tool'" bridge in `formatAgentMessages`. **Dropped** — upstream rejected it and handles role ordering in MultiAgentGraph's handoff path instead. |
+| Closed (rejected) | `fix/wrong-agent-id` | [#61](https://github.com/danny-avila/agents/pull/61) | Handoff: return wrong-tool correction to LLM. **Dropped** — upstream's `shouldHandleUnknownHandoffLocally` + `getUnknownToolErrorMessage` supersedes it. |
+| Open | `feat/custom-reranker-provider` | [#66](https://github.com/danny-avila/agents/pull/66) | Custom reranker provider (configurable URL + model). **Kept.** |
 
 ### arabold/docs-mcp-server
 
