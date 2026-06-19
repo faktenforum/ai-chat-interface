@@ -7,13 +7,22 @@
 # What this adds over the Docker setup (which is unchanged):
 #   - Traefik reaches the container runtime over Podman's Docker-API-compatible socket.
 #     Set CONTAINER_SOCKET=/run/user/$UID/podman/podman.sock (the npm scripts do this).
-#   - security_opt label=disable lets the (SELinux-confined) Traefik container read that
-#     socket on SELinux hosts (Fedora etc.); without it the docker provider gets
-#     "permission denied while trying to connect to the docker API".
+#   - security_opt label=disable lets SELinux-confined containers (Traefik's socket
+#     mount, Meilisearch's bind-mounted data dir) work on SELinux hosts (Fedora etc.);
+#     without it they get "permission denied" (docker API / os error 13).
+#   - mongodb runs as the image-default uid 999. The chown-init that aligns the named
+#     volume to uid 1000 under Docker does not take effect under rootless Podman (the
+#     volume keeps the image's 999 ownership), so forcing user 1000 makes mongod fail
+#     with "Permission denied ... /data/db/journal". Running as 999 matches the volume.
 #
 # Rootless ports: binding 80/443 rootless needs `net.ipv4.ip_unprivileged_port_start=80`
 # (sysctl). Otherwise set TRAEFIK_HTTP_PORT/TRAEFIK_HTTPS_PORT to >=1024. See docs/PODMAN.md.
 services:
   traefik:
+    security_opt:
+      - label=disable
+  mongodb:
+    user: "999:999"
+  meilisearch:
     security_opt:
       - label=disable
