@@ -64,7 +64,7 @@ submodules:
     upstream_branch: main
     fork_branch: main
     upstream_tracking_branch: upstream
-    description: "Grounded Docs MCP server fork (configurable embedding dimension)"
+    description: "Grounded Docs MCP server (fork mirrors upstream; configurable embedding dimension is now upstream-native)"
 
   - path: dev/agents
     fork_url: git@github.com:faktenforum/agents.git
