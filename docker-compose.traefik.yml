@@ -9,11 +9,17 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+    # Host ports default to 80/443 (Docker, and rootful Podman). For rootless Podman
+    # without raising net.ipv4.ip_unprivileged_port_start, set TRAEFIK_HTTP_PORT /
+    # TRAEFIK_HTTPS_PORT to >=1024 (e.g. 8080/8443). See docs/PODMAN.md.
     ports:
-      - "80:80"
-      - "443:443"
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Container runtime socket for Traefik's docker provider. Defaults to the Docker
+      # socket; for rootless Podman set CONTAINER_SOCKET=/run/user/$UID/podman/podman.sock
+      # (Podman exposes a Docker-API-compatible socket). See docs/PODMAN.md.
+      - ${CONTAINER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
       - ./volumes/traefik/letsencrypt:/letsencrypt
     networks:
       - traefik-net
