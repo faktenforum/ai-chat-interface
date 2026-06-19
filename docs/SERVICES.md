@@ -71,7 +71,7 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 
 **RAG API** — Retrieval-Augmented Generation service for document search. Network: `app-net`. Access: LibreChat API only.
 
-**Faktenforum Search (external)** — LibreChat connects to an **external** Faktenforum Search instance via MCP. No Search services run in this stack. Configure `SEARCH_MCP_URL`, `SEARCH_MCP_API_KEY`, and `SEARCH_MCP_DOMAIN` in env. To run or deploy Search, see [Search docs](../dev/search/README.md).
+**Faktenforum Search (external, optional)** — LibreChat optionally connects to an **external** Faktenforum Search instance via MCP. Search is no longer deployed by this stack; it is hosted as part of Faktenforum (prod `https://api.faktenforum.org/search/`, dev `https://dev-api.faktenforum.org/search/`). The integration is opt-in: it activates only when `SEARCH_MCP_URL` is set. Leave it empty to disable - the Search MCP server and the Faktencheck agent are then omitted at init time. Configure `SEARCH_MCP_URL`, `SEARCH_MCP_API_KEY`, and `SEARCH_MCP_DOMAIN` in env (e.g. `SEARCH_MCP_URL=https://dev-api.faktenforum.org/search/mcp`, `SEARCH_MCP_DOMAIN=dev-api.faktenforum.org`).
 
 **YTPTube** — yt-dlp Web UI; queues downloads. MCP YTPTube uses it for audio/transcripts. Network: `app-net` + `traefik-net` (prod/dev: download-only router `PathPrefix(/api/download)` at `https://ytptube.{DOMAIN}/api/download/*`); local/local-dev: full host `http://ytptube.{DOMAIN}`. Image: `ghcr.io/arabcoders/ytptube:latest`
 

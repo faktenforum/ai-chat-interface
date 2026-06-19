@@ -52,6 +52,12 @@ export const MCP_SERVER = 'sys__server__sys';
 /** Marker for "all tools" from an MCP server. */
 export const MCP_ALL = 'sys__all__sys';
 
+/** Optional Faktenforum Search integration (gated on SEARCH_MCP_URL being set). */
+export const SEARCH_MCP_SERVER_NAME = 'search';
+
+/** Agent that depends entirely on the Search MCP server; omitted when Search is disabled. */
+export const SEARCH_DEPENDENT_AGENT_ID = 'shared-agent-faktencheck';
+
 // ============================================================================
 // Access Control
 // ============================================================================
