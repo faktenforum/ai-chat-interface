@@ -6,22 +6,21 @@ Work-in-progress notes and design docs for vision handling, YTPTube production, 
 
 Works locally; on server (e.g. Hetzner), blocking (geo/bot) may apply. See [YTPTUBE_FUTURE_WORK.md](YTPTUBE_FUTURE_WORK.md) for production options and [TODO.md](../TODO.md) for the tracked task.
 
-## Branch Status & Upstream Sync (Jan 2025)
+## Branch Status & Upstream Sync (2026-06)
 
-Vision is **re-enabled as experimental/WIP**. Implementation lives on `feat/vision` in submodules; config in this repo is active and explicitly marked WIP.
+Vision is **re-enabled as experimental/WIP**. The implementation is merged into fork `main` for both `dev/librechat` and `dev/agents` (during the 2026-06 upstream sync); config in this repo is active and explicitly marked WIP.
 
 | Aspect | Details |
 |--------|---------|
-| **Submodules** | `dev/librechat`, `dev/agents` |
-| **Feature branch** | `feat/vision` (required for vision to work) |
+| **Submodules** | `dev/librechat`, `dev/agents` (vision on fork `main`) |
 | **Status** | **Experimental/WIP** – not merged upstream yet |
-| **Draft PRs** | [LibreChat PR #11501](https://github.com/danny-avila/LibreChat/pull/11501) (modelSpecs vision flag), [agents PR #48](https://github.com/danny-avila/agents/pull/48) (base64 artifact filtering) |
+| **Upstream re-attempts** | [agents PR #257](https://github.com/danny-avila/agents/pull/257) (`vision` flag + image stripping before streaming) and [LibreChat PR #13860](https://github.com/danny-avila/LibreChat/pull/13860) (forwards `vision` onto the OpenAI LLM config) |
 
 **Config:** Vision is turned on in `packages/librechat-init/config/librechat.yaml` and labelled WIP/experimental:
 - Agents capability: `- "vision"` (around line 102) with comment `# WIP/experimental`
-- Model specs: `vision: true` on vision-capable models (Scaleway Pixtral/Mistral Small, OpenRouter Claude/GPT/Gemini). Section header references draft PRs.
+- Model specs: `vision: true` on vision-capable models (Scaleway Pixtral/Mistral Small, OpenRouter Claude/GPT/Gemini).
 
-To bring submodule `main` in line with upstream while keeping vision on `feat/vision`, use **[Submodule Sync Guide](../SUBMODULE_SYNC.md)** (`npm run update:submodules:status`, `npm run update:submodules`, `npm run update:submodules:dry-run`).
+To keep the forks in line with upstream, use **[Submodule Sync Guide](../SUBMODULE_SYNC.md)** (`npm run update:submodules:status`, `npm run update:submodules`, `npm run update:submodules:dry-run`).
 
 ## Contents
 

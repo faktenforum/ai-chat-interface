@@ -52,7 +52,7 @@
 
 - [x] Fix vision model detection for "Upload to AI Provider" option
   - LibreChat discussion [#11333](https://github.com/danny-avila/LibreChat/discussions/11333)
-  - Fixed by: [LibreChat PR #11501](https://github.com/danny-avila/LibreChat/pull/11501) (vision capability flag to modelSpecs)
+  - Handled in our fork; clean upstream re-attempt: [LibreChat #13860](https://github.com/danny-avila/LibreChat/pull/13860) + [agents #257](https://github.com/danny-avila/agents/pull/257) (see [Upstream Contributions](#upstream-contributions))
 - [ ] Add multilingual support for custom titles, labels, and descriptions
   - LibreChat discussion [#7666](https://github.com/danny-avila/LibreChat/discussions/7666) - multilingual support for user-defined content (model specs, MCP servers, interface config, agents)
   - Related: [#10183](https://github.com/danny-avila/LibreChat/issues/10183) (model fields)
@@ -87,7 +87,7 @@
 
 - [x] Fix MCP image generation tools sending artifacts to non-vision models
   - LibreChat issue [#11413](https://github.com/danny-avila/LibreChat/issues/11413)
-  - Fixed by: [LibreChat PR #11504](https://github.com/danny-avila/LibreChat/pull/11504) (vision toggle for agents) and [agents PR #48](https://github.com/danny-avila/agents/pull/48) (filter base64 image artifacts)
+  - Handled in our fork (vision feature); clean upstream re-attempts: [agents #257](https://github.com/danny-avila/agents/pull/257) + [LibreChat #13860](https://github.com/danny-avila/LibreChat/pull/13860) (see [Upstream Contributions](#upstream-contributions))
 - [ ] Reduce SSE stream disconnection error logs
   - Known issue: `streamable-http` MCP servers use stateless HTTP POST while LibreChat's `StreamableHTTPClientTransport` attempts SSE streams, causing "Bad Request" errors. Servers function correctly. Log rotation configured.
   - Related: [LibreChat Discussion #11230](https://github.com/danny-avila/LibreChat/discussions/11230)
@@ -125,11 +125,11 @@
 
 ### danny-avila/LibreChat
 
-Status verified and customizations decided during the 2026-06 upstream sync (forks merged up to upstream/main).
+Status verified and customizations decided during the 2026-06 upstream sync (forks merged up to upstream/main); PR statuses refreshed 2026-06-20.
 
 | Status | Branch | PR | Description / sync decision |
 |--------|--------|----|-------------|
-| Closed (rejected) | `feat/vision` | [#11501](https://github.com/danny-avila/LibreChat/pull/11501) | Vision capability flag for modelSpecs. **Kept as fork divergence** — load-bearing (non-vision Scaleway/OpenRouter models error on image input) and upstream has no agent-vision equivalent. Vision capability type made optional. |
+| Open (draft) | `feat/vision-capability` | [#13860](https://github.com/danny-avila/LibreChat/pull/13860) | Optional `vision` flag on the OpenAI LLM config, forwarded onto the chat-client options so image content is stripped for non-vision models. **Clean minimal re-attempt** off upstream/main; depends on [agents#257](https://github.com/danny-avila/agents/pull/257). Pairs with the load-bearing fork vision feature (non-vision Scaleway/OpenRouter models error on image input). |
 | Open | `fix/mcp-parser` | [#12103](https://github.com/danny-avila/LibreChat/pull/12103) | Auto-detect OpenAI-compatible custom endpoints in formatToolContent. **Kept** (Scaleway depends on it); merged with upstream's new MCP image-size validation. |
 | Open | `feat/stt` | [#11528](https://github.com/danny-avila/LibreChat/pull/11528) | Prefer ogg/wav in external STT recording. Not affected by the sync. |
 | Open | — | depends on [#10574](https://github.com/danny-avila/LibreChat/pull/10574) | Replace Jina reranker with RAG API reranker (`rerankerType: "simple"`); not our PR. |
@@ -139,9 +139,7 @@ Status verified and customizations decided during the 2026-06 upstream sync (for
 
 | Status | Branch | PR | Description / sync decision |
 |--------|--------|----|-------------|
-| Open | — | [#48](https://github.com/danny-avila/agents/pull/48) | Filter base64 image artifacts based on agent vision capability. **Kept** — re-engineered onto upstream's delegating stream: images stripped once via `stripImagesFromMessages()` before `super._streamResponseChunks`. |
-| Closed (rejected) | `fix/user-after-tool` | [#55](https://github.com/danny-avila/agents/pull/55) | "400 Unexpected role 'user' after role 'tool'" bridge in `formatAgentMessages`. **Dropped** — upstream rejected it and handles role ordering in MultiAgentGraph's handoff path instead. |
-| Closed (rejected) | `fix/wrong-agent-id` | [#61](https://github.com/danny-avila/agents/pull/61) | Handoff: return wrong-tool correction to LLM. **Dropped** — upstream's `shouldHandleUnknownHandoffLocally` + `getUnknownToolErrorMessage` supersedes it. |
+| Open | `feat/vision-capability` | [#257](https://github.com/danny-avila/agents/pull/257) | Optional vision gating: a `vision` constructor flag + `stripImagesFromMessages()` that strips `image_url` parts before `super._streamResponseChunks` when the model lacks vision support. **Clean minimal re-attempt** (3 files, with tests); supersedes the closed #48. Consumed by LibreChat [#13860](https://github.com/danny-avila/LibreChat/pull/13860). |
 | Open | `feat/custom-reranker-provider` | [#66](https://github.com/danny-avila/agents/pull/66) | Custom reranker provider (configurable URL + model). **Kept.** |
 
 ### arabold/docs-mcp-server
@@ -159,4 +157,4 @@ Status verified and customizations decided during the 2026-06 upstream sync (for
 
 ### Notes
 
-- Vision is re-enabled in `packages/librechat-init/config/librechat.yaml` as **experimental/WIP**. Requires `feat/vision` in `dev/librechat` and `dev/agents`. See [WIP Documentation](wip/README.md).
+- Vision is re-enabled in `packages/librechat-init/config/librechat.yaml` as **experimental/WIP**. Requires the vision customizations in the `dev/librechat` and `dev/agents` forks (merged into fork main during the 2026-06 sync). Clean upstream re-attempts: [agents#257](https://github.com/danny-avila/agents/pull/257) + [LibreChat#13860](https://github.com/danny-avila/LibreChat/pull/13860). See [WIP Documentation](wip/README.md).
