@@ -72,6 +72,15 @@ Enable automatic stack updates from GitHub using webhooks for immediate deployme
 
 When changes are pushed to the repository, Portainer automatically pulls the latest code and updates the stack. All volumes are preserved (data is not lost).
 
+### Agents fork (prod/dev)
+
+`docker-compose.prod.yml` and `docker-compose.dev.yml` mount our `@librechat/agents` fork over the registry image's npm copy (`./dev/agents:/app/node_modules/@librechat/agents`) so the fork's customizations (vision gating, custom reranker) take effect. Two host prerequisites, or LibreChat will fail to start with an empty `@librechat/agents`:
+
+1. Clone submodules recursively (Portainer: enable recursive/submodule clone for the stack repo).
+2. Build the fork before deploy: `npm run build:dev` (runs `build-dev-submodules.sh`, which builds `dev/agents`). The mount needs `dev/agents/dist`.
+
+Alternative (more robust for the registry-image model): bake the built fork into the librechat image in CI instead of mounting it. Tracked as a follow-up.
+
 ## Data Safety
 
 **⚠️ Important:**
