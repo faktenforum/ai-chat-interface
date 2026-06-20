@@ -3,6 +3,10 @@ services:
   traefik:
     extends: { file: docker-compose.traefik.yml, service: traefik }
     env_file: .env.local
+    # Lets the SELinux-confined container read the runtime socket under rootless Podman
+    # (no-op under Docker). CONTAINER_SOCKET selects the docker vs podman socket.
+    security_opt:
+      - label=disable
 
   maildev:
     container_name: maildev
@@ -31,6 +35,10 @@ services:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
     container_name: ${STACK_NAME:-local}-mongodb
     env_file: .env.local
+    # Under rootless Podman the chown-init can't align the named volume to uid 1000, so
+    # the volume keeps the mongo image's default uid (999). MONGODB_USER=999:999 (set by
+    # the podman npm scripts) matches it. Defaults to 1000:1000 under Docker (unchanged).
+    user: "${MONGODB_USER:-1000:1000}"
     volumes:
       - mongodata:/data/db
       - mongoconfig:/data/configdb
@@ -74,6 +82,10 @@ services:
     extends: { file: docker-compose.librechat.yml, service: meilisearch }
     container_name: ${STACK_NAME:-local}-meilisearch
     env_file: .env.local
+    # SELinux relabel workaround for the bind-mounted meili_data dir under rootless Podman
+    # (no-op under Docker).
+    security_opt:
+      - label=disable
 
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
