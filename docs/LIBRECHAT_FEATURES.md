@@ -384,7 +384,7 @@ Enabled in `librechat.prod.yaml` and `librechat.dev.yaml` (not in base, so local
   - `npm run set-balance <email> <credits>` (absolute), `npm run add-balance <email> <credits>` (increment), `npm run list-balances`, `npm run user-stats`.
 - **Prices must be known.** Two paths for custom endpoints:
   - **OpenRouter** is in LibreChat's `FetchTokenConfig`, so `fetch: true` imports its live (marked-up) per-token prices automatically. No `tokenConfig` needed.
-  - **Scaleway** has no price feed (its `/v1/models` returns only `id/object/created/owned_by`). It bills at `defaultRate` ($6/1M) unless an explicit `tokenConfig` is set. We set one (USD/1M, from Scaleway's EUR pricing). A YAML `tokenConfig` is authoritative and works alongside `fetch: true`.
+  - **Scaleway** has no price feed (its `/v1/models` returns only `id/object/created/owned_by`). It bills at `defaultRate` ($6/1M) unless an explicit `tokenConfig` is set. We set one (USD/1M, from Scaleway's EUR pricing). A YAML `tokenConfig` is authoritative, works alongside `fetch: true`, and is the recommended approach (per-endpoint rates reflect what you actually pay, vs. a global guess). **Its keys are matched exactly** against the served model id (exact-match, unlike the substring-matched built-in `tokenValues`), so every selectable Scaleway model id must be a literal `tokenConfig` key. Fetched-but-unlisted models fall back to the built-in map.
 - **UI:** `interface.contextCost: true` shows the estimated cost per message.
 - **No global cap.** LibreChat has no org-wide spend limit; the backstop is provider-side (OpenRouter credit/key limits, Scaleway billing alerts). Tracked as a follow-up.
 
