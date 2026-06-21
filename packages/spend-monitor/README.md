@@ -1,9 +1,9 @@
 # spend-monitor
 
-Read-only org-wide cost monitor for LibreChat. Aggregates spend from the
-`transactions` collection in LibreChat's MongoDB and serves an in-platform
-status page. It does **not** write to LibreChat's database and does **not**
-enforce any limit (per-user limits stay in LibreChat's own balance system).
+Org-wide cost monitor for LibreChat. Aggregates spend from the `transactions`
+collection in LibreChat's MongoDB and serves an in-platform status page.
+Read-only by default; can optionally enforce an org hard cap by zeroing balances
+when over budget (`SPEND_MONITOR_ENFORCE`). Per-user limits stay in LibreChat.
 
 ## Endpoints
 
@@ -24,6 +24,7 @@ enforce any limit (per-user limits stay in LibreChat's own balance system).
 | `SPEND_MONITOR_CRIT_PCT` | `80` | critical threshold (%) |
 | `SPEND_MONITOR_EUR_RATE` | `0.92` | EUR per USD, display only |
 | `SPEND_MONITOR_POLL_SECONDS` | `60` | aggregation interval |
+| `SPEND_MONITOR_ENFORCE` | `off` | `off`/`dry-run`/`on` — hard stop by zeroing balances |
 
 Spend uses LibreChat's convention: `1,000,000 token credits = 1 USD`. `tokenValue`
 is negative for usage; `tokenType: 'credits'` rows (refills) are excluded.

@@ -1,18 +1,20 @@
 # Spend Monitor
 
-Read-only org-wide cost monitor for LibreChat. It aggregates spend from the
-`transactions` collection in LibreChat's MongoDB and serves an in-platform
-status page. It does **not** write to LibreChat's database and does **not**
-enforce limits — per-user limits stay in LibreChat's own balance system.
+Org-wide cost monitor for LibreChat. It aggregates spend from the `transactions`
+collection in LibreChat's MongoDB and serves an in-platform status page.
 
-This is the observability layer (Phase 1). Hard enforcement (zeroing balances),
-a Scaleway billing webhook, and email/webhook alerts are possible later phases.
+**Read-only by default.** Optionally it enforces an org-wide hard cap by zeroing
+user balances when spend reaches 100% of the budget (`SPEND_MONITOR_ENFORCE`).
+Per-user limits stay in LibreChat's own balance system either way.
+
+A Scaleway billing webhook and email/webhook alerts are possible later phases.
 
 ## Endpoints
 
 - `GET /health` — liveness
 - `GET /api/spend` — current-period spend JSON (org total, per-provider, per-model, top users)
 - `GET /` — HTML status page (auto-refreshes every 30s)
+- `POST /restore` — lift enforcement and restore balances (only when enforce is `on`/`dry-run`)
 
 Local: `http://localhost:3016` and `http://spend.localhost`. Prod/dev: `https://spend.${DOMAIN}` (behind Traefik basic auth).
 
@@ -38,6 +40,7 @@ Spend is recorded after a completion, so the total trails real spend by at most 
 | `SPEND_MONITOR_CRIT_PCT` | `80` | critical threshold (%) |
 | `SPEND_MONITOR_EUR_RATE` | `0.92` | EUR per USD, display only |
 | `SPEND_MONITOR_POLL_SECONDS` | `60` | aggregation interval |
+| `SPEND_MONITOR_ENFORCE` | `off` | `off` / `dry-run` / `on` — hard stop by zeroing balances |
 | `SPEND_MONITOR_BASIC_AUTH` | — | prod/dev: Traefik basic-auth htpasswd line |
 
 The MongoDB URI is not configured separately — the service reuses LibreChat's
@@ -48,6 +51,25 @@ The MongoDB URI is not configured separately — the service reuses LibreChat's
 In-platform only for now: the status-page banner turns amber/orange/red at the
 warn/crit/over thresholds, and each level transition is logged (structured Pino
 warning at crit/over). Email and webhook notifiers are stubbed for a later phase.
+
+## Enforcement (optional hard stop)
+
+`SPEND_MONITOR_ENFORCE` (default `off`):
+
+- `off` — monitor only, never writes to LibreChat's database.
+- `dry-run` — logs what it *would* zero/restore but writes nothing. Use this first.
+- `on` — when spend reaches 100% of budget, it snapshots all balances, sets every
+  `tokenCredits` to 0 and disables auto-refill, so LibreChat's pre-request balance
+  check blocks all further requests. It re-zeroes each poll (catching in-flight spend
+  and newly created users), **auto-restores** when the period resets or the budget is
+  raised (spend < budget), and can be lifted manually via the dashboard's **Restore**
+  button (`POST /restore`).
+
+Snapshot and enforcement state live in the `spendmonitor_balance_snapshot` and
+`spendmonitor_state` collections (the monitor's own, not LibreChat's). There is a lag
+of up to one poll + in-flight requests before the cap bites (spend is recorded after a
+completion), so set the budget slightly below the true ceiling. Coarse by design: it
+cuts off all users at once.
 
 ## Basic auth (prod/dev)
 
