@@ -1,6 +1,7 @@
 services:
   spend-monitor:
-    # Read-only org cost monitor. Browser-facing status page exposed via Traefik;
+    # Org cost monitor (read-only by default; opt-in balance enforcement via SPEND_MONITOR_ENFORCE).
+    # Browser-facing status page exposed via Traefik;
     # Traefik labels (and basic auth for prod/dev) are set in the extension files.
     # Build overridden in docker-compose.local.yml; prod/dev pull from the registry.
     image: ghcr.io/faktenforum/spend-monitor:latest

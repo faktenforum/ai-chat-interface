@@ -1,8 +1,11 @@
 import 'dotenv/config';
+import type { EnforceMode } from './enforce.ts';
 
 export type Period = 'calendar-month' | 'rolling-30d';
 
 export interface Config {
+  /** off (monitor only) | dry-run (log what it would do) | on (zero balances over budget) */
+  enforce: EnforceMode;
   port: number;
   mongoUri: string;
   dbName: string;
@@ -24,7 +27,9 @@ function num(name: string, def: number): number {
 
 export function loadConfig(): Config {
   const rawPeriod = process.env.SPEND_MONITOR_PERIOD;
+  const rawEnforce = process.env.SPEND_MONITOR_ENFORCE;
   return {
+    enforce: rawEnforce === 'on' ? 'on' : rawEnforce === 'dry-run' ? 'dry-run' : 'off',
     port: num('PORT', 3016),
     mongoUri: process.env.SPEND_MONITOR_MONGO_URI || 'mongodb://prod-mongodb:27017/LibreChat',
     dbName: process.env.SPEND_MONITOR_DB || 'LibreChat',
