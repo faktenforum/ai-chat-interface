@@ -242,6 +242,9 @@ const PROMPTS: Record<string, PromptConfig> = {
 
     // MCP Linux - Code index (semantic code search; optional)
     'CODE_INDEX_EMBEDDING_API_KEY': { message: 'Code index embedding API key (optional; OpenRouter or Scaleway for semantic code search):', type: 'password', defaultGen: () => '' },
+
+    // Spend Monitor dashboard - Traefik basic auth (prod/dev). Generate: htpasswd -nbB admin <password>
+    'SPEND_MONITOR_BASIC_AUTH': { message: 'Spend-monitor dashboard basic auth - htpasswd line "user:hash" (enter to skip; required for the prod/dev dashboard):', type: 'password', defaultGen: () => '' },
 };
 
 /**
