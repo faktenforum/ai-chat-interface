@@ -65,6 +65,15 @@ const genUsername = (prefix: string = 'admin'): string => {
 };
 
 /**
+ * Escape '$' as '$$' for values consumed through docker-compose ${...} interpolation
+ * (e.g. an htpasswd bcrypt hash in a Traefik label - an unescaped '$' is eaten as a
+ * variable reference and corrupts the hash). Idempotent: collapses any existing '$$'
+ * first, so re-running setup-env never double-escapes.
+ */
+const escapeComposeDollar = (value: string): string =>
+    value ? value.split('$$').join('$').split('$').join('$$') : value;
+
+/**
  * Check if a value contains variable expansions (e.g., ${VAR_NAME})
  */
 const containsVariableExpansion = (value: string): boolean => {
@@ -587,7 +596,9 @@ async function processEnvExample(
                 isProdMode || isDevMode,
                 skipPrompts
             );
-            finalEnvLines.push(`${key}=${value}`);
+            // htpasswd hashes flow into a docker-compose ${...} Traefik label; escape '$' -> '$$'
+            const finalValue = key === 'SPEND_MONITOR_BASIC_AUTH' ? escapeComposeDollar(value) : value;
+            finalEnvLines.push(`${key}=${finalValue}`);
             continue;
         }
 
