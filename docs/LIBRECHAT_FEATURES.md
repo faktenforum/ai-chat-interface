@@ -374,18 +374,28 @@ Rating system for AI responses with thumbs up/down and detailed tags.
 
 ---
 
+## Cost control (per-user balance)
+
+Enabled in `librechat.prod.yaml` and `librechat.dev.yaml` (not in base, so local dev stays uncapped).
+
+- **Credit unit:** `1,000,000 token credits = 1 USD`. Cost = `tokens × multiplier`, where the multiplier is USD per 1M tokens. Default for unpriced models is `defaultRate = 6` ($6/1M).
+- **Budget:** `balance.startBalance: 30000000` ($30) with monthly auto-refill (`refillAmount: 30000000`). The check is pre-request on prompt tokens; an out-of-credit user is blocked with an error. Auto-refill ADDS `refillAmount` once the balance hits ≤ 0 and the interval has elapsed (it does not reset unused balance).
+- **Per-user only.** No per-role/group budget exists. Override individual users via the API container:
+  - `npm run set-balance <email> <credits>` (absolute), `npm run add-balance <email> <credits>` (increment), `npm run list-balances`, `npm run user-stats`.
+- **Prices must be known.** Two paths for custom endpoints:
+  - **OpenRouter** is in LibreChat's `FetchTokenConfig`, so `fetch: true` imports its live (marked-up) per-token prices automatically. No `tokenConfig` needed.
+  - **Scaleway** has no price feed (its `/v1/models` returns only `id/object/created/owned_by`). It bills at `defaultRate` ($6/1M) unless an explicit `tokenConfig` is set. We set one (USD/1M, from Scaleway's EUR pricing). A YAML `tokenConfig` is authoritative, works alongside `fetch: true`, and is the recommended approach (per-endpoint rates reflect what you actually pay, vs. a global guess). **Its keys are matched exactly** against the served model id (exact-match, unlike the substring-matched built-in `tokenValues`), so every selectable Scaleway model id must be a literal `tokenConfig` key. Fetched-but-unlisted models fall back to the built-in map.
+- **UI:** `interface.contextCost: true` shows the estimated cost per message.
+- **No global cap.** LibreChat has no org-wide spend limit; the backstop is provider-side (OpenRouter credit/key limits, Scaleway billing alerts). Tracked as a follow-up.
+
+---
+
 ## Unused Features
 
 **Note:** All features below are available in `docker-compose.librechat.yml` but **commented out** (disabled) with their default settings. To enable, remove comments and adjust values.
 
-### Balance System
-- Token balance system for API usage (cost-based limits)
-- `enabled: false`, `startBalance: 20000`, `autoRefillEnabled: false`
-
-### Transactions
-- Transaction logs for balance tracking
-- `enabled: false` (default: true)
-- Auto-enabled if `balance.enabled: true`
+### Balance System / Transactions
+- Now **enabled** in prod/dev for per-user cost limits. See [Cost control](#cost-control-per-user-balance) above.
 
 ### Speech (TTS/STT)
 - **STT**: Via **Scaleway** ([Audio Transcriptions API](https://www.scaleway.com/en/docs/generative-apis/how-to/query-audio-models/), `whisper-large-v3`). Requires `SCALEWAY_PROJECT_ID` and `SCALEWAY_API_KEY`; init injects the transcriptions URL.

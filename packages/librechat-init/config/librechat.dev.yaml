@@ -1,4 +1,18 @@
 # Dev (Portainer) overrides: only "My Agents" in model selector; base capabilities (execute_code on).
+# Inherits fetch: true for the custom endpoints from the base config (no override here).
 modelSpecs:
   addedEndpoints:
     - agents
+
+# Cost control test parity with prod: per-user token balance.
+# 1,000,000 credits = 1 USD → $30 = 30,000,000 credits. See librechat.prod.yaml for the full notes
+# and the admin scripts (set-balance / add-balance / list-balances / user-stats).
+balance:
+  enabled: true
+  startBalance: 30000000
+  autoRefillEnabled: true
+  refillIntervalValue: 1
+  refillIntervalUnit: months
+  refillAmount: 30000000
+transactions:
+  enabled: true

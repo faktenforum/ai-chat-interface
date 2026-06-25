@@ -1,4 +1,9 @@
-# Production overrides: only "My Agents" in selector; custom endpoints use default model list only (no API fetch); execute_code disabled.
+# Production overrides.
+# - Model selector stays curated: only "My Agents" + the modelSpecs groups (addedEndpoints: [agents]).
+#   The raw OpenRouter/Scaleway endpoints are NOT added to the selector, so users only see our list.
+# - fetch: true on both custom endpoints. This does NOT change visibility (controlled by addedEndpoints);
+#   it lets OpenRouter feed live prices into the balance system, and refreshes the model lists.
+# - execute_code disabled.
 modelSpecs:
   addedEndpoints:
     - agents
@@ -6,10 +11,14 @@ endpoints:
   custom:
     - name: OpenRouter
       models:
-        fetch: false
+        # fetch: true → OpenRouter's /models response feeds live (marked-up) per-token prices
+        # into the balance system automatically (OpenRouter is in LibreChat's FetchTokenConfig).
+        fetch: true
     - name: Scaleway
       models:
-        fetch: false
+        # fetch: true → fetches the model list. Prices come from the endpoint `tokenConfig`
+        # in the base config: Scaleway's /models does NOT expose pricing, so it cannot be fetched.
+        fetch: true
   agents:
     capabilities:
       - "file_search"
@@ -21,3 +30,23 @@ endpoints:
       - "tools"
       - "web_search"
       - "vision"
+
+# Cost control (enterprise): per-user token balance.
+# Credit convention: 1,000,000 token credits = 1 USD. So $30 = 30,000,000 credits.
+# The check is pre-request on prompt tokens; an out-of-credit user is blocked with an error.
+# Auto-refill ADDS refillAmount once the balance is depleted (<= 0) and refillIntervalValue
+# units have elapsed since the last refill (it does not reset unused balance each month).
+# Override individual users via the admin scripts in the LibreChat API container:
+#   npm run set-balance <email> <credits>   # set absolute (e.g. 60000000 = $60)
+#   npm run add-balance <email> <credits>   # increment
+#   npm run list-balances                    # overview
+#   npm run user-stats                       # per-user spend
+balance:
+  enabled: true
+  startBalance: 30000000        # $30 starting budget for new users
+  autoRefillEnabled: true
+  refillIntervalValue: 1
+  refillIntervalUnit: months
+  refillAmount: 30000000        # $30 topped up when depleted after a month
+transactions:
+  enabled: true
