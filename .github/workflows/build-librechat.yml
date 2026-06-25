@@ -64,7 +64,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # tsdown (agents build) requires node ^22.18.0 || >=24.0.0; on node 20 it
+          # falls back to the optional `unrun` config loader and fails. Match LibreChat's runtime.
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: dev/agents/package-lock.json
 
