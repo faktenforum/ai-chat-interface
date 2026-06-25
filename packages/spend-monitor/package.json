@@ -1,0 +1,26 @@
+{
+  "name": "@ai-chat-interface/spend-monitor",
+  "version": "1.0.0",
+  "description": "Read-only org-wide cost monitor for LibreChat - aggregates spend from MongoDB transactions and serves an in-platform status page",
+  "type": "module",
+  "main": "src/server.ts",
+  "scripts": {
+    "start": "node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
+    "dev": "node --watch --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
+    "lint": "eslint . --ext .ts"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "mongodb": "^6.12.0",
+    "pino": "^10.3.1",
+    "dotenv": "^17.3.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.5.0",
+    "typescript": "^6.0.2"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

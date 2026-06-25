@@ -1,0 +1,46 @@
+services:
+  spend-monitor:
+    # Read-only org cost monitor. Browser-facing status page exposed via Traefik;
+    # Traefik labels (and basic auth for prod/dev) are set in the extension files.
+    # Build overridden in docker-compose.local.yml; prod/dev pull from the registry.
+    image: ghcr.io/faktenforum/spend-monitor:latest
+    restart: always
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${SPEND_MONITOR_PORT:-3016}
+      LOG_LEVEL: ${SPEND_MONITOR_LOG_LEVEL:-info}
+      # Reuse LibreChat's own MongoDB URI expression verbatim so the monitor always
+      # connects to the same database LibreChat uses, in every environment.
+      SPEND_MONITOR_MONGO_URI: ${LIBRECHAT_MONGO_URI:-mongodb://${STACK_NAME:-prod}-mongodb:27017/LibreChat}
+      SPEND_MONITOR_DB: ${SPEND_MONITOR_DB:-LibreChat}
+      SPEND_MONITOR_BUDGET_USD: ${SPEND_MONITOR_BUDGET_USD:-100}
+      SPEND_MONITOR_PERIOD: ${SPEND_MONITOR_PERIOD:-calendar-month}
+      SPEND_MONITOR_WARN_PCT: ${SPEND_MONITOR_WARN_PCT:-50}
+      SPEND_MONITOR_CRIT_PCT: ${SPEND_MONITOR_CRIT_PCT:-80}
+      SPEND_MONITOR_EUR_RATE: ${SPEND_MONITOR_EUR_RATE:-0.92}
+      SPEND_MONITOR_POLL_SECONDS: ${SPEND_MONITOR_POLL_SECONDS:-60}
+    expose:
+      - "3016"
+    networks:
+      - app-net
+      - traefik-net
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3016/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M

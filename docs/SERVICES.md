@@ -13,6 +13,7 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 | Service | Description | Local (via Traefik) | Production (via Traefik) | Internal Only |
 |---------|-------------|---------------------|--------------------------|---------------|
 | **LibreChat** | Main AI chat interface | ✅ `http://chat.localhost` | ✅ `https://chat.{DOMAIN}` | ❌ |
+| **Spend Monitor** | Read-only org cost dashboard (reads LibreChat MongoDB) | ✅ `http://spend.localhost` | ✅ `https://spend.{DOMAIN}` (basic auth) | ❌ |
 | **SearXNG** | Meta search engine for web search | ✅ `http://searxng.localhost` | ❌ Not exposed | ✅ Internal only |
 | **Firecrawl API** | Web scraping service | ✅ `http://firecrawl.localhost` | ❌ Not exposed | ✅ Internal only (prod/dev) |
 | **MailDev** | Development mail server | ✅ `http://maildev.localhost` | ❌ Not in production | ❌ |

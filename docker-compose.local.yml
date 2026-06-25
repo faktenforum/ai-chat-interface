@@ -415,6 +415,24 @@ services:
     extends: { file: docker-compose.openwebui.yml, service: openwebui }
     env_file: .env.local
 
+  spend-monitor:
+    extends: { file: docker-compose.spend-monitor.yml, service: spend-monitor }
+    container_name: ${STACK_NAME:-local}-spend-monitor
+    env_file: .env.local
+    # Override: build locally instead of pulling from registry
+    build:
+      context: ./packages/spend-monitor
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${SPEND_MONITOR_PORT:-3016}:${SPEND_MONITOR_PORT:-3016}"
+    # Local only: localhost-bound + spend.localhost. No auth needed on a dev machine.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=ai-chat-interface_traefik-net"
+      - "traefik.http.routers.spend-monitor.rule=Host(`spend.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.spend-monitor.entrypoints=web"
+      - "traefik.http.services.spend-monitor.loadbalancer.server.port=3016"
+
 networks:
   app-net:
     driver: bridge

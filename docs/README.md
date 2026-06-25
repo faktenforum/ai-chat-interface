@@ -25,6 +25,7 @@ They are baked into the init image and written into the config volume at startup
 - **[Services](SERVICES.md)** - Services and MCP services overview, network architecture
 - **[Administration](ADMINISTRATION.md)** - User management and administration
 - **[LibreChat Features](LIBRECHAT_FEATURES.md)** - LibreChat configuration and features
+- **[Spend Monitor](SPEND_MONITOR.md)** - Read-only org cost dashboard (reads LibreChat MongoDB; in-platform status page)
 - **[LibreChat group icons](LIBRECHAT_GROUP_ICONS.md)** - Model-spec group icons, colors, theme tips
 - **[Agent avatar prompts](AGENT_AVATAR_PROMPTS.md)** - Image-gen MCP prompts for round minimalist agent avatars
 - **[MCP YTPTube](MCP_YTPTUBE.md)** - YTPTube MCP (media URL → transcript or download). Status and [future work](wip/YTPTUBE_FUTURE_WORK.md) (production proxy, FlareSolverr).

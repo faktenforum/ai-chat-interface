@@ -279,6 +279,26 @@ services:
     image: ghcr.io/faktenforum/mcp-youtube-transcript:dev
     # No Traefik labels - internal service only
 
+  spend-monitor:
+    extends: { file: docker-compose.spend-monitor.yml, service: spend-monitor }
+    container_name: ${STACK_NAME:-prod}-spend-monitor
+    image: ghcr.io/faktenforum/spend-monitor:dev
+    # Browser-facing cost dashboard (sensitive). Protected by Traefik basic auth:
+    # set SPEND_MONITOR_BASIC_AUTH to an htpasswd line (user:bcrypt-hash). See docs/SPEND_MONITOR.md.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=loadbalancer-net"
+      - "traefik.http.middlewares.${STACK_NAME:-prod}-spend-auth.basicauth.users=${SPEND_MONITOR_BASIC_AUTH}"
+      - "traefik.http.routers.${STACK_NAME:-prod}-spend-monitor.rule=Host(`spend.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-spend-monitor.entrypoints=web"
+      - "traefik.http.routers.${STACK_NAME:-prod}-spend-monitor.middlewares=${STACK_NAME:-prod}-spend-auth"
+      - "traefik.http.routers.${STACK_NAME:-prod}-spend-monitor-secure.rule=Host(`spend.${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.${STACK_NAME:-prod}-spend-monitor-secure.entrypoints=websecure"
+      - "traefik.http.routers.${STACK_NAME:-prod}-spend-monitor-secure.tls=true"
+      - "traefik.http.routers.${STACK_NAME:-prod}-spend-monitor-secure.tls.certresolver=le"
+      - "traefik.http.routers.${STACK_NAME:-prod}-spend-monitor-secure.middlewares=${STACK_NAME:-prod}-spend-auth"
+      - "traefik.http.services.${STACK_NAME:-prod}-spend-monitor.loadbalancer.server.port=3016"
+
 networks:
   app-net:
     name: ${STACK_NAME:-prod}-app-net
