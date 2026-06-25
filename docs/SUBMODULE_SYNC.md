@@ -127,31 +127,34 @@ npm run update:submodules:status  # Check status
 npm run update:submodules         # Update all
 ```
 
-### Fixing Bugs
+### Own change that should also go upstream (preferred)
 
-**For Upstream PRs (recommended):**
+Branch off **upstream**, never off the fork `main` (branching off `main` carries our other customizations into the PR diff):
 ```bash
 cd dev/librechat
-git checkout upstream
-git checkout -b fix/bug-description
-# ... implement fix ...
-git push origin fix/bug-description
-# Create PR: faktenforum/LibreChat → danny-avila/LibreChat
+git fetch upstream
+git checkout -b feat/short-description upstream/main   # use upstream/dev if upstream merges features into dev
+# ... implement ...
+git push origin feat/short-description
+# Open PR: faktenforum/LibreChat:feat/short-description → danny-avila/LibreChat
 ```
+- To make it live in our fork before upstream merges: also merge the branch into the fork `main`, bump the parent submodule pointer (`git add dev/<submodule>`), and track it as a pending-upstream customization (prune it after upstream merges).
+- If the change is **not** needed live (e.g. superseded by a `librechat.yaml` override): leave fork `main` untouched and `git checkout <pinned-sha>` so the parent submodule pointer is unchanged — the commit lives only on the pushed branch + the PR.
 
-**For Faktenforum-specific fixes:**
+**Base-branch caveat:** LibreChat merges contributions into its **`dev`** branch; they reach `main` only at the next release. Our fork tracks `upstream_branch: main` (`scripts/submodules-upstream.yaml`), so `npm run update:submodules` will **not** pull a change that is still only on upstream `dev`.
+
+**For Faktenforum-specific fixes (stay in the fork, no upstream PR):**
 ```bash
 cd dev/librechat
-git checkout main
-git checkout -b fix/faktenforum-specific-bug
+git checkout main && git checkout -b fix/faktenforum-specific-bug
 # ... implement fix ...
-git checkout main && git merge fix/faktenforum-specific-bug
-git push origin main
+git checkout main && git merge fix/faktenforum-specific-bug && git push origin main
 ```
 
 ### After Upstream Accepts PR
 ```bash
 npm run update:submodules  # Step 1 updates all; step 2 merges upstream into main for forks
+# then drop the now-redundant local commit so our diff vs upstream shrinks (prune pending-upstream customizations)
 ```
 
 ## CI: Image builds on submodule updates
