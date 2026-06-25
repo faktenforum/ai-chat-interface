@@ -8,9 +8,10 @@
  *
  * Read-only by default. When SPEND_MONITOR_ENFORCE is `on` (or `dry-run`), it adds an
  * org-wide HARD STOP: once spend reaches 100% of the budget it snapshots and zeroes all
- * user balances (and disables auto-refill) so LibreChat's own pre-request balance check
- * blocks further requests. It auto-restores when the period resets (spend < budget) and
- * can be lifted manually via POST /restore.
+ * user balances so LibreChat's own pre-request balance check blocks further requests. The
+ * freeze is held by re-zeroing balances every poll - LibreChat's per-request config-sync
+ * resets the autoRefillEnabled flag, so disabling auto-refill is not relied on. It
+ * auto-restores when the period resets (spend < budget) and can be lifted via POST /restore.
  */
 
 import 'dotenv/config';
@@ -36,7 +37,7 @@ async function main(): Promise<void> {
 
   let latest: Snapshot | null = null;
   let prevLevel: Level = 'ok';
-  let enforceState: EnforceState = { active: false, since: null, reason: null };
+  let enforceState: EnforceState = { active: false, since: null, reason: null, overridePeriodStart: null };
 
   async function refresh(): Promise<void> {
     try {
@@ -44,7 +45,7 @@ async function main(): Promise<void> {
 
       if (cfg.enforce !== 'off') {
         const dryRun = cfg.enforce === 'dry-run';
-        await clearStaleOverride(db, snap.periodStart);
+        await clearStaleOverride(db, snap.periodStart, dryRun);
         const st = await getEnforceState(db);
         const suppressed = st.overridePeriodStart === snap.periodStart;
         if (snap.level === 'over' && !suppressed) {
@@ -98,7 +99,7 @@ async function main(): Promise<void> {
       res.status(503).send('no data yet');
       return;
     }
-    res.type('html').send(renderPage(latest, cfg.enforce, enforceState));
+    res.type('html').send(renderPage(latest, cfg.enforce, enforceState, cfg.pollSeconds));
   });
 
   // Manually lift enforcement and restore balances (the dashboard's "Restore" button).

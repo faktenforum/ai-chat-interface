@@ -49,18 +49,30 @@ async function setEnforceState(db: Db, state: EnforceState): Promise<void> {
 }
 
 /** Clear a stale admin override once the billing period has rolled over. */
-export async function clearStaleOverride(db: Db, currentPeriodStart: string): Promise<void> {
+export async function clearStaleOverride(
+  db: Db,
+  currentPeriodStart: string,
+  dryRun: boolean,
+): Promise<void> {
   const st = await getEnforceState(db);
   if (st.overridePeriodStart != null && st.overridePeriodStart !== currentPeriodStart) {
+    if (dryRun) {
+      logger.warn(
+        { overridePeriodStart: st.overridePeriodStart, currentPeriodStart },
+        'DRY-RUN: would clear stale override',
+      );
+      return;
+    }
     await setEnforceState(db, { ...st, overridePeriodStart: null });
   }
 }
 
 /**
- * Snapshot balances (once, on activation) then zero them and disable auto-refill.
- * Idempotent: safe to call every poll while over budget - it re-zeroes balances that
- * crept above 0 (in-flight spends, lazily-created new users) and keeps auto-refill off
- * so LibreChat's own refill cannot re-credit users mid-freeze.
+ * Snapshot balances (once, on activation) then zero them. The autoRefillEnabled:false write
+ * is best-effort only - LibreChat's per-request config-sync resets that flag - so the freeze
+ * is actually held by re-zeroing every poll, not by suppressing auto-refill.
+ * Idempotent: safe to call every poll while over budget - it re-zeroes balances that crept
+ * above 0 (in-flight spends, lazily-created new users, or a monthly auto-refill between polls).
  */
 export async function enforceCap(
   db: Db,
@@ -146,8 +158,12 @@ export async function restoreBalances(
     );
   }
 
-  await snapshot.deleteMany({});
+  // Clear enforcement state before dropping the snapshot. A crash in the gap then leaves
+  // active:false with the snapshot still present (recoverable - the next enforceCap re-snapshots
+  // correct values before zeroing), rather than active:true with an empty snapshot (which would
+  // let enforceCap zero balances with nothing left to restore).
   await setEnforceState(db, { active: false, since: null, reason: null, overridePeriodStart });
+  await snapshot.deleteMany({});
   logger.warn({ restored: snaps.length, overridePeriodStart }, 'ENFORCEMENT OFF: balances restored');
   return { restored: snaps.length };
 }

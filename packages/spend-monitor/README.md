@@ -9,7 +9,7 @@ when over budget (`SPEND_MONITOR_ENFORCE`). Per-user limits stay in LibreChat.
 
 - `GET /health` — liveness, `{status:"ok"}`
 - `GET /api/spend` — current-period spend JSON (org total, per-provider, per-model, top users)
-- `GET /` — HTML status page (auto-refresh 30s)
+- `GET /` — HTML status page (auto-refreshes every `SPEND_MONITOR_POLL_SECONDS`)
 
 ## Config (env)
 
@@ -29,6 +29,11 @@ when over budget (`SPEND_MONITOR_ENFORCE`). Per-user limits stay in LibreChat.
 Spend uses LibreChat's convention: `1,000,000 token credits = 1 USD`. `tokenValue`
 is negative for usage; `tokenType: 'credits'` rows (refills) are excluded.
 Provider split: model ids containing `/` are OpenRouter, bare ids are Scaleway.
+
+Under this repo's compose these are wired up for you: `PORT` is fixed at 3016 (only
+the host side of the local binding follows `SPEND_MONITOR_PORT`) and
+`SPEND_MONITOR_MONGO_URI` defaults to `LIBRECHAT_MONGO_URI`. See
+`docker-compose.spend-monitor.yml`.
 
 ## Run
 

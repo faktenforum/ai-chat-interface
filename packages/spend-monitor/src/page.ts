@@ -42,7 +42,12 @@ function enforceStrip(mode: EnforceMode, e: EnforceState): string {
   return '';
 }
 
-export function renderPage(s: Snapshot, mode: EnforceMode, enforcement: EnforceState): string {
+export function renderPage(
+  s: Snapshot,
+  mode: EnforceMode,
+  enforcement: EnforceState,
+  pollSeconds: number,
+): string {
   const c = COLORS[s.level];
   const pct = Math.round(s.usedRatio * 100);
   const barWidth = Math.min(100, pct);
@@ -59,7 +64,7 @@ export function renderPage(s: Snapshot, mode: EnforceMode, enforcement: EnforceS
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta http-equiv="refresh" content="30" />
+<meta http-equiv="refresh" content="${pollSeconds}" />
 <title>LibreChat spend monitor</title>
 <style>
   :root { color-scheme: light dark; }
@@ -113,7 +118,7 @@ export function renderPage(s: Snapshot, mode: EnforceMode, enforcement: EnforceS
   </section>
 
   <footer>
-    period start <code>${esc(s.periodStart)}</code> &middot; updated <code>${esc(s.updatedAt)}</code> &middot; auto-refresh 30s &middot;
+    period start <code>${esc(s.periodStart)}</code> &middot; updated <code>${esc(s.updatedAt)}</code> &middot; auto-refresh ${pollSeconds}s &middot;
     enforce: <code>${mode}</code> &middot; 1,000,000 credits = $1 &middot; EUR display rate ${s.eur.rate}
   </footer>
 </div>

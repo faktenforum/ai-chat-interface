@@ -8,7 +8,9 @@ services:
     restart: always
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      PORT: ${SPEND_MONITOR_PORT:-3016}
+      # Container port is fixed at 3016 (expose, healthcheck and Traefik all assume it).
+      # SPEND_MONITOR_PORT only remaps the host side of the local port binding.
+      PORT: 3016
       LOG_LEVEL: ${SPEND_MONITOR_LOG_LEVEL:-info}
       # Reuse LibreChat's own MongoDB URI expression verbatim so the monitor always
       # connects to the same database LibreChat uses, in every environment.
@@ -20,6 +22,10 @@ services:
       SPEND_MONITOR_CRIT_PCT: ${SPEND_MONITOR_CRIT_PCT:-80}
       SPEND_MONITOR_EUR_RATE: ${SPEND_MONITOR_EUR_RATE:-0.92}
       SPEND_MONITOR_POLL_SECONDS: ${SPEND_MONITOR_POLL_SECONDS:-60}
+      # off (monitor only) | dry-run (log what it would do) | on (zero balances at 100% of budget).
+      # Must be in this environment block: Portainer ignores env_file, so a label-only
+      # override would never reach the container in prod/dev.
+      SPEND_MONITOR_ENFORCE: ${SPEND_MONITOR_ENFORCE:-off}
     expose:
       - "3016"
     networks:

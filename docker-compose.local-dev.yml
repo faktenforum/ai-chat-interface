@@ -404,7 +404,7 @@ services:
     container_name: ${STACK_NAME:-local}-spend-monitor
     env_file: .env.local
     ports:
-      - "127.0.0.1:${SPEND_MONITOR_PORT:-3016}:${SPEND_MONITOR_PORT:-3016}"
+      - "127.0.0.1:${SPEND_MONITOR_PORT:-3016}:3016"
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=ai-chat-interface_traefik-net"
