@@ -81,9 +81,10 @@ htpasswd -nbB admin 'your-password'
 # -> admin:$2y$05$....
 ```
 
-Use the full `user:hash` string. If login is rejected when the value comes from
-an env file, double every `$` to `$$` (compose interpolation). Local does not use
-basic auth (localhost-bound + `spend.localhost`).
+Use the full `user:hash` string. `scripts/setup-env.ts` auto-escapes `$` to `$$`
+for compose interpolation (idempotent), so manual doubling is only needed if you
+edit `.env` by hand without running setup-env. Local does not use basic auth
+(localhost-bound + `spend.localhost`).
 
 ## Deploy
 
