@@ -1,4 +1,5 @@
 import type { Level, Snapshot } from './aggregate.ts';
+import type { EnforceMode, EnforceState } from './enforce.ts';
 
 const COLORS: Record<Level, { bg: string; fg: string; label: string }> = {
   ok: { bg: '#065f46', fg: '#d1fae5', label: 'OK' },
@@ -24,7 +25,24 @@ function rows(cells: string[][]): string {
   return cells.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('');
 }
 
-export function renderPage(s: Snapshot): string {
+function enforceStrip(mode: EnforceMode, e: EnforceState): string {
+  if (e.active) {
+    const dry = mode === 'dry-run' ? ' (DRY-RUN)' : '';
+    return `<div class="enforce active">
+      <strong>&#9940; Enforcement active${dry}</strong> &mdash; all user balances zeroed since <code>${esc(e.since ?? '')}</code>. ${esc(e.reason ?? '')}
+      <button onclick="if(confirm('Restore all balances and lift the spending freeze?')){this.disabled=true;fetch('/restore',{method:'POST'}).then(()=>location.reload())}">Restore balances</button>
+    </div>`;
+  }
+  if (e.overridePeriodStart != null) {
+    return `<div class="enforce armed">Admin override: freeze lifted for this period &mdash; auto-enforcement re-engages next period if still over budget.</div>`;
+  }
+  if (mode !== 'off') {
+    return `<div class="enforce armed">Enforcement armed: <code>${mode}</code> &mdash; balances are zeroed automatically when spend reaches 100% of budget.</div>`;
+  }
+  return '';
+}
+
+export function renderPage(s: Snapshot, mode: EnforceMode, enforcement: EnforceState): string {
   const c = COLORS[s.level];
   const pct = Math.round(s.usedRatio * 100);
   const barWidth = Math.min(100, pct);
@@ -33,11 +51,7 @@ export function renderPage(s: Snapshot): string {
     ['OpenRouter', usd(s.byProvider.openrouter)],
     ['Scaleway', usd(s.byProvider.scaleway)],
   ]);
-
-  const modelRows = rows(
-    s.byModel.slice(0, 20).map((m) => [esc(m.model), m.provider, usd(m.usd)]),
-  );
-
+  const modelRows = rows(s.byModel.slice(0, 20).map((m) => [esc(m.model), m.provider, usd(m.usd)]));
   const userRows = rows(s.topUsers.map((u) => [esc(u.user), usd(u.usd)]));
 
   return `<!doctype html>
@@ -58,6 +72,10 @@ export function renderPage(s: Snapshot): string {
   .sub { font-size: 0.9rem; opacity: 0.9; }
   .bar { height: 8px; background: rgba(255,255,255,0.2); border-radius: 999px; margin-top: 0.9rem; overflow: hidden; }
   .bar > span { display: block; height: 100%; width: ${barWidth}%; background: rgba(255,255,255,0.85); }
+  .enforce { border-radius: 10px; padding: 0.8rem 1.1rem; margin-top: 1rem; font-size: 0.9rem; }
+  .enforce.active { background: #7f1d1d; color: #fee2e2; }
+  .enforce.armed { background: #1f2937; color: #9ca3af; }
+  .enforce button { margin-left: 0.6rem; background: #fee2e2; color: #7f1d1d; border: 0; border-radius: 6px; padding: 0.35rem 0.7rem; font-weight: 600; cursor: pointer; }
   table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.9rem; }
   th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #1f2937; }
   td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
@@ -69,13 +87,15 @@ export function renderPage(s: Snapshot): string {
 </head>
 <body>
 <div class="wrap">
-  <h1>LibreChat &mdash; org spend monitor (read-only)</h1>
+  <h1>LibreChat &mdash; org spend monitor</h1>
   <div class="banner">
     <div class="level">${c.label} &middot; ${pct}% of budget</div>
     <div class="headline">${usd(s.spentUsd)} <span style="opacity:.6;font-size:1.2rem">/ ${usd(s.budgetUsd)}</span></div>
     <div class="sub">${eur(s.eur.spent)} / ${eur(s.eur.budget)} &middot; period: ${s.period}</div>
     <div class="bar"><span></span></div>
   </div>
+
+  ${enforceStrip(mode, enforcement)}
 
   <section>
     <h2>By provider</h2>
@@ -94,7 +114,7 @@ export function renderPage(s: Snapshot): string {
 
   <footer>
     period start <code>${esc(s.periodStart)}</code> &middot; updated <code>${esc(s.updatedAt)}</code> &middot; auto-refresh 30s &middot;
-    1,000,000 credits = $1 &middot; EUR is display-only (rate ${s.eur.rate})
+    enforce: <code>${mode}</code> &middot; 1,000,000 credits = $1 &middot; EUR display rate ${s.eur.rate}
   </footer>
 </div>
 </body>

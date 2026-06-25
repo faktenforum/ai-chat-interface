@@ -65,6 +65,15 @@ const genUsername = (prefix: string = 'admin'): string => {
 };
 
 /**
+ * Escape '$' as '$$' for values consumed through docker-compose ${...} interpolation
+ * (e.g. an htpasswd bcrypt hash in a Traefik label - an unescaped '$' is eaten as a
+ * variable reference and corrupts the hash). Idempotent: collapses any existing '$$'
+ * first, so re-running setup-env never double-escapes.
+ */
+const escapeComposeDollar = (value: string): string =>
+    value ? value.split('$$').join('$').split('$').join('$$') : value;
+
+/**
  * Check if a value contains variable expansions (e.g., ${VAR_NAME})
  */
 const containsVariableExpansion = (value: string): boolean => {
@@ -242,6 +251,9 @@ const PROMPTS: Record<string, PromptConfig> = {
 
     // MCP Linux - Code index (semantic code search; optional)
     'CODE_INDEX_EMBEDDING_API_KEY': { message: 'Code index embedding API key (optional; OpenRouter or Scaleway for semantic code search):', type: 'password', defaultGen: () => '' },
+
+    // Spend Monitor dashboard - Traefik basic auth (prod/dev). Generate: htpasswd -nbB admin <password>
+    'SPEND_MONITOR_BASIC_AUTH': { message: 'Spend-monitor dashboard basic auth - htpasswd line "user:hash" (enter to skip; required for the prod/dev dashboard):', type: 'password', defaultGen: () => '' },
 };
 
 /**
@@ -584,7 +596,9 @@ async function processEnvExample(
                 isProdMode || isDevMode,
                 skipPrompts
             );
-            finalEnvLines.push(`${key}=${value}`);
+            // htpasswd hashes flow into a docker-compose ${...} Traefik label; escape '$' -> '$$'
+            const finalValue = key === 'SPEND_MONITOR_BASIC_AUTH' ? escapeComposeDollar(value) : value;
+            finalEnvLines.push(`${key}=${finalValue}`);
             continue;
         }
 

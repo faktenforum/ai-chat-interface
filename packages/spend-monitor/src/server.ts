@@ -3,10 +3,14 @@
 /**
  * Spend Monitor
  *
- * Read-only org-wide cost monitor for LibreChat. Periodically aggregates spend
- * from the `transactions` collection in LibreChat's MongoDB, serves an in-platform
- * status page (GET /) and JSON (GET /api/spend), and logs level transitions.
- * It never writes to LibreChat's database.
+ * Aggregates org-wide spend from LibreChat's `transactions` collection and serves an
+ * in-platform status page (GET /) and JSON (GET /api/spend).
+ *
+ * Read-only by default. When SPEND_MONITOR_ENFORCE is `on` (or `dry-run`), it adds an
+ * org-wide HARD STOP: once spend reaches 100% of the budget it snapshots and zeroes all
+ * user balances (and disables auto-refill) so LibreChat's own pre-request balance check
+ * blocks further requests. It auto-restores when the period resets (spend < budget) and
+ * can be lifted manually via POST /restore.
  */
 
 import 'dotenv/config';
@@ -18,6 +22,8 @@ import { connectMongo, closeMongo } from './mongo.ts';
 import { aggregate } from './aggregate.ts';
 import type { Level, Snapshot } from './aggregate.ts';
 import { logNotifier } from './notify.ts';
+import { getEnforceState, enforceCap, restoreBalances, clearStaleOverride } from './enforce.ts';
+import type { EnforceState } from './enforce.ts';
 import { renderPage } from './page.ts';
 import { logger } from './utils/logger.ts';
 
@@ -30,10 +36,31 @@ async function main(): Promise<void> {
 
   let latest: Snapshot | null = null;
   let prevLevel: Level = 'ok';
+  let enforceState: EnforceState = { active: false, since: null, reason: null };
 
   async function refresh(): Promise<void> {
     try {
       const snap = await aggregate(db, cfg, new Date());
+
+      if (cfg.enforce !== 'off') {
+        const dryRun = cfg.enforce === 'dry-run';
+        await clearStaleOverride(db, snap.periodStart);
+        const st = await getEnforceState(db);
+        const suppressed = st.overridePeriodStart === snap.periodStart;
+        if (snap.level === 'over' && !suppressed) {
+          await enforceCap(
+            db,
+            `org budget exceeded: $${snap.spentUsd.toFixed(2)} / $${snap.budgetUsd.toFixed(2)}`,
+            new Date().toISOString(),
+            dryRun,
+          );
+        } else if (st.active && snap.level !== 'over') {
+          // spend dropped below budget (period reset or budget raised) -> lift the freeze
+          await restoreBalances(db, dryRun, null);
+        }
+        enforceState = await getEnforceState(db);
+      }
+
       if (snap.level !== prevLevel) {
         logNotifier.notify(prevLevel, snap);
         prevLevel = snap.level;
@@ -42,7 +69,7 @@ async function main(): Promise<void> {
     } catch (error) {
       logger.error(
         { error: error instanceof Error ? error.message : String(error) },
-        'Spend aggregation failed',
+        'Spend refresh failed',
       );
     }
   }
@@ -62,7 +89,7 @@ async function main(): Promise<void> {
       res.status(503).json({ error: 'no data yet' });
       return;
     }
-    res.json(latest);
+    res.json({ ...latest, enforce: cfg.enforce, enforcement: enforceState });
   });
 
   app.get('/', async (_req: Request, res: Response) => {
@@ -71,12 +98,30 @@ async function main(): Promise<void> {
       res.status(503).send('no data yet');
       return;
     }
-    res.type('html').send(renderPage(latest));
+    res.type('html').send(renderPage(latest, cfg.enforce, enforceState));
+  });
+
+  // Manually lift enforcement and restore balances (the dashboard's "Restore" button).
+  app.post('/restore', async (_req: Request, res: Response) => {
+    if (cfg.enforce === 'off') {
+      res.status(400).json({ error: 'enforcement disabled (SPEND_MONITOR_ENFORCE=off)' });
+      return;
+    }
+    // Admin override: lift the freeze and suppress re-enforcement for the current period.
+    const result = await restoreBalances(db, cfg.enforce !== 'on', latest?.periodStart ?? null);
+    await refresh();
+    res.json({ restored: result.restored, dryRun: cfg.enforce !== 'on', suppressedForPeriod: latest?.periodStart ?? null });
   });
 
   const server = app.listen(cfg.port, '0.0.0.0', () => {
     logger.info(
-      { port: cfg.port, budgetUsd: cfg.budgetUsd, period: cfg.period, pollSeconds: cfg.pollSeconds },
+      {
+        port: cfg.port,
+        budgetUsd: cfg.budgetUsd,
+        period: cfg.period,
+        pollSeconds: cfg.pollSeconds,
+        enforce: cfg.enforce,
+      },
       'Spend monitor started',
     );
   });
