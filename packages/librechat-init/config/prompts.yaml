@@ -62,7 +62,7 @@ prompts:
       **Important**: Use the Quality developer agents for higher quality:
       - Code Reviewer (Gemini 3 Pro Preview) for detailed reviews
       - Code Refactorer (Gemini 3 Pro Preview) for refactoring
-      - Developer (Claude Opus 4.6) for implementations
+      - Developer (Claude Opus 4.8) for implementations
       
       This variant uses more expensive but more powerful models for better results.
 
@@ -71,7 +71,7 @@ prompts:
       1. **Review**: Analyze the PR (Code, Tests, Docs) with Code Reviewer (Gemini 3 Pro Preview). Identify improvement points.
       2. **Refactor Plan**: Create a prioritized list of changes.
       3. **Workspace**: If a Linux workspace exists for this PR – check if it is current and reusable; otherwise reset and create new.
-      4. **Implementation**: Delegate each task to the Quality experts (Code Refactorer with Gemini 3 Pro Preview, Developer with Claude Opus 4.6). Each expert completes their task and hands off to the next, until all points are completed.
+      4. **Implementation**: Delegate each task to the Quality experts (Code Refactorer with Gemini 3 Pro Preview, Developer with Claude Opus 4.8). Each expert completes their task and hands off to the next, until all points are completed.
       5. **Completion**: Push the changes to the PR branch. Leave a PR comment summarizing the review and the improvements made.
 
       ## Rules
@@ -80,7 +80,7 @@ prompts:
       - The final PR comment must clearly document review results and change list.
     command: refactor-github-pr-quality
     category: code
-    oneliner: Reviews a GitHub PR with Quality agents (Gemini 3 Pro Preview, Claude Opus 4.6), implements improvements and pushes them to the branch.
+    oneliner: Reviews a GitHub PR with Quality agents (Gemini 3 Pro Preview, Claude Opus 4.8), implements improvements and pushes them to the branch.
     sharing:
       public:
         enabled: true
