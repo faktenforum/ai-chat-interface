@@ -194,7 +194,7 @@ agents:
         description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Describe what needs to be implemented or fixed, including repo URLs, language/framework, and requirements"
       - agent: shared-agent-developer-quality
-        description: "Transfer to Developer (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
+        description: "Transfer to Developer (Claude Opus 4.8) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
         prompt: "Describe what needs to be implemented or fixed, including repo URLs, language/framework, and requirements"
       - agent: shared-agent-code-refactorer
         description: "Transfer to Code Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
@@ -227,11 +227,11 @@ agents:
     description: Implements features and fixes bugs in the Linux workspace – full terminal and workspace access with Node.js, Python, Git.
     instructionsFile: shared-agent-developer-instructions.md
     provider: Scaleway
-    model: devstral-2-123b-instruct-2512
+    model: glm-5.2
     model_parameters:
       temperature: 0.5
       top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+      maxContextTokens: 128000   # GLM 5.2; Scaleway served context not yet documented (conservative)
     tools:
       - web_search
     mcpServers:
@@ -322,15 +322,15 @@ agents:
       publicEdit: true
 
   - id: shared-agent-developer-quality
-    name: Developer (Claude Opus 4.6)
+    name: Developer (Claude Opus 4.8)
     description: Implements features and fixes bugs in the Linux workspace – full terminal and workspace access with Node.js, Python, Git. Quality variant (OpenRouter).
     instructionsFile: shared-agent-developer-instructions.md
     provider: OpenRouter
-    model: anthropic/claude-opus-4.6
+    model: anthropic/claude-opus-4.8
     model_parameters:
       temperature: 0.5
       top_p: 0.9
-      maxContextTokens: 1000000   # Claude Opus 4.6
+      maxContextTokens: 1000000   # Claude Opus 4.8
       maxOutputTokens: 128000
     tools:
       - web_search
@@ -425,11 +425,11 @@ agents:
     description: Refactoring and optimization of code – structure, style, tests, readability. Full Linux workspace access.
     instructionsFile: shared-agent-code-refactorer-instructions.md
     provider: Scaleway
-    model: devstral-2-123b-instruct-2512
+    model: glm-5.2
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+      maxContextTokens: 128000   # GLM 5.2; Scaleway served context not yet documented (conservative)
     tools:
       - web_search
     mcpServers:
@@ -482,7 +482,7 @@ agents:
         description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Describe what needs to be implemented (e.g. missing tests, new logic) and the workspace/repo context"
       - agent: shared-agent-developer-quality
-        description: "Transfer to Developer (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
+        description: "Transfer to Developer (Claude Opus 4.8) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
         prompt: "Describe what needs to be implemented (e.g. missing tests, new logic) and the workspace/repo context"
       - agent: shared-agent-code-reviewer
         description: "Transfer to Code Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
@@ -560,7 +560,7 @@ agents:
         description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Describe what needs to be implemented (e.g. missing tests, new logic) and the workspace/repo context"
       - agent: shared-agent-developer-quality
-        description: "Transfer to Developer (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
+        description: "Transfer to Developer (Claude Opus 4.8) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
         prompt: "Describe what needs to be implemented (e.g. missing tests, new logic) and the workspace/repo context"
       - agent: shared-agent-code-reviewer
         description: "Transfer to Code Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
@@ -655,7 +655,7 @@ agents:
         description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Describe what needs to be implemented based on the GitHub context"
       - agent: shared-agent-developer-quality
-        description: "Transfer to Developer (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
+        description: "Transfer to Developer (Claude Opus 4.8) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
         prompt: "Describe what needs to be implemented based on the GitHub context"
       - agent: shared-agent-code-refactorer
         description: "Transfer to Code Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
@@ -681,11 +681,11 @@ agents:
     description: Analyzes pull requests – clones the repo, checks the diff, reads the codebase and creates a structured review. Posts the review via the GitHub Assistant if needed.
     instructionsFile: shared-agent-code-reviewer-instructions.md
     provider: Scaleway
-    model: devstral-2-123b-instruct-2512
+    model: glm-5.2
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+      maxContextTokens: 128000   # GLM 5.2; Scaleway served context not yet documented (conservative)
     tools: []
     mcpServers:
       - linux
@@ -726,7 +726,7 @@ agents:
         description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
       - agent: shared-agent-developer-quality
-        description: "Transfer to Developer (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
+        description: "Transfer to Developer (Claude Opus 4.8) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
         prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
     # Dev: PR review — file reads, diff, GitHub API, push
     recursion_limit: 100
@@ -786,7 +786,7 @@ agents:
         description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
       - agent: shared-agent-developer-quality
-        description: "Transfer to Developer (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
+        description: "Transfer to Developer (Claude Opus 4.8) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
         prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
     recursion_limit: 80
     isCollaborative: true
@@ -827,7 +827,7 @@ agents:
         description: "Primary path: Developer researches bug (find duplicates, analyze code) in faktenforum/ai-chat-interface before issue creation. Prefer this unless the user emphasizes quality or a previous attempt failed."
         prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code, and propose fixes; after research follow plan to hand off to GitHub Assistant"
       - agent: shared-agent-developer-quality
-        description: "Use Developer (Claude Opus 4.6) when the user explicitly asks for higher quality or when the default Developer could not fulfill the research task."
+        description: "Use Developer (Claude Opus 4.8) when the user explicitly asks for higher quality or when the default Developer could not fulfill the research task."
         prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code, and propose fixes; after research follow plan to hand off to GitHub Assistant"
       - agent: shared-agent-code-assistant
         description: "User wants to fix the bug, not only report. Transfer to Code Assistant."
@@ -940,11 +940,11 @@ agents:
     description: Analyzes data from CSV, JSON and other formats – filters, transforms, visualizes (charts) and summarizes. Files via upload; charts are displayed as images in the chat.
     instructionsFile: shared-agent-data-analysis-instructions.md
     provider: Scaleway
-    model: devstral-2-123b-instruct-2512
+    model: glm-5.2
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+      maxContextTokens: 128000   # GLM 5.2; Scaleway served context not yet documented (conservative)
     tools:
       - web_search
     mcpServers:
@@ -1044,11 +1044,11 @@ agents:
     description: Creates professional documents – letters, reports, invoices, CVs, templates. Generates PDF (Typst) or editable formats (ODT/DOCX via Pandoc). Result as download.
     instructionsFile: shared-agent-document-creator-instructions.md
     provider: Scaleway
-    model: devstral-2-123b-instruct-2512
+    model: glm-5.2
     model_parameters:
       temperature: 0.5
       top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+      maxContextTokens: 128000   # GLM 5.2; Scaleway served context not yet documented (conservative)
     mcpServers:
       - linux
     mcpTools:
