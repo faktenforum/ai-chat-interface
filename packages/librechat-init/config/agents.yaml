@@ -231,7 +231,7 @@ agents:
     model_parameters:
       temperature: 0.5
       top_p: 0.9
-      maxContextTokens: 128000   # GLM 5.2; Scaleway served context not yet documented (conservative)
+      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
     tools:
       - web_search
     mcpServers:
@@ -429,7 +429,7 @@ agents:
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 128000   # GLM 5.2; Scaleway served context not yet documented (conservative)
+      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
     tools:
       - web_search
     mcpServers:
@@ -685,7 +685,7 @@ agents:
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 128000   # GLM 5.2; Scaleway served context not yet documented (conservative)
+      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
     tools: []
     mcpServers:
       - linux
@@ -944,7 +944,7 @@ agents:
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 128000   # GLM 5.2; Scaleway served context not yet documented (conservative)
+      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
     tools:
       - web_search
     mcpServers:
@@ -1048,7 +1048,7 @@ agents:
     model_parameters:
       temperature: 0.5
       top_p: 0.9
-      maxContextTokens: 128000   # GLM 5.2; Scaleway served context not yet documented (conservative)
+      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
     mcpServers:
       - linux
     mcpTools:
