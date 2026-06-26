@@ -197,7 +197,7 @@ endpoints:
         qwen3.5-397b-a17b:                   { prompt: 0.65, completion: 3.89, context: 250000 }
         qwen3.6-35b-a3b:                     { prompt: 0.27, completion: 1.62, context: 256000 }
         mistral-medium-3.5-128b:             { prompt: 1.62, completion: 8.10, context: 256000 }
-        glm-5.2:                             { prompt: 1.94, completion: 5.94, context: 128000 }
+        glm-5.2:                             { prompt: 1.94, completion: 5.94, context: 262144 }
         qwen3-embedding-8b:                  { prompt: 0.11, completion: 0, context: 32000 }
         bge-multilingual-gemma2:             { prompt: 0.11, completion: 0, context: 8000 }
       titleConvo: true
@@ -564,7 +564,7 @@ modelSpecs:
     # Token limits: Scaleway Generative APIs + Managed Inference model catalog (Oct 2025)
     - name: "scaleway-glm-5.2"
       label: "GLM 5.2"
-      description: "Starkes Reasoning- und Coding-Modell (Z.AI, MoE). Eines der besten Open-Weight-Modelle, europäisch gehostet (Scaleway). Text und Code. Scaleway-Kontext noch nicht final dokumentiert; konservativ 128K. Open Weights (Z.AI)."
+      description: "Starkes Reasoning- und Coding-Modell (Z.AI, MoE). Eines der besten Open-Weight-Modelle, europäisch gehostet (Scaleway). 256K Context, 16K Output. Text und Code. Open Weights (Z.AI)."
       group: "Europa & Open Source"
       groupIcon: "/images/group-europa.svg"
       order: 0
@@ -572,8 +572,8 @@ modelSpecs:
         endpoint: "Scaleway"
         endpointType: "custom"
         model: "glm-5.2"
-        maxContextTokens: 128000
-        maxOutputTokens: 32000
+        maxContextTokens: 262144
+        maxOutputTokens: 16384
 
     - name: "scaleway-devstral-2-123b"
       label: "Devstral 2 123B"
@@ -587,7 +587,7 @@ modelSpecs:
         endpointType: "custom"
         model: "devstral-2-123b-instruct-2512"
         maxContextTokens: 200000
-        maxOutputTokens: 8192
+        maxOutputTokens: 16384
 
     - name: "scaleway-gemma-4-26b"
       label: "Gemma 4 26B"
@@ -600,7 +600,7 @@ modelSpecs:
         endpointType: "custom"
         model: "gemma-4-26b-a4b-it"
         maxContextTokens: 256000
-        maxOutputTokens: 32000
+        maxOutputTokens: 32768
 
     - name: "scaleway-gpt-oss-120b"
       label: "GPT-OSS 120B"
@@ -612,7 +612,7 @@ modelSpecs:
         endpointType: "custom"
         model: "gpt-oss-120b"
         maxContextTokens: 128000
-        maxOutputTokens: 8192
+        maxOutputTokens: 32768
 
     - name: "scaleway-holo2-30b"
       label: "Holo2 30B"
@@ -637,7 +637,7 @@ modelSpecs:
         endpointType: "custom"
         model: "llama-3.3-70b-instruct"
         maxContextTokens: 100000   # Generative APIs; Managed Inference up to 128k (instance-dependent)
-        maxOutputTokens: 4096
+        maxOutputTokens: 16384
 
     - name: "scaleway-mistral-small-3.2"
       label: "Mistral Small 3.2 24B"
@@ -650,7 +650,7 @@ modelSpecs:
         endpointType: "custom"
         model: "mistral-small-3.2-24b-instruct-2506"
         maxContextTokens: 128000
-        maxOutputTokens: 8192
+        maxOutputTokens: 32768
 
     - name: "scaleway-pixtral-12b"
       label: "Pixtral 12B"
@@ -675,7 +675,7 @@ modelSpecs:
         endpointType: "custom"
         model: "qwen3-235b-a22b-instruct-2507"
         maxContextTokens: 250000
-        maxOutputTokens: 8192
+        maxOutputTokens: 16384
 
     - name: "scaleway-qwen3-coder-30b"
       label: "Qwen3 Coder 30B"
@@ -687,19 +687,7 @@ modelSpecs:
         endpointType: "custom"
         model: "qwen3-coder-30b-a3b-instruct"
         maxContextTokens: 128000
-        maxOutputTokens: 8192
-
-    - name: "scaleway-voxtral-small-24b"
-      label: "Voxtral Small 24B"
-      description: "Chat- und Audio-Modell (Mistral). 32K Context, 8K Output. Transkription und Verstehen von Audio (WAV, MP3), mehrsprachig. Apache-2.0 License. Zum Testen der Audio-Fähigkeiten."
-      group: "Europa & Open Source"
-      order: 10
-      preset:
-        endpoint: "Scaleway"
-        endpointType: "custom"
-        model: "voxtral-small-24b-2507"
-        maxContextTokens: 32000
-        maxOutputTokens: 8192
+        maxOutputTokens: 32768
 
     - name: "scaleway-qwen3.5-397b"
       label: "Qwen3.5 397B"
@@ -712,7 +700,7 @@ modelSpecs:
         endpointType: "custom"
         model: "qwen3.5-397b-a17b"
         maxContextTokens: 250000
-        maxOutputTokens: 16000
+        maxOutputTokens: 16384
 
     - name: "scaleway-qwen3.6-35b"
       label: "Qwen3.6 35B"
@@ -725,7 +713,7 @@ modelSpecs:
         endpointType: "custom"
         model: "qwen3.6-35b-a3b"
         maxContextTokens: 256000
-        maxOutputTokens: 32000
+        maxOutputTokens: 32768
 
     # ==========================================
     # Premium-Modelle (OpenRouter) – alphabetisch nach Label
