@@ -40,16 +40,10 @@ services:
   api:
     extends: { file: docker-compose.librechat.yml, service: api }
     container_name: ${STACK_NAME:-prod}-librechat
-    # Use pre-built image from registry (built by GitHub Actions)
+    # Pre-built registry image (GitHub Actions). Our @librechat/agents fork (vision
+    # gating, custom reranker) is baked into this image by the CI build
+    # (.github/dockerfiles/librechat-with-agents.Dockerfile), so no host mount is needed.
     image: ghcr.io/faktenforum/librechat:latest
-    # Override the image's npm @librechat/agents with our built fork (vision gating,
-    # custom reranker). The registry image ships upstream @librechat/agents; this mount
-    # makes our customizations effective in prod.
-    # PREREQUISITE on the deploy host: submodules cloned recursively AND the fork built
-    # (`npm run build:dev`). An empty/unbuilt dev/agents makes the package empty and
-    # LibreChat will fail to start. See docs/PORTAINER-CONFIG.md.
-    volumes:
-      - ./dev/agents:/app/node_modules/@librechat/agents
     depends_on:
       librechat-init:
         condition: service_completed_successfully
