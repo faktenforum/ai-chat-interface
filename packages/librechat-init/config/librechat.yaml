@@ -139,6 +139,8 @@ endpoints:
       iconURL: "/images/scaleway.svg"
       # Scaleway docs: "Meta models do not support parallel tool calls."
       # Affected: Llama 3.1 (8b, 70b), Llama 3.3 (70b). Without this → 400 single tool-calls error.
+      # addParams has no per-model scope, so this applies endpoint-wide. Benign for the other
+      # models (e.g. glm-5.2 runs a sequential one-tool-per-turn agent loop and isn't restricted by it).
       # See docs/LIBRECHAT_FEATURES.md#scaleway-parallel-tool-calls.
       addParams:
         parallel_tool_calls: false
