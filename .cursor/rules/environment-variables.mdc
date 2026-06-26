@@ -17,7 +17,7 @@ The setup uses three example files that are merged during generation:
 - Variables in example files can use `${VAR_NAME}` expansions - `setup-env.ts` resolves them iteratively
 
 ## 2. Naming Patterns
-**Prefix Convention**: `{SERVICE}_` in UPPER_SNAKE_CASE (e.g., `N8N_`, `FIRECRAWL_`, `LIBRECHAT_`)
+**Prefix Convention**: `{SERVICE}_` in UPPER_SNAKE_CASE (e.g., `SPEND_MONITOR_`, `FIRECRAWL_`, `LIBRECHAT_`)
 
 **Common Patterns**:
 - Connection: `{SERVICE}_HOST`, `{SERVICE}_PORT`, `{SERVICE}_PROTOCOL`, `{SERVICE}_URI`, `{SERVICE}_URL`

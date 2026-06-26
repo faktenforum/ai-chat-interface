@@ -74,12 +74,11 @@ When changes are pushed to the repository, Portainer automatically pulls the lat
 
 ### Agents fork (prod/dev)
 
-`docker-compose.prod.yml` and `docker-compose.dev.yml` mount our `@librechat/agents` fork over the registry image's npm copy (`./dev/agents:/app/node_modules/@librechat/agents`) so the fork's customizations (vision gating, custom reranker) take effect. Two host prerequisites, or LibreChat will fail to start with an empty `@librechat/agents`:
+Our `@librechat/agents` fork (vision gating, custom reranker) is baked into the `ghcr.io/faktenforum/librechat` image at build time. CI (`.github/workflows/build-librechat.yml` + `.github/dockerfiles/librechat-with-agents.Dockerfile`) overlays the fork's compiled `dist` onto the base image. Prod and dev run that image directly - no host mount, no recursive submodule clone or fork build needed on the deploy host.
 
-1. Clone submodules recursively (Portainer: enable recursive/submodule clone for the stack repo).
-2. Build the fork before deploy: `npm run build:dev` (runs `build-dev-submodules.sh`, which builds `dev/agents`). The mount needs `dev/agents/dist`.
+To ship a fork change: edit `dev/agents`, push, let CI rebuild and publish the image, then **Pull and redeploy** the stack.
 
-Alternative (more robust for the registry-image model): bake the built fork into the librechat image in CI instead of mounting it. Tracked as a follow-up.
+The overlay copies only the fork's `dist` and `package.json`; its runtime dependencies come from the base image's `npm ci` of the same `@librechat/agents` version pinned in `dev/librechat/package-lock.json`. Keep the fork dependency-compatible with that version - a fork that adds or bumps a runtime dependency upstream does not declare will be missing at runtime (`MODULE_NOT_FOUND`).
 
 ## Data Safety
 
