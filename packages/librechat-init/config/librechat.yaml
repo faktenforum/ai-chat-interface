@@ -1008,15 +1008,12 @@ mcpSettings:
     - 'localhost'               # Local development
     - '$${STACK_NAME:-prod}-mcp-calculator'           # MCP Calculator service (Docker network)
     - '$${STACK_NAME:-prod}-mcp-image-gen'            # MCP Image Generation service (Docker network)
-    - '$${STACK_NAME:-prod}-mcp-firecrawl'           # MCP Firecrawl service (Docker network)
     - '$${STACK_NAME:-prod}-mcp-openstreetmap'       # MCP OpenStreetMap service (Docker network)
     - '$${STACK_NAME:-prod}-mcp-weather'             # MCP Weather service (Docker network)
-    - '$${STACK_NAME:-prod}-mcp-playwright'          # MCP Playwright service (Docker network)
     - '$${STACK_NAME:-prod}-mcp-db-timetable'        # MCP DB Timetable service (Docker network)
     - '$${STACK_NAME:-prod}-mcp-stackoverflow'       # MCP StackOverflow service (Docker network)
     - '$${STACK_NAME:-prod}-mcp-npm-search'           # MCP npm Search service (Docker network)
     - '$${STACK_NAME:-prod}-mcp-ytptube'             # MCP YTPTube (YTPTube + Scaleway STT)
-    - '$${STACK_NAME:-prod}-mcp-youtube-transcript'  # MCP YouTube Transcript (youtube-transcript-api)
     - '$${STACK_NAME:-prod}-mcp-docs'                # MCP Docs (Grounded Docs) service (Docker network)
     - '$${STACK_NAME:-prod}-mcp-chefkoch'            # MCP Chefkoch service (Docker network)
     - '$${STACK_NAME:-prod}-mcp-linux'                # MCP Linux service (Docker network)
@@ -1083,18 +1080,6 @@ mcpServers:
     initTimeout: 120000
     chatMenu: true
     startup: true
-    serverInstructions: true
-
-  playwright:
-    type: streamable-http
-    url: http://$${STACK_NAME:-prod}-mcp-playwright:3006/mcp
-    title: Browser Automation
-    description: Search, interact with and automate websites
-    iconPath: /images/mcp-playwright-icon.svg
-    initTimeout: 120000
-    timeout: 150000
-    chatMenu: false
-    startup: false # Currently experimental, maybe not needed in favor of default websearch feature
     serverInstructions: true
 
   db-timetable:
@@ -1169,17 +1154,6 @@ mcpServers:
     startup: false # Currently experimental
     serverInstructions: true
 
-  youtube-transcript:
-    type: streamable-http
-    url: http://$${STACK_NAME:-prod}-mcp-youtube-transcript:3011/mcp
-    title: YouTube Transcript
-    description: Retrieve transcripts from YouTube videos
-    iconPath: /images/mcp-youtube-transcript-icon.svg
-    initTimeout: 120000
-    chatMenu: false
-    startup: false # Currently experimental, mybe not needed in favor of ytptube
-    serverInstructions: true
-
   github:
     type: streamable-http
     url: https://api.githubcopilot.com/mcp/
@@ -1219,18 +1193,6 @@ mcpServers:
     chatMenu: true
     startup: true
     serverInstructions: true
-
-  # Web scraping (scrape, search, map, crawl, extract). Not shown in chat dropdown; available for agents.
-  # firecrawl:
-  #   type: streamable-http
-  #   url: http://$${STACK_NAME:-prod}-mcp-firecrawl:3003/mcp
-  #   title: Web Scraping
-  #   description: Webseiten scrapen, durchsuchen und analysieren
-  #   iconPath: /images/mcp-firecrawl-icon.svg
-  #   initTimeout: 120000
-  #   chatMenu: false
-  #   startup: false
-  #   serverInstructions: true
 
 
 # OCR Configuration (Optical Character Recognition)

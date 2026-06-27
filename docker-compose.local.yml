@@ -247,13 +247,6 @@ services:
       - "127.0.0.1:${MCP_IMAGE_GEN_PORT:-3013}:${MCP_IMAGE_GEN_PORT:-3013}"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
-  mcp-firecrawl:
-    extends: { file: docker-compose.mcp-firecrawl.yml, service: mcp-firecrawl }
-    container_name: ${STACK_NAME:-local}-mcp-firecrawl
-    env_file: .env.local
-    ports:
-      - "127.0.0.1:3003:3003"  # Cursor IDE – local only
-
   mcp-docs:
     extends: { file: docker-compose.mcp-docs.yml, service: mcp-docs }
     container_name: ${STACK_NAME:-local}-mcp-docs
@@ -287,14 +280,6 @@ services:
       - "127.0.0.1:3005:3005"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
-  mcp-playwright:
-    extends: { file: docker-compose.mcp-playwright.yml, service: mcp-playwright }
-    container_name: ${STACK_NAME:-local}-mcp-playwright
-    env_file: .env.local
-    ports:
-      - "127.0.0.1:3006:3006"  # Cursor IDE – local only
-    # No Traefik labels - internal service only
-
   mcp-ytptube:
     extends: { file: docker-compose.mcp-ytptube.yml, service: mcp-ytptube }
     container_name: ${STACK_NAME:-local}-mcp-ytptube
@@ -307,19 +292,6 @@ services:
         condition: service_started
     ports:
       - "127.0.0.1:3010:3010"  # Cursor IDE – local only
-    # No Traefik labels - internal service only
-
-  mcp-youtube-transcript:
-    extends: { file: docker-compose.mcp-youtube-transcript.yml, service: mcp-youtube-transcript }
-    container_name: ${STACK_NAME:-local}-mcp-youtube-transcript
-    env_file: .env.local
-    # Build from submodule Dockerfile (like mcp-db-timetable)
-    image: ghcr.io/faktenforum/mcp-youtube-transcript:latest
-    build:
-      context: ./dev/mcp-youtube-transcript
-      dockerfile: Dockerfile
-    ports:
-      - "127.0.0.1:3011:3011"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
   mcp-db-timetable:

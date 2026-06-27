@@ -50,7 +50,7 @@ Application servers, databases, and infrastructure (excluding MCP servers).
 **Firecrawl API**
 - **Local**: `http://firecrawl.localhost` (exposed for debugging)
 - **Production / Dev (Portainer)**: ❌ **Not exposed** (internal only)
-- **Purpose**: Web scraping and content extraction; used by LibreChat (scraper) and mcp-firecrawl via `http://firecrawl-api:3002`
+- **Purpose**: Web scraping and content extraction; used by LibreChat (scraper) via `http://firecrawl-api:3002`
 - **Network**: `firecrawl-network` + `app-net` (prod/dev); local also has `traefik-net` for firecrawl.localhost
 - **Internal Dependencies**: playwright-service, redis, nuq-postgres, rabbitmq
 - **Note**: No need to expose publicly; all consumers use the internal hostname.
@@ -94,16 +94,13 @@ Internal Docker MCP servers are exposed on localhost when running the stack loca
 | **Image Generation** | Internal Docker | 3013 | `http://mcp-image-gen:3013/mcp` | — | ✅ `localhost:3013` |
 | **OpenStreetMap** | Internal Docker | 3004 | `http://mcp-openstreetmap:3004/mcp` | — | ✅ `localhost:3004` |
 | **Weather** | Internal Docker | 3005 | `http://mcp-weather:3005/mcp` | — | ✅ `localhost:3005` |
-| **Playwright** | Internal Docker | 3006 | `http://mcp-playwright:3006/mcp` | — | ✅ `localhost:3006` |
 | **DB Timetable** | Internal Docker | 3007 | `http://mcp-db-timetable:3007/mcp` | — | ✅ `localhost:3007` |
 | **StackOverflow** | Internal Docker | 3008 | `http://mcp-stackoverflow:3008/mcp` | — | ✅ `localhost:3008` |
 | **npm Search** | Internal Docker | 3009 | `http://mcp-npm-search:3009/mcp` | — | ✅ `localhost:3009` |
 | **Chefkoch** | Internal Docker | 3014 | `http://mcp-chefkoch:3014/mcp` | — | ✅ `localhost:3014` |
 | **Linux** | Internal Docker | 3015 | `http://mcp-linux:3015/mcp` | ✅ `https://mcp-linux.{DOMAIN}/upload/*`, `/download/*`, `/status` | ✅ `localhost:3015` |
 | **YTPTube** | Internal Docker | 3010 | `http://mcp-ytptube:3010/mcp` | — | ✅ `localhost:3010` |
-| **YouTube Transcript** | Internal Docker | 3011 | `http://mcp-youtube-transcript:3011/mcp` | — | ✅ `localhost:3011` |
 | **Grounded Docs** | Internal Docker | 6280 | `http://mcp-docs:6280/mcp` | — | ✅ `localhost:6280` |
-| **Firecrawl** | Internal Docker | 3003 | `http://mcp-firecrawl:3003/mcp` | — | ✅ `localhost:3003` |
 | **GitHub** | Remote | — | `https://api.githubcopilot.com/mcp/` | N/A (external) | — |
 | **Mapbox** | Remote | — | `https://mcp.mapbox.com/mcp` | N/A (external) | — |
 
@@ -117,8 +114,6 @@ Internal Docker MCP servers are exposed on localhost when running the stack loca
 
 **Weather** — Weather, air quality, timezone tools. Uses free Open-Meteo API (no key). Tools: `get_current_weather`, `get_weather_by_datetime_range`, `get_weather_details`, `get_air_quality`, `get_air_quality_details`, `get_current_datetime`, `get_timezone_info`, `convert_time`. Network: `app-net`. URL: `http://mcp-weather:3005/mcp`. Image: `dog830228/mcp_weather_server:latest`
 
-**Playwright** — Browser automation; browse and interact with web pages. Network: `app-net`. URL: `http://mcp-playwright:3006/mcp`.
-
 **DB Timetable** — Deutsche Bahn schedules, station search, connections. Network: `app-net`. URL: `http://mcp-db-timetable:3007/mcp`.
 
 **StackOverflow** — Programming solutions and debugging. Network: `app-net`. URL: `http://mcp-stackoverflow:3008/mcp`.
@@ -131,15 +126,11 @@ Internal Docker MCP servers are exposed on localhost when running the stack loca
 
 **YTPTube** — Media URL → transcript or download link. Tools: `request_transcript`, `get_status`, `request_download_link`, `get_media_info`, `get_thumbnail_url`, `list_recent_downloads`. Optional: `TRANSCRIPTION_BASE_URL` + `TRANSCRIPTION_API_KEY` for audio transcription; omit for platform-subtitles-only. Network: `app-net`. URL: `http://mcp-ytptube:3010/mcp`. [MCP YTPTube](MCP_YTPTUBE.md)
 
-**YouTube Transcript** — YouTube video URL → transcript via youtube-transcript-api. Tools: `get_transcript`, `get_timed_transcript`, `get_video_info`. Network: `app-net`. URL: `http://mcp-youtube-transcript:3011/mcp`. [MCP YouTube Transcript](MCP_YOUTUBE_TRANSCRIPT.md)
-
 **Grounded Docs** — Documentation index (websites, GitHub, npm, local files). Optional semantic search via embeddings (`MCP_DOCS_*`). Volumes: `docs-mcp-data`, `docs-mcp-config`. Network: `app-net`. URL: `http://mcp-docs:6280/mcp`. Image: `ghcr.io/faktenforum/mcp-docs:latest`. Port: `MCP_DOCS_PORT` (default 6280). [MCP Grounded Docs](MCP_DOCS.md)
 
 **GitHub** — Repository management, issues, pull requests, code search; write access (create issue/PR/review) when not read-only. Remote; requires `MCP_GITHUB_PAT` (shared machine user recommended). URL: `https://api.githubcopilot.com/mcp/`. See [GitHub Machine User](GITHUB_MACHINE_USER.md).
 
 **Mapbox** — Geo search, routing, geocoding, map visualisation. Remote; requires `MCP_MAPBOX_ACCESS_TOKEN`. URL: `https://mcp.mapbox.com/mcp`
-
-**Firecrawl** — Web scraping tools (`firecrawl_scrape`, `firecrawl_batch_scrape`, `firecrawl_map`, `firecrawl_crawl`, `firecrawl_search`, `firecrawl_extract`). Backend: internal Firecrawl API (`firecrawl-api:3002`). Network: `app-net`. URL: `http://mcp-firecrawl:3003/mcp`. Configured with `chatMenu: false` (not in chat dropdown; available for agents). Image: `ghcr.io/firecrawl/firecrawl-mcp-server:latest`
 
 ### Testing internal MCPs from Cursor IDE
 
@@ -148,7 +139,7 @@ When using the **local** stack (`docker-compose -f docker-compose.local.yml …`
 1. **Start the MCP servers** so something is listening on the ports used in `.cursor/mcp.json`:
    - Full stack: `docker compose -f docker-compose.local.yml up -d` (or `docker-compose.local-dev.yml`).
    - **YTPTube only**: `docker compose -f docker-compose.local.yml up -d ytptube mcp-ytptube`. `.env.local`: `YTPTUBE_URL`; optional `TRANSCRIPTION_BASE_URL`/`TRANSCRIPTION_API_KEY` (e.g. `${SCALEWAY_BASE_URL}`/`${SCALEWAY_API_KEY}`).
-   - Other MCPs: start the service and any dependencies it has (e.g. `mcp-firecrawl` needs `firecrawl-api` and its stack).
+   - Other MCPs: start the service and any dependencies it has (e.g. `mcp-docs` may need its embeddings env configured).
 2. Use the URL-based entries in `.cursor/mcp.json` (`http://localhost:PORT/mcp`). Cursor loads these from the project config and uses the tools when the agent considers them relevant.
 
 **If Cursor shows `ECONNREFUSED`** for an internal MCP URL, no process is listening on that port. Start the corresponding container(s) with the **local** compose file (see above).
@@ -164,7 +155,7 @@ When using the **local** stack (`docker-compose -f docker-compose.local.yml …`
 
 2. **`app-net`** (Bridge)
    - LibreChat and related services: LibreChat, MongoDB, Meilisearch, VectorDB, RAG API, SearXNG, Firecrawl API, YTPTube
-   - All internal MCP servers: mcp-calculator, mcp-image-gen, mcp-openstreetmap, mcp-weather, mcp-playwright, mcp-db-timetable, mcp-stackoverflow, mcp-npm-search, mcp-chefkoch, mcp-linux, mcp-ytptube, mcp-docs, mcp-firecrawl (when enabled)
+   - All internal MCP servers: mcp-calculator, mcp-image-gen, mcp-openstreetmap, mcp-weather, mcp-db-timetable, mcp-stackoverflow, mcp-npm-search, mcp-chefkoch, mcp-linux, mcp-ytptube, mcp-docs
 
 3. **`firecrawl-network`** (Bridge)
    - Firecrawl only: firecrawl-api, playwright-service, redis, nuq-postgres, rabbitmq
