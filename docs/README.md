@@ -58,6 +58,8 @@ They are baked into the init image and written into the config volume at startup
 - **[Cursor Rules](CURSOR_RULES.md)** - Integrating services and MCP servers
 - **[Cursor MongoDB MCP](CURSOR_MONGODB_MCP.md)** - Cursor MongoDB integration
 - **[Agent Firecrawl Tools](AGENT_FIRECRAWL_TOOLS.md)** - Firecrawl MCP tool guide
+- **[MCP Server Best Practices](MCP_SERVER_BEST_PRACTICES.md)** - Conventions for building, wiring, and testing MCP servers
+
 ## WIP (Work in Progress)
 
 - **[WIP Documentation](wip/README.md)** - YTPTube production, vision architecture, agent token metadata. Vision re-enabled as **experimental/WIP** (merged into fork `main`); upstream re-attempts [agents #257](https://github.com/danny-avila/agents/pull/257), [LibreChat #13860](https://github.com/danny-avila/LibreChat/pull/13860)
@@ -67,6 +69,7 @@ They are baked into the init image and written into the config volume at startup
 ## Project
 
 - **[MCP Servers to Test](MCP_SERVERS_TODO.md)** - MCP servers to evaluate (x-twitter, Context7, Wikipedia) for Social Networks, Developer Support, and Research Assistant agents
+- **[Agent MCP Suggestions](AGENT_MCP_SUGGESTIONS.md)** - Which MCP servers suit which agents (see SERVICES.md and agents.yaml for the live setup)
 
 ## Links
 

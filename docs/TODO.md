@@ -8,7 +8,7 @@
 - [ ] Test LDAP login flow
 - [ ] Document LDAP configuration
 
-**Resources:** [LibreChat LDAP Documentation](dev/librechat-doc/pages/docs/configuration/authentication/ldap.mdx)
+**Resources:** [LibreChat LDAP Documentation](../dev/librechat-doc/content/docs/configuration/authentication/ldap.mdx)
 
 ### Firecrawl API Security
 - [ ] Remove public Traefik exposure for Firecrawl API (only internal Docker network access needed)
