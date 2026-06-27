@@ -381,10 +381,6 @@ services:
       - "traefik.http.services.mcp-linux.loadbalancer.server.port=3015"
 
   # Additional Services
-  openwebui:
-    extends: { file: docker-compose.openwebui.yml, service: openwebui }
-    env_file: .env.local
-
   spend-monitor:
     extends: { file: docker-compose.spend-monitor.yml, service: spend-monitor }
     container_name: ${STACK_NAME:-local}-spend-monitor

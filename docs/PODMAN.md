@@ -61,7 +61,7 @@ Validated under rootless Podman on Fedora (SELinux enforcing):
 - **Meilisearch** - listens on 7700 with `label=disable`. Fails without it (bind-mount SELinux denial).
 - **An MCP server** (`mcp-calculator`, our ghcr image) - healthy on `app-net`.
 
-Not yet exercised wholesale (the heavy services - the locally-built LibreChat app, the Firecrawl group, `rag_api`, `vectordb`, `openwebui`): a full bring-up was skipped to avoid resource contention with other live stacks on the dev host, not because of a known issue. When running them, watch for the same two failure classes:
+Not yet exercised wholesale (the heavy services - the locally-built LibreChat app, the Firecrawl group, `rag_api`, `vectordb`): a full bring-up was skipped to avoid resource contention with other live stacks on the dev host, not because of a known issue. When running them, watch for the same two failure classes:
 
 - Bind-mounted path → SELinux denial → add `security_opt: label=disable` to that service in `docker-compose.local*.yml` (or `:z` on the specific mount).
 - Named volume whose Docker chown-init targets uid 1000 → run the service as the image-default uid (as done for mongodb via `MONGODB_USER`). Candidates: `nuq-postgres` / `vectordb` (postgres data), `rabbitmq`, `firecrawl_pgdata`.
