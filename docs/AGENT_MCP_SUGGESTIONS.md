@@ -4,20 +4,10 @@ This document provides suggestions for additional Agents and MCP Servers that co
 
 ## Current Setup
 
-### Existing Agents
-- **Research Assistant** - Research assistant with web_search and file_search capabilities
-- **Image Generation Assistant** - Image generation assistant using mcp-image-gen
+This document only proposes *additional* agents and MCP servers. For the live setup, use the sources of truth (an inline snapshot here drifted, so it was removed):
 
-### Existing MCP Servers
-- **calculator** - Mathematical calculations
-- **image-gen** - Image generation via OpenRouter
-
-### Available Services
-- MongoDB (with MCP integration)
-- RAG API (vector database)
-- Firecrawl (web scraping)
-- SearXNG (metasearch)
-- Meilisearch (search engine)
+- Agents: [`agents.yaml`](../packages/librechat-init/config/agents.yaml)
+- Wired MCP servers: [`librechat.yaml`](../packages/librechat-init/config/librechat.yaml) `mcpServers` and the matrix in [`SERVICES.md`](SERVICES.md)
 
 ---
 
