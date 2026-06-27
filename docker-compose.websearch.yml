@@ -268,6 +268,12 @@ services:
     depends_on:
       searxng-config-init:
         condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   playwright-service:
     container_name: firecrawl-playwright
@@ -286,6 +292,12 @@ services:
     command: redis-server --bind 0.0.0.0
     networks:
       - firecrawl-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   nuq-postgres:
     container_name: firecrawl-postgres

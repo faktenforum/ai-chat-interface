@@ -140,6 +140,12 @@ services:
       # (not on shared traefik-net where multiple containers might register mcp-linux)
       - app-net
       - traefik-net
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   mongodb-init:
     image: alpine:latest
@@ -195,6 +201,12 @@ services:
       - ./meili_data_v1.12:/meili_data
     networks:
       - app-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:7700/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
 volumes:
   librechat-config:
