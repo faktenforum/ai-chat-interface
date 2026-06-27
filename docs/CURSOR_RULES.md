@@ -4,7 +4,7 @@ This project uses [Cursor Rules](https://docs.cursor.com/features/rules) to enab
 
 ## Overview
 
-Cursor Rules are workspace-level instructions that guide AI agents. All rule files live in `.cursor/rules/`:
+The authoritative agent guide for this workspace is the root [`AGENTS.md`](../../AGENTS.md) (aliased as `CLAUDE.md`) one level up, in the Faktenforum workspace. The `.cursor/rules/` files below mirror those conventions for Cursor users. All rule files live in `.cursor/rules/`:
 
 | Rule | Purpose |
 |------|---------|
@@ -16,6 +16,9 @@ Cursor Rules are workspace-level instructions that guide AI agents. All rule fil
 | `docker-env.mdc` | Docker env and compose file structure |
 | `environment-variables.mdc` | Environment variable guidelines for the stack |
 | `documentation.mdc` | Documentation standards (minimal, scannable) |
+| `ai-humanizer.mdc` | Writing and tone (no banned words, no em-dash separators) |
+| `prompt-compression.mdc` | Writing AGENTS.md / context files (compressed, pipe-delimited) |
+| `think-first.mdc` | Read and search before editing; plan multi-file changes |
 | `general.mdc` | Language, submodules, code quality (always applied) |
 | `typescript.mdc` | TypeScript conventions |
 

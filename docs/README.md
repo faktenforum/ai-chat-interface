@@ -30,7 +30,6 @@ They are baked into the init image and written into the config volume at startup
 - **[Agent avatar prompts](AGENT_AVATAR_PROMPTS.md)** - Image-gen MCP prompts for round minimalist agent avatars
 - **[MCP YTPTube](MCP_YTPTUBE.md)** - YTPTube MCP (media URL → transcript or download). Status and [future work](wip/YTPTUBE_FUTURE_WORK.md) (production proxy, FlareSolverr).
 - **[YTPTube Cleanup](YTPTUBE_CLEANUP.md)** - Where archive and downloads live; how to clean for fresh tests
-- **[MCP YouTube Transcript](MCP_YOUTUBE_TRANSCRIPT.md)** - YouTube Transcript MCP (video URL → transcript via youtube-transcript-api)
 - **[MCP Grounded Docs](MCP_DOCS.md)** - Grounded Docs MCP (documentation index; optional embeddings)
 - **[Faktenforum Search](SERVICES.md)** - Optional external fact-check search (MCP), hosted as part of Faktenforum; opt-in via `SEARCH_MCP_URL`
 - **[MCP Chefkoch](MCP_CHEFKOCH.md)** – Recipes from chefkoch.de (get_recipe, search_recipes, get_random_recipe, get_daily_recipes). Internal only.
@@ -39,7 +38,7 @@ They are baked into the init image and written into the config volume at startup
 - **[MCP Code Execution Insights](MCP_CODE_EXECUTION_INSIGHTS.md)** – Insights from Anthropic’s “Code execution with MCP” article applied to our Linux MCP server and agents.
 - **[MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md)** – CSV/JSON analysis and chart generation (Data Analysis agent): workflow, example Python script, image return via read_workspace_file.
 - **[Agent file upload guidance](AGENT_FILE_UPLOAD.md)** – LibreChat upload options (Upload to Provider, Upload as Text), MCP Linux upload/download, when to recommend which, workspace handoff.
-- **[Webshare Proxy](WEBSHARE_PROXY.md)** - Fixed proxy URL setup (Rotating/Backbone) for mcp-ytptube and mcp-youtube-transcript
+- **[Webshare Proxy](WEBSHARE_PROXY.md)** - Fixed proxy URL setup (Rotating/Backbone) for mcp-ytptube
 
 ## Deployment
 
