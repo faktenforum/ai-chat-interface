@@ -174,7 +174,7 @@ services:
       - "traefik.docker.network=ai-chat-interface_traefik-net"
       - "traefik.http.routers.firecrawl.rule=Host(`firecrawl.${DOMAIN:-localhost}`)"
       - "traefik.http.routers.firecrawl.entrypoints=web"
-      - "traefik.http.services.firecrawl.loadbalancer.server.url=http://firecrawl-api:3002"
+      - "traefik.http.services.firecrawl.loadbalancer.server.port=3002"
 
   playwright-service:
     extends: { file: docker-compose.websearch.yml, service: playwright-service }
