@@ -266,28 +266,12 @@ Predefined model presets that appear as simple selections in the UI.
 
 #### Current Model Groups
 
-1. **Vision Models (Open Source)**
-   - Qwen2.5-VL 72B (default)
-   - Qwen2.5-VL 32B
-   - Llama 3.2 Vision 90B
+The model catalog lives in [`librechat.yaml`](../packages/librechat-init/config/librechat.yaml) under `modelSpecs.list`, the single source of truth. Do not re-list models here; the list drifts. There are two groups:
 
-2. **Vision Models (Proprietary)**
-   - Claude Sonnet 4.5
-   - Gemini 2.5 Flash Lite
+1. **Europa & Open Source** - Scaleway-hosted open-weight models (EU, GDPR).
+2. **Premium-Modelle** - OpenRouter proprietary and flagship models.
 
-3. **Text Models (Open Source)**
-   - DeepSeek V3.2
-   - Llama 3.3 70B
-   - MiMo-V2-Flash
-   - DeepSeek Chat 67B
-   - Llama 3.1 8B
-
-4. **Text Models (Proprietary)**
-   - GPT-5.2
-   - GPT-5 Mini
-   - Mistral Large 2411
-   - Mistral Nemo
-   - GLM 4.7
+See `modelSpecs.list` for the live models, labels, context/output limits, and the `tokenConfig` prices.
 
 #### Testing
 1. Open model selector → Should show all configured specs in groups
@@ -474,7 +458,7 @@ Enabled in `librechat.prod.yaml` and `librechat.dev.yaml` (not in base, so local
 ### Endpoints & Models
 - [x] OpenRouter endpoint works
 - [x] Model specs displayed in groups
-- [x] Default model (Qwen2.5-VL 72B) used
+- [x] Default model (Main Assistant spec) used
 - [x] Model switching works
 - [x] Title generation works
 - [ ] Group icons displayed correctly
