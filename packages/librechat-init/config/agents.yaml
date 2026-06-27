@@ -169,11 +169,11 @@ agents:
     description: Routes developer requests to the appropriate specialist - implementation, refactoring, GitHub, Code Review.
     instructionsFile: shared-agent-code-assistant-instructions.md
     provider: Scaleway
-    model: devstral-2-123b-instruct-2512
+    model: glm-5.2
     model_parameters:
       temperature: 0.3
       top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
+      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
     tools: []
     mcpServers:
       - linux
