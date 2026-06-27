@@ -39,6 +39,10 @@ services:
     # the volume keeps the mongo image's default uid (999). MONGODB_USER=999:999 (set by
     # the podman npm scripts) matches it. Defaults to 1000:1000 under Docker (unchanged).
     user: "${MONGODB_USER:-1000:1000}"
+    # SELinux: named volume lives under $HOME (user_home_t); a confined container can't write
+    # to it under rootless Podman -> mongod fails creating /data/db/journal. Mirrors meilisearch.
+    security_opt:
+      - label=disable
     volumes:
       - mongodata:/data/db
       - mongoconfig:/data/configdb
@@ -52,6 +56,10 @@ services:
     extends: { file: docker-compose.librechat.yml, service: librechat-init }
     container_name: ${STACK_NAME:-local}-librechat-init
     env_file: .env.local
+    # SELinux: host mounts + $HOME-based named volumes are user_home_t; confined containers
+    # can't access them under rootless Podman. Mirrors meilisearch/mongodb (no-op under Docker).
+    security_opt:
+      - label=disable
     environment:
       LIBRECHAT_ENV: local
       STACK_NAME: ${STACK_NAME:-local}
@@ -71,6 +79,8 @@ services:
     extends: { file: docker-compose.librechat.yml, service: librechat-post-init }
     container_name: ${STACK_NAME:-local}-librechat-post-init
     env_file: .env.local
+    security_opt:
+      - label=disable
     # Mount host config so agent/prompt changes apply without image rebuild; post-init reads from /app/config-source when present.
     volumes:
       - librechat-config:/app/config
@@ -99,6 +109,10 @@ services:
       dockerfile: Dockerfile
       target: node
     env_file: .env.local
+    # SELinux: api mounts dev/agents + host images/uploads/logs + the librechat-config volume
+    # (user_home_t); needs label=disable under rootless Podman (no-op under Docker).
+    security_opt:
+      - label=disable
     depends_on:
       librechat-init:
         condition: service_completed_successfully
