@@ -409,7 +409,7 @@ modelSpecs:
 
     - name: "agent-code-assistant"
       label: "Code Assistant"
-      description: "Routes developer requests to the appropriate specialist – Code Research, implementation, refactoring, GitHub, Code Review."
+      description: "Routes developer requests to the appropriate specialist - implementation, refactoring, GitHub, Code Review."
       group: "Assistants"
       order: 5
       preset:
@@ -448,8 +448,8 @@ modelSpecs:
         agent_id: "shared-agent-code-refactorer"
 
     - name: "agent-code-refactorer-quality"
-      label: "Code Refactorer (Gemini 3 Pro Preview)"
-      description: "Code Refactorer with OpenRouter Gemini 3 Pro – for higher quality or fallback when the default variant is insufficient."
+      label: "Code Refactorer (Gemini 3.1 Pro Preview)"
+      description: "Code Refactorer with OpenRouter Gemini 3.1 Pro – for higher quality or fallback when the default variant is insufficient."
       group: "Assistants"
       order: 11
       preset:
@@ -468,8 +468,8 @@ modelSpecs:
         agent_id: "shared-agent-code-reviewer"
 
     - name: "agent-code-reviewer-quality"
-      label: "Code Reviewer (Gemini 3 Pro Preview)"
-      description: "Code Reviewer with OpenRouter Gemini 3 Pro – for higher quality or fallback when the default variant is insufficient."
+      label: "Code Reviewer (Gemini 3.1 Pro Preview)"
+      description: "Code Reviewer with OpenRouter Gemini 3.1 Pro – for higher quality or fallback when the default variant is insufficient."
       group: "Assistants"
       order: 13
       preset:

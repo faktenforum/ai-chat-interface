@@ -166,7 +166,7 @@ agents:
 
   - id: shared-agent-code-assistant
     name: Code Assistant
-    description: Routes developer requests to the appropriate specialist – Code Research, implementation, refactoring, GitHub, Code Review.
+    description: Routes developer requests to the appropriate specialist - implementation, refactoring, GitHub, Code Review.
     instructionsFile: shared-agent-code-assistant-instructions.md
     provider: Scaleway
     model: devstral-2-123b-instruct-2512
@@ -200,7 +200,7 @@ agents:
         description: "Transfer to Code Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Describe what code needs refactoring, the goals (readability, performance, structure), and the workspace/repo context"
       - agent: shared-agent-code-refactorer-quality
-        description: "Transfer to Code Refactorer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code Refactorer could not fulfill the task."
+        description: "Transfer to Code Refactorer (Gemini 3.1 Pro Preview) when the user explicitly asks for higher quality or when the default Code Refactorer could not fulfill the task."
         prompt: "Describe what code needs refactoring, the goals (readability, performance, structure), and the workspace/repo context"
       - agent: shared-agent-github
         description: "Transfer to GitHub assistant for PR creation, issue management, reviews posting, and repo operations"
@@ -209,7 +209,7 @@ agents:
         description: "Transfer to Code Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Provide the PR URL and any specific review focus areas"
       - agent: shared-agent-code-reviewer-quality
-        description: "Transfer to Code Reviewer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code Reviewer could not fulfill the task."
+        description: "Transfer to Code Reviewer (Gemini 3.1 Pro Preview) when the user explicitly asks for higher quality or when the default Code Reviewer could not fulfill the task."
         prompt: "Provide the PR URL and any specific review focus areas"
       - agent: shared-agent-main-assistant
         description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
@@ -312,7 +312,7 @@ agents:
         description: "Transfer to Code Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
       - agent: shared-agent-code-refactorer-quality
-        description: "Transfer to Code Refactorer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code Refactorer could not fulfill the task."
+        description: "Transfer to Code Refactorer (Gemini 3.1 Pro Preview) when the user explicitly asks for higher quality or when the default Code Refactorer could not fulfill the task."
         prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
     # Dev: implement/fix, many file and terminal ops
     recursion_limit: 120
@@ -412,7 +412,7 @@ agents:
         description: "Transfer to Code Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
       - agent: shared-agent-code-refactorer-quality
-        description: "Transfer to Code Refactorer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code Refactorer could not fulfill the task."
+        description: "Transfer to Code Refactorer (Gemini 3.1 Pro Preview) when the user explicitly asks for higher quality or when the default Code Refactorer could not fulfill the task."
         prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
     recursion_limit: 80
     isCollaborative: true
@@ -488,7 +488,7 @@ agents:
         description: "Transfer to Code Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
       - agent: shared-agent-code-reviewer-quality
-        description: "Transfer to Code Reviewer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code Reviewer could not fulfill the task."
+        description: "Transfer to Code Reviewer (Gemini 3.1 Pro Preview) when the user explicitly asks for higher quality or when the default Code Reviewer could not fulfill the task."
         prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
     # Dev: refactor, tests, many file reads
     recursion_limit: 100
@@ -566,7 +566,7 @@ agents:
         description: "Transfer to Code Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
       - agent: shared-agent-code-reviewer-quality
-        description: "Transfer to Code Reviewer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code Reviewer could not fulfill the task."
+        description: "Transfer to Code Reviewer (Gemini 3.1 Pro Preview) when the user explicitly asks for higher quality or when the default Code Reviewer could not fulfill the task."
         prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
     recursion_limit: 80
     isCollaborative: true
@@ -661,13 +661,13 @@ agents:
         description: "Transfer to Code Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Describe the code that needs refactoring"
       - agent: shared-agent-code-refactorer-quality
-        description: "Transfer to Code Refactorer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code Refactorer could not fulfill the task."
+        description: "Transfer to Code Refactorer (Gemini 3.1 Pro Preview) when the user explicitly asks for higher quality or when the default Code Refactorer could not fulfill the task."
         prompt: "Describe the code that needs refactoring"
       - agent: shared-agent-code-reviewer
         description: "Transfer to Code Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
         prompt: "Provide the PR URL and context for review"
       - agent: shared-agent-code-reviewer-quality
-        description: "Transfer to Code Reviewer (Gemini 3 Pro Preview) when the user explicitly asks for higher quality or when the default Code Reviewer could not fulfill the task."
+        description: "Transfer to Code Reviewer (Gemini 3.1 Pro Preview) when the user explicitly asks for higher quality or when the default Code Reviewer could not fulfill the task."
         prompt: "Provide the PR URL and context for review"
     # Dev: GitHub API + git, many file/API ops
     recursion_limit: 100
