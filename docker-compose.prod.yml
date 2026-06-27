@@ -100,7 +100,7 @@ services:
     networks:
       - firecrawl-network
       - app-net
-    # Not exposed via Traefik: only LibreChat (firecrawl-api:3002) and mcp-firecrawl use it internally.
+    # Not exposed via Traefik: only LibreChat (firecrawl-api:3002) uses it internally.
 
   playwright-service:
     extends: { file: docker-compose.websearch.yml, service: playwright-service }
@@ -137,10 +137,6 @@ services:
     container_name: ${STACK_NAME:-prod}-mcp-image-gen
     # No Traefik labels - internal service only
 
-  mcp-firecrawl:
-    extends: { file: docker-compose.mcp-firecrawl.yml, service: mcp-firecrawl }
-    container_name: ${STACK_NAME:-prod}-mcp-firecrawl
-
   mcp-docs:
     extends: { file: docker-compose.mcp-docs.yml, service: mcp-docs }
     container_name: ${STACK_NAME:-prod}-mcp-docs
@@ -157,11 +153,6 @@ services:
   mcp-weather:
     extends: { file: docker-compose.mcp-weather.yml, service: mcp-weather }
     container_name: ${STACK_NAME:-prod}-mcp-weather
-    # No Traefik labels - internal service only
-
-  mcp-playwright:
-    extends: { file: docker-compose.mcp-playwright.yml, service: mcp-playwright }
-    container_name: ${STACK_NAME:-prod}-mcp-playwright
     # No Traefik labels - internal service only
 
   mcp-db-timetable:
@@ -254,12 +245,6 @@ services:
     depends_on:
       ytptube:
         condition: service_started
-    # No Traefik labels - internal service only
-
-  mcp-youtube-transcript:
-    extends: { file: docker-compose.mcp-youtube-transcript.yml, service: mcp-youtube-transcript }
-    container_name: ${STACK_NAME:-prod}-mcp-youtube-transcript
-    image: ghcr.io/faktenforum/mcp-youtube-transcript:latest
     # No Traefik labels - internal service only
 
   spend-monitor:
