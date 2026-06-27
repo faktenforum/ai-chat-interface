@@ -1,6 +1,6 @@
 # Vision Artifact Refactoring - Completed
 
-> **WIP** – Work-in-progress. See [WIP Documentation](README.md).
+> **WIP, January 2026 snapshot (superseded).** Vision was re-enabled as experimental during the June 2026 upstream sync; this records the earlier attempt and is kept for history. See [WIP Documentation](README.md) for current status.
 
 ## Problem (Solved)
 

@@ -1,77 +1,33 @@
 # Agent instruction conventions (maintainer reference)
 
-**Not loaded by any agent.** Canonical snippets live in `partial_instructions/` and are included in agent files via `{{include:partial-name.md}}` (e.g. `{{include:mcp-linux-handoff-workspace.md}}`, `{{include:conventions-current-datetime.md}}`). The init process resolves these directives before storing instructions in LibreChat. See [shared-file-upload-types.md](shared-file-upload-types.md) for full upload/workspace/plan detail.
+**Not loaded by any agent.** Canonical snippets live in `partial_instructions/` and are pulled into agent files via `{{include:partial-name.md}}` (e.g. `{{include:mcp-linux-handoff-workspace.md}}`). The init process resolves these includes before storing instructions in LibreChat. Edit the partials, not this file.
 
 ## Principle
 
-Workspace + plan/tasks are the single source of truth for continuity across handoffs; handoff text should not duplicate the full plan/task list.
+Workspace plus plan/tasks are the single source of truth for continuity across handoffs; handoff text should not duplicate the full plan/task list.
 
-## Partial files (source of truth)
+## Partials (`partial_instructions/`)
 
 | Partial | Content |
 |---------|---------|
-| mcp-linux-handoff-workspace | Full workspace handoff (Transfer, Before handoff, On receive, End of turn) |
-| handoff-simple | Minimal handoff (Transfer via lc_transfer_to; put context in instructions) |
-| execution-2 | Execution: ≤2 tool calls/batch; brief prose; no labels/tags. |
-| code-generation | Execution: ≤3 tool calls/batch; brief prose; no labels/tags. |
-| mcp-linux-tools-files-upload | MCP upload/download (list_upload_sessions, read_workspace_file, create_download_link) |
-| paths-workspace | Paths: workspace-relative; same workspace for all tools. |
-| code-commit-push | Commit/push: Only stage/push repo-relevant files... |
-| code-git-ssh | Git (GitHub): Use SSH only... |
-| mcp-github-repo-default | GitHub repo: faktenforum/ai-chat-interface (owner/repo constants) |
-| before-handoff-workspace | Before handoff or when finishing: get_workspaces; update_workspace... |
-| conventions-when-unclear-router | When unclear (routers): wait for reply before transferring; do not hand off to same specialist again |
-| file-upload-types | LibreChat vs MCP upload, routing, Linux handoff (011); workspace agents use mcp-linux-tools-files-upload |
+| `handoff-simple` | Minimal handoff: transfer via `lc_transfer_to_<agentId>`, put context in the instructions param (chat text does not trigger a transfer). |
+| `mcp-linux-handoff-workspace` | Full workspace handoff: transfer, before-handoff, on-receive, end-of-turn. |
+| `mcp-linux-workspace-management` | Workspace create/list/status/update tools. |
+| `mcp-linux-workspace-persistent-repo` | Persistent git-repo workspaces. |
+| `mcp-linux-tools-files-upload` | MCP upload/download: `list_upload_sessions`, `read_workspace_file`, `create_download_link`. |
+| `mcp-linux-tools-search-list` | Linux search/list tools. |
+| `mcp-github-repo-default` | GitHub repo constants (`faktenforum/ai-chat-interface`). |
+| `code-developer-base` | Shared base instructions for the developer specialists. |
+| `code-generation` | Execution: at most 3 tool calls per batch; brief prose; no labels/tags. |
+| `code-think-first` | Read and search before editing; plan multi-file changes. |
+| `code-commit-push` | Only stage/push repo-relevant files; drop temp/helper files before pushing. |
+| `code-git-ssh` | GitHub over SSH only (`git@github.com:org/repo.git`); never HTTPS with a token. |
+| `code-python-dependencies` | Use `uv` for all Python deps; never `pip install`. |
+| `conventions-current-datetime` | Injects the current date/time. |
+| `conventions-when-unclear` | Ask or interpret; do not hand back for ambiguity alone; match the user's language. |
+| `conventions-when-unclear-router` | Router variant: wait for the reply before transferring; do not re-transfer to the same specialist. |
+| `workflow-multi-agent` | Multi-agent workflow: plan/tasks and the handoff chain. |
 
-## Canonical snippets (reference; edit partials, not this list)
+## Section order (per agent file)
 
-**HANDOFF (minimal)**  
-Transfer only via lc_transfer_to_<agentId>; put context in the tool's instructions param. Chat text does not trigger transfer.
-
-**Before handoff (workspace agents)**  
-Before handoff: update plan/tasks with update_workspace (mark completed done, next in_progress); then hand off with workspace name in instructions. Optionally add one short hint (e.g. "Continue from plan/tasks").
-
-**On receive (workspace)**  
-On receive: use workspace from instructions → get_workspaces → follow plan/tasks; if none/empty → update_workspace from instructions, then proceed. Plan and tasks are the source of truth for what to do next.
-
-**End of turn (workspace)**  
-Always call update_workspace before handoff or when finishing your part so the next agent has current state; otherwise context is lost.
-
-**Execution**  
-≤N tool calls/batch; brief prose; no labels/tags.
-
-**When unclear**  
-Inlined one-liner in each agent (and in think-first.md for dev agents): ask or interpret; do not hand back for ambiguity alone; match user language.
-
-**Files (MCP)**  
-Files: MCP upload → list_upload_sessions then read_workspace_file(workspace, uploads/<path>); output → create_download_link. Do not ask for LibreChat attach unless LLM must read content.
-
-**Paths**  
-Paths: workspace-relative; same workspace for all tools.
-
-**Commit/push**  
-Only stage/push repo-relevant files; unstage or remove helper scripts and temp files before push.
-
-**Git (GitHub)**  
-Use SSH only for GitHub: remote URLs must be `git@github.com:org/repo.git`. Do not set origin (or any remote) to HTTPS with token or password; push/pull use the configured SSH key. If the remote is HTTPS, set it to the SSH URL: `git remote set-url origin git@github.com:org/repo.git`.
-
-## Which agents use which snippet
-
-| Snippet | Agents |
-|--------|--------|
-| HANDOFF (minimal) | All 17 agent instruction files |
-| Before handoff | 008, 009, 010, developer, code-refactorer, code-reviewer, github, code-researcher |
-| On receive | 008, 009, 010, developer, code-refactorer, code-reviewer, github, code-researcher |
-| End of turn | 008, 009, 010, developer, code-refactorer, code-reviewer, github, code-researcher |
-| Execution | 001, 002, 003, 005, 006, 008, 009, 010, developer, code-refactorer, code-reviewer, github, code-researcher, feedback |
-| When unclear | 001, 002, 003, 005, 006, 008, 009, 010, developer, code-refactorer, code-reviewer, github, code-researcher, feedback, code-assistant, 011 |
-| Files (MCP) | 008, 009, 010, developer |
-| Paths | 008, 009, 010, developer |
-| Commit/push | developer, code-reviewer, github |
-| Git (GitHub) | developer, code-reviewer, github |
-
-## Section order (per file)
-
-HANDOFF → Role → Constraints → Workflow / Hand off → Execution → When unclear → {{include:conventions-current-datetime.md}}
-
-Omit sections that do not apply.
+HANDOFF → Role → Constraints → Workflow / Hand off → Execution → When unclear → `{{include:conventions-current-datetime.md}}`. Omit sections that do not apply.
