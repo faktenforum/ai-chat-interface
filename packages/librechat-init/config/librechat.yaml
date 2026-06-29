@@ -997,6 +997,7 @@ mcpSettings:
     - '$${STACK_NAME:-prod}-mcp-docs'                # MCP Docs (Grounded Docs) service (Docker network)
     - '$${STACK_NAME:-prod}-mcp-chefkoch'            # MCP Chefkoch service (Docker network)
     - '$${STACK_NAME:-prod}-mcp-linux'                # MCP Linux service (Docker network)
+    - '$${STACK_NAME:-prod}-mcp-wikipedia'           # MCP Wikipedia service (Docker network)
     - 'api.githubcopilot.com'   # GitHub MCP Server (remote hosted)
     - 'mcp.mapbox.com'           # Mapbox MCP Server (remote hosted)
     - '$${SEARCH_MCP_DOMAIN}'  # Faktenforum Search (external; host only, e.g. search.localhost)
@@ -1006,6 +1007,17 @@ mcpSettings:
 
 # MCP Calculator Server
 mcpServers:
+  wikipedia:
+    type: streamable-http
+    url: http://$${STACK_NAME:-prod}-mcp-wikipedia:3017/mcp
+    title: Wikipedia
+    description: Look up encyclopedic facts and article summaries from Wikipedia
+    iconPath: /images/mcp-wikipedia-icon.svg
+    initTimeout: 120000
+    chatMenu: true
+    startup: true
+    serverInstructions: true
+
   calculator:
     type: streamable-http
     url: http://$${STACK_NAME:-prod}-mcp-calculator:3012/mcp

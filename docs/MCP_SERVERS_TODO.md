@@ -6,7 +6,7 @@ TODO list of MCP servers to evaluate and integrate for specific agents.
 |----------------------|--------------|--------|
 | [x-twitter-mcp-server](#1-x-twitter-mcp-server) | Social Networks (Soziale Netzwerke) | [ ] |
 | [Context7](#2-context7) | Developer domain (e.g. Code Research) | [ ] |
-| [Wikipedia MCP](#3-wikipedia-mcp) | Research Assistant | [ ] |
+| [Wikipedia MCP](#3-wikipedia-mcp) | Research Assistant | [x] Done - wired to the Research agent |
 | [Code execution with MCP](#4-code-execution-with-mcp-concept) | TBD (developer / data workflows) | [ ] — still searching for suitable server |
 
 ---
@@ -42,14 +42,15 @@ TODO list of MCP servers to evaluate and integrate for specific agents.
 
 ## 3. Wikipedia MCP
 
+**Status: Done.** Implemented as the first-party `mcp-wikipedia` service (wraps the upstream `wikipedia-mcp` pip package, pinned `2.0.1`), streamable-http on port `3017` at `/mcp`, internal-only on `app-net`, and wired to the Research agent (`shared-agent-research`). See [SERVICES.md](SERVICES.md) and `packages/mcp-wikipedia/`.
+
 - **Repository:** [Rudra-ravi/wikipedia-mcp](https://github.com/Rudra-ravi/wikipedia-mcp/tree/main)
 - **Purpose:** Wikipedia search, article content, summaries, sections, links, related topics; optional multi-language and caching.
 - **Target agent:** Research Assistant
-- **Transport:** STDIO or SSE. Docker image available. Optional Wikipedia access token for rate limits.
+- **Transport:** streamable-http (`POST /mcp`). Internal Docker service.
 - **Tasks:**
-  - [ ] Test STDIO vs SSE with LibreChat
-  - [ ] Decide Docker vs external (e.g. pipx) deployment
-  - [ ] Add to stack and wire to “Research Assistant” agent
+  - [x] Decided Docker deployment via the pinned `wikipedia-mcp` pip package
+  - [x] Added to the stack and wired to the Research agent
   - [ ] Optionally configure language/country and caching
 
 ---

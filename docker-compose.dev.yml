@@ -143,6 +143,12 @@ services:
     image: ghcr.io/faktenforum/mcp-calculator:dev
     # No Traefik labels - internal service only
 
+  mcp-wikipedia:
+    extends: { file: docker-compose.mcp-wikipedia.yml, service: mcp-wikipedia }
+    container_name: ${STACK_NAME:-prod}-mcp-wikipedia
+    image: ghcr.io/faktenforum/mcp-wikipedia:dev
+    # No Traefik labels - internal service only
+
   mcp-image-gen:
     extends: { file: docker-compose.mcp-image-gen.yml, service: mcp-image-gen }
     container_name: ${STACK_NAME:-prod}-mcp-image-gen

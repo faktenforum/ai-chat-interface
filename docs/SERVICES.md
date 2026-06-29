@@ -101,6 +101,7 @@ Internal Docker MCP servers are exposed on localhost when running the stack loca
 | **Linux** | Internal Docker | 3015 | `http://mcp-linux:3015/mcp` | ✅ `https://mcp-linux.{DOMAIN}/upload/*`, `/download/*`, `/status` | ✅ `localhost:3015` |
 | **YTPTube** | Internal Docker | 3010 | `http://mcp-ytptube:3010/mcp` | — | ✅ `localhost:3010` |
 | **Grounded Docs** | Internal Docker | 6280 | `http://mcp-docs:6280/mcp` | — | ✅ `localhost:6280` |
+| **Wikipedia** | Internal Docker | 3017 | `http://mcp-wikipedia:3017/mcp` | — | ✅ `localhost:3017` |
 | **GitHub** | Remote | — | `https://api.githubcopilot.com/mcp/` | N/A (external) | — |
 | **Mapbox** | Remote | — | `https://mcp.mapbox.com/mcp` | N/A (external) | — |
 
@@ -127,6 +128,8 @@ Internal Docker MCP servers are exposed on localhost when running the stack loca
 **YTPTube** — Media URL → transcript or download link. Tools: `request_transcript`, `get_status`, `request_download_link`, `get_media_info`, `get_thumbnail_url`, `list_recent_downloads`. Optional: `TRANSCRIPTION_BASE_URL` + `TRANSCRIPTION_API_KEY` for audio transcription; omit for platform-subtitles-only. Network: `app-net`. URL: `http://mcp-ytptube:3010/mcp`. [MCP YTPTube](MCP_YTPTUBE.md)
 
 **Grounded Docs** — Documentation index (websites, GitHub, npm, local files). Optional semantic search via embeddings (`MCP_DOCS_*`). Volumes: `docs-mcp-data`, `docs-mcp-config`. Network: `app-net`. URL: `http://mcp-docs:6280/mcp`. Image: `ghcr.io/faktenforum/mcp-docs:latest`. Port: `MCP_DOCS_PORT` (default 6280). [MCP Grounded Docs](MCP_DOCS.md)
+
+**Wikipedia** — Wikipedia search, article content, summaries, sections, links, related topics. Wraps the upstream `wikipedia-mcp` pip package (pinned `2.0.1`); no `/health` endpoint, so the healthcheck is a TCP connect. Used by the Research agent. Internal only. Network: `app-net`. URL: `http://mcp-wikipedia:3017/mcp`. Image: `ghcr.io/faktenforum/mcp-wikipedia:latest`. Env: `MCP_WIKIPEDIA_PORT` (3017), `WIKIPEDIA_ACCESS_TOKEN` (optional, raises API rate limits).
 
 **GitHub** — Repository management, issues, pull requests, code search; write access (create issue/PR/review) when not read-only. Remote; requires `MCP_GITHUB_PAT` (shared machine user recommended). URL: `https://api.githubcopilot.com/mcp/`. See [GitHub Machine User](GITHUB_MACHINE_USER.md).
 

@@ -12,6 +12,8 @@ agents:
     tools:
       - web_search
       - file_search
+    mcpServers:
+      - wikipedia
     category: general
     conversation_starters:
       - Research current information on climate change
