@@ -115,10 +115,13 @@ endpoints:
         default: [
           "anthropic/claude-opus-4.8",        # Strongest coding/agent model (1M Context)
           "anthropic/claude-sonnet-4.6",      # Top proprietary model (Vision, 1M Context)
+          "openai/gpt-5.5-pro",               # GPT-5.5 Pro (premium tier)
           "openai/gpt-5.5",                   # Newest GPT-5 flagship (Vision)
           "openai/gpt-5.4",                   # GPT-5.4 (Vision, cheaper than 5.5)
           "google/gemini-3.5-flash",          # Google Gemini 3.5 Flash (GA, Vision)
+          "google/gemini-3.1-flash-lite",     # Gemini 3.1 Flash Lite (cheap, fast)
           "google/gemini-3.1-pro-preview",    # Google Gemini 3.1 Pro (Preview from Google)
+          "deepseek/deepseek-v4-pro",         # DeepSeek V4 Pro (long context)
           "x-ai/grok-4.3",                    # xAI reasoning model (Vision)
           "moonshotai/kimi-k2.6",             # Cheap long-context reasoning (Vision)
           "mistralai/mistral-large-2512"      # European premium option (French)
@@ -162,12 +165,15 @@ endpoints:
           "glm-5.2",                          # Chat (Reasoning/Code) - strongest open-weight, European
           "llama-3.3-70b-instruct",           # Chat - Generally Available
           "qwen3-235b-a22b-instruct-2507",    # Chat - Generally Available
+          "qwen3.5-397b-a17b",                # Chat, Vision (frontier MoE) - Generally Available
+          "qwen3.6-35b-a3b",                  # Chat, Vision (efficient MoE) - Generally Available
           "mistral-small-3.2-24b-instruct-2506", # Chat, Vision - Generally Available
           "devstral-2-123b-instruct-2512",    # Chat (Code) - Generally Available
           "gpt-oss-120b",                      # Chat - Generally Available
           "gemma-4-26b-a4b-it",               # Chat, Vision - Generally Available
           "qwen3-coder-30b-a3b-instruct",     # Chat (Code) - Generally Available
           "pixtral-12b-2409",                 # Chat, Vision - Generally Available
+          "holo2-30b-a3b",                    # Chat, Vision (GUI analysis) - Generally Available
           "qwen3-embedding-8b",               # Embeddings - Generally Available
           "bge-multilingual-gemma2"           # Embeddings - Generally Available
         ]
