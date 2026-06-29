@@ -67,7 +67,7 @@ services:
       - ./logs:/logs
       - ./images:/images
       - ./uploads:/uploads
-      - ./data-node:/mongo_data
+      - mongodata:/mongo_data
       - ./meili_data_v1.12:/meili_data
       - mongoconfig:/mongo_configdb
 
