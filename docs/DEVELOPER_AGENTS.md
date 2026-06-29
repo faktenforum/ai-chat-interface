@@ -27,10 +27,8 @@ Each of the three Code specialists (Developer, Code Refactorer, Code Reviewer) h
 | **Developer** (default) | `shared-agent-developer` | Scaleway | glm-5.2 | 18 (Linux full, web_search) | Implement, fix bugs. |
 | **Developer (Claude Opus 4.8)** (quality) | `shared-agent-developer-quality` | OpenRouter | anthropic/claude-opus-4.8 | same | Same role; use when user wants higher quality or default failed. |
 | **Code Refactorer** (default) | `shared-agent-code-refactorer` | Scaleway | glm-5.2 | 18 (Linux full, web_search) | Refactor, polish, restructure. |
-| **Code Refactorer (Gemini 3.1 Pro Preview)** (quality) | `shared-agent-code-refactorer-quality` | OpenRouter | google/gemini-3.1-pro-preview | same | Same role; use when user wants higher quality or default failed. |
 | **GitHub Assistant** | `shared-agent-github` | Scaleway | devstral-2-123b | GitHub (read+write), Linux minimal | PRs, issues, releases; create/update/merge PR, review, file/repo ops. See [GitHub tools](#github-tools). |
 | **Code Reviewer** (default) | `shared-agent-code-reviewer` | Scaleway | glm-5.2 | ~18 (Linux subset, GitHub read) | Single entry for PR reviews: clone repo, analyze via Linux MCP, produce review; hand off to GitHub Assistant to post on GitHub when the user requests it. |
-| **Code Reviewer (Gemini 3.1 Pro Preview)** (quality) | `shared-agent-code-reviewer-quality` | OpenRouter | google/gemini-3.1-pro-preview | same | Same role; use when user wants higher quality or default failed. |
 
 ## Chains
 

@@ -24,18 +24,6 @@ prompts:
       public:
         enabled: true
         defaultRole: editor
-  - name: Review GitHub Pull Request (Quality)
-    prompt: |
-      Please review {{Github Pull Request URL}} and publish it as a comment in the PR.
-      
-      **Important**: Use the Quality developer agents (Code Reviewer with Gemini 3.1 Pro Preview) for higher quality and more detailed analysis. This variant uses more expensive but more powerful models.
-    command: review-github-pr-quality
-    category: code
-    oneliner: Reviews a GitHub Pull Request with Quality agents (Gemini 3.1 Pro Preview) for higher quality and more detailed analysis.
-    sharing:
-      public:
-        enabled: true
-        defaultRole: editor
   - name: Refactor GitHub PR
     prompt: |
       Process the GitHub Pull Request {{Github Pull Request URL}} completely.
@@ -59,28 +47,23 @@ prompts:
     prompt: |
       Process the GitHub Pull Request {{Github Pull Request URL}} completely.
 
-      **Important**: Use the Quality developer agents for higher quality:
-      - Code Reviewer (Gemini 3.1 Pro Preview) for detailed reviews
-      - Code Refactorer (Gemini 3.1 Pro Preview) for refactoring
-      - Developer (Claude Opus 4.8) for implementations
-      
-      This variant uses more expensive but more powerful models for better results.
+      **Important**: For implementations use the Developer Quality agent (Claude Opus 4.8); the Code Reviewer and Code Refactorer run GLM 5.2. The Opus developer variant costs more per run.
 
       ## Process
 
-      1. **Review**: Analyze the PR (Code, Tests, Docs) with Code Reviewer (Gemini 3.1 Pro Preview). Identify improvement points.
+      1. **Review**: Analyze the PR (Code, Tests, Docs) with the Code Reviewer. Identify improvement points.
       2. **Refactor Plan**: Create a prioritized list of changes.
       3. **Workspace**: If a Linux workspace exists for this PR – check if it is current and reusable; otherwise reset and create new.
-      4. **Implementation**: Delegate each task to the Quality experts (Code Refactorer with Gemini 3.1 Pro Preview, Developer with Claude Opus 4.8). Each expert completes their task and hands off to the next, until all points are completed.
+      4. **Implementation**: Delegate each task to the right expert; use Developer (Claude Opus 4.8) for implementations. Each expert completes their task and hands off to the next, until all points are completed.
       5. **Completion**: Push the changes to the PR branch. Leave a PR comment summarizing the review and the improvements made.
 
       ## Rules
-      - Delegate specifically to Quality experts; no parallel tasks without dependencies.
+      - Delegate specifically to the right expert; no parallel tasks without dependencies.
       - Keep the plan manageable; prioritize the most important improvements first.
       - The final PR comment must clearly document review results and change list.
     command: refactor-github-pr-quality
     category: code
-    oneliner: Reviews a GitHub PR with Quality agents (Gemini 3.1 Pro Preview, Claude Opus 4.8), implements improvements and pushes them to the branch.
+    oneliner: Reviews a GitHub PR and implements improvements with Developer (Claude Opus 4.8), then pushes them to the branch.
     sharing:
       public:
         enabled: true
