@@ -237,6 +237,14 @@ services:
       - "127.0.0.1:${MCP_CALCULATOR_PORT:-3012}:${MCP_CALCULATOR_PORT:-3012}"  # Cursor IDE – local only
     # No Traefik labels - internal service only
 
+  mcp-wikipedia:
+    extends: { file: docker-compose.mcp-wikipedia.yml, service: mcp-wikipedia }
+    container_name: ${STACK_NAME:-local}-mcp-wikipedia
+    env_file: .env.local
+    ports:
+      - "127.0.0.1:${MCP_WIKIPEDIA_PORT:-3017}:${MCP_WIKIPEDIA_PORT:-3017}"  # Cursor IDE – local only
+    # No Traefik labels - internal service only
+
   mcp-image-gen:
     extends: { file: docker-compose.mcp-image-gen.yml, service: mcp-image-gen }
     container_name: ${STACK_NAME:-local}-mcp-image-gen
