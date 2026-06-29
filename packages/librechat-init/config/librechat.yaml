@@ -447,16 +447,6 @@ modelSpecs:
         endpointType: "agents"
         agent_id: "shared-agent-code-refactorer"
 
-    - name: "agent-code-refactorer-quality"
-      label: "Code Refactorer (Gemini 3.1 Pro Preview)"
-      description: "Code Refactorer with OpenRouter Gemini 3.1 Pro – for higher quality or fallback when the default variant is insufficient."
-      group: "Assistants"
-      order: 11
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-code-refactorer-quality"
-
     - name: "agent-code-reviewer"
       label: "Code Reviewer"
       description: "Analyzes pull requests – clones the repo, checks the diff, reads the codebase and creates a structured review. Posts the review via the GitHub Assistant if needed."
@@ -466,16 +456,6 @@ modelSpecs:
         endpoint: "agents"
         endpointType: "agents"
         agent_id: "shared-agent-code-reviewer"
-
-    - name: "agent-code-reviewer-quality"
-      label: "Code Reviewer (Gemini 3.1 Pro Preview)"
-      description: "Code Reviewer with OpenRouter Gemini 3.1 Pro – for higher quality or fallback when the default variant is insufficient."
-      group: "Assistants"
-      order: 13
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-code-reviewer-quality"
 
     - name: "agent-github"
       label: "GitHub Assistant"
