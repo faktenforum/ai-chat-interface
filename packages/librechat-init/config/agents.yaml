@@ -1,39 +1,130 @@
 agents:
-  - id: shared-agent-research
-    name: Research Assistant
-    description: Helps with research and information gathering from various sources
-    instructionsFile: shared-agent-research-instructions.md
+  # Universal assistant. Handles coding, Linux/shell, files, data, documents, research and
+  # GitHub in one place. Replaces the former developer/workspace stack and both routers.
+  - id: shared-agent-assistant
+    name: Assistant
+    description: General-purpose assistant – coding, Linux/shell, files, data analysis, documents, research and GitHub in one place.
+    instructionsFile: shared-agent-assistant-instructions.md
     provider: Scaleway
-    model: mistral-small-3.2-24b-instruct-2506
+    model: glm-5.2
+    # No vision: glm-5.2 is text/code only. Image uploads fall back to OCR / "Upload as Text".
     model_parameters:
-      temperature: 0.5
+      temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
+      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
     tools:
       - web_search
       - file_search
     mcpServers:
-      - wikipedia
+      - linux
+      - github
+      - docs
+      - stackoverflow
+      - npm-search
+      - wikipedia   # no explicit mcpTools -> all wikipedia tools enabled
+    mcpTools:
+      - execute_command_mcp_linux
+      - read_terminal_output_mcp_linux
+      - write_terminal_mcp_linux
+      - list_terminals_mcp_linux
+      - kill_terminal_mcp_linux
+      - list_workspaces_mcp_linux
+      - create_workspace_mcp_linux
+      - delete_workspace_mcp_linux
+      - get_workspaces_mcp_linux
+      - update_workspace_mcp_linux
+      - get_status_mcp_linux
+      - reset_account_mcp_linux
+      - clean_workspace_uploads_mcp_linux
+      - create_upload_session_mcp_linux
+      - list_upload_sessions_mcp_linux
+      - close_upload_session_mcp_linux
+      - create_download_link_mcp_linux
+      - list_download_links_mcp_linux
+      - close_download_link_mcp_linux
+      - read_workspace_file_mcp_linux
+      - list_workspace_files_mcp_linux
+      - codebase_search_mcp_linux
+      - get_code_index_status_mcp_linux
+      - search_code_mcp_github
+      - search_repositories_mcp_github
+      - search_issues_mcp_github
+      - search_pull_requests_mcp_github
+      - search_users_mcp_github
+      - get_file_contents_mcp_github
+      - get_commit_mcp_github
+      - get_latest_release_mcp_github
+      - get_release_by_tag_mcp_github
+      - get_label_mcp_github
+      - get_me_mcp_github
+      - issue_read_mcp_github
+      - pull_request_read_mcp_github
+      - list_commits_mcp_github
+      - list_branches_mcp_github
+      - list_tags_mcp_github
+      - list_pull_requests_mcp_github
+      - list_issues_mcp_github
+      - list_releases_mcp_github
+      - list_issue_types_mcp_github
+      - create_issue_mcp_github
+      - create_pull_request_mcp_github
+      - create_review_mcp_github
+      - pull_request_review_write_mcp_github
+      - add_comment_to_pending_review_mcp_github
+      - add_issue_comment_mcp_github
+      - issue_write_mcp_github
+      - update_pull_request_mcp_github
+      - update_pull_request_branch_mcp_github
+      - create_branch_mcp_github
+      - merge_pull_request_mcp_github
+      - create_or_update_file_mcp_github
+      - delete_file_mcp_github
+      - push_files_mcp_github
+      - fork_repository_mcp_github
+      - create_repository_mcp_github
+      - assign_copilot_to_issue_mcp_github
+      - request_copilot_review_mcp_github
+      - sub_issue_write_mcp_github
+      - scrape_docs_mcp_docs
+      - search_docs_mcp_docs
+      - list_libraries_mcp_docs
+      - list_jobs_mcp_docs
+      - get_job_info_mcp_docs
+      - fetch_url_mcp_docs
+      - refresh_version_mcp_docs
+      - find_version_mcp_docs
+      - remove_docs_mcp_docs
+      - cancel_job_mcp_docs
+      - search_by_error_mcp_stackoverflow
+      - search_by_tags_mcp_stackoverflow
+      - analyze_stack_trace_mcp_stackoverflow
+      - search_npm_packages_mcp_npm-search
     category: general
     conversation_starters:
-      - Research current information on climate change
-      - Search for studies on renewable energy
-      - Compare reporting from different sources on a current topic
-      - Research the latest developments in solar power
+      - What can you do?
+      - Implement a feature or fix a bug in my project
+      - Analyze this CSV file and create a chart
+      - Create a professional PDF document
+      - Convert this file to another format
+      - Review a pull request or open an issue
+      - Research a topic and summarize the findings
+    # Single agent, long sessions, no router chain.
+    recursion_limit: 150
     handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
-      - agent: shared-agent-data-analysis
-        description: "Transfer to data analyst for statistical analysis, charts, or visualization of collected data"
-        prompt: "Summarize the research findings and describe what data analysis or visualization is needed"
-      - agent: shared-agent-document-creator
-        description: "Transfer to document creator for a professional report, summary, or PDF from research results"
-        prompt: "Summarize the research findings and describe what kind of document should be created"
-    recursion_limit: 50
+      - agent: shared-agent-faktencheck
+        description: "Transfer to Faktencheck Assistant for German fact-checks, verifying claims, or finding existing checks in Faktenforum"
+        prompt: "Summarize the claim or topic the user wants fact-checked"
+      - agent: shared-agent-travel-location
+        description: "Transfer to Travel and Location Assistant for route planning, maps, weather, POI search, or public transport"
+        prompt: "Summarize the travel or location query: origin, destination, preferences, or area of interest"
+      - agent: shared-agent-image-generation
+        description: "Transfer to Image Generation Assistant for creating AI-generated images from text descriptions"
+        prompt: "Describe the image: subject, style, mood, colors, and any specific requirements"
     isCollaborative: true
     permissions:
       public: true
       publicEdit: true
+
   - id: shared-agent-faktencheck
     name: Faktencheck Assistant
     description: Search and present German fact-checks from Faktenforum; verify claims and find existing checks
@@ -58,16 +149,14 @@ agents:
       - Welche Kategorien von Faktenchecks gibt es?
       - Zeig mir die Details zu einem bestimmten Faktencheck
     handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain (e.g. general research without fact-checks). Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
-      - agent: shared-agent-research
-        description: "Transfer to Research Assistant for broader research, web search, or when fact-check search is insufficient"
-        prompt: "Summarize what was found via fact-checks and what additional research is needed"
+      - agent: shared-agent-assistant
+        description: "Return to the Assistant when the request is outside fact-checking (e.g. general research, coding, documents). Do not hand back merely because the request is ambiguous; ask one short clarifying question or handle it within your role."
     recursion_limit: 25
     isCollaborative: false # Not yet public
     permissions:
       public: false # Not yet public
       publicEdit: false # Not yet public
+
   - id: shared-agent-image-generation
     name: Image Generation Assistant
     description: Creates images from text descriptions using AI image generation
@@ -92,13 +181,14 @@ agents:
       - Generate an abstract artwork
       - Create an image of a café in Paris
     handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
+      - agent: shared-agent-assistant
+        description: "Return to the Assistant when the request is outside image generation. Do not hand back merely because the request is ambiguous; ask one short clarifying question or handle it within your role."
     recursion_limit: 25
     isCollaborative: true
     permissions:
       public: true
       publicEdit: true
+
   - id: shared-agent-travel-location
     name: Travel and Location Assistant
     description: Helps with travel planning, location search, route planning and combines geographic information with weather data
@@ -157,915 +247,9 @@ agents:
       - Create a map with the route from Hamburg to Bremen
       - What will the weather be like tomorrow in Munich?
     handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
+      - agent: shared-agent-assistant
+        description: "Return to the Assistant when the request is outside travel and location (e.g. coding, documents, research). Do not hand back merely because the request is ambiguous; ask one short clarifying question or handle it within your role."
     recursion_limit: 40
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
-  # Developer domain: router + specialists. See docs/DEVELOPER_AGENTS.md.
-
-  - id: shared-agent-code-assistant
-    name: Code Assistant
-    description: Routes developer requests to the appropriate specialist - implementation, refactoring, GitHub, Code Review.
-    instructionsFile: shared-agent-code-assistant-instructions.md
-    provider: Scaleway
-    model: glm-5.2
-    model_parameters:
-      temperature: 0.3
-      top_p: 0.9
-      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
-    tools: []
-    mcpServers:
-      - linux
-    mcpTools:
-      - list_workspaces_mcp_linux
-      - create_workspace_mcp_linux
-      - delete_workspace_mcp_linux
-      - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
-    category: development
-    conversation_starters:
-      - I need help with a development project
-      - Which developer assistant fits my task?
-      - I want to have a PR reviewed
-      - Help me with debugging
-    handoffs:
-      - agent: shared-agent-developer
-        description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Describe what needs to be implemented or fixed, including repo URLs, language/framework, and requirements"
-      - agent: shared-agent-developer-quality
-        description: "Transfer to Developer (Claude Opus 4.8) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
-        prompt: "Describe what needs to be implemented or fixed, including repo URLs, language/framework, and requirements"
-      - agent: shared-agent-code-refactorer
-        description: "Transfer to Code Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Describe what code needs refactoring, the goals (readability, performance, structure), and the workspace/repo context"
-      - agent: shared-agent-github
-        description: "Transfer to GitHub assistant for PR creation, issue management, reviews posting, and repo operations"
-        prompt: "Describe the GitHub task: repo, PR/issue number, what action is needed"
-      - agent: shared-agent-code-reviewer
-        description: "Transfer to Code Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Provide the PR URL and any specific review focus areas"
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-    # Router→specialist + many tool steps; limit from first agent applies to whole run
-    recursion_limit: 120
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
-
-
-
-  - id: shared-agent-developer
-    name: Developer
-    description: Implements features and fixes bugs in the Linux workspace – full terminal and workspace access with Node.js, Python, Git.
-    instructionsFile: shared-agent-developer-instructions.md
-    provider: Scaleway
-    model: glm-5.2
-    model_parameters:
-      temperature: 0.5
-      top_p: 0.9
-      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
-    tools:
-      - web_search
-    mcpServers:
-      - linux
-      - github
-      - docs
-      - stackoverflow
-      - npm-search
-    mcpTools:
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - write_terminal_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
-      - list_workspaces_mcp_linux
-      - create_workspace_mcp_linux
-      - delete_workspace_mcp_linux
-      - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
-      - get_status_mcp_linux
-      - create_upload_session_mcp_linux
-      - list_upload_sessions_mcp_linux
-      - close_upload_session_mcp_linux
-      - create_download_link_mcp_linux
-      - list_download_links_mcp_linux
-      - close_download_link_mcp_linux
-      - read_workspace_file_mcp_linux
-      - list_workspace_files_mcp_linux
-      - codebase_search_mcp_linux
-      - get_code_index_status_mcp_linux
-      - search_code_mcp_github
-      - search_repositories_mcp_github
-      - search_issues_mcp_github
-      - search_pull_requests_mcp_github
-      - get_file_contents_mcp_github
-      - list_commits_mcp_github
-      - issue_read_mcp_github
-      - pull_request_read_mcp_github
-      - get_latest_release_mcp_github
-      - get_release_by_tag_mcp_github
-      - list_branches_mcp_github
-      - list_tags_mcp_github
-      - get_commit_mcp_github
-      - scrape_docs_mcp_docs
-      - search_docs_mcp_docs
-      - list_libraries_mcp_docs
-      - list_jobs_mcp_docs
-      - get_job_info_mcp_docs
-      - fetch_url_mcp_docs
-      - refresh_version_mcp_docs
-      - find_version_mcp_docs
-      - remove_docs_mcp_docs
-      - cancel_job_mcp_docs
-      - search_by_error_mcp_stackoverflow
-      - search_by_tags_mcp_stackoverflow
-      - analyze_stack_trace_mcp_stackoverflow
-      - search_npm_packages_mcp_npm-search
-    category: development
-    conversation_starters:
-      - Implement a new feature in my project
-      - Fix this bug in my code
-      - Clone a repository and set up the project
-      - Create a new Python project with tests
-      - Run a Node.js script and show the output
-      - I have an error in my code, can you help?
-      - Search for npm packages for form validation
-      - Show me example code for React Hooks
-      - Search Stack Overflow for solutions to TypeScript type errors
-      - Search documentation for Vue
-      - Index new library documentation
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-      - agent: shared-agent-github
-        description: "Transfer to GitHub assistant for creating PRs, opening issues, or posting reviews"
-        prompt: "Include workspace name (e.g. ai-chat-interface), repo, branch, and what was implemented or what action is needed"
-      - agent: shared-agent-code-refactorer
-        description: "Transfer to Code Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
-    # Dev: implement/fix, many file and terminal ops
-    recursion_limit: 120
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
-
-  - id: shared-agent-developer-quality
-    name: Developer (Claude Opus 4.8)
-    description: Implements features and fixes bugs in the Linux workspace – full terminal and workspace access with Node.js, Python, Git. Quality variant (OpenRouter).
-    instructionsFile: shared-agent-developer-instructions.md
-    provider: OpenRouter
-    model: anthropic/claude-opus-4.8
-    model_parameters:
-      temperature: 0.5
-      top_p: 0.9
-      maxContextTokens: 1000000   # Claude Opus 4.8
-      maxOutputTokens: 128000
-    tools:
-      - web_search
-    mcpServers:
-      - linux
-      - github
-      - docs
-      - stackoverflow
-      - npm-search
-    mcpTools:
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - write_terminal_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
-      - list_workspaces_mcp_linux
-      - create_workspace_mcp_linux
-      - delete_workspace_mcp_linux
-      - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
-      - get_status_mcp_linux
-      - create_upload_session_mcp_linux
-      - list_upload_sessions_mcp_linux
-      - close_upload_session_mcp_linux
-      - create_download_link_mcp_linux
-      - list_download_links_mcp_linux
-      - close_download_link_mcp_linux
-      - read_workspace_file_mcp_linux
-      - list_workspace_files_mcp_linux
-      - codebase_search_mcp_linux
-      - get_code_index_status_mcp_linux
-      - search_code_mcp_github
-      - search_repositories_mcp_github
-      - search_issues_mcp_github
-      - search_pull_requests_mcp_github
-      - get_file_contents_mcp_github
-      - list_commits_mcp_github
-      - issue_read_mcp_github
-      - pull_request_read_mcp_github
-      - get_latest_release_mcp_github
-      - get_release_by_tag_mcp_github
-      - list_branches_mcp_github
-      - list_tags_mcp_github
-      - get_commit_mcp_github
-      - scrape_docs_mcp_docs
-      - search_docs_mcp_docs
-      - list_libraries_mcp_docs
-      - list_jobs_mcp_docs
-      - get_job_info_mcp_docs
-      - fetch_url_mcp_docs
-      - refresh_version_mcp_docs
-      - find_version_mcp_docs
-      - remove_docs_mcp_docs
-      - cancel_job_mcp_docs
-      - search_by_error_mcp_stackoverflow
-      - search_by_tags_mcp_stackoverflow
-      - analyze_stack_trace_mcp_stackoverflow
-      - search_npm_packages_mcp_npm-search
-    category: development
-    conversation_starters:
-      - Implement a new feature in my project
-      - Fix this bug in my code
-      - Clone a repository and set up the project
-      - Create a new Python project with tests
-      - Run a Node.js script and show the output
-      - I have an error in my code, can you help?
-      - Search for npm packages for form validation
-      - Show me example code for React Hooks
-      - Search Stack Overflow for solutions to TypeScript type errors
-      - Search documentation for Vue
-      - Index new library documentation
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-      - agent: shared-agent-github
-        description: "Transfer to GitHub assistant for creating PRs, opening issues, or posting reviews"
-        prompt: "Include workspace name (e.g. ai-chat-interface), repo, branch, and what was implemented or what action is needed"
-      - agent: shared-agent-code-refactorer
-        description: "Transfer to Code Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Summarize what was implemented and which parts should be refactored (readability, structure, tests, style)"
-    recursion_limit: 80
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
-
-  - id: shared-agent-code-refactorer
-    name: Code Refactorer
-    description: Refactoring and optimization of code – structure, style, tests, readability. Full Linux workspace access.
-    instructionsFile: shared-agent-code-refactorer-instructions.md
-    provider: Scaleway
-    model: glm-5.2
-    model_parameters:
-      temperature: 0.4
-      top_p: 0.9
-      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
-    tools:
-      - web_search
-    mcpServers:
-      - linux
-      - github
-    mcpTools:
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - write_terminal_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
-      - list_workspaces_mcp_linux
-      - create_workspace_mcp_linux
-      - delete_workspace_mcp_linux
-      - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
-      - get_status_mcp_linux
-      - create_upload_session_mcp_linux
-      - list_upload_sessions_mcp_linux
-      - close_upload_session_mcp_linux
-      - create_download_link_mcp_linux
-      - list_download_links_mcp_linux
-      - close_download_link_mcp_linux
-      - read_workspace_file_mcp_linux
-      - list_workspace_files_mcp_linux
-      - codebase_search_mcp_linux
-      - get_code_index_status_mcp_linux
-      - search_code_mcp_github
-      - search_repositories_mcp_github
-      - get_file_contents_mcp_github
-      - issue_read_mcp_github
-      - pull_request_read_mcp_github
-      - list_commits_mcp_github
-      - list_branches_mcp_github
-      - get_commit_mcp_github
-    category: development
-    conversation_starters:
-      - Refactor this code for better readability
-      - Improve the structure of my project
-      - Extract reusable functions
-      - Add tests to this module
-      - Reduce the complexity of this function
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-      - agent: shared-agent-github
-        description: "Transfer to GitHub assistant for creating a PR with the refactored code"
-        prompt: "Describe the refactoring changes and the PR that should be created"
-      - agent: shared-agent-developer
-        description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Describe what needs to be implemented (e.g. missing tests, new logic) and the workspace/repo context"
-      - agent: shared-agent-developer-quality
-        description: "Transfer to Developer (Claude Opus 4.8) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
-        prompt: "Describe what needs to be implemented (e.g. missing tests, new logic) and the workspace/repo context"
-      - agent: shared-agent-code-reviewer
-        description: "Transfer to Code Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Include the workspace name you are using, the PR URL, and that the user wants the review comments read and the mentioned issues fixed"
-    # Dev: refactor, tests, many file reads
-    recursion_limit: 100
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
-
-  - id: shared-agent-github
-    name: GitHub Assistant
-    description: GitHub operations – read and manage repositories, issues, pull requests. Uses GitHub MCP and Linux terminal for Git commands.
-    instructionsFile: shared-agent-github-instructions.md
-    provider: Scaleway
-    model: devstral-2-123b-instruct-2512
-    model_parameters:
-      temperature: 0.5
-      top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
-    tools: []
-    mcpServers:
-      - github
-      - linux
-    # GitHub MCP: read/list + write (issues, PRs, review, branch, file, repo, Copilot). Names _mcp_github; unknown tools ignored.
-    mcpTools:
-      - search_code_mcp_github
-      - search_repositories_mcp_github
-      - search_issues_mcp_github
-      - search_pull_requests_mcp_github
-      - search_users_mcp_github
-      - get_file_contents_mcp_github
-      - get_commit_mcp_github
-      - get_latest_release_mcp_github
-      - get_release_by_tag_mcp_github
-      - get_label_mcp_github
-      - get_me_mcp_github
-      - issue_read_mcp_github
-      - pull_request_read_mcp_github
-      - list_commits_mcp_github
-      - list_branches_mcp_github
-      - list_tags_mcp_github
-      - list_pull_requests_mcp_github
-      - list_issues_mcp_github
-      - list_releases_mcp_github
-      - list_issue_types_mcp_github
-      - create_issue_mcp_github
-      - create_pull_request_mcp_github
-      - create_review_mcp_github
-      - pull_request_review_write_mcp_github
-      - add_comment_to_pending_review_mcp_github
-      - add_issue_comment_mcp_github
-      - issue_write_mcp_github
-      - update_pull_request_mcp_github
-      - update_pull_request_branch_mcp_github
-      - create_branch_mcp_github
-      - merge_pull_request_mcp_github
-      - create_or_update_file_mcp_github
-      - delete_file_mcp_github
-      - push_files_mcp_github
-      - fork_repository_mcp_github
-      - create_repository_mcp_github
-      - assign_copilot_to_issue_mcp_github
-      - request_copilot_review_mcp_github
-      - sub_issue_write_mcp_github
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - list_workspaces_mcp_linux
-      - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
-      - read_workspace_file_mcp_linux
-      - list_workspace_files_mcp_linux
-      - codebase_search_mcp_linux
-      - get_code_index_status_mcp_linux
-      - create_download_link_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
-    category: development
-    conversation_starters:
-      - Show me the open PRs in this repository
-      - Search for issues on a specific topic
-      - Create a pull request for my changes
-      - Review this pull request on GitHub
-      - Show me the latest commits in a repository
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-      - agent: shared-agent-developer
-        description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Describe what needs to be implemented based on the GitHub context"
-      - agent: shared-agent-developer-quality
-        description: "Transfer to Developer (Claude Opus 4.8) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
-        prompt: "Describe what needs to be implemented based on the GitHub context"
-      - agent: shared-agent-code-refactorer
-        description: "Transfer to Code Refactorer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Describe the code that needs refactoring"
-      - agent: shared-agent-code-reviewer
-        description: "Transfer to Code Reviewer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Provide the PR URL and context for review"
-    # Dev: GitHub API + git, many file/API ops
-    recursion_limit: 100
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
-
-  - id: shared-agent-code-reviewer
-    name: Code Reviewer
-    description: Analyzes pull requests – clones the repo, checks the diff, reads the codebase and creates a structured review. Posts the review via the GitHub Assistant if needed.
-    instructionsFile: shared-agent-code-reviewer-instructions.md
-    provider: Scaleway
-    model: glm-5.2
-    model_parameters:
-      temperature: 0.4
-      top_p: 0.9
-      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
-    tools: []
-    mcpServers:
-      - linux
-      - github
-    mcpTools:
-      - list_workspaces_mcp_linux
-      - create_workspace_mcp_linux
-      - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - read_workspace_file_mcp_linux
-      - list_workspace_files_mcp_linux
-      - codebase_search_mcp_linux
-      - get_code_index_status_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
-      - get_status_mcp_linux
-      - pull_request_read_mcp_github
-      - get_file_contents_mcp_github
-      - list_commits_mcp_github
-      - get_commit_mcp_github
-      - list_branches_mcp_github
-      - search_code_mcp_github
-      - search_repositories_mcp_github
-    category: development
-    conversation_starters:
-      - "Review this PR: https://github.com/..."
-      - Analyze the changes in this pull request
-      - Check the diff and code quality of this PR
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-      - agent: shared-agent-github
-        description: "Transfer to GitHub assistant to post the review on the PR (only when the user requested posting)"
-        prompt: "Include the workspace name you are using, the review body, and any inline comments for the PR."
-      - agent: shared-agent-developer
-        description: "Transfer to Developer (default, OpenSource). Prefer this unless the user emphasizes quality or a previous attempt with the default failed."
-        prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
-      - agent: shared-agent-developer-quality
-        description: "Transfer to Developer (Claude Opus 4.8) when the user explicitly asks for higher quality or when the default Developer could not fulfill the task."
-        prompt: "Include the workspace name you are using and the issues found in the PR review that need to be fixed"
-    # Dev: PR review — file reads, diff, GitHub API, push
-    recursion_limit: 100
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
-
-  - id: shared-agent-feedback
-    name: Feedback Assistant
-    description: Reports errors in the chat interface – understands error descriptions, prepares them and creates a GitHub issue.
-    instructionsFile: shared-agent-feedback-instructions.md
-    provider: Scaleway
-    model: mistral-small-3.2-24b-instruct-2506
-    model_parameters:
-      temperature: 0.4
-      top_p: 0.9
-      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
-    tools:
-      - web_search
-    mcpServers:
-      - linux
-    mcpTools:
-      - list_workspaces_mcp_linux
-      - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
-    category: general
-    conversation_starters:
-      - I want to report an error in the chat
-      - Something went wrong with the last call – here's the description
-      - How can I report a bug?
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only for non-development tasks. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or handle within your dev role."
-      - agent: shared-agent-github
-        description: "Create the issue with prepared title and body (English)"
-        prompt: "workspace: feedback — call `get_workspaces('feedback')` to read issue details from the plan, then create the issue via `create_issue_mcp_github(owner='faktenforum', repo='ai-chat-interface', title=..., body=...)` using title and body from the plan (English). If the plan contains structured issue details, use those. Otherwise, use the title and body provided in this handoff instructions. Do not pass German text for title/body."
-      - agent: shared-agent-developer
-        description: "Primary path: Developer researches bug (find duplicates, analyze code) in faktenforum/ai-chat-interface before issue creation. Prefer this unless the user emphasizes quality or a previous attempt failed."
-        prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code, and propose fixes; after research follow plan to hand off to GitHub Assistant"
-      - agent: shared-agent-developer-quality
-        description: "Use Developer (Claude Opus 4.8) when the user explicitly asks for higher quality or when the default Developer could not fulfill the research task."
-        prompt: "workspace: feedback — read plan for structured issue details; search GitHub issues for duplicates, analyze relevant code, and propose fixes; after research follow plan to hand off to GitHub Assistant"
-      - agent: shared-agent-code-assistant
-        description: "User wants to fix the bug, not only report. Transfer to Code Assistant."
-        prompt: "workspace: feedback — call `get_workspaces('feedback')` to read bug details from the plan. User wants to fix the reported bug in faktenforum/ai-chat-interface. Summarize error, steps to reproduce, expected vs actual behavior, and what needs to be fixed (debug, implement fix). Pass workspace name and relevant context from the plan to the appropriate developer specialist."
-    recursion_limit: 50
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
-
-  # Video Transcripts: public false until server-side access is reliable (proxy/geo). See docs/wip/YTPTUBE_FUTURE_WORK.md.
-  # Model: devstral-2-123b has 200K context to handle large cookie pastes.
-  - id: shared-agent-video-transcripts
-    name: Video Transcripts
-    description: Transcripts, metadata, thumbnails and download links for video URLs (YouTube, Instagram, TikTok, etc.).
-    instructionsFile: shared-agent-video-transcripts-instructions.md
-    provider: Scaleway
-    model: devstral-2-123b-instruct-2512
-    model_parameters:
-      temperature: 0.5
-      top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
-    tools: []
-    mcpServers:
-      - ytptube
-    mcpTools:
-      - request_transcript_mcp_ytptube
-      - get_status_mcp_ytptube
-      - request_download_link_mcp_ytptube
-      - transcribe_audio_url_mcp_ytptube
-      - list_recent_downloads_mcp_ytptube
-      - get_media_info_mcp_ytptube
-      - get_thumbnail_url_mcp_ytptube
-      - get_logs_mcp_ytptube
-      - get_system_configuration_mcp_ytptube
-      - get_history_item_mcp_ytptube
-    category: general
-    conversation_starters:
-      - "Transcribe this video: https://www.youtube.com/watch?v=jNQXAC9IVRw"
-      - Show me the recent downloads
-      - "Video info for https://www.dailymotion.com/video/xczg00"
-      - "Thumbnail for https://vimeo.com/76979871"
-      - "Status for this video: https://www.pbs.org/video/how-fantasy-reflects-our-world-picecq/"
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
-      - agent: shared-agent-file-converter
-        description: "Transfer to file converter for converting downloaded audio/video to another format, or for splitting large audio/video files (>25MB) into smaller chunks for transcription"
-        prompt: "If file is too large for transcription (>25MB): Video/Audio file is too large for transcription (>25MB). Download URL: [URL]. Please convert to audio and split into chunks of max 25MB. Return the download links. Otherwise: Describe the media file (format, source URL, workspace path if downloaded) and the desired output format"
-    recursion_limit: 40
-    isCollaborative: false
-    permissions:
-      public: false
-      publicEdit: false
-  - id: shared-agent-cooking
-    name: Cooking Assistant
-    description: Helps with cooking – suggests recipes, inspiration for meals, ingredients and preparation, plus general cooking questions.
-    instructionsFile: shared-agent-cooking-instructions.md
-    provider: Scaleway
-    model: devstral-2-123b-instruct-2512
-    model_parameters:
-      temperature: 0.6
-      top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
-    tools:
-      - web_search
-    mcpServers:
-      - chefkoch
-      - calculator
-      - weather
-      - image-gen
-    mcpTools:
-      - get_recipe_mcp_chefkoch
-      - search_recipes_mcp_chefkoch
-      - get_random_recipe_mcp_chefkoch
-      - get_daily_recipes_mcp_chefkoch
-      - add_mcp_calculator
-      - subtract_mcp_calculator
-      - multiply_mcp_calculator
-      - divide_mcp_calculator
-      - get_current_weather_mcp_weather
-      - get_weather_byDateTimeRange_mcp_weather
-      - get_weather_details_mcp_weather
-      - get_air_quality_mcp_weather
-      - get_air_quality_details_mcp_weather
-      - get_current_datetime_mcp_weather
-      - get_timezone_info_mcp_weather
-      - convert_time_mcp_weather
-      - generate_image_mcp_image-gen
-      - list_models_mcp_image-gen
-      - check_model_mcp_image-gen
-    category: productivity
-    conversation_starters:
-      - Suggest recipes for tonight
-      - I need inspiration for the weekend – what to cook?
-      - How do I replace eggs in cake?
-      - Recipes under 30 minutes with good ratings
-      - Simple recipes for beginners
-      - What is tasting and how do I do it?
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
-    recursion_limit: 40
-    isCollaborative: false
-    permissions:
-      public: true
-      publicEdit: true
-  - id: shared-agent-data-analysis
-    name: Data Analysis
-    description: Analyzes data from CSV, JSON and other formats – filters, transforms, visualizes (charts) and summarizes. Files via upload; charts are displayed as images in the chat.
-    instructionsFile: shared-agent-data-analysis-instructions.md
-    provider: Scaleway
-    model: glm-5.2
-    model_parameters:
-      temperature: 0.4
-      top_p: 0.9
-      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
-    tools:
-      - web_search
-    mcpServers:
-      - linux
-    mcpTools:
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - write_terminal_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
-      - list_workspaces_mcp_linux
-      - create_workspace_mcp_linux
-      - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
-      - get_status_mcp_linux
-      - create_upload_session_mcp_linux
-      - list_upload_sessions_mcp_linux
-      - close_upload_session_mcp_linux
-      - create_download_link_mcp_linux
-      - list_download_links_mcp_linux
-      - close_download_link_mcp_linux
-      - read_workspace_file_mcp_linux
-      - list_workspace_files_mcp_linux
-      - codebase_search_mcp_linux
-      - get_code_index_status_mcp_linux
-    category: productivity
-    conversation_starters:
-      - I have a CSV file that I want to filter
-      - Create a chart from my CSV file
-      - Analyze this JSON data for me
-      - Help me remove duplicates from a table
-      - Summarize the key metrics from my data
-      - Convert this data from CSV to JSON
-      - Create statistics from my file
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
-      - agent: shared-agent-document-creator
-        description: "Transfer to document creator for a professional report or PDF from analysis results"
-        prompt: "Summarize the analysis results, key findings, and describe what kind of report or document should be created"
-    recursion_limit: 75
-    isCollaborative: false
-    permissions:
-      public: true
-      publicEdit: true
-  - id: shared-agent-file-converter
-    name: File Converter
-    description: Converts images, audio, video and documents between formats – ImageMagick, FFmpeg, Pandoc. Result directly in chat or as download.
-    instructionsFile: shared-agent-file-converter-instructions.md
-    provider: Scaleway
-    model: mistral-small-3.2-24b-instruct-2506
-    model_parameters:
-      temperature: 0.4
-      top_p: 0.9
-      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
-    mcpServers:
-      - linux
-    mcpTools:
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - write_terminal_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
-      - list_workspaces_mcp_linux
-      - create_workspace_mcp_linux
-      - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
-      - get_status_mcp_linux
-      - create_upload_session_mcp_linux
-      - list_upload_sessions_mcp_linux
-      - close_upload_session_mcp_linux
-      - create_download_link_mcp_linux
-      - list_download_links_mcp_linux
-      - close_download_link_mcp_linux
-      - read_workspace_file_mcp_linux
-      - list_workspace_files_mcp_linux
-      - codebase_search_mcp_linux
-      - get_code_index_status_mcp_linux
-    category: productivity
-    conversation_starters:
-      - Convert my PNG to WEBP
-      - Convert an MP4 to MP3
-      - Convert Markdown to HTML
-      - Change the resolution of my video
-      - Convert WAV to FLAC
-      - Convert my document to another format
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
-    recursion_limit: 50
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
-  - id: shared-agent-document-creator
-    name: Document Creator
-    description: Creates professional documents – letters, reports, invoices, CVs, templates. Generates PDF (Typst) or editable formats (ODT/DOCX via Pandoc). Result as download.
-    instructionsFile: shared-agent-document-creator-instructions.md
-    provider: Scaleway
-    model: glm-5.2
-    model_parameters:
-      temperature: 0.5
-      top_p: 0.9
-      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
-    mcpServers:
-      - linux
-    mcpTools:
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - write_terminal_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
-      - list_workspaces_mcp_linux
-      - create_workspace_mcp_linux
-      - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
-      - get_status_mcp_linux
-      - create_upload_session_mcp_linux
-      - list_upload_sessions_mcp_linux
-      - close_upload_session_mcp_linux
-      - create_download_link_mcp_linux
-      - list_download_links_mcp_linux
-      - close_download_link_mcp_linux
-      - read_workspace_file_mcp_linux
-      - list_workspace_files_mcp_linux
-      - codebase_search_mcp_linux
-      - get_code_index_status_mcp_linux
-    category: productivity
-    conversation_starters:
-      - Write a formal letter to ...
-      - Create a report about ...
-      - Create an invoice
-      - Write my CV
-      - Create a PDF document with ...
-      - Create a template for business letters
-      - Convert my text to a professional PDF
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant only when: the user explicitly asks for a different assistant, or your task is complete and they want something else, or the request is clearly outside your domain. Do not hand back merely because the request is ambiguous; then ask one short clarifying question or do a reasonable interpretation within your role."
-      - agent: shared-agent-file-converter
-        description: "Transfer to file converter for converting the created document to another format (e.g. PDF to image, audio extraction)"
-        prompt: "Describe the document (file path in workspace, format) and the desired output format for conversion"
-      - agent: shared-agent-code-assistant
-        description: "Transfer to Code Assistant when Typst compilation fails repeatedly (after 2-3 fix attempts) or when encountering complex syntax issues that require deeper debugging. Include workspace name and compilation error details."
-        prompt: "Summarize the Typst compilation errors encountered, what fixes were attempted, and include the workspace name where the document source file is located"
-    recursion_limit: 75
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
-  - id: shared-agent-linux-expert
-    name: Linux Expert
-    description: >-
-      General Linux assistant with full MCP Linux access – shell, scripts, files, workspaces.
-      Additionally maintenance: status, cleanup, reset account.
-      No code implementation or document creation – hand off to Developer or Document Creator for those.
-    instructionsFile: shared-agent-linux-expert-instructions.md
-    provider: Scaleway
-    model: devstral-2-123b-instruct-2512
-    model_parameters:
-      temperature: 0.3
-      top_p: 0.9
-      maxContextTokens: 200000   # Devstral 2 123B; Scaleway has no endpointTokenConfig
-    mcpServers:
-      - linux
-    mcpTools:
-      - list_workspaces_mcp_linux
-      - create_workspace_mcp_linux
-      - delete_workspace_mcp_linux
-      - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
-      - get_status_mcp_linux
-      - reset_account_mcp_linux
-      - list_upload_sessions_mcp_linux
-      - close_upload_session_mcp_linux
-      - create_upload_session_mcp_linux
-      - list_download_links_mcp_linux
-      - close_download_link_mcp_linux
-      - create_download_link_mcp_linux
-      - clean_workspace_uploads_mcp_linux
-      - execute_command_mcp_linux
-      - read_terminal_output_mcp_linux
-      - write_terminal_mcp_linux
-      - list_terminals_mcp_linux
-      - kill_terminal_mcp_linux
-      - read_workspace_file_mcp_linux
-      - list_workspace_files_mcp_linux
-      - codebase_search_mcp_linux
-      - get_code_index_status_mcp_linux
-    category: productivity
-    conversation_starters:
-      - How do I create a backup with tar?
-      - Show account status
-      - Explain the find command with -exec
-      - Clean up old uploads
-      - Shell script for file renaming
-    handoffs:
-      - agent: shared-agent-main-assistant
-        description: "Return to Main Assistant when task is done or request is outside Linux/maintenance (e.g. coding, document creation, research). Do not hand back merely because the request is ambiguous; ask one short clarifying question."
-      - agent: shared-agent-code-assistant
-        description: "Transfer to Code Assistant when user needs code implementation, bug fixes, or feature development"
-        prompt: "Summarize the Linux context and what coding/implementation is needed"
-      - agent: shared-agent-data-analysis
-        description: "Transfer to data analyst for CSV/JSON analysis, charts, or data visualization"
-        prompt: "Describe the data analysis task; include workspace and file path if relevant"
-      - agent: shared-agent-file-converter
-        description: "Transfer to file converter for format conversion (image, audio, video, document)"
-        prompt: "Describe source/target format and file path in workspace"
-      - agent: shared-agent-document-creator
-        description: "Transfer to document creator for PDFs, letters, reports, or CVs"
-        prompt: "Describe the document to create"
-    recursion_limit: 50
-    isCollaborative: true
-    permissions:
-      public: true
-      publicEdit: true
-  - id: shared-agent-main-assistant
-    name: Main Assistant
-    description: General assistant – automatically recognizes which specialist best fits and routes the request.
-    instructionsFile: shared-agent-main-assistant-instructions.md
-    provider: Scaleway
-    model: mistral-small-3.2-24b-instruct-2506
-    vision: true
-    model_parameters:
-      temperature: 0.3
-      top_p: 0.9
-      maxContextTokens: 128000   # Mistral Small 3.2 24B; Scaleway has no endpointTokenConfig
-    # Global limit for whole run (e.g. Main Assistant→Code Assistant→specialist). 200 allows long PR review and multi-step dev chains.
-    recursion_limit: 100
-    tools:
-      - web_search
-      - file_search
-    mcpServers:
-      - linux
-    mcpTools:
-      - list_workspaces_mcp_linux
-      - list_upload_sessions_mcp_linux
-      - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
-      - create_upload_session_mcp_linux
-    handoffs:
-      - agent: shared-agent-research
-        description: "Transfer to research assistant for fact-finding, information gathering, and web research"
-        prompt: "Summarize what the user wants researched, including specific topics, questions, or sources to check"
-      - agent: shared-agent-image-generation
-        description: "Transfer to image generator for creating AI-generated images from text descriptions"
-        prompt: "Describe the image the user wants: subject, style, mood, colors, and any specific requirements"
-      - agent: shared-agent-travel-location
-        description: "Transfer to travel and location assistant for route planning, maps, weather, POI search, and public transport"
-        prompt: "Summarize the user's travel or location query, including origin, destination, preferences, or area of interest"
-      - agent: shared-agent-code-assistant
-        description: "Transfer to Code Assistant for all development tasks: coding, debugging, implementation, refactoring, GitHub operations, PR reviews"
-        prompt: "Summarize the user's development request, including language/framework, error messages, repo URLs, or what they're trying to achieve"
-      - agent: shared-agent-feedback
-        description: "Transfer to feedback assistant for reporting bugs or errors in the chat interface (prepare and create GitHub issue)"
-        prompt: "The user wants to report a bug or error in the chat interface; include their description and any details they gave"
-      - agent: shared-agent-cooking
-        description: "Transfer to cooking assistant for recipes, meal inspiration, cooking tips, and ingredient substitutions"
-        prompt: "Describe what cooking help the user needs: recipe type, ingredients, dietary requirements, or cooking question"
-      - agent: shared-agent-data-analysis
-        description: "Transfer to data analyst for CSV/JSON analysis, charts, data visualization; they will provide an upload link for the user's file (MCP Linux) if needed"
-        prompt: "Describe the data analysis task: user has or will upload data; analyst will provide upload link and then analyze/visualize"
-      - agent: shared-agent-file-converter
-        description: "Transfer to file converter for image, audio, video, and document format conversion (ImageMagick, FFmpeg, Pandoc)"
-        prompt: "Describe the conversion needed: source format, target format, and any quality or size requirements"
-      - agent: shared-agent-document-creator
-        description: "Transfer to document creator for professional PDFs, letters, reports, invoices, and CVs (Typst/Pandoc)"
-        prompt: "Describe the document the user wants: type (letter, report, invoice, CV), content, style, and language"
-      - agent: shared-agent-linux-expert
-        description: "Transfer to Linux expert for general Linux help, shell commands, scripts, or MCP Linux account/workspace management: status, cleanup, reset, session and workspace administration"
-        prompt: "Summarize what the user wants: e.g. Linux/shell question, script help, reset account, clean uploads, delete workspace, check disk usage, close stale sessions"
-    category: general
-    conversation_starters:
-      - I need help with ...
-      - What can you do?
-      - Which assistant fits my task?
     isCollaborative: true
     permissions:
       public: true
