@@ -70,3 +70,7 @@
 [submodule "dev/codebase-indexer"]
 	path = dev/codebase-indexer
 	url = git@github.com:faktenforum/codebase-indexer.git
+[submodule "refs/opencode"]
+	path = refs/opencode
+	url = https://github.com/anomalyco/opencode.git
+	branch = dev
