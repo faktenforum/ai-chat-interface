@@ -25,12 +25,54 @@ function rows(cells: string[][]): string {
   return cells.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('');
 }
 
-function enforceStrip(mode: EnforceMode, e: EnforceState): string {
+const STYLES = `
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 1.5rem; background: #0b0f14; color: #e5e7eb; }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+  h1 { font-size: 1.1rem; font-weight: 600; color: #9ca3af; margin: 0 0 1rem; }
+  .banner { border-radius: 10px; padding: 1.25rem 1.5rem; }
+  .level { font-size: 0.8rem; letter-spacing: 0.08em; opacity: 0.9; }
+  .headline { font-size: 2rem; font-weight: 700; margin: 0.25rem 0; }
+  .sub { font-size: 0.9rem; opacity: 0.9; }
+  .bar { height: 8px; background: rgba(255,255,255,0.2); border-radius: 999px; margin-top: 0.9rem; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: rgba(255,255,255,0.85); }
+  .enforce { border-radius: 10px; padding: 0.8rem 1.1rem; margin-top: 1rem; font-size: 0.9rem; }
+  .enforce.active { background: #7f1d1d; color: #fee2e2; }
+  .enforce.armed { background: #1f2937; color: #9ca3af; }
+  .btn { background: #fee2e2; color: #7f1d1d; border: 0; border-radius: 6px; padding: 0.35rem 0.7rem; font-weight: 600; cursor: pointer; }
+  .btn.ghost { background: #1f2937; color: #d1d5db; }
+  .enforce .btn { margin-left: 0.6rem; }
+  table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #1f2937; }
+  td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  section { margin-top: 1.75rem; }
+  section h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin: 0 0 0.3rem; }
+  footer { margin-top: 2rem; font-size: 0.78rem; color: #6b7280; }
+  code { color: #93c5fd; }
+`;
+
+/** Posts iframe size and forwards tool actions. Used only by the MCP variant. */
+const MCP_JS = `
+(function(){
+  function post(){var b=document.body?document.body.scrollHeight:0;window.parent.postMessage({type:'ui-size-change',payload:{width:document.documentElement.scrollWidth,height:Math.max(document.documentElement.scrollHeight,b)}},'*');}
+  if(window.ResizeObserver){var ro=new ResizeObserver(post);ro.observe(document.documentElement);if(document.body)ro.observe(document.body);}
+  window.addEventListener('load',post);window.addEventListener('resize',post);setTimeout(post,60);post();
+})();
+function uiTool(name,params,confirmMsg){if(confirmMsg&&!window.confirm(confirmMsg))return;window.parent.postMessage({type:'tool',payload:{toolName:name,params:params||{}}},'*');}`;
+
+type Variant = 'hosted' | 'mcp';
+
+function enforceStrip(mode: EnforceMode, e: EnforceState, variant: Variant): string {
   if (e.active) {
     const dry = mode === 'dry-run' ? ' (DRY-RUN)' : '';
+    const restore =
+      variant === 'mcp'
+        ? `<button class="btn" onclick="uiTool('restore_balances',{confirm:true},'Restore all balances and lift the spending freeze?')">Restore balances</button>`
+        : `<button class="btn" onclick="if(confirm('Restore all balances and lift the spending freeze?')){this.disabled=true;fetch('/restore',{method:'POST'}).then(()=>location.reload())}">Restore balances</button>`;
     return `<div class="enforce active">
       <strong>&#9940; Enforcement active${dry}</strong> &mdash; all user balances zeroed since <code>${esc(e.since ?? '')}</code>. ${esc(e.reason ?? '')}
-      <button onclick="if(confirm('Restore all balances and lift the spending freeze?')){this.disabled=true;fetch('/restore',{method:'POST'}).then(()=>location.reload())}">Restore balances</button>
+      ${restore}
     </div>`;
   }
   if (e.overridePeriodStart != null) {
@@ -42,10 +84,12 @@ function enforceStrip(mode: EnforceMode, e: EnforceState): string {
   return '';
 }
 
-export function renderPage(
+/** Renders the shared dashboard body (banner, enforcement, tables, footer). */
+function dashboardBody(
   s: Snapshot,
   mode: EnforceMode,
   enforcement: EnforceState,
+  variant: Variant,
   pollSeconds: number,
 ): string {
   const c = COLORS[s.level];
@@ -59,48 +103,23 @@ export function renderPage(
   const modelRows = rows(s.byModel.slice(0, 20).map((m) => [esc(m.model), m.provider, usd(m.usd)]));
   const userRows = rows(s.topUsers.map((u) => [esc(u.user), usd(u.usd)]));
 
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta http-equiv="refresh" content="${pollSeconds}" />
-<title>LibreChat spend monitor</title>
-<style>
-  :root { color-scheme: light dark; }
-  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 1.5rem; background: #0b0f14; color: #e5e7eb; }
-  .wrap { max-width: 880px; margin: 0 auto; }
-  h1 { font-size: 1.1rem; font-weight: 600; color: #9ca3af; margin: 0 0 1rem; }
-  .banner { background: ${c.bg}; color: ${c.fg}; border-radius: 10px; padding: 1.25rem 1.5rem; }
-  .level { font-size: 0.8rem; letter-spacing: 0.08em; opacity: 0.9; }
-  .headline { font-size: 2rem; font-weight: 700; margin: 0.25rem 0; }
-  .sub { font-size: 0.9rem; opacity: 0.9; }
-  .bar { height: 8px; background: rgba(255,255,255,0.2); border-radius: 999px; margin-top: 0.9rem; overflow: hidden; }
-  .bar > span { display: block; height: 100%; width: ${barWidth}%; background: rgba(255,255,255,0.85); }
-  .enforce { border-radius: 10px; padding: 0.8rem 1.1rem; margin-top: 1rem; font-size: 0.9rem; }
-  .enforce.active { background: #7f1d1d; color: #fee2e2; }
-  .enforce.armed { background: #1f2937; color: #9ca3af; }
-  .enforce button { margin-left: 0.6rem; background: #fee2e2; color: #7f1d1d; border: 0; border-radius: 6px; padding: 0.35rem 0.7rem; font-weight: 600; cursor: pointer; }
-  table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.9rem; }
-  th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #1f2937; }
-  td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
-  section { margin-top: 1.75rem; }
-  section h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin: 0 0 0.3rem; }
-  footer { margin-top: 2rem; font-size: 0.78rem; color: #6b7280; }
-  code { color: #93c5fd; }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <h1>LibreChat &mdash; org spend monitor</h1>
-  <div class="banner">
+  const heading =
+    variant === 'mcp'
+      ? `<div class="top"><h1>LibreChat &mdash; org spend monitor</h1><button class="btn ghost" onclick="uiTool('get_usage_report',{})">Refresh</button></div>`
+      : `<h1>LibreChat &mdash; org spend monitor</h1>`;
+
+  const refreshNote =
+    variant === 'mcp' ? 'use the Refresh button' : `auto-refresh ${pollSeconds}s`;
+
+  return `${heading}
+  <div class="banner" style="background:${c.bg};color:${c.fg}">
     <div class="level">${c.label} &middot; ${pct}% of budget</div>
     <div class="headline">${usd(s.spentUsd)} <span style="opacity:.6;font-size:1.2rem">/ ${usd(s.budgetUsd)}</span></div>
     <div class="sub">${eur(s.eur.spent)} / ${eur(s.eur.budget)} &middot; period: ${s.period}</div>
-    <div class="bar"><span></span></div>
+    <div class="bar"><span style="width:${barWidth}%"></span></div>
   </div>
 
-  ${enforceStrip(mode, enforcement)}
+  ${enforceStrip(mode, enforcement, variant)}
 
   <section>
     <h2>By provider</h2>
@@ -118,10 +137,46 @@ export function renderPage(
   </section>
 
   <footer>
-    period start <code>${esc(s.periodStart)}</code> &middot; updated <code>${esc(s.updatedAt)}</code> &middot; auto-refresh ${pollSeconds}s &middot;
+    period start <code>${esc(s.periodStart)}</code> &middot; updated <code>${esc(s.updatedAt)}</code> &middot; ${refreshNote} &middot;
     enforce: <code>${mode}</code> &middot; 1,000,000 credits = $1 &middot; EUR display rate ${s.eur.rate}
-  </footer>
-</div>
+  </footer>`;
+}
+
+/** Full hosted status page (auto-refreshing, with a fetch-based Restore button). */
+export function renderPage(
+  s: Snapshot,
+  mode: EnforceMode,
+  enforcement: EnforceState,
+  pollSeconds: number,
+): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="refresh" content="${pollSeconds}" />
+<title>LibreChat spend monitor</title>
+<style>${STYLES}</style>
+</head>
+<body>
+<div class="wrap">${dashboardBody(s, mode, enforcement, 'hosted', pollSeconds)}</div>
+</body>
+</html>`;
+}
+
+/** Embedded MCP-UI variant: no meta-refresh; buttons post tool actions. */
+export function renderMcpUi(s: Snapshot, mode: EnforceMode, enforcement: EnforceState): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LibreChat spend monitor</title>
+<style>${STYLES}</style>
+</head>
+<body>
+<div class="wrap">${dashboardBody(s, mode, enforcement, 'mcp', 0)}</div>
+<script>${MCP_JS}</script>
 </body>
 </html>`;
 }
