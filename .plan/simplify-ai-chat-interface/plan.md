@@ -215,11 +215,25 @@ are natural neighbours of the project-management tools).
 - Faktencheck model: keep Mistral or bump to GLM-5.2 (it is strategic).
 - Whether to keep light one-hop handoffs at all, or rely purely on the LibreChat agent picker.
 
-## Phase 1 status (done in branch `refactor/consolidate-agents`)
+## Status (branch `refactor/consolidate-agents`, PR #66)
 
-Config + docs done and YAML-validated: new `shared-agent-assistant` + instructions; 14 agents and
-their instruction files removed; 8 router/handoff partials removed; `librechat.yaml` modelSpecs
-reduced to 4 (Assistant default); avatars and `DEVELOPER_AGENTS.md` / `docs/README.md` updated.
-**Not yet done:** run `librechat-post-init` + restart API to sync (mutates the LibreChat DB — do on
-the target stack), manual UI smoke test, and the wider doc sweep (LIBRECHAT_FEATURES, MCP_LINUX,
-AGENT_AVATAR_PROMPTS, MCP_SERVERS_TODO, top-level + librechat-init READMEs still name old agents).
+- **Phase 1 done.** 18 agents → 4; routers/handoff/quality machinery and 8 partials removed;
+  `librechat.yaml` modelSpecs reduced to 4 (Assistant default); avatars + docs updated. Config
+  validated with a standalone harness replicating the real init include/tool-build logic (ALL PASS).
+- **Phase 2 done.** mcp-linux: added `write`/`edit`/`grep`/`glob` (worker, run as user) + `todowrite`;
+  removed the code-index subsystem (`@codebase-indexer/core`, LanceDB/tree-sitter), the plan/tasks
+  state and `update_workspace`, plus `CODE_INDEX_*` env and dead status-page components. Built the
+  image with podman and exercised every new tool end-to-end via MCP (server + runuser + worker). +485/−1344.
+- **Phase 3 done.** Dropped the 4 workspace template submodules and the unused `dev/codebase-indexer`
+  submodule; emptied `workspace_templates`; workspaces are plain per-project git dirs (git on demand).
+  Unit tests green.
+- **Phase 4 done.** Docs reconciled to the new shape across 10 files; no banned words, no stale refs.
+- **Phase 5** (per-user credentials + account setup) remains a future design note (below).
+
+Remaining manual step: run `librechat-post-init` + restart the API on the target stack to sync the
+4 agents into LibreChat (mutates the LibreChat DB), then a quick UI smoke test. The mcp-linux image
+change is covered by the podman tool test above.
+
+Decisions applied for the open items: image-gen kept on the standalone Image agent (not folded in);
+Faktencheck stays on Mistral; light one-hop handoffs kept. Vision limitation (glm-5.2 is text-only)
+stands as noted.
