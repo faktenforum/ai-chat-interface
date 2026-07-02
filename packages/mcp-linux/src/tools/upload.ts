@@ -13,6 +13,8 @@ import {
   ListUploadSessionsSchema,
   CloseUploadSessionSchema,
 } from '../schemas/upload.schema.ts';
+import { renderUploadUi } from '../ui/upload-ui.ts';
+import { uiResource } from '../ui/html.ts';
 
 /**
  * Registers all upload tools on the MCP server
@@ -26,9 +28,11 @@ export function registerUploadTools(
     'create_upload_session',
     {
       description:
-        'Create a file upload session. Returns a unique URL that the user can open in their browser to upload a file. ' +
-        'The file will be saved to the specified workspace under uploads/. ' +
-        'Sessions auto-close after successful upload and expire after the configured timeout.',
+        'Create a file upload session. Returns an inline upload widget (UI resource) - place its marker (\\ui{id}) in your reply ' +
+        'so the user can drop a file directly in the chat. The result also includes a browser URL for the same upload. ' +
+        'The file is saved to the specified workspace under uploads/. ' +
+        'Sessions auto-close after successful upload and expire after the configured timeout. ' +
+        'After the user uploads, follow the list_upload_sessions -> read_workspace_file flow to access the file.',
       inputSchema: CreateUploadSessionSchema.shape,
     },
     async (args, extra) => {
@@ -55,6 +59,20 @@ export function registerUploadTools(
               type: 'text',
               text: JSON.stringify(session, null, 2) + staleWarning,
             },
+            uiResource(
+              `ui://mcp-linux/upload/${token}`,
+              renderUploadUi(
+                {
+                  token,
+                  uploadUrl: url,
+                  workspace: session.workspace,
+                  maxSizeMb: session.max_file_size_mb,
+                  allowedExtensions: session.allowed_extensions ?? [],
+                  expiresAt: session.expires_at,
+                },
+                'embedded',
+              ),
+            ),
           ],
         };
       } catch (error) {

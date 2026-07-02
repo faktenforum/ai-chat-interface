@@ -1,13 +1,3 @@
-# ── Stage 1: Build the Nuxt frontend SPA ────────────────────────────────────
-FROM node:24-slim AS frontend-builder
-WORKDIR /app
-COPY frontend/package.json ./
-RUN npm install
-COPY frontend/nuxt.config.ts ./
-COPY frontend/app ./app
-RUN npm run build
-
-# ── Stage 2: Production image ────────────────────────────────────────────────
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -139,9 +129,6 @@ COPY assets ./assets
 
 # Server config: use example as default so workspace templates work out of the box
 COPY config.example.yaml ./config.yaml
-
-# Copy pre-built frontend SPA from builder stage
-COPY --from=frontend-builder /app/.output/public ./frontend/.output/public
 
 # Create persistent data directories
 RUN mkdir -p /app/data /run/mcp-workers

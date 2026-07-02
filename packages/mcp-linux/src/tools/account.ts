@@ -1,17 +1,19 @@
 /**
  * Account tool registration for MCP server
  *
- * Registers account management tools (get info, reset, system info).
+ * Registers account management tools (status overview, reset).
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { randomUUID } from 'node:crypto';
-import { logger } from '../utils/logger.ts';
 import type { UserManager } from '../user-manager.ts';
 import type { WorkerManager } from '../worker-manager.ts';
+import type { UploadManager } from '../upload/upload-manager.ts';
+import type { DownloadManager } from '../download/download-manager.ts';
 import { resolveEmail, errorResult } from './helpers.ts';
 import { GetStatusSchema, ResetAccountSchema } from '../schemas/account.schema.ts';
-import { getStatusPageUrlWithToken } from '../utils/status-token.ts';
+import { buildStatusOverview } from '../status-overview.ts';
+import { renderStatusUi } from '../ui/status-ui.ts';
+import { uiResource } from '../ui/html.ts';
 
 /**
  * Registers all account tools on the MCP server
@@ -20,70 +22,51 @@ export function registerAccountTools(
   server: McpServer,
   userManager: UserManager,
   workerManager: WorkerManager,
+  uploadManager: UploadManager,
+  downloadManager: DownloadManager,
 ): void {
 
   server.registerTool(
     'get_status',
     {
       description:
-        'Get current user status: username, home, disk usage, runtimes, workspace count, and status page URL',
+        'Get current user status: account, runtimes, workspaces, upload/download sessions, and terminals. ' +
+        'The result includes an interactive status card as a UI resource - place its marker (\\ui{id}) in your reply ' +
+        'so the user can view and manage everything inline. Buttons in the card ask you to run the matching tool.',
       inputSchema: GetStatusSchema.shape,
     },
     async (args, extra) => {
       try {
         const email = resolveEmail(extra);
-        const mapping = await userManager.ensureUser(email);
-        const info = await userManager.getUserInfo(email);
-
-        if (!info) {
-          return errorResult('User account not found');
-        }
-
-        // Get workspace count from worker
-        let workspaceCount = 0;
-        try {
-          const response = await workerManager.sendRequest(email, {
-            id: randomUUID(),
-            method: 'list_workspaces',
-            params: {},
-          });
-          if (!response.error && response.result) {
-            const result = response.result as { workspaces: unknown[] };
-            workspaceCount = result.workspaces?.length || 0;
-          }
-        } catch {
-          // Worker may not be running yet
-        }
-
-        // Get runtime versions from worker
-        let runtimes: Record<string, string> = {};
-        try {
-          const response = await workerManager.sendRequest(email, {
-            id: randomUUID(),
-            method: 'get_system_runtimes',
-            params: {},
-          });
-          if (!response.error && response.result) {
-            const result = response.result as { runtimes: Record<string, string> };
-            runtimes = result.runtimes || {};
-          }
-        } catch {
-          // Worker may not be running
-        }
-
-        const result = {
+        const overview = await buildStatusOverview(
+          { userManager, workerManager, uploadManager, downloadManager },
           email,
-          username: info.username,
-          uid: info.uid,
-          home: info.home,
-          disk_usage: info.diskUsage,
-          workspace_count: workspaceCount,
-          runtimes,
-          created_at: info.createdAt,
-          status_page_url: getStatusPageUrlWithToken(email),
+        );
+
+        const u = overview.user;
+        const summary = {
+          email: u.email,
+          username: u.username,
+          home: u.home,
+          disk_usage: u.diskUsage,
+          created_at: u.createdAt,
+          runtimes: u.runtimes,
+          workspaces: overview.workspaces,
+          active_upload_sessions: overview.upload_sessions
+            .filter((s) => s.status === 'active')
+            .map((s) => ({ token: s.token, workspace: s.workspace, expires_at: s.expires_at })),
+          active_download_links: overview.download_sessions
+            .filter((s) => s.status === 'active')
+            .map((s) => ({ token: s.token, filename: s.filename, expires_at: s.expires_at })),
+          terminals: overview.terminals.map((t) => ({ terminal_id: t.terminal_id, workspace: t.workspace })),
         };
 
-        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+        return {
+          content: [
+            { type: 'text', text: JSON.stringify(summary, null, 2) },
+            uiResource('ui://mcp-linux/status', renderStatusUi(overview)),
+          ],
+        };
       } catch (error) {
         return errorResult(error);
       }
