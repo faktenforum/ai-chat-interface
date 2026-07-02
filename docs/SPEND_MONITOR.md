@@ -15,8 +15,9 @@ A Scaleway billing webhook and email/webhook alerts are possible later phases.
 - `GET /api/spend` — current-period spend JSON (org total, per-provider, per-model, top users)
 - `GET /` — HTML status page (auto-refreshes every 30s)
 - `POST /restore` — lift enforcement and restore balances (only when enforce is `on`/`dry-run`)
+- `POST /mcp` — MCP endpoint (admin-gated; see [MCP endpoint](#mcp-endpoint))
 
-Local: `http://localhost:3016` and `http://spend.localhost`. Prod/dev: `https://spend.${DOMAIN}` (behind Traefik basic auth).
+Local: `http://localhost:3016` and `http://spend.localhost`. Prod/dev: `https://spend.${DOMAIN}` (behind Traefik basic auth). The `/mcp` endpoint is Docker-network only (reached by LibreChat at `http://${STACK_NAME}-spend-monitor:3016/mcp`), never exposed via Traefik.
 
 ## How spend is computed
 
@@ -42,9 +43,33 @@ Spend is recorded after a completion, so the total trails real spend by at most 
 | `SPEND_MONITOR_POLL_SECONDS` | `60` | aggregation interval |
 | `SPEND_MONITOR_ENFORCE` | `off` | `off` / `dry-run` / `on` — hard stop by zeroing balances |
 | `SPEND_MONITOR_BASIC_AUTH` | — | prod/dev: Traefik basic-auth htpasswd line |
+| `SPEND_MONITOR_ADMIN_EMAILS` | — | comma-separated emails allowed to use the MCP tools; empty disables `/mcp` |
 
 The MongoDB URI is not configured separately — the service reuses LibreChat's
 `LIBRECHAT_MONGO_URI` (compose default), so it always reads the same database.
+
+## MCP endpoint
+
+The monitor also speaks MCP over `POST /mcp`, so admins can pull the spend report and
+lift a freeze from inside a LibreChat chat instead of opening the hosted page. The
+hosted page and `POST /restore` remain the ops fallback — enforcement must be operable
+when LibreChat itself is down.
+
+Tools:
+
+- `get_usage_report` — returns the current spend summary as JSON plus the dashboard as
+  an MCP-UI resource (`ui://spend-monitor/report`) rendered inline in the chat. Its
+  buttons (Refresh, and Restore when a freeze is active) post tool actions back to
+  LibreChat, arriving as new messages that ask the agent to run the matching tool.
+- `restore_balances` (requires `confirm: true`) — same effect as the dashboard's Restore
+  button / `POST /restore`.
+
+**Access control.** YAML-defined MCP servers are global in LibreChat (`chatMenu: false`
+only hides a server from the chat picker; any agent can still attach it), so the endpoint
+is gated server-side: it checks the `X-User-Email` header against
+`SPEND_MONITOR_ADMIN_EMAILS`. If that list is empty the endpoint returns `403` for every
+request (deny-by-default), since it exposes org-wide spend and a write action. The MCP
+server is wired into LibreChat as `spend` in `librechat.yaml` with the `X-User-*` headers.
 
 ## Alerting
 
