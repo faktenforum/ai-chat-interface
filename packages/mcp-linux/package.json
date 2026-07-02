@@ -10,11 +10,7 @@
     "lint": "eslint . --ext .ts",
     "test": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/integration.ts",
     "test:e2e": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/http-test.ts",
-    "check": "npm run check:self && npm run check:frontend",
-    "check:self": "tsc --noEmit",
-    "check:frontend": "cd frontend && npm run check",
-    "build": "npm run build:frontend",
-    "build:frontend": "cd frontend && npm install && npm run build"
+    "check": "tsc --noEmit"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",

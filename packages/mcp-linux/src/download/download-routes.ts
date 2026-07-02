@@ -11,20 +11,19 @@ import type express from 'express';
 import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import { logger } from '../utils/logger.ts';
-import { paramString, spaErrorRedirect } from '../utils/route-helpers.ts';
+import { paramString } from '../utils/route-helpers.ts';
+import { renderErrorPage } from '../ui/error-page.ts';
 import type { DownloadManager } from './download-manager.ts';
 
 /**
  * Registers download routes on the Express app.
- * @param spaDir - path to the built SPA static files for serving error pages
  */
 export function setupDownloadRoutes(
   app: express.Application,
   downloadManager: DownloadManager,
-  _spaDir: string,
 ): void {
-  function spaError(res: Response, status: number, title: string, message: string): void {
-    spaErrorRedirect(res, 'download', status, title, message);
+  function sendError(res: Response, status: number, title: string, message: string): void {
+    res.status(status).type('html').send(renderErrorPage(title, message));
   }
 
   // ── GET /download/:token — stream the file ─────────────────────────────────
@@ -33,22 +32,22 @@ export function setupDownloadRoutes(
     const session = downloadManager.getSession(token);
 
     if (!session) {
-      spaError(res, 404, 'Link Not Found', 'This download link is invalid or has been removed.');
+      sendError(res, 404, 'Link Not Found', 'This download link is invalid or has been removed.');
       return;
     }
 
     if (session.status === 'expired') {
-      spaError(res, 410, 'Link Expired', 'This download link has expired. Please request a new download link.');
+      sendError(res, 410, 'Link Expired', 'This download link has expired. Please request a new download link.');
       return;
     }
 
     if (session.status === 'downloaded') {
-      spaError(res, 410, 'Already Downloaded', 'This file has already been downloaded. The link is now closed.');
+      sendError(res, 410, 'Already Downloaded', 'This file has already been downloaded. The link is now closed.');
       return;
     }
 
     if (session.status === 'closed') {
-      spaError(res, 410, 'Link Closed', 'This download link has been revoked. Please request a new one.');
+      sendError(res, 410, 'Link Closed', 'This download link has been revoked. Please request a new one.');
       return;
     }
 
@@ -57,7 +56,7 @@ export function setupDownloadRoutes(
       await fs.access(session.absolutePath);
     } catch {
       logger.error({ token, path: session.absolutePath }, 'Download file no longer exists');
-      spaError(res, 404, 'File Not Found', 'The file is no longer available. It may have been moved or deleted.');
+      sendError(res, 404, 'File Not Found', 'The file is no longer available. It may have been moved or deleted.');
       return;
     }
 
@@ -72,7 +71,7 @@ export function setupDownloadRoutes(
     fileStream.on('error', (error) => {
       logger.error({ error, token, path: session.absolutePath }, 'Error streaming download file');
       if (!res.headersSent) {
-        spaError(res, 500, 'Download Error', 'An error occurred while streaming the file. Please try again.');
+        sendError(res, 500, 'Download Error', 'An error occurred while streaming the file. Please try again.');
       }
     });
 

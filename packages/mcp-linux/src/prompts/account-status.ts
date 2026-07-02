@@ -1,45 +1,30 @@
 /**
- * MCP Prompt: Account Status Page
+ * MCP Prompt: Account Status
  *
- * Tells the LLM to use get_status for the user's status page URL (with token)
- * and when to refer users there.
+ * Tells the LLM to render the interactive status card via get_status and how the
+ * card's buttons flow back as tool calls.
  */
-
-const PORT = parseInt(process.env.PORT || '3015', 10);
-
-function getStatusPageUrl(): string {
-  const explicit = process.env.MCP_LINUX_STATUS_PAGE_URL?.trim();
-  if (explicit) {
-    return explicit.replace(/\/+$/, '');
-  }
-
-  const base =
-    process.env.MCP_LINUX_UPLOAD_BASE_URL ||
-    process.env.MCP_LINUX_DOWNLOAD_BASE_URL ||
-    `http://localhost:${PORT}`;
-  const normalized = base.replace(/\/+$/, '');
-  return normalized + '/status';
-}
-
-export const STATUS_PAGE_URL = getStatusPageUrl();
 
 export const ACCOUNT_STATUS_PROMPT = {
   name: 'account_status',
   description:
-    'URL of the status page where users can manage workspaces, upload/download sessions, and terminals',
-  content: `# Account Status Page
+    'How to show users their account status card and let them manage workspaces, sessions, and terminals inline',
+  content: `# Account Status
 
-Users have a web interface to view and manage their Linux account.
+Users can view and manage their Linux account directly in the chat.
 
-**How to give the user the link:** Call \`get_status\` and use the \`status_page_url\` from the result. That URL includes a time-limited token for the current user. Give that exact URL to the user when they want to manage things themselves.
+**How to show it:** Call \`get_status\`. The result includes an interactive status card as a UI resource. Place its marker (\`\\ui{id}\`) in your reply so the card renders inline. There is no external status page.
 
-## When to refer the user
+The card shows the account, installed runtimes, workspaces, upload/download sessions, and running terminals.
 
-- They want to close an upload session or revoke a download link themselves.
-- They want to see all their workspaces, open upload/download sessions, or active terminals.
-- They want to delete a workspace or kill a terminal from a browser.
-- They ask where they can "see my workspaces" or "manage my sessions".
+## Buttons
 
-Tell them to open the status URL (from get_status) in a new tab.
+Buttons in the card ask you to run a tool: Delete a workspace (\`delete_workspace\`), Close an upload session (\`close_upload_session\`), Revoke a download link (\`close_download_link\`), Kill a terminal (\`kill_terminal\`), or Refresh (\`get_status\`). Each click arrives as a new message; run the requested tool and report the result. Destructive actions already prompt the user for confirmation in the card.
+
+## When to show it
+
+- The user wants to see workspaces, open sessions, or running terminals.
+- The user wants to close a session, revoke a link, delete a workspace, or kill a terminal.
+- The user asks where they can "see my workspaces" or "manage my sessions".
 `,
 };
