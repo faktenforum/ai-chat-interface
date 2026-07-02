@@ -26,6 +26,8 @@ services:
       # Must be in this environment block: Portainer ignores env_file, so a label-only
       # override would never reach the container in prod/dev.
       SPEND_MONITOR_ENFORCE: ${SPEND_MONITOR_ENFORCE:-off}
+      # Comma-separated emails allowed to use the spend-monitor MCP tools (empty = MCP disabled).
+      SPEND_MONITOR_ADMIN_EMAILS: ${SPEND_MONITOR_ADMIN_EMAILS:-}
     expose:
       - "3016"
     networks:

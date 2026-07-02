@@ -17,7 +17,8 @@
 import 'dotenv/config';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import type { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { loadConfig } from './config.ts';
 import { connectMongo, closeMongo } from './mongo.ts';
 import { aggregate } from './aggregate.ts';
@@ -26,6 +27,8 @@ import { logNotifier } from './notify.ts';
 import { getEnforceState, enforceCap, restoreBalances, clearStaleOverride } from './enforce.ts';
 import type { EnforceState } from './enforce.ts';
 import { renderPage } from './page.ts';
+import { setupMcpEndpoints, extractUserContext } from './utils/http-server.ts';
+import { createSession } from './mcp.ts';
 import { logger } from './utils/logger.ts';
 
 const SERVER_NAME = 'spend-monitor';
@@ -80,10 +83,6 @@ async function main(): Promise<void> {
   const app = express();
   app.disable('x-powered-by');
 
-  app.get('/health', (_req: Request, res: Response) => {
-    res.json({ status: 'ok', server: SERVER_NAME, version: SERVER_VERSION });
-  });
-
   app.get('/api/spend', async (_req: Request, res: Response) => {
     if (!latest) await refresh();
     if (!latest) {
@@ -114,6 +113,44 @@ async function main(): Promise<void> {
     res.json({ restored: result.restored, dryRun: cfg.enforce !== 'on', suppressedForPeriod: latest?.periodStart ?? null });
   });
 
+  // ── MCP endpoint (admin-gated) ─────────────────────────────────────────────
+  // YAML-defined MCP servers are global in LibreChat, so gate on the X-User-Email
+  // header against an allowlist. Empty/unset allowlist disables the endpoint.
+  const transports = new Map<string, StreamableHTTPServerTransport>();
+  const adminEmails = new Set(
+    (process.env.SPEND_MONITOR_ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
+  );
+
+  app.use('/mcp', express.json({ limit: '1mb' }));
+  app.use('/mcp', (req: Request, res: Response, next: NextFunction) => {
+    if (adminEmails.size === 0) {
+      res.status(403).json({ error: 'spend-monitor MCP disabled: SPEND_MONITOR_ADMIN_EMAILS is not set' });
+      return;
+    }
+    const ctx = extractUserContext(req.headers);
+    if (!ctx || !adminEmails.has(ctx.email.toLowerCase())) {
+      res.status(403).json({ error: 'Not authorized for spend-monitor tools' });
+      return;
+    }
+    next();
+  });
+
+  setupMcpEndpoints(app, {
+    serverName: SERVER_NAME,
+    version: SERVER_VERSION,
+    port: cfg.port,
+    transports,
+    createServer: () =>
+      createSession(
+        { getSnapshot: () => latest, getEnforceState: () => enforceState, refresh, cfg, db },
+        transports,
+      ),
+    logger,
+  });
+
   const server = app.listen(cfg.port, '0.0.0.0', () => {
     logger.info(
       {
@@ -134,6 +171,14 @@ async function main(): Promise<void> {
   const shutdown = async () => {
     logger.info('Shutting down...');
     clearInterval(timer);
+    for (const transport of transports.values()) {
+      try {
+        await transport.close();
+      } catch (error) {
+        logger.error({ error: error instanceof Error ? error.message : String(error) }, 'Error closing MCP transport');
+      }
+    }
+    transports.clear();
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await closeMongo();
     process.exit(0);
