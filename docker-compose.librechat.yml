@@ -51,6 +51,7 @@ services:
       LIBRECHAT_API_URL: ${LIBRECHAT_API_URL:-http://api:3080}
       LIBRECHAT_JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
       JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
+      SEARCH_MCP_URL: ${SEARCH_MCP_URL:-}
     volumes:
       - librechat-config:/app/config
       - mongodata:/mongo_data
@@ -128,6 +129,7 @@ services:
       OCR_BASEURL: ${LIBRECHAT_OCR_BASEURL:-https://api.mistral.ai/v1}
       MCP_GITHUB_PAT: ${MCP_GITHUB_PAT:-}
       MCP_MAPBOX_ACCESS_TOKEN: ${MCP_MAPBOX_ACCESS_TOKEN:-}
+      SEARCH_MCP_API_KEY: ${SEARCH_MCP_API_KEY:-}
     volumes:
       - ./images:/app/client/public/images
       - ./uploads:/app/uploads
