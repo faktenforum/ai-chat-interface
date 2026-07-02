@@ -12,10 +12,8 @@
 
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
-import fs from 'node:fs/promises';
-import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'url';
-import express, { type Request, type Response, type NextFunction } from 'express';
+import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { logger } from './utils/logger.ts';
@@ -23,12 +21,9 @@ import {
   setupMcpEndpoints,
   setupGracefulShutdown,
   extractUserContext,
-  type UserContext,
 } from './utils/http-server.ts';
-import { verifyToken } from './utils/status-token.ts';
 import { UserManager } from './user-manager.ts';
 import { WorkerManager } from './worker-manager.ts';
-import { createStatusRouter } from './status-routes.ts';
 import { registerWorkspaceTools, sessionEmailMap } from './tools/workspace.ts';
 import { registerTerminalTools } from './tools/terminal.ts';
 import { registerAccountTools } from './tools/account.ts';
@@ -65,47 +60,6 @@ const downloadManager = new DownloadManager({
   baseUrl: process.env.MCP_LINUX_DOWNLOAD_BASE_URL || process.env.MCP_LINUX_UPLOAD_BASE_URL || `http://localhost:${PORT}`,
   defaultSessionTimeoutMin: parseInt(process.env.MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN || '60', 10),
 });
-
-interface StatusRequest extends Request {
-  userContext?: UserContext;
-}
-
-function requireUserContext(req: StatusRequest, res: Response, next: NextFunction): void {
-  const userContext = extractUserContext(req.headers);
-  if (!userContext) {
-    res.status(401).json({ error: 'Missing user context' });
-    return;
-  }
-  req.userContext = userContext;
-  next();
-}
-
-/** Resolves user from status token (query or body) or from X-User-* headers. Allows GET /status without auth so the page can load and show "open link from agent". */
-function requireUserContextOrStatusToken(req: StatusRequest, res: Response, next: NextFunction): void {
-  const tokenRaw =
-    (typeof req.query.token === 'string' ? req.query.token : null) ||
-    (typeof req.body?.auth_token === 'string' ? req.body.auth_token : null);
-  if (tokenRaw) {
-    const payload = verifyToken(tokenRaw);
-    if (payload) {
-      req.userContext = { userId: '', email: payload.email, username: '' };
-      next();
-      return;
-    }
-  }
-  const userContext = extractUserContext(req.headers);
-  if (userContext) {
-    req.userContext = userContext;
-    next();
-    return;
-  }
-  const isIndexGet = req.method === 'GET' && (req.path === '' || req.path === '/');
-  if (isIndexGet) {
-    next();
-    return;
-  }
-  res.status(401).json({ error: 'Missing user context or invalid/expired token' });
-}
 
 /**
  * Creates and configures the MCP server with all tool and prompt registrations
@@ -149,7 +103,7 @@ CAPABILITIES
 - list_workspace_files: Use to explore directory structure; more effective than ls for getting a structured file list.
 
 File Upload:
-- create_upload_session to generate a unique upload URL for the user. Uploaded files are saved to ~/workspaces/{workspace}/uploads/. Uploads are ephemeral (may be purged); use clean_workspace_uploads to free space or move/download important outputs. Sessions auto-close after upload and expire after 15 minutes by default. User uploaded → list_upload_sessions, find completed session with uploaded_file, then read_workspace_file(workspace, e.g. uploads/filename). Never read_workspace_file without path from list_upload_sessions when user just uploaded. Close unnecessary active sessions with close_upload_session when appropriate.
+- create_upload_session returns an inline upload widget (UI resource) plus a browser URL. Place the widget's marker (\\ui{id}) in your reply so the user can drop a file directly in the chat; the URL is a fallback they can open in a new tab. Uploaded files are saved to ~/workspaces/{workspace}/uploads/. Uploads are ephemeral (may be purged); use clean_workspace_uploads to free space or move/download important outputs. Sessions auto-close after upload and expire after 15 minutes by default. User uploaded → list_upload_sessions, find completed session with uploaded_file, then read_workspace_file(workspace, e.g. uploads/filename). Never read_workspace_file without path from list_upload_sessions when user just uploaded. Close unnecessary active sessions with close_upload_session when appropriate.
 
 File Download:
 - create_download_link for a temporary download URL for any workspace file; share the URL with the user. Links are single-use, expire after 60 minutes by default. Cleanup: list_download_links, close_download_link to limit exposure.
@@ -157,14 +111,14 @@ File Download:
 Reading Files:
 - read_workspace_file returns content with line numbers for diffing. Use optional line_ranges for specific sections. Text files are returned inline; images and audio as base64; large or binary files get a download link instead.
 
-Status page: Users can view and manage their account (workspaces, upload/download sessions, terminals). Use get_status and give the user the status_page_url from the result (it includes a time-limited token). When the user wants to close sessions, revoke download links, kill terminals, or delete workspaces themselves, direct them to open that URL in a new tab. See the account_status prompt for when to refer users.`,
+Status card: Users can view and manage their account (workspaces, upload/download sessions, terminals) inline. Call get_status and place the returned UI resource marker (\\ui{id}) in your reply to render the interactive card. Its buttons (delete workspace, close upload session, revoke download link, kill terminal, refresh) arrive back as new messages asking you to run the matching tool; run it and report the result. There is no external status page. See the account_status prompt for details.`,
     },
   );
 
   // Register all tools
   registerWorkspaceTools(server, userManager, workerManager);
   registerTerminalTools(server, userManager, workerManager);
-  registerAccountTools(server, userManager, workerManager);
+  registerAccountTools(server, userManager, workerManager, uploadManager, downloadManager);
   registerUploadTools(server, userManager, uploadManager);
   registerDownloadTools(server, userManager, downloadManager);
   registerFileTools(server, userManager, downloadManager);
@@ -216,46 +170,9 @@ async function createApp(): Promise<express.Application> {
   app.use(express.json({ limit: '10mb' }));
   app.disable('x-powered-by');
 
-  const appRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
-  const spaDirCwd = join(process.cwd(), 'frontend/.output/public');
-  const spaDirFromModule = join(appRoot, 'frontend/.output/public');
-  let spaDir = spaDirFromModule;
-  try {
-    await fs.access(join(spaDirFromModule, 'index.html'));
-  } catch {
-    try {
-      await fs.access(join(spaDirCwd, 'index.html'));
-      spaDir = spaDirCwd;
-    } catch {
-      // fallback to spaDirFromModule
-    }
-  }
-
-  // Restore path when proxy (e.g. Traefik) strips prefix and sets X-Forwarded-Prefix
-  app.use((req: Request, _res: Response, next: NextFunction) => {
-    const prefix = req.get('x-forwarded-prefix');
-    if (prefix && typeof prefix === 'string' && req.path && !req.path.startsWith(prefix)) {
-      const path = req.path === '/' ? '' : req.path;
-      req.url = (prefix.replace(/\/$/, '') + path) || '/';
-      logger.debug({ originalPath: req.path, prefix, newUrl: req.url }, 'Path rewritten from X-Forwarded-Prefix');
-    }
-    next();
-  });
-
-  // Upload and download routes first so GET /upload/:token and GET /download/:token
-  // are served (SPA page or file stream), not passed to static (which would 404).
-  setupUploadRoutes(app, uploadManager, userManager, spaDir);
-  setupDownloadRoutes(app, downloadManager, spaDir);
-
-  // Static files from the built Nuxt SPA (index, assets, etc.)
-  app.use(express.static(spaDir));
-
-  // Status routes (per-user overview and management UI)
-  const statusRouter = createStatusRouter(
-    { userManager, workerManager, uploadManager, downloadManager },
-    spaDir,
-  );
-  app.use('/status', requireUserContextOrStatusToken, statusRouter);
+  // Upload (browser page + multipart POST) and download (file stream) routes.
+  setupUploadRoutes(app, uploadManager, userManager);
+  setupDownloadRoutes(app, downloadManager);
 
   // User-context extraction middleware: maps session ID to user email
   app.use('/mcp', (req, _res, next) => {

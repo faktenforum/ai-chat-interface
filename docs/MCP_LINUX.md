@@ -53,7 +53,7 @@ A workspace is a plain per-project directory under `~/workspaces/`. Git is avail
 ### Account
 | Tool | Description |
 |------|-------------|
-| `get_status` | Username, home, disk usage, runtimes, status_page_url (status link with token) |
+| `get_status` | Account, runtimes, workspaces, sessions, terminals; returns an interactive status card (UI resource) |
 | `reset_account` | Wipe and re-create home |
 
 ### File Upload
@@ -138,22 +138,24 @@ If you run **both** stacks on one host they also share the external network `loa
 | `MCP_LINUX_UPLOAD_SESSION_TIMEOUT_MIN` | `15` | Upload session expiry (min) |
 | `MCP_LINUX_DOWNLOAD_BASE_URL` | *(falls back to upload URL)* | Public base URL for download links |
 | `MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN` | `60` | Download link expiry (min) |
-| `MCP_LINUX_STATUS_PAGE_URL` | *(upload base + /status)* | Public base URL for the status page |
-| `MCP_LINUX_STATUS_TOKEN_SECRET` | *(empty)* | Secret to sign status page tokens. If set, `get_status` returns a status URL with a time-limited token (same pattern as upload/download). If unset, status page only works when requests carry `X-User-*` headers (e.g. via proxy). |
-| `MCP_LINUX_STATUS_TOKEN_TTL_MIN` | `60` | Status link token lifetime (minutes) |
 | `MCP_LINUX_SESSION_IDLE_TIMEOUT_MIN` | `30` | MCP session idle timeout (min); sessions with no activity are evicted to prevent leak |
 | `MCP_LINUX_STATUS_MAX_FILES` | `50` | Max file entries per status category (staged/unstaged/untracked) before capping |
 | `MCP_LINUX_STATUS_COLLAPSE_DIRS` | `uploads,venv,.venv` | Comma-separated dirs whose paths are collapsed to one summary line in status |
 | `MCP_LINUX_RESOURCE_LIST_DIRS` | `uploads,outputs` | Comma-separated dirs listed in MCP resources (allowlist); only these appear in list |
 | `MCP_LINUX_UPLOADS_MAX_AGE_DAYS` | `0` (disabled) | If > 0, server runs daily cleanup of `uploads/` files older than N days |
 
-## Status page
+## Inline UI (MCP-UI)
 
-The status page (`/status`) lets users view and manage their account (workspaces, upload/download sessions, terminals) in the browser. Access is token-based: the agent gets a personal link via `get_status` (`status_page_url`), which includes a signed, time-limited token. The user opens that URL directly; no LibreChat proxy is required. Set `MCP_LINUX_STATUS_TOKEN_SECRET` so the server can issue and verify tokens.
+The server ships small self-contained HTML views as MCP-UI resources (`ui://` text/html) that LibreChat renders inline in the chat. No separate frontend or hosted status page.
+
+- `get_status` returns an interactive **status card**: account, runtimes, workspaces, upload/download sessions, and terminals. Buttons (delete workspace, close upload session, revoke download link, kill terminal, refresh) post `tool` actions back to LibreChat, which arrive as a new user message asking the agent to run the matching tool. The agent places the resource marker (`\ui{id}`) in its reply to render the card.
+- `create_upload_session` returns an **upload widget** (drag & drop, progress) plus a browser URL. The widget renders inline; the same widget is served standalone at `GET /upload/:token` for a shareable link.
+
+The upload widget's iframe has an opaque origin, so `POST /upload/:token` and `GET /upload/:token/{config,status}` send permissive CORS headers (the token in the URL is the capability; no cookies are used). Downloads happen via the shared text URL: the chat iframe sandbox has no `allow-downloads`, so links inside the card are also shown as selectable text.
 
 ## Traefik Routing
 
-Upload, download, and status routes are exposed publicly via Traefik (`/upload/*`, `/download/*`, `/status`). The MCP endpoint (`/mcp`) remains internal (Docker network only). Production base URLs must point to the public Traefik host (e.g. `https://mcp-linux.faktenforum.org`).
+Upload and download routes are exposed publicly via Traefik (`/upload/*`, `/download/*`). The MCP endpoint (`/mcp`) remains internal (Docker network only). Production base URLs must point to the public Traefik host (e.g. `https://mcp-linux.faktenforum.org`).
 
 ## Git Access
 

@@ -24,11 +24,6 @@ const DEV_EXAMPLE_FILE = path.join(ROOT_DIR, 'env.dev.example');
 const genSecret = (length: number = 32): string => crypto.randomBytes(length).toString('hex');
 
 /**
- * Generate a random base64 string
- */
-const genBase64Secret = (length: number = 32): string => crypto.randomBytes(length).toString('base64');
-
-/**
  * Generate a secure password meeting common requirements:
  * - At least 1 uppercase letter
  * - At least 1 lowercase letter
@@ -180,7 +175,6 @@ const AUTO_GENERATED: Record<string, () => string> = {
     'SEARXNG_SECRET_KEY': () => genSecret(32),
     'LIBRECHAT_SEARXNG_API_KEY': () => genSecret(32),
     'FIRECRAWL_BULL_AUTH_KEY': () => genSecret(16),
-    'MCP_LINUX_STATUS_TOKEN_SECRET': () => genBase64Secret(32),
 };
 
 /** Values that trigger auto-generation for specific keys (in addition to empty / change-me) */

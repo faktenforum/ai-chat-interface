@@ -5,6 +5,3 @@ dist/
 config.yaml
 .DS_Store
 *.tsbuildinfo
-frontend/.output
-frontend/.nuxt
-frontend/dist

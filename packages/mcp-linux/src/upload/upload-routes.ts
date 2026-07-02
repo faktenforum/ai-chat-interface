@@ -7,15 +7,16 @@
  * - GET  /upload/:token/status Returns session status as JSON
  */
 
-import { type Request, type Response } from 'express';
+import { type Request, type Response, type NextFunction } from 'express';
 import type express from 'express';
 import { createWriteStream } from 'node:fs';
 import fs from 'node:fs/promises';
-import { join, resolve, extname, basename } from 'node:path';
+import { join, extname, basename } from 'node:path';
 import Busboy from 'busboy';
-import { serveSpaIndex } from '../utils/serve-spa.ts';
 import { logger } from '../utils/logger.ts';
-import { paramString, spaErrorRedirect } from '../utils/route-helpers.ts';
+import { paramString } from '../utils/route-helpers.ts';
+import { renderUploadUi } from '../ui/upload-ui.ts';
+import { renderErrorPage } from '../ui/error-page.ts';
 import type { UploadManager } from './upload-manager.ts';
 import type { UserManager } from '../user-manager.ts';
 
@@ -69,20 +70,26 @@ export function setupUploadRoutes(
   app: express.Application,
   uploadManager: UploadManager,
   userManager: UserManager,
-  spaDir: string,
 ): void {
-  const spaRoot = resolve(spaDir);
-
-  function spaError(res: Response, status: number, title: string, message: string): void {
-    spaErrorRedirect(res, 'upload', status, title, message);
+  function sendError(res: Response, status: number, title: string, message: string): void {
+    res.status(status).type('html').send(renderErrorPage(title, message));
   }
 
-  // ── GET /upload/error — SPA error page (must be before /upload/:token so "error" is not used as token)
-  app.get('/upload/error', async (_req: Request, res: Response) => {
-    await serveSpaIndex(spaRoot, res, 'Upload SPA');
+  // ── CORS for the embedded upload widget (opaque iframe origin) ──────────────
+  // The token in the URL is the capability; no cookies/auth headers are used, so
+  // Access-Control-Allow-Origin: * is safe (and forbids credentials by spec).
+  app.use('/upload/:token', (req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
+    next();
   });
 
-  // ── GET /upload/:token/config — session config as JSON (used by SPA) ────────
+  // ── GET /upload/:token/config — session config as JSON ──────────────────────
   app.get('/upload/:token/config', (req: Request, res: Response) => {
     const token = paramString(req.params.token);
     const session = uploadManager.getSession(token);
@@ -102,39 +109,51 @@ export function setupUploadRoutes(
     });
   });
 
-  // ── GET /upload/:token — serve the SPA upload page ──────────────────────────
-  app.get('/upload/:token', async (req: Request, res: Response) => {
+  // ── GET /upload/:token — serve the standalone upload page ───────────────────
+  app.get('/upload/:token', (req: Request, res: Response) => {
     const token = paramString(req.params.token);
     logger.info({ token, path: req.path }, 'GET /upload/:token');
     const session = uploadManager.getSession(token);
 
     if (!session) {
-      spaError(
+      sendError(
         res,
         404,
         'Session Not Found',
-        'This upload link is invalid or has been removed. Sessions are lost on server restart; create a new upload session from the status page.',
+        'This upload link is invalid or has been removed. Sessions are lost on server restart; ask the assistant for a new upload link.',
       );
       return;
     }
 
     if (session.status === 'expired') {
-      spaError(res, 410, 'Session Expired', 'This upload session has expired. Please request a new upload link.');
+      sendError(res, 410, 'Session Expired', 'This upload session has expired. Please request a new upload link.');
       return;
     }
 
     if (session.status === 'completed') {
-      spaError(res, 410, 'Upload Complete', 'A file has already been uploaded in this session. The session is now closed.');
+      sendError(res, 410, 'Upload Complete', 'A file has already been uploaded in this session. The session is now closed.');
       return;
     }
 
     if (session.status === 'closed') {
-      spaError(res, 410, 'Session Closed', 'This upload session has been closed. Please request a new upload link.');
+      sendError(res, 410, 'Session Closed', 'This upload session has been closed. Please request a new upload link.');
       return;
     }
 
-    logger.info({ token }, 'Serving upload SPA');
-    await serveSpaIndex(spaRoot, res, 'Upload SPA');
+    res.type('html').send(
+      renderUploadUi(
+        {
+          token: session.token,
+          // Same-origin page: a host-absolute path is enough (no baseUrl needed).
+          uploadUrl: `/upload/${session.token}`,
+          workspace: session.workspace,
+          maxSizeMb: Math.round(session.maxFileSize / (1024 * 1024)),
+          allowedExtensions: session.allowedExtensions ?? [],
+          expiresAt: session.expiresAt.toISOString(),
+        },
+        'standalone',
+      ),
+    );
   });
 
   // ── GET /upload/:token/status — session status as JSON ─────────────────────
