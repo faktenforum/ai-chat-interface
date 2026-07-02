@@ -1037,7 +1037,12 @@ mcpServers:
     initTimeout: 120000
     timeout: 150000
     chatMenu: true
-    startup: true
+    # mcp.mapbox.com requires its own per-user OAuth regardless of the bearer header above.
+    # Operator-configured MCP servers are global (connected regardless of which agent/tools
+    # a turn actually uses), so startup:true made ANY agent turn - even ones with no use for
+    # Mapbox - block on this OAuth requirement. startup:false makes the connection lazy: it
+    # only triggers (and only blocks) when a turn actually calls a Mapbox tool.
+    startup: false
     serverInstructions: true
 
   search:
