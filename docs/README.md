@@ -48,7 +48,6 @@ They are baked into the init image and written into the config volume at startup
 ## Development
 
 - **[Agents](DEVELOPER_AGENTS.md)** - Current agent roster (universal Assistant + 3 specialists) and the consolidation rationale
-- **[Agent Workspaces](../workspaces/README.md)** - Persistent workspace repositories for agents
 - **[Development Guide](DEVELOPMENT.md)** - Git submodules and development stack
 - **[Running with Podman](PODMAN.md)** - Run the local stack under rootless Podman instead of Docker
 - **[Testing internal MCPs from Cursor](SERVICES.md#testing-internal-mcps-from-cursor-ide)** - Use local-stack MCPs from Cursor IDE for testing

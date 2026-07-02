@@ -49,22 +49,25 @@ roles:
 
 **Files:** `config/agents.yaml` (public), `config/agents.private.yaml` (private)
 
-Each agent can use inline `instructions` or reference a file via **`instructionsFile`** (filename only, e.g. `shared-agent-research-instructions.md`). Files are loaded from `config/agent-instructions/`; naming convention: `{agent-id}-instructions.md`. If `instructionsFile` is set, its content (trimmed) is used and any inline `instructions` is ignored.
+Each agent can use inline `instructions` or reference a file via **`instructionsFile`** (filename only, e.g. `shared-agent-assistant-instructions.md`). Files are loaded from `config/agent-instructions/`; naming convention: `{agent-id}-instructions.md`. If `instructionsFile` is set, its content (trimmed) is used and any inline `instructions` is ignored.
 
-**Partial instructions:** Instruction files support `{{include:path}}` directives to embed shared snippets from `config/agent-instructions/partial_instructions/`. Example: `{{include:handoff-workspace}}` injects the workspace handoff block. Partials are resolved at init time; LibreChat receives the expanded text. Use this to avoid duplicating common blocks (handoff, execution, when-unclear, etc.) across agents.
+**Partial instructions:** Instruction files support `{{include:path}}` directives to embed shared snippets from `config/agent-instructions/partial_instructions/`. Example: `{{include:handoff-simple.md}}` injects the handoff block. Partials are resolved at init time; LibreChat receives the expanded text. Use this to avoid duplicating common blocks (handoff, workspace management, file upload, when-unclear, etc.) across agents.
+
+Roster: **Assistant** (universal - coding, Linux/shell, files, data, documents, research, GitHub), **Faktencheck** (checkbot-rag search, private), **Travel and Location**, **Image Generation**. The Assistant does the work itself and hands off one hop to the three specialists; there is no router chain.
 
 ```yaml
 agents:
-  - name: Research Assistant
+  - id: shared-agent-assistant
+    name: Assistant
     provider: Scaleway
-    model: mistral-small-3.2-24b-instruct-2506
+    model: glm-5.2
     tools:
       - web_search
       - file_search
     mcpServers:
-      - firecrawl
-    mcpTools:
-      - firecrawl_search_mcp_firecrawl
+      - linux
+      - github
+      - docs
     permissions:
       public: true
 ```

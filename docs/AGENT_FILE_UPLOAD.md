@@ -1,6 +1,6 @@
 # Agent file upload guidance
 
-How agents choose between LibreChat in-chat options and MCP Linux upload/download. Canonical wording: partials [file-upload-types.md](../packages/librechat-init/config/agent-instructions/partial_instructions/file-upload-types.md) (011) and [files-mcp.md](../packages/librechat-init/config/agent-instructions/partial_instructions/files-mcp.md) (008, 009, 010, developer).
+How the Assistant chooses between LibreChat in-chat options and MCP Linux upload/download. Canonical wording: partial [mcp-linux-tools-files-upload.md](../packages/librechat-init/config/agent-instructions/partial_instructions/mcp-linux-tools-files-upload.md), included in the Assistant's instructions.
 
 ## LibreChat in-chat options
 
@@ -16,15 +16,8 @@ How agents choose between LibreChat in-chat options and MCP Linux upload/downloa
 | **Upload** | Agent provides a link via `create_upload_session`; file lands in the Linux workspace. | Data analysis, charts, format conversion, processing without loading full content into the conversation. |
 | **Download** | Agent creates a temporary URL via `create_download_link`; user downloads the file in the browser. | Processed or generated files (charts, converted files, exports) that the user should receive. |
 
-Data viz / "upload for data" → **Data Analysis** (or 009/010). Specialists use MCP Linux upload and `create_download_link` for results.
+Data viz, format conversion, or document creation: the Assistant uploads the source via `create_upload_session`, processes it in a workspace, and returns the result with `create_download_link`. The file content stays in the workspace and does not need to load into the conversation.
 
-## Router tools (handoff only)
+## No router, single agent
 
-| Router | MCP Linux tools | Use |
-|--------|------------------|-----|
-| **Main Assistant** | list_upload_sessions, get_workspace_status, create_upload_session | Resolve upload state and workspace before handoff to Data Analysis/009/010; optionally create upload link in first reply. |
-| **Code Assistant** | list_workspaces, get_workspace_status | Resolve workspace name when handing off to dev specialists. |
-
-## Workspace handoff
-
-Linux-workplace agents (Data Analysis, File Converter, Document Creator, Developer, dev specialists): when handing off to another such agent, pass **workspace name** in handoff `instructions`; on receive, use that workspace for all Linux tool calls.
+The Assistant handles upload and download itself; there is no router chain. It resolves upload state with `list_upload_sessions` and picks a workspace with `list_workspaces` / `get_workspaces` before creating an upload or download link. Work in one workspace stays in that workspace across the turn.

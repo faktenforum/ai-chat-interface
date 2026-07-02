@@ -13,28 +13,14 @@ Prompts for generating round agent avatars for LibreChat. Style: playful and fri
 
 | Agent ID | Name | Prompt (EN) |
 |----------|------|-------------|
-| shared-agent-main-assistant | Main Assistant | Playful round avatar, soft gradient background (e.g. soft blue to purple or warm amber). Centered cute sparkle or star with little rays, friendly and universal. Slightly whimsical, no text. |
-| shared-agent-research | Research Assistant | Playful round avatar, soft teal or blue background. Cute magnifying glass over a document or lines, research theme. Friendly, colorful icon, no text. |
-| shared-agent-image-generation | Image Generation Assistant | Playful round avatar, soft purple or magenta background. Cute image frame or palette with a small brush, creative and colorful. No text. |
+| shared-agent-assistant | Assistant | Playful round avatar, soft gradient background (e.g. soft blue to purple or warm amber). Centered cute sparkle or star with little rays, friendly and universal. Slightly whimsical, no text. |
+| shared-agent-faktencheck | Faktencheck Assistant | Playful round avatar, soft blue or slate background. Cute magnifying glass over a document with a small checkmark, fact-checking theme. Friendly, colorful icon, no text. |
 | shared-agent-travel-location | Travel and Location Assistant | Playful round avatar, soft green or mint background. Friendly map pin or tiny map with a location dot, travel vibe. Colorful, no text. |
-| shared-agent-code-assistant | Code Assistant | Playful round avatar, soft indigo or slate background. Cute branching arrows or router node, routing to specialists. Friendly geometric symbol, no text. |
-| shared-agent-developer | Developer | Playful round avatar, soft blue or cyan background. Cute terminal window or code brackets symbol, dev vibe. Friendly and slightly playful, no text. |
-| shared-agent-code-refactorer | Code Refactorer | Playful round avatar, soft violet background. Cute overlapping blocks or arrows for refactor, friendly geometric. No text. |
-| shared-agent-github | GitHub Assistant | Playful round avatar, soft grey-blue or dark teal background. Cute branch or fork symbol (git), not the GitHub logo. Friendly, no text. |
-| shared-agent-code-reviewer | Code Reviewer | Playful round avatar, soft green or emerald background. Cute checkmark in curly braces or magnifying glass over code. Friendly, no text. |
-| shared-agent-feedback | Feedback Assistant | Playful round avatar, soft coral or rose background. Cute speech bubble with exclamation or small flag, feedback theme. Friendly, no text. |
-| shared-agent-video-transcripts | Video Transcripts | Playful round avatar, soft red or coral background. Cute play button with two or three subtitle lines beside it. Friendly, no text. |
-| shared-agent-cooking | Cooking Assistant | Playful round avatar, warm orange or warm yellow background. Cute cooking pot, chef's hat, or fork and spoon. Cozy, friendly, no text. |
-| shared-agent-data-analysis | Data Analysis | Playful round avatar, soft blue or aqua background. Cute bar chart or line chart, friendly data vibe. Colorful, no text. |
-| shared-agent-file-converter | File Converter | Playful round avatar, soft lime or green background. Cute two file shapes with arrow between them, conversion theme. Friendly, no text. |
-| shared-agent-document-creator | Document Creator | Playful round avatar, soft paper-white or cream with blue accent. Cute document with pen or sheet with lines. Clean, friendly, no text. |
-| shared-agent-linux-expert | Linux Expert | Playful round avatar, soft slate or grey-blue background. Cute terminal window or command prompt symbol (>_), friendly Linux vibe. No text. |
-
-The Developer quality variant (`shared-agent-developer-quality`) uses the same prompt as the default Developer; reuse the same image file for the avatar.
+| shared-agent-image-generation | Image Generation Assistant | Playful round avatar, soft purple or magenta background. Cute image frame or palette with a small brush, creative and colorful. No text. |
 
 ## Usage (Image-Gen MCP)
 
-Example for one agent (Main Assistant):
+Example for one agent (Assistant):
 
 ```
 Prompt: Playful round avatar, soft gradient background (e.g. soft blue to purple or warm amber). Centered cute sparkle or star with little rays, friendly and universal. Slightly whimsical, no text.

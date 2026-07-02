@@ -12,7 +12,7 @@ Summary of [Anthropic: Code execution with MCP](https://www.anthropic.com/engine
 
 We already provide a **code execution environment** via the Linux MCP server (`execute_command` in a real Linux environment). We use **direct tool calls** for all MCP tools (execute_command, read_terminal_output, workspaces, upload, download, read_workspace_file, etc.), so we are affected by:
 
-1. **Tool definition load** — Development specialists (e.g. Code Research) use Linux + GitHub + docs + Stack Overflow + npm (many tools). Each tool’s name, description, and schema are in context.
+1. **Tool definition load** — The Assistant uses Linux + GitHub + docs + Stack Overflow + npm + Wikipedia (many tools). Each tool’s name, description, and schema are in context.
 2. **Intermediate data in context** — Large command output, full file contents, or big API responses are returned to the model before the next step.
 
 We can improve efficiency without changing LibreChat’s “all tools in context” model by: (a) encouraging **batch work in code** and **filter-before-return** in prompts and agent instructions, and (b) keeping tool descriptions concise.
@@ -25,8 +25,8 @@ We can improve efficiency without changing LibreChat’s “all tools in context
 
 **What we do:**
 
-- In agent instructions (e.g. Developer, Data Analysis): state that **multi-step workflows should be implemented in a single script** run via `execute_command`, and only use tool calls for I/O boundaries (upload URL, download link, read a final file).
-- In MCP prompts (e.g. data_analysis, document_creation): add a short note that **loops and conditionals belong inside the script**, not as repeated tool calls.
+- In the Assistant's instructions: state that **multi-step workflows should be implemented in a single script** run via `execute_command`, and only use tool calls for I/O boundaries (upload URL, download link, read a final file).
+- In MCP prompts (e.g. file-operations, workspaces): add a short note that **loops and conditionals belong inside the script**, not as repeated tool calls.
 
 ---
 
@@ -36,8 +36,8 @@ We can improve efficiency without changing LibreChat’s “all tools in context
 
 **What we do:**
 
-- In the **data_analysis** MCP prompt: explicitly say to **filter or summarize in Python/bash before returning**; avoid passing full result sets through the conversation; use `read_workspace_file` or `create_download_link` for the final artifact or a short summary/sample.
-- In the **Data Analysis** agent instructions: reinforce “process in script, return only summary or sample when data is large.”
+- For data analysis: **filter or summarize in Python/bash before returning**; avoid passing full result sets through the conversation; use `read_workspace_file` or `create_download_link` for the final artifact or a short summary/sample.
+- In the Assistant's instructions: reinforce “process in script, return only summary or sample when data is large.”
 
 ---
 
@@ -61,7 +61,7 @@ We can improve efficiency without changing LibreChat’s “all tools in context
 
 - **Shorter tool descriptions** in the Linux MCP server: keep descriptions minimal (one sentence + critical params) to reduce tokens.
 - **Lightweight “tool overview” prompt** on MCP Linux: e.g. a prompt that lists tool names and one-line descriptions so agents that support prompt-based discovery can pull a short list instead of relying only on full schemas (if/when the client uses it).
-- **Agent splitting:** avoid one agent with “Linux + 5 other MCPs”; keep tool sets smaller per agent where it makes sense.
+- **Concise tool sets:** the Assistant deliberately carries Linux + several MCPs in one agent (simpler UX than a router chain). Short descriptions and a tool-overview prompt matter more here than splitting into narrower agents.
 
 ---
 
@@ -69,7 +69,7 @@ We can improve efficiency without changing LibreChat’s “all tools in context
 
 **Insight:** For sensitive data, the harness can tokenize PII before it reaches the model and untokenize when calling tools, so the model never sees raw PII.
 
-**Our situation:** Not implemented. Could be a future improvement for agents that handle user-uploaded or customer data (e.g. Data Analysis, Document Creator). Out of scope for the current changes.
+**Our situation:** Not implemented. Could be a future improvement when the Assistant handles user-uploaded or customer data. Out of scope for the current changes.
 
 ---
 
@@ -77,8 +77,8 @@ We can improve efficiency without changing LibreChat’s “all tools in context
 
 | Insight | Action |
 |--------|--------|
-| Control flow in code | Instruct agents: batch multi-step work in one script; use tools for I/O boundaries. |
-| Filter before return | Data-analysis prompt + agent: filter/summarize in script; return summary or sample, not full dataset. |
+| Control flow in code | Instruct the Assistant: batch multi-step work in one script; use tools for I/O boundaries. |
+| Filter before return | Filter/summarize in script; return summary or sample, not full dataset. |
 | State / skills | Document: save scripts in workspace and reuse in later turns. |
-| Progressive disclosure | Keep tool descriptions short; optional tool-overview prompt; consider smaller tool sets per agent. |
+| Progressive disclosure | Keep tool descriptions short; optional tool-overview prompt. |
 | PII tokenization | Note as future improvement; not implemented. |
