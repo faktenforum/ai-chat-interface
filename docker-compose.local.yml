@@ -27,6 +27,16 @@ services:
     extends: { file: docker-compose.librechat.yml, service: mongodb-init }
     container_name: ${STACK_NAME:-local}-mongodb-init
     env_file: .env.local
+    # Under rootless Podman mongod runs as MONGODB_USER (0:0, see below) so this chown must
+    # match, or it fights the alignment back to 1000:1000 on every "up". Defaults to UID/GID
+    # (1000:1000) under Docker, unchanged.
+    environment:
+      UID: ${MONGODB_INIT_UID:-${UID:-1000}}
+      GID: ${MONGODB_INIT_GID:-${GID:-1000}}
+    # SELinux: without this the chown itself is silently denied (swallowed by the script's
+    # `2>/dev/null || true`), so it never actually applies. Mirrors mongodb/meilisearch.
+    security_opt:
+      - label=disable
     volumes:
       - mongodata:/data/db
       - mongoconfig:/data/configdb
@@ -35,9 +45,14 @@ services:
     extends: { file: docker-compose.librechat.yml, service: mongodb }
     container_name: ${STACK_NAME:-local}-mongodb
     env_file: .env.local
-    # Under rootless Podman the chown-init can't align the named volume to uid 1000, so
-    # the volume keeps the mongo image's default uid (999). MONGODB_USER=999:999 (set by
-    # the podman npm scripts) matches it. Defaults to 1000:1000 under Docker (unchanged).
+    # Under rootless Podman, non-root container uids (e.g. 999, the mongo image's default)
+    # resolve to different host uids depending on whether the container was created via
+    # `podman run`/`podman unshare` or via the Docker-API-compat socket (what podman-compose
+    # uses) - the two disagree on the subuid mapping, so a fixed non-root uid works from one
+    # path and gets Permission denied from the other. Container-uid 0 is unambiguous: it's a
+    # single 1:1 mapping to the real host user on both paths. MONGODB_USER=0:0 (set by the
+    # podman npm scripts) sidesteps the mismatch entirely. Defaults to 1000:1000 under Docker
+    # (unchanged, no rootless remapping there).
     user: "${MONGODB_USER:-1000:1000}"
     # SELinux: named volume lives under $HOME (user_home_t); a confined container can't write
     # to it under rootless Podman -> mongod fails creating /data/db/journal. Mirrors meilisearch.
@@ -366,6 +381,11 @@ services:
     build:
       context: ./packages/mcp-linux
       dockerfile: Dockerfile
+    # SELinux: bind-mounted ./packages/mcp-linux/src (user_home_t) is unreadable to the
+    # confined container under rootless Podman -> Cannot find module '/app/src/server.ts'.
+    # Mirrors meilisearch/mongodb (no-op under Docker).
+    security_opt:
+      - label=disable
     ports:
       - "127.0.0.1:${MCP_LINUX_PORT:-3015}:${MCP_LINUX_PORT:-3015}"  # Cursor IDE – local only
     volumes:
