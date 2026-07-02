@@ -140,7 +140,7 @@ export function registerWorkspaceTools(
     'get_workspaces',
     {
       description:
-        'Full git status and submodules status (idle/updating/done/error/none) for a workspace. When AGENTS.md exists in the workspace root, returns its content as instructions. First call after every handoff: use workspace from handoff instructions (default if none). Pass summary_only: true to get the same overview without the full file lists.',
+        'Full git status and submodules status (idle/updating/done/error/none) for a workspace. When AGENTS.md exists in the workspace root, returns its content as instructions. First call after every handoff: use workspace from handoff instructions (default if none). File lists are capped; use read_workspace_file, list_workspace_files, or glob for specific files.',
       inputSchema: GetWorkspacesSchema.shape,
     },
     async (args, extra) => {
@@ -151,7 +151,6 @@ export function registerWorkspaceTools(
           method: 'get_workspaces',
           params: {
             workspace: args.workspace,
-            summary_only: args.summary_only,
           },
         });
 

@@ -145,7 +145,7 @@ CAPABILITIES
 - Use terminal tools (execute_command, write_terminal) to run any command. All commands run in the context of a workspace (default: "default"). Each terminal response includes workspace git metadata (branch, dirty status).
 - Prefer the first-class file tools over the terminal for routine file work: read_workspace_file to read, write to create/overwrite, edit for targeted string replacements, grep to search file contents (ripgrep), glob to find files by pattern. Use the terminal for git, builds, and everything else.
 - For multi-step tasks, track your plan with todowrite (statuses: pending, in_progress, completed); keep exactly one item in_progress.
-- list_workspaces = overview (all workspaces, branch, dirty). get_workspaces(workspace) = full detail (git status, optional workspace-root AGENTS.md). Use the latter after handoffs or when you need workspace context; use the former to choose or create a workspace. get_workspaces(workspace, { summary_only: true }) for the same overview without the full file lists. get_workspaces returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files.
+- list_workspaces = overview (all workspaces, branch, dirty). get_workspaces(workspace) = full detail (git status, optional workspace-root AGENTS.md). Use the latter after handoffs or when you need workspace context; use the former to choose or create a workspace. get_workspaces returns capped file lists (staged_count, truncated); prefer read_workspace_file, list_workspace_files, or glob with explicit paths for specific files.
 - list_workspace_files: Use to explore directory structure; more effective than ls for getting a structured file list.
 
 File Upload:

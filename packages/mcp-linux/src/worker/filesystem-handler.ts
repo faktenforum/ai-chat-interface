@@ -15,13 +15,28 @@ import type { Handler, WorkerContext } from './types.ts';
 const execFileAsync = promisify(execFile);
 
 /** Resolve a workspace-relative path to an absolute path, rejecting traversal outside the workspace. */
-function safeResolve(workspacesDir: string, workspace: string, relativePath: string): { root: string; abs: string } {
+async function safeResolve(
+  workspacesDir: string,
+  workspace: string,
+  relativePath: string,
+): Promise<{ root: string; abs: string }> {
   const wsError = validateWorkspaceName(workspace);
   if (wsError) throw new Error(wsError);
   const root = join(workspacesDir, workspace);
   const abs = resolve(root, relativePath);
   if (abs !== root && !abs.startsWith(root + '/')) {
     throw new Error('Path traversal denied: path must be within the workspace');
+  }
+  // Reject symlink targets that resolve outside the workspace (parity with resolveSafePath).
+  try {
+    const realRoot = await fs.realpath(root);
+    const realAbs = await fs.realpath(abs);
+    if (realAbs !== realRoot && !realAbs.startsWith(realRoot + '/')) {
+      throw new Error('Path traversal denied: symlink target is outside the workspace');
+    }
+  } catch (err) {
+    // ENOENT is fine: the target does not exist yet (new file). Other errors propagate.
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
   }
   return { root, abs };
 }
@@ -38,7 +53,7 @@ export function createFilesystemHandlers(ctx: WorkerContext): Record<string, Han
       if (typeof filePath !== 'string' || !filePath) throw new Error('file_path is required');
       if (typeof content !== 'string') throw new Error('content is required');
 
-      const { abs } = safeResolve(ctx.workspacesDir, workspace, filePath);
+      const { abs } = await safeResolve(ctx.workspacesDir, workspace, filePath);
       await fs.mkdir(dirname(abs), { recursive: true });
       let existed = true;
       try {
@@ -67,7 +82,7 @@ export function createFilesystemHandlers(ctx: WorkerContext): Record<string, Han
       }
       if (oldString === newString) throw new Error('old_string and new_string must differ');
 
-      const { abs } = safeResolve(ctx.workspacesDir, workspace, filePath);
+      const { abs } = await safeResolve(ctx.workspacesDir, workspace, filePath);
       let content: string;
       try {
         content = await fs.readFile(abs, 'utf-8');
@@ -83,7 +98,14 @@ export function createFilesystemHandlers(ctx: WorkerContext): Record<string, Han
         );
       }
 
-      const updated = replaceAll ? content.split(oldString).join(newString) : content.replace(oldString, newString);
+      // Literal replacement (String.replace would interpret $-patterns in newString).
+      let updated: string;
+      if (replaceAll) {
+        updated = content.split(oldString).join(newString);
+      } else {
+        const idx = content.indexOf(oldString);
+        updated = content.slice(0, idx) + newString + content.slice(idx + oldString.length);
+      }
       await fs.writeFile(abs, updated, 'utf-8');
       return { workspace, file_path: filePath, replacements: replaceAll ? occurrences : 1 };
     },
@@ -96,7 +118,7 @@ export function createFilesystemHandlers(ctx: WorkerContext): Record<string, Han
       const limit = (params.limit as number) || 100;
       if (typeof pattern !== 'string' || !pattern) throw new Error('pattern is required');
 
-      const { root, abs } = safeResolve(ctx.workspacesDir, workspace, searchPath);
+      const { root, abs } = await safeResolve(ctx.workspacesDir, workspace, searchPath);
       const rel = relative(root, abs);
 
       const args = ['--line-number', '--no-heading', '--color=never', '--max-columns=300', '-e', pattern];
@@ -111,9 +133,9 @@ export function createFilesystemHandlers(ctx: WorkerContext): Record<string, Han
       } catch (err) {
         const e = err as { code?: number; stdout?: string; stderr?: string; message?: string };
         // ripgrep exits 1 when there are no matches; that is not an error.
+        // ripgrep exits 1 = no matches (ok); any other non-zero is a real error.
         if (e.code === 1) return { workspace, pattern, matches: [], truncated: false };
-        if (typeof e.stdout === 'string' && e.stdout) stdout = e.stdout;
-        else throw new Error(`grep failed: ${e.stderr || e.message || String(err)}`);
+        throw new Error(`grep failed: ${e.stderr || e.message || String(err)}`);
       }
 
       const lines = stdout.split('\n').filter((l) => l.length > 0);
@@ -133,7 +155,7 @@ export function createFilesystemHandlers(ctx: WorkerContext): Record<string, Han
       const limit = (params.limit as number) || 100;
       if (typeof pattern !== 'string' || !pattern) throw new Error('pattern is required');
 
-      const { root, abs } = safeResolve(ctx.workspacesDir, workspace, searchPath);
+      const { root, abs } = await safeResolve(ctx.workspacesDir, workspace, searchPath);
       const rel = relative(root, abs);
 
       const args = ['--files', '-g', pattern];
@@ -145,9 +167,9 @@ export function createFilesystemHandlers(ctx: WorkerContext): Record<string, Han
         stdout = res.stdout;
       } catch (err) {
         const e = err as { code?: number; stdout?: string; stderr?: string; message?: string };
+        // ripgrep exits 1 = no files matched (ok); any other non-zero is a real error.
         if (e.code === 1) return { workspace, pattern, files: [], truncated: false };
-        if (typeof e.stdout === 'string' && e.stdout) stdout = e.stdout;
-        else throw new Error(`glob failed: ${e.stderr || e.message || String(err)}`);
+        throw new Error(`glob failed: ${e.stderr || e.message || String(err)}`);
       }
 
       const files = stdout

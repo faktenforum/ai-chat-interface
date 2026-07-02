@@ -192,7 +192,6 @@ export function createWorkspaceHandlers(ctx: WorkerContext): Record<string, Hand
 
     async get_workspaces(params) {
       const workspace = (params.workspace as string) || 'default';
-      const summaryOnly = (params.summary_only as boolean) === true;
       const wsPath = resolveWorkspacePath(ctx.workspacesDir, workspace);
 
       try {
@@ -273,26 +272,6 @@ export function createWorkspaceHandlers(ctx: WorkerContext): Record<string, Hand
         (hasGitmodules
           ? ({ status: 'idle' as const, message: '' } satisfies SubmodulesStatus)
           : ({ status: 'none' as const, message: '' } satisfies SubmodulesStatus));
-
-      if (summaryOnly) {
-        return {
-          workspace,
-          branch: meta.branch,
-          dirty: meta.dirty,
-          remote_url: remoteUrl || null,
-          staged: capped.staged,
-          unstaged: capped.unstaged,
-          untracked: capped.untracked,
-          staged_count: capped.staged_count,
-          unstaged_count: capped.unstaged_count,
-          untracked_count: capped.untracked_count,
-          truncated: capped.truncated,
-          ahead,
-          behind,
-          instructions: instructions ?? null,
-          submodules,
-        };
-      }
 
       return {
         workspace,
