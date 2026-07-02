@@ -26,33 +26,29 @@ LibreChat can use one app-level MCP connection (`startup: true`), so one MCP ses
 | `list_terminals` | List active sessions |
 | `kill_terminal` | Terminate a session |
 
+A workspace is a plain per-project directory under `~/workspaces/`. Git is available on demand (init, clone, commit, push) but not required; a workspace can just hold files. One workspace = one task context.
+
 ### Workspace
 | Tool | Description |
 |------|-------------|
-| `list_workspaces` | Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use `get_workspace_status(workspace)` for full plan and tasks. |
-| `create_workspace` | Create workspace (empty or from git URL). When cloning, the main repo is cloned first; submodules are updated in the background (see **Submodules** below). Call list_workspaces first if unsure whether the name exists. |
-| `delete_workspace` | Delete workspace (not default) |
-| `get_workspace_status` | Full git status, plan, tasks, **submodules** status, and **code_index** status. First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next. File lists may be truncated/collapsed (see **Status capping** below). |
-| `set_workspace_plan` | Set plan and/or tasks. Call before every handoff and at end of your turn so the next agent sees current state; if you omit this, context is lost. Pass full task list with updated statuses, or partial updates via `task_updates: [{ index, status }]` (0-based index from get_workspace_status). Tasks: `{ title, status? }` or string[]; status: pending, in_progress, done, cancelled. |
+| `list_workspaces` | Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url. Use `get_workspaces(workspace)` for full git status. |
+| `create_workspace` | Create a workspace (empty repo or clone from git URL). When cloning, submodules are checked out recursively. Call list_workspaces first if unsure whether the name exists. |
+| `delete_workspace` | Delete a workspace (not `default`; requires `confirm: true`). |
+| `get_workspaces` | Full git status and **submodules** status for one workspace. Returns workspace-root `AGENTS.md` content as `instructions` when present. Pass `summary_only: true` for the same overview without the full file lists. File lists may be truncated/collapsed (see **Status capping** below). |
 | `clean_workspace_uploads` | Delete files in workspace `uploads/` older than N days (default 7; use 0 to delete all). Use to free space; uploads are ephemeral. |
 
-#### When to use list_workspaces vs get_workspace_status
+#### When to use list_workspaces vs get_workspaces
 
-- **`list_workspaces`** — Overview only: all workspace names, branch, dirty flag, remote_url, short plan_preview. Use when: choosing or creating a workspace, checking if a name exists, or deciding which workspace to pass in a handoff. When handing off to a workspace specialist, put the chosen workspace name in the handoff instructions so they call `get_workspace_status(workspace)` first.
-- **`get_workspace_status(workspace)`** — Full detail for **one** workspace: full plan, all tasks (title + status), optional instructions (from workspace-root `AGENTS.md`), git status (with capping). Use when: after a handoff (to read plan/tasks), before/after `set_workspace_plan`, or when you need task-level context. Do not use for "list all workspaces".
+- **`list_workspaces`** — Overview only: all workspace names, branch, dirty flag, remote_url. Use when choosing or creating a workspace, or checking whether a name exists.
+- **`get_workspaces(workspace)`** — Full detail for **one** workspace: git status (with capping), optional instructions (from workspace-root `AGENTS.md`), submodules status. Pass `summary_only: true` for the overview without full file lists. Do not use for "list all workspaces".
 
-#### Plan and tasks
+#### Submodules in get_workspaces
 
-Workspaces store a **plan** (goal/context) and **tasks** (steps) as the **single source of truth** for continuity across handoffs. Stored in `.mcp-linux/plan.md` (plan text) and `.mcp-linux/tasks.json` (tasks). Optional `AGENTS.md` in the workspace root (see [agents.md](https://agents.md)) provides entry instructions for expert workspaces; returned in `get_workspace_status` as `instructions` when present. Each task has `title` and `status` (pending | in_progress | done | cancelled). **Flow:** After a handoff use `get_workspace_status(workspace)` (workspace from handoff instructions; use `default` if none). If there is no or empty plan/tasks, set an initial plan and tasks from the handoff then continue. **Always** call `set_workspace_plan` before every handoff or when finishing your part so the next agent has current state; otherwise context is lost. To update only some statuses, use `task_updates` with 0-based indices from get_workspace_status (e.g. `task_updates: [{ index: 0, status: 'done' }, { index: 1, status: 'in_progress' }]`). Handoff instructions should contain the **workspace name** and optionally one short hint (e.g. "Continue from plan/tasks"); do not duplicate the full plan or task list in handoff text. Before creating a workspace call `list_workspaces` to avoid "already exists". Prefer tasks as string array (e.g. `["Step 1", "Step 2"]`); or `[{ title, status? }]`.
-
-#### Submodules and code_index in get_workspace_status
-
-- **`submodules`** — Status of background submodule checkout after clone: `status` is `none` (no .gitmodules), `idle` (not started), `updating`, `done`, or `error`; optional `message` on error. When cloning a repo with submodules, `create_workspace` returns immediately and submodules are updated in the background; poll `get_workspace_status` to see when `submodules.status` is `done` or `error`.
-- **`code_index`** — Semantic code index state. When indexing is disabled (global or per-workspace), `code_index` is `{ enabled: false }`. When enabled, `code_index` includes `enabled: true`, `status` (standby | indexing | indexed | error), `message`, `files_processed`, `files_total`, and `has_index` (whether the index has data and is complete).
+- **`submodules`** — Submodule checkout status: `none` (no .gitmodules), `idle`, `updating`, `done`, or `error`; optional `message` on error.
 
 #### Status capping
 
-`get_workspace_status` returns bounded file lists to avoid context overflow: paths under bulk dirs (e.g. `uploads/`, `venv/`) are collapsed to one summary line per dir; remaining paths are capped per category. Response includes `staged_count`, `unstaged_count`, `untracked_count` and `truncated: true` when lists were reduced. For full details use `execute_command('git status')` or file tools with explicit paths. Prefer `read_workspace_file` with explicit paths (e.g. from `list_upload_sessions`) rather than relying on the full status payload.
+`get_workspaces` returns bounded file lists to avoid context overflow: paths under bulk dirs (e.g. `uploads/`, `venv/`) are collapsed to one summary line per dir; remaining paths are capped per category. Response includes `staged_count`, `unstaged_count`, `untracked_count` and `truncated: true` when lists were reduced. For full details use `execute_command('git status')` or file tools with explicit paths. Prefer `read_workspace_file` with explicit paths (e.g. from `list_upload_sessions`) rather than relying on the full status payload.
 
 ### Account
 | Tool | Description |
@@ -78,12 +74,23 @@ Sessions are token-based, single-use (auto-close after upload), and time-limited
 
 Links are token-based, single-use (auto-close after download), and time-limited (default 60 min). Files are streamed from their original location. **Cleanup:** Periodically check `list_download_links` (e.g. after creating new links or at end of a task) and call `close_download_link` for links that are unused—keeps exposure minimal and follows security best practice.
 
-### File Reading
+### Files
+
+First-class file tools (opencode-style) run in the per-user worker, so file ownership is correct and routine file work does not go through `execute_command`. All paths are relative to the workspace root.
+
 | Tool | Description |
 |------|-------------|
-| `read_workspace_file` | Read file as structured MCP content (text, image, audio) |
+| `read_workspace_file` | Read a file as structured MCP content (text, image, audio). Text inline with line numbers; images/audio as base64; large or binary files get a download link. Limits: text 1 MB, binary 10 MB. |
+| `list_workspace_files` | List files in a workspace directory; more effective than `ls` for exploring structure. |
+| `write` | Create (with parent dirs) or overwrite a file. Prefer over echoing content through `execute_command`. |
+| `edit` | Replace an exact string in an existing file. `old_string` must match exactly and be unique unless `replace_all: true`. |
+| `grep` | Search file contents by regex (ripgrep). Returns matching files, line numbers, and line text. Narrow with `path` and `glob`. |
+| `glob` | Find files by glob pattern (e.g. `**/*.py`). Returns paths relative to the workspace root. |
 
-Returns text files inline, images/audio as base64. Large or binary files automatically get a download link instead. Limits: text 1 MB, binary 10 MB.
+### Task tracking
+| Tool | Description |
+|------|-------------|
+| `todowrite` | Maintain a structured todo list for the current multi-step task. Statuses: `pending`, `in_progress`, `completed`; keep exactly one item `in_progress`. The list lives in the model's context, not on the server. |
 
 ### MCP Resources
 
@@ -93,49 +100,11 @@ Resource template `workspace://{workspace}/{+path}` exposes workspace files as n
 
 Workspaces are persistent. Agents can save scripts (e.g. under `scripts/` in a workspace) and run them again in later turns. See [MCP Code Execution Insights](MCP_CODE_EXECUTION_INSIGHTS.md) for context-efficiency guidance (batch work in code, filter before return).
 
-### Agent Linux Expert
+### Which agent uses this
 
-The **Linux Expert** agent (id: `shared-agent-linux-expert`) is a general Linux assistant with full MCP Linux tool access. It handles: general Linux questions, shell commands, scripts, file operations; plus MCP Linux account/workspace administration (status, cleanup, reset, sessions). Users can select it directly or be routed from Main Assistant. It hands off to Code Assistant (code implementation), Data Analysis, File Converter, or Document Creator for those domains.
+The **Assistant** agent (id: `shared-agent-assistant`) uses these tools. It is the universal agent for coding, Linux/shell, files, data analysis, documents, file conversion, research, and GitHub. There is no router and no multi-agent handoff chain; the Assistant does the work itself and hands off (one hop) only to the three specialists (Faktencheck, Travel and Location, Image Generation) when the request is outside its scope.
 
-## Code index and search
-
-The MCP Linux server can build a semantic **code index** for each workspace. The indexer:
-
-- Scans files under the workspace root, filtered by extension and ignore rules.
-- Splits content into **code chunks** and stores them with embeddings in LanceDB.
-- Exposes tools for search and debugging:
-  - `codebase_search` – semantic search over the indexed code.
-  - `debug_code_index_list_chunks` – list stored chunks for a file/path prefix.
-  - `debug_code_index_rechunk_file` – recompute chunks for a single file without touching the index.
-
-Chunking uses a hybrid strategy:
-
-- **AST-aware chunking (tree-sitter)** for a set of languages, with a strict fallback to line-based splitting.
-- **Line-based chunking** for everything else, or when parsing/boundary extraction fails.
-
-Current AST-backed languages (via tree-sitter):
-
-- TypeScript family: `.ts`, `.tsx`
-- JavaScript family: `.js`, `.jsx`, `.json`
-- Markdown: `.md`, `.markdown`
-- HTML: `.html`, `.htm`
-- CSS: `.css`
-- Python: `.py`
-- Java: `.java`
-- Rust: `.rs`
-- C / C headers: `.c`, `.h`
-- C++: `.cpp`, `.hpp`
-
-Every stored chunk is a `CodeBlock` with at least:
-
-- `file_path`: relative path in the workspace
-- `start_line`, `end_line`: 1-based line range in the original file
-- `content`: the chunk text
-- `file_hash`: SHA-256 of the source file
-- `segment_hash`: stable identifier for the chunk
-- `language` (optional): language hint derived from the file extension (e.g. `ts`, `md`, `py`, `java`)
-
-On parser errors, missing parsers, or empty AST boundaries, the indexer falls back to the same line-based splitter used for non-AST languages, so all supported files remain searchable.
+For searching code in a workspace, use the `grep` and `glob` file tools above.
 
 ## MCP transport and sessions
 
@@ -195,7 +164,7 @@ Upload, download, and status routes are exposed publicly via Traefik (`/upload/*
 
 ## Pre-installed Runtimes
 
-Node.js 24, Python 3, Git, Bash, ripgrep, tree, jq, build-essential, openssh-client, **GitHub CLI (gh)**. For headless plotting (e.g. Data Analysis agent): fontconfig, fonts-dejavu-core. See [MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md) for CSV→chart workflow and example Python script.
+Node.js 24, Python 3, Git, Bash, ripgrep, tree, jq, build-essential, openssh-client, **GitHub CLI (gh)**. For headless plotting: fontconfig, fonts-dejavu-core. See [MCP Linux Data Analysis](MCP_LINUX_DATA_ANALYSIS.md) for the CSV→chart workflow and an example Python script.
 
 Media conversion and document tools (no LibreOffice/texlive):
 - **FFmpeg** — audio/video conversion (MP3, OGG, FLAC, OPUS, MP4, WEBM, etc.)

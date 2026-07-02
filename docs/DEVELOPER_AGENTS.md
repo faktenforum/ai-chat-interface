@@ -1,90 +1,32 @@
-# Developer Agents
+# Agents
 
-Development requests are routed by **Code Assistant** to task-specific specialists. Main Assistant hands off to this router once (10-handoff limit); the router then has up to 10 handoffs to specialists.
+The chat interface runs one universal **Assistant** plus three specialists. This replaced the former
+developer/workspace stack (a Code Assistant router with Developer, Code Refactorer, GitHub, Code
+Reviewer, plus workspace specialists and quality variants). Better models (GLM-5.2) made the router,
+handoff chain, quality-variant split, and per-workspace plan/task state unnecessary. See
+`.plan/simplify-ai-chat-interface/plan.md` for the full rationale and the remaining phases.
 
-## Router hierarchy
+## Roster
 
-```
-Main Assistant ──► Code Assistant ──► Developer | Code Refactorer
-                                 ──► GitHub Assistant | Code Reviewer
-                                 ──► Main Assistant (back)
-```
+| Agent | ID | Provider / Model | Distinct backend / tools |
+|-------|----|------------------|--------------------------|
+| Assistant (default) | `shared-agent-assistant` | Scaleway / glm-5.2 (text/code, no vision) | linux, github (read+write), docs, stackoverflow, npm-search, wikipedia, web_search, file_search |
+| Faktencheck | `shared-agent-faktencheck` | Scaleway / mistral-small-3.2 | checkbot-rag `search` MCP (still `public: false`) |
+| Travel and Location | `shared-agent-travel-location` | Scaleway / qwen3-235b | mapbox, openstreetmap, weather, db-timetable |
+| Image Generation | `shared-agent-image-generation` | Scaleway / mistral-small-3.2 | image-gen MCP |
 
-Specialists do **not** hand off back to the router; they hand off to Main Assistant or to other specialists.
+The Assistant does coding, Linux/shell, data analysis, document creation, file conversion, research
+and GitHub itself. It hands off (one hop) only for a clearly different domain: fact-checking, travel,
+or image generation. Each specialist returns to the Assistant.
 
-**Recursion limit (Max Agent Steps):**
-- One limit applies to the **entire** run (all agents in the chain); taken from the **first** agent (the one the user started with).
-- Each step = one LLM call, tool call, or handoff. Stop = agent returns a final response with no further tools/handoffs; else `GRAPH_RECURSION_LIMIT`.
-- Dev agents: 100–120 so workflows with many file/git/GitHub steps complete. Main Assistant 200, Code Assistant 120.
+## Recursion limit (Max Agent Steps)
 
-## Agents
+One limit applies to the whole run, taken from the agent the user started with. Each step is one LLM
+call, tool call, or handoff. The Assistant uses 150 so long coding/GitHub sessions complete;
+specialists use 25-40.
 
-Each of the three Code specialists (Developer, Code Refactorer, Code Reviewer) has two variants: a **default** (OpenSource, Scaleway glm-5.2) and a **quality** variant (OpenRouter, name includes model). Use the default first; use the quality variant when the user explicitly emphasizes quality or when the default could not fulfill the task (fallback).
+## Guiding principle
 
-| Agent | ID | Provider | Model | Tools | Role |
-|-------|----|----------|-------|-------|------|
-| **Code Assistant** | `shared-agent-code-assistant` | Scaleway | glm-5.2 | list_workspaces, get_workspace_status (MCP Linux) | Route to specialist; uses tools only to pass explicit workspace name in handoff. |
-| **Developer** (default) | `shared-agent-developer` | Scaleway | glm-5.2 | 18 (Linux full, web_search) | Implement, fix bugs. |
-| **Developer (Claude Opus 4.8)** (quality) | `shared-agent-developer-quality` | OpenRouter | anthropic/claude-opus-4.8 | same | Same role; use when user wants higher quality or default failed. |
-| **Code Refactorer** (default) | `shared-agent-code-refactorer` | Scaleway | glm-5.2 | 18 (Linux full, web_search) | Refactor, polish, restructure. |
-| **GitHub Assistant** | `shared-agent-github` | Scaleway | devstral-2-123b | GitHub (read+write), Linux minimal | PRs, issues, releases; create/update/merge PR, review, file/repo ops. See [GitHub tools](#github-tools). |
-| **Code Reviewer** (default) | `shared-agent-code-reviewer` | Scaleway | glm-5.2 | ~18 (Linux subset, GitHub read) | Single entry for PR reviews: clone repo, analyze via Linux MCP, produce review; hand off to GitHub Assistant to post on GitHub when the user requests it. |
-
-## Chains
-
-No automatic chains. All transitions between specialists are via explicit handoffs.
-
-## Handoffs
-
-Each specialist can hand off to Main Assistant and to 2–3 relevant specialists (e.g. Developer → Code Refactorer, GitHub Assistant). Specialists do **not** hand off back to Code Assistant. Handoff: call the transfer tool (runtime name `lc_transfer_to_<api_id>`), pass context in the **instructions** parameter. Main Assistant has no GitHub tools; for bug reports only hand off to Feedback Assistant.
-
-For the three Code specialists (Developer, Code Refactorer, Code Reviewer), handoffs include **both** the default and the quality variant. The handoff **description** in `agents.yaml` guides the LLM: prefer the default; use the quality variant only when the user explicitly emphasizes quality or when the default could not fulfill the task.
-
-**Loops:** Main Assistant asks once when unclear then transfers; specialists return to Main Assistant only when task done, user asks for another assistant, or request is clearly out of domain—not when merely ambiguous.
-
-- **Developer → Code Refactorer**: Polish or restructure code (readability, structure, tests, style).
-- **Code Refactorer → Developer**: Implement missing code, tests, or behavior found during refactoring.
-- **Code Refactorer → Code Reviewer**: Read PR/review comments and fix issues (Code Refactorer has no GitHub API).
-- **Feedback Assistant → GitHub Assistant**: Create issue (title + body in English); → Code Assistant (user wants to fix).
-
-## Code review flow
-
-1. User provides PR URL to **Code Reviewer** (via router or by selecting the agent).
-2. **Code Reviewer**: `pull_request_read` → head/base ref and repo URL; `create_workspace` (git_url, branch = head ref) → in workspace: `git fetch origin <base_ref>`, `git diff origin/<base_ref>...HEAD`; `read_workspace_file` for changed files and context → analyze → structured review (summary + optional inline comments).
-3. To post on GitHub: **Code Reviewer** hands off via transfer tool with review body and inline comments; **GitHub Assistant** uses `create_review` or `pull_request_review_write`. If using `pull_request_review_write` with method `create`, the assistant must then call it again with method `submit_pending` so the review is published; otherwise only a pending (draft) review exists and nothing appears on the PR.
-
-Optional handoffs: Code Reviewer → Developer (fix issues).
-
-**GitHub content:** GitHub Assistant posts all review bodies, inline comments, and issue/PR text in **English** (per agent instructions).
-
-## Feedback / Bug reports
-
-**Feedback Assistant** (`shared-agent-feedback`): Chat-interface bug reports. Repo always **faktenforum/ai-chat-interface**. No GitHub tools → hand off to **GitHub Assistant** (title + body in English). On create_issue error, GitHub Assistant reports the error. Optional: **Code Assistant** (user wants to fix). Entry: Main Assistant or preset “Feedback / Report error”.
-
-## GitHub tools
-
-Write tools are **only on GitHub Assistant**; Code Reviewer has read-only GitHub tools. Code Reviewer hands off to GitHub Assistant to post reviews.
-
-GitHub Assistant’s tools in `agents.yaml` (suffix `_mcp_github`):
-
-| Scope | Examples |
-|-------|----------|
-| Read | search_*, get_file_contents, get_commit, get_me, get_label, issue_read, pull_request_read, list_* |
-| Write — issues/PRs/review | create_issue, create_pull_request, create_review, pull_request_review_write, add_issue_comment, issue_write, update_pull_request, update_pull_request_branch, merge_pull_request |
-| Write — branch/file/repo | create_branch, create_or_update_file, delete_file, push_files, fork_repository, create_repository |
-| Optional (if MCP provides) | assign_copilot_to_issue, request_copilot_review, sub_issue_write |
-
-Only tools the GitHub MCP server actually provides are exposed; unknown names in YAML are ignored. In the UI, tools may appear without the `_mcp_github` suffix—keep them enabled for GitHub Assistant.
-
-## Troubleshooting
-
-**"empty_messages" / "Message pruning removed all messages"** when using Scaleway (or other custom endpoints) for dev agents: Custom endpoints without `endpointTokenConfig` get a **18K context fallback**. Long chains (Main Assistant → Router → Code Refactorer/Code Reviewer plus PR/commit data) exceed that; pruning then removes all messages. **Fix:** set `maxContextTokens` in each agent’s `model_parameters` in `agents.yaml` to the model’s real context (e.g. `262144` for glm-5.2 on Code Assistant/Developer/Code Refactorer/Code Reviewer, `200000` for Devstral 2 123B on GitHub Assistant). Re-run the librechat-init after any change to `agents.yaml` so the DB receives the updated `model_parameters`; otherwise the runtime keeps using the 18K fallback. For very large PRs, use the quality variant (e.g. Code Reviewer with Gemini 3.1 Pro Preview, 1M context). See [AGENTS_CONTEXT_LIMIT](wip/AGENTS_CONTEXT_LIMIT.md) for the init/pruning flow.
-
-**"400 Unexpected role 'user' after role 'tool'"** after a transfer (e.g. Main Assistant → Data Analysis right after the router ran `list_upload_sessions`): The API expects an assistant turn after a tool message, but the handoff logic was appending the handoff instructions as a user message. Fixed in **dev/agents** (`MultiAgentGraph.ts`): when the last message before the handoff is a tool message, handoff instructions are now injected into that tool message’s content instead of adding a separate user message. Ensure the agents submodule/image includes this fix.
-
-## Config
-
-- Agents: [`packages/librechat-init/config/agents.yaml`](../packages/librechat-init/config/agents.yaml)
-- Agent instructions: [`packages/librechat-init/config/agent-instructions/`](../packages/librechat-init/config/agent-instructions/) — one `.md` file per agent, referenced in `agents.yaml` via `instructionsFile` (e.g. `shared-agent-developer-instructions.md`). Naming: `{agent-id}-instructions.md`.
-- Models: [`packages/librechat-init/config/librechat.yaml`](../packages/librechat-init/config/librechat.yaml)
-- Init: [`packages/librechat-init/src/init-agents.ts`](../packages/librechat-init/src/init-agents.ts)
+An agent exists as a separate entity only when it differs by tool access or backend, not by skill
+level or domain prose. Skill and domain differences live in the Assistant's instructions and the
+per-project workspace, not in separate agents.

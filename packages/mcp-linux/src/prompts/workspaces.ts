@@ -1,23 +1,22 @@
 /**
  * MCP Prompt: Workspaces
  *
- * How workspaces work: concept, plan and tasks for handoffs, setup, and git workflow.
+ * How workspaces work: concept, setup, and git workflow.
  * Replaces the former workspace_setup and git_workflow prompts.
  */
 
 export const WORKSPACES_PROMPT = {
   name: 'workspaces',
-  description: 'How workspaces work: plan and tasks for handoffs, setup, and git workflow',
+  description: 'How workspaces work: setup and git workflow',
   content: `# Workspaces
 
-As per server instructions: list_workspaces first when choosing/creating; get_workspaces(workspace) for plan and tasks; update_workspace before every handoff. Workspaces live under \`~/workspaces/\`; one workspace = one task context. Paths in terminal and file tools are relative to the workspace root.
+As per server instructions: list_workspaces first when choosing/creating; get_workspaces(workspace) for git status and workspace-root AGENTS.md. Workspaces live under \`~/workspaces/\`; one workspace = one task context. Paths in terminal and file tools are relative to the workspace root.
 
 ## Creating a workspace (examples)
 
 list_workspaces first, then create_workspace:
 - Empty repo: \`create_workspace(name: "my-project")\`
 - Clone: \`create_workspace(name: "my-project", git_url: "git@github.com:org/repo.git")\` — submodules checked out recursively
-- Plan/tasks: \`update_workspace\` accepts \`plan\`, \`tasks\` (e.g. \`["Step 1", "Step 2"]\` or \`[{ title, status? }]\`), or \`task_updates: [{ index, status }]\` for status-only updates.
 
 ## Project setup (terminal)
 

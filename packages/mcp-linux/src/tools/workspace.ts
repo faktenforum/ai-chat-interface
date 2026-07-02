@@ -18,7 +18,6 @@ import {
   CreateWorkspaceSchema,
   DeleteWorkspaceSchema,
   GetWorkspacesSchema,
-  UpdateWorkspaceSchema,
   CleanWorkspaceUploadsSchema,
 } from '../schemas/workspace.schema.ts';
 
@@ -46,7 +45,7 @@ export function registerWorkspaceTools(
   server.registerTool(
     'list_workspaces',
     {
-      description: 'Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url, plan_preview. Use get_workspaces(workspace) for full plan and tasks. When handing off to a workspace specialist, put the chosen workspace name in the handoff instructions so they call get_workspaces(workspace) first.',
+      description: 'Call first to see all workspaces before creating or choosing one. Returns branch, dirty, remote_url. Use get_workspaces(workspace) for full git status. When handing off to a workspace specialist, put the chosen workspace name in the handoff instructions so they call get_workspaces(workspace) first.',
       inputSchema: ListWorkspacesSchema.shape,
     },
     async (args, extra) => {
@@ -80,15 +79,11 @@ export function registerWorkspaceTools(
         const email = resolveEmail(extra);
         let gitUrl = args.git_url;
         let branch = args.branch;
-        let default_workspace_config: { code_index_enabled?: boolean } | undefined;
         if (gitUrl == null || gitUrl === '') {
           const template = await getWorkspaceTemplate(args.name);
           if (template) {
             gitUrl = template.git_url;
             branch = template.branch ?? branch;
-            default_workspace_config = {
-              code_index_enabled: template.code_index_enabled ?? true,
-            };
           }
         }
         const response = await workerManager.sendRequest(email, {
@@ -98,7 +93,6 @@ export function registerWorkspaceTools(
             name: args.name,
             git_url: gitUrl,
             branch,
-            ...(default_workspace_config != null && { default_workspace_config }),
           },
         });
 
@@ -146,7 +140,7 @@ export function registerWorkspaceTools(
     'get_workspaces',
     {
       description:
-        'Full git status, plan, tasks, submodules status (idle/updating/done/error/none), and code_index status (enabled, status, progress). When AGENTS.md exists in the workspace root, returns its content as instructions. First call after every handoff: use workspace from handoff instructions (default if none). Plan and tasks are the source of truth for what to do next. Pass summary_only: true to get only a plan summary and task counts (done/in_progress/pending/cancelled) instead of the full plan and task list.',
+        'Full git status and submodules status (idle/updating/done/error/none) for a workspace. When AGENTS.md exists in the workspace root, returns its content as instructions. First call after every handoff: use workspace from handoff instructions (default if none). File lists are capped; use read_workspace_file, list_workspace_files, or glob for specific files.',
       inputSchema: GetWorkspacesSchema.shape,
     },
     async (args, extra) => {
@@ -157,41 +151,6 @@ export function registerWorkspaceTools(
           method: 'get_workspaces',
           params: {
             workspace: args.workspace,
-            summary_only: args.summary_only,
-          },
-        });
-
-        if (response.error) {
-          return errorResult(response.error);
-        }
-
-        return { content: [{ type: 'text', text: JSON.stringify(response.result, null, 2) }] };
-      } catch (error) {
-        return errorResult(error);
-      }
-    },
-  );
-
-  server.registerTool(
-    'update_workspace',
-    {
-      description:
-        'Update workspace plan, tasks, config, and/or trigger reindex. All params optional. Set plan/tasks before every handoff so the next agent sees current state. Use task_updates: [{index, status}] for partial status changes (0-based index from get_workspaces). Set code_index_enabled to toggle indexing. Set reindex: true to force rebuild the code index.',
-      inputSchema: UpdateWorkspaceSchema.shape,
-    },
-    async (args, extra) => {
-      try {
-        const email = resolveEmail(extra);
-        const response = await workerManager.sendRequest(email, {
-          id: randomUUID(),
-          method: 'update_workspace',
-          params: {
-            workspace: args.workspace,
-            plan: args.plan,
-            tasks: args.tasks,
-            task_updates: args.task_updates,
-            code_index_enabled: args.code_index_enabled,
-            reindex: args.reindex,
           },
         });
 

@@ -51,22 +51,7 @@
 	path = dev/docs-mcp-server
 	url = git@github.com:faktenforum/docs-mcp-server.git
 	branch = main
-[submodule "workspaces/document-creator"]
-	path = workspaces/document-creator
-	url = git@github.com:faktenforum/workspace-document-creator.git
-	branch = main
-[submodule "workspaces/file-converter"]
-	path = workspaces/file-converter
-	url = git@github.com:faktenforum/workspace-file-converter.git
-	branch = main
-[submodule "workspaces/data-analysis"]
-	path = workspaces/data-analysis
-	url = git@github.com:faktenforum/workspace-data-analysis.git
-	branch = main
-[submodule "workspaces/linux-expert"]
-	path = workspaces/linux-expert
-	url = git@github.com:faktenforum/workspace-linux-expert.git
-	branch = main
-[submodule "dev/codebase-indexer"]
-	path = dev/codebase-indexer
-	url = git@github.com:faktenforum/codebase-indexer.git
+[submodule "refs/opencode"]
+	path = refs/opencode
+	url = https://github.com/anomalyco/opencode.git
+	branch = dev

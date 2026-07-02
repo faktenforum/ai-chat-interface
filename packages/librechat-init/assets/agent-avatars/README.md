@@ -11,35 +11,10 @@ The image-gen MCP shows each generated image in the chat. To use them:
 
 | Order | Agent ID | Suggested filename |
 |-------|----------|---------------------|
-| 1 | shared-agent-main-assistant | shared-agent-main-assistant.png |
-| 2 | shared-agent-research | shared-agent-research.png |
+| 1 | shared-agent-assistant | shared-agent-assistant.png |
+| 2 | shared-agent-faktencheck | shared-agent-faktencheck.png |
 | 3 | shared-agent-image-generation | shared-agent-image-generation.png |
 | 4 | shared-agent-travel-location | shared-agent-travel-location.png |
-| 5 | shared-agent-code-assistant | shared-agent-code-assistant.png |
-| 6 | shared-agent-developer | shared-agent-developer.png |
-| 7 | shared-agent-code-refactorer | shared-agent-code-refactorer.png |
-| 8 | shared-agent-github | shared-agent-github.png |
-| 9 | shared-agent-code-reviewer | shared-agent-code-reviewer.png |
-| 9a | shared-agent-developer-quality | shared-agent-developer.png (reuse default) |
-| 9b | shared-agent-code-refactorer-quality | shared-agent-code-refactorer.png (reuse default) |
-| 9c | shared-agent-code-reviewer-quality | shared-agent-code-reviewer.png (reuse default) |
-| 10 | shared-agent-feedback | shared-agent-feedback.png |
-| 11 | shared-agent-video-transcripts | shared-agent-video-transcripts.png |
-| 12 | shared-agent-cooking | shared-agent-cooking.png |
-| 13 | shared-agent-data-analysis | shared-agent-data-analysis.png |
-| 14 | shared-agent-file-converter | shared-agent-file-converter.png |
-| 15 | shared-agent-document-creator | shared-agent-document-creator.png |
-| 16 | shared-agent-linux-expert | shared-agent-linux-expert.png |
-
-### Linux Expert (shared-agent-linux-expert) — 3 avatar options
-
-Three variants are provided; pick one and rename to `shared-agent-linux-expert.png`:
-
-| Option | Filename | Style |
-|--------|----------|-------|
-| 1 | shared-agent-linux-expert-option1.png | Terminal/prompt symbol, slate background |
-| 2 | shared-agent-linux-expert-option2.png | Penguin (Tux), teal background |
-| 3 | shared-agent-linux-expert-option3.png | Shell/bash symbol, amber background |
 
 3. In LibreChat: open each agent in the sidebar → Agent settings → upload the matching avatar image.
 

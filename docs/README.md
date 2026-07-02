@@ -9,7 +9,7 @@ The project’s LibreChat setup is defined in the **librechat-init** config; the
 | File | Purpose |
 |------|---------|
 | **[`packages/librechat-init/config/librechat.yaml`](../packages/librechat-init/config/librechat.yaml)** | LibreChat settings: endpoints, model specs, MCP servers, interface, memory, OCR, etc. |
-| **[`packages/librechat-init/config/agents.yaml`](../packages/librechat-init/config/agents.yaml)** | Shared agents (Research Assistant, Image Generation Assistant, Main Assistant, Code Assistant, Feedback Assistant, Linux Expert, dev specialists) and their tools. |
+| **[`packages/librechat-init/config/agents.yaml`](../packages/librechat-init/config/agents.yaml)** | Shared agents (universal Assistant + Faktencheck, Travel and Location, Image Generation) and their tools. |
 | **[`packages/librechat-init/config/agent-instructions/_shared-conventions.md`](../packages/librechat-init/config/agent-instructions/_shared-conventions.md)** | Canonical snippets for agent instructions (maintainer reference; not loaded by agents). |
 | **[`packages/librechat-init/config/roles.yaml`](../packages/librechat-init/config/roles.yaml)** | Roles and permissions (who can use which agents/features). |
 
@@ -47,8 +47,7 @@ They are baked into the init image and written into the config volume at startup
 
 ## Development
 
-- **[Developer Agents](DEVELOPER_AGENTS.md)** - Developer domain: router, specialists, handoffs, code review (Code Reviewer + GitHub Assistant)
-- **[Agent Workspaces](../workspaces/README.md)** - Persistent workspace repositories for agents
+- **[Agents](DEVELOPER_AGENTS.md)** - Current agent roster (universal Assistant + 3 specialists) and the consolidation rationale
 - **[Development Guide](DEVELOPMENT.md)** - Git submodules and development stack
 - **[Running with Podman](PODMAN.md)** - Run the local stack under rootless Podman instead of Docker
 - **[Testing internal MCPs from Cursor](SERVICES.md#testing-internal-mcps-from-cursor-ide)** - Use local-stack MCPs from Cursor IDE for testing

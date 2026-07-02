@@ -40,10 +40,6 @@ async function confirmDelete(name: string) {
         <span v-if="data.submodules.message"> - {{ data.submodules.message }}</span>
       </div>
 
-      <div v-if="data.config?.code_index_enabled != null" class="text-sm text-muted">
-        Code index enabled: {{ data.config.code_index_enabled ? 'yes' : 'no' }}
-      </div>
-
       <div v-if="data.meta.path" class="text-xs text-muted">Path: {{ data.meta.path }}</div>
 
       <div

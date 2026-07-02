@@ -5,9 +5,9 @@ TODO list of MCP servers to evaluate and integrate for specific agents.
 | MCP Server / Concept | Target Agent | Status |
 |----------------------|--------------|--------|
 | [x-twitter-mcp-server](#1-x-twitter-mcp-server) | Social Networks (Soziale Netzwerke) | [ ] |
-| [Context7](#2-context7) | Developer domain (e.g. Code Research) | [ ] |
-| [Wikipedia MCP](#3-wikipedia-mcp) | Research Assistant | [x] Done - wired to the Research agent |
-| [Code execution with MCP](#4-code-execution-with-mcp-concept) | TBD (developer / data workflows) | [ ] — still searching for suitable server |
+| [Context7](#2-context7) | Assistant | [ ] |
+| [Wikipedia MCP](#3-wikipedia-mcp) | Assistant | [x] Done - wired to the Assistant |
+| [Code execution with MCP](#4-code-execution-with-mcp-concept) | Assistant | [ ] — still searching for suitable server |
 
 ---
 
@@ -30,27 +30,27 @@ TODO list of MCP servers to evaluate and integrate for specific agents.
 
 - **Repository:** [upstash/context7](https://github.com/upstash/context7/tree/master)
 - **Purpose:** Up-to-date, version-specific code documentation for LLMs — resolves library IDs and fetches docs from source.
-- **Target agent:** Developer domain (e.g. Code Research)
+- **Target agent:** Assistant
 - **Transport:** Remote HTTP (`https://mcp.context7.com/mcp`) or local (`npx -y @upstash/context7-mcp --api-key KEY`). API key recommended (free at context7.com/dashboard).
 - **Tasks:**
   - [ ] Get Context7 API key and test remote vs local
   - [ ] Verify compatibility with LibreChat MCP client
-  - [ ] Add Context7 MCP to a developer specialist (e.g. Code Research) and document usage
+  - [ ] Add Context7 MCP to the Assistant and document usage
   - [ ] Document rule/prompt usage (e.g. “use context7” / library IDs)
 
 ---
 
 ## 3. Wikipedia MCP
 
-**Status: Done.** Implemented as the first-party `mcp-wikipedia` service (wraps the upstream `wikipedia-mcp` pip package, pinned `2.0.1`), streamable-http on port `3017` at `/mcp`, internal-only on `app-net`, and wired to the Research agent (`shared-agent-research`). See [SERVICES.md](SERVICES.md) and `packages/mcp-wikipedia/`.
+**Status: Done.** Implemented as the first-party `mcp-wikipedia` service (wraps the upstream `wikipedia-mcp` pip package, pinned `2.0.1`), streamable-http on port `3017` at `/mcp`, internal-only on `app-net`, and wired to the Assistant (`shared-agent-assistant`). See [SERVICES.md](SERVICES.md) and `packages/mcp-wikipedia/`.
 
 - **Repository:** [Rudra-ravi/wikipedia-mcp](https://github.com/Rudra-ravi/wikipedia-mcp/tree/main)
 - **Purpose:** Wikipedia search, article content, summaries, sections, links, related topics; optional multi-language and caching.
-- **Target agent:** Research Assistant
+- **Target agent:** Assistant
 - **Transport:** streamable-http (`POST /mcp`). Internal Docker service.
 - **Tasks:**
   - [x] Decided Docker deployment via the pinned `wikipedia-mcp` pip package
-  - [x] Added to the stack and wired to the Research agent
+  - [x] Added to the stack and wired to the Assistant
   - [ ] Optionally configure language/country and caching
 
 ---
@@ -58,7 +58,7 @@ TODO list of MCP servers to evaluate and integrate for specific agents.
 ## 4. Code execution with MCP (concept)
 
 - **Concept:** [Code execution with MCP: Building more efficient agents](https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/1780) — agents write and execute code to call MCP tools instead of direct tool calls, so tool definitions and large results don’t always consume LLM context; better scaling for data-heavy workflows (see [Anthropic engineering post](https://www.anthropic.com/engineering/code-execution-with-mcp)).
-- **Target agent:** TBD (e.g. developer or data-analysis agent).
+- **Target agent:** Assistant.
 - **Status:** We want to test this concept but are still searching for a suitable MCP server. Promising candidate to evaluate:
   - **[alfonsograziano/node-code-sandbox-mcp](https://github.com/alfonsograziano/node-code-sandbox-mcp)** — Node.js MCP server that runs arbitrary JavaScript in ephemeral Docker containers; tools: `run_js_ephemeral`, `sandbox_initialize` / `sandbox_exec` / `run_js` / `sandbox_stop`, `search_npm_packages`. Requires Docker; supports STDIO (e.g. npx) or Docker image `mcp/node-code-sandbox`.
 - **Tasks:**

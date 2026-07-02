@@ -360,10 +360,10 @@ endpoints:
 modelSpecs:
   prioritize: false  # avoids API warning when default spec + interface.presets are both enabled
   list:
-    # Assistants: agent specs; post-init patches preset.agent_id to real API id — restart API to apply. Main Assistant = default.
-    - name: "main-assistant-agent"
-      label: "Main Assistant"
-      description: "General assistant – automatically recognizes which specialist best fits and routes the request."
+    # Assistants: agent specs; post-init patches preset.agent_id to real API id — restart API to apply. Assistant = default.
+    - name: "assistant-agent"
+      label: "Assistant"
+      description: "General-purpose assistant – coding, Linux/shell, files, data analysis, documents, research and GitHub in one place."
       group: "Assistants"
       groupIcon: "/images/group-assistants.svg"
       order: 0
@@ -371,17 +371,7 @@ modelSpecs:
       preset:
         endpoint: "agents"
         endpointType: "agents"
-        agent_id: "shared-agent-main-assistant"
-
-    - name: "agent-research"
-      label: "Research Assistant"
-      description: "Helps with research and information gathering from various sources"
-      group: "Assistants"
-      order: 1
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-research"
+        agent_id: "shared-agent-assistant"
 
     - name: "agent-faktencheck"
       label: "Faktencheck Assistant"
@@ -413,135 +403,6 @@ modelSpecs:
         endpointType: "agents"
         agent_id: "shared-agent-travel-location"
 
-    - name: "agent-code-assistant"
-      label: "Code Assistant"
-      description: "Routes developer requests to the appropriate specialist - implementation, refactoring, GitHub, Code Review."
-      group: "Assistants"
-      order: 5
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-code-assistant"
-
-    - name: "agent-developer"
-      label: "Developer"
-      description: "Implements features and fixes bugs in the Linux workspace – full terminal and workspace access with Node.js, Python, Git."
-      group: "Assistants"
-      order: 8
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-developer"
-
-    - name: "agent-developer-quality"
-      label: "Developer (Claude Opus 4.8)"
-      description: "Developer with OpenRouter Claude Opus 4.8 – for higher quality or fallback when the default variant is insufficient."
-      group: "Assistants"
-      order: 9
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-developer-quality"
-
-    - name: "agent-code-refactorer"
-      label: "Code Refactorer"
-      description: "Refactoring and optimization of code – structure, style, tests, readability. Full Linux workspace access."
-      group: "Assistants"
-      order: 10
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-code-refactorer"
-
-    - name: "agent-code-reviewer"
-      label: "Code Reviewer"
-      description: "Analyzes pull requests – clones the repo, checks the diff, reads the codebase and creates a structured review. Posts the review via the GitHub Assistant if needed."
-      group: "Assistants"
-      order: 12
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-code-reviewer"
-
-    - name: "agent-github"
-      label: "GitHub Assistant"
-      description: "GitHub operations – read and manage repositories, issues, pull requests. Uses GitHub MCP and Linux terminal for Git commands."
-      group: "Assistants"
-      order: 14
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-github"
-
-    - name: "agent-feedback"
-      label: "Feedback / Report error"
-      description: "Reports errors in the chat interface – understands error descriptions, prepares them and creates a GitHub issue."
-      group: "Assistants"
-      order: 15
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-feedback"
-
-    # - name: "agent-video-transcripts"
-    #   label: "Video Transcripts"
-    #   description: "Transcripts, metadata, thumbnails and download links for video URLs (YouTube, Instagram, TikTok, etc.)."
-    #   group: "Assistants"
-    #   order: 10
-    #   preset:
-    #     endpoint: "agents"
-    #     endpointType: "agents"
-    #     agent_id: "shared-agent-video-transcripts"
-
-    - name: "agent-cooking"
-      label: "Cooking Assistant"
-      description: "Helps with cooking – suggests recipes, inspiration for meals, ingredients and preparation, plus general cooking questions."
-      group: "Assistants"
-      order: 16
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-cooking"
-
-    - name: "agent-data-analysis"
-      label: "Data Analysis"
-      description: "Analyzes data from CSV, JSON and other formats – filters, transforms, visualizes (charts) and summarizes."
-      group: "Assistants"
-      order: 17
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-data-analysis"
-
-    - name: "agent-file-converter"
-      label: "File Converter"
-      description: "Converts images, audio, video and documents between formats – ImageMagick, FFmpeg, Pandoc. Result directly in chat or as download."
-      group: "Assistants"
-      order: 18
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-file-converter"
-
-    - name: "agent-document-creator"
-      label: "Document Creator"
-      description: "Creates professional documents – letters, reports, invoices, CVs, templates. Generates PDF (Typst) or editable formats (ODT/DOCX via Pandoc)."
-      group: "Assistants"
-      order: 19
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-document-creator"
-
-    - name: "agent-linux-expert"
-      label: "Linux Expert"
-      description: "General Linux assistant with full MCP Linux access – shell, scripts, files, workspaces. Additionally maintenance: status, cleanup, reset account."
-      group: "Assistants"
-      order: 20
-      preset:
-        endpoint: "agents"
-        endpointType: "agents"
-        agent_id: "shared-agent-linux-expert"
 
     # ==========================================
     # Europe & Open Source (Scaleway) – alphabetical by label
