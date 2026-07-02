@@ -1069,6 +1069,12 @@ mcpServers:
     iconPath: /images/mcp-search-icon.svg
     headers:
       Authorization: "Bearer ${SEARCH_MCP_API_KEY}"
+    # Static admin-managed Bearer key, not OAuth. Without this, LibreChat's startup
+    # OAuth probe hits the URL with no Authorization header, gets a 401 + WWW-Authenticate
+    # challenge from the search API, and misclassifies the server as requiring OAuth -
+    # which skips the real (authenticated) inspection, so capabilities/tools never load
+    # and the Faktencheck agent has no working tools.
+    requiresOAuth: false
     initTimeout: 120000
     chatMenu: true
     startup: true
