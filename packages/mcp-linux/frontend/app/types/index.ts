@@ -1,19 +1,3 @@
-export type TaskStatus = 'pending' | 'in_progress' | 'done' | 'cancelled';
-
-export interface PlanTask {
-  title: string;
-  status: TaskStatus;
-}
-
-export interface CodeIndexState {
-  status: string;
-  message?: string;
-  files_processed?: number;
-  files_total?: number;
-  has_index?: boolean;
-  enabled?: boolean;
-}
-
 export interface WorkspaceMeta {
   workspace: string;
   branch: string | null;
@@ -30,11 +14,7 @@ export interface WorkspaceGitMeta {
 export interface WorkspaceStatusResponse {
   meta: WorkspaceMeta;
   git: WorkspaceGitMeta;
-  config?: { code_index_enabled?: boolean };
   submodules?: { status: string; message?: string };
-  code_index?: CodeIndexState;
-  plan?: string | null;
-  tasks?: PlanTask[];
 }
 
 /** Raw workspace status from API (flat shape from worker); normalize to WorkspaceStatusResponse for UI. */
@@ -46,11 +26,7 @@ export interface WorkspaceStatusRaw {
   remote_url?: string | null;
   ahead?: number;
   behind?: number;
-  config?: { code_index_enabled?: boolean };
   submodules?: { status: string; message?: string };
-  code_index?: CodeIndexState;
-  plan?: string | null;
-  tasks?: PlanTask[];
   [key: string]: unknown;
 }
 
@@ -74,11 +50,7 @@ export function normalizeWorkspaceStatus(
       ahead: r.ahead ?? 0,
       behind: r.behind ?? 0,
     },
-    config: r.config,
     submodules: r.submodules,
-    code_index: r.code_index,
-    plan: r.plan ?? null,
-    tasks: r.tasks ?? [],
   };
 }
 
@@ -122,14 +94,6 @@ export interface StatusOverview {
   upload_sessions: UploadSession[];
   download_sessions: DownloadSession[];
   terminals: TerminalInfo[];
-}
-
-export interface CodeSearchResult {
-  file_path?: string;
-  start_line?: number;
-  end_line?: number;
-  score?: number;
-  code_chunk?: string;
 }
 
 export interface UploadConfig {

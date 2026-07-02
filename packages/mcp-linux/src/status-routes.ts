@@ -2,8 +2,8 @@
  * Status Routes
  *
  * Per-user status page API endpoints, extracted from server.ts.
- * Provides workspace overview, terminal management, upload/download session management,
- * code index operations, and plan/task editing via the status page UI.
+ * Provides workspace overview, terminal management, and upload/download session
+ * management via the status page UI.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -108,84 +108,6 @@ export function createStatusRouter(deps: StatusDeps, spaDir: string): express.Ro
       logger.error({ error }, 'Failed to build workspace status overview');
       res.status(500).json({ error: 'Failed to build workspace status overview' });
     }
-  });
-
-  // ── Reindex workspace ────────────────────────────────────────────────────
-  statusRouter.post('/api/reindex-workspace', (req: StatusRequest, res: Response) => {
-    const userContext = req.userContext;
-    if (!userContext) {
-      res.status(401).json({ error: 'Missing user context' });
-      return;
-    }
-
-    const name = typeof req.body?.name === 'string' ? req.body.name : '';
-    const force = req.body?.force === true;
-    if (!name) {
-      res.status(400).json({ error: 'name is required' });
-      return;
-    }
-
-    workerProxy(deps, 'index_workspace_code',
-      () => ({ workspace: name, force }),
-      'Failed to start code index rebuild',
-      (result) => ({ success: true, result }),
-    )(req, res);
-  });
-
-  // ── Workspace search ─────────────────────────────────────────────────────
-  statusRouter.post('/api/workspace-search', (req: StatusRequest, res: Response) => {
-    const userContext = req.userContext;
-    if (!userContext) {
-      res.status(401).json({ error: 'Missing user context' });
-      return;
-    }
-
-    const name = typeof req.body?.name === 'string' ? req.body.name : '';
-    const query = typeof req.body?.query === 'string' ? req.body.query : '';
-    const path = typeof req.body?.path === 'string' ? req.body.path : undefined;
-    const limit =
-      typeof req.body?.limit === 'number' && req.body.limit > 0 && req.body.limit <= 100
-        ? req.body.limit
-        : 10;
-
-    if (!name) {
-      res.status(400).json({ error: 'name is required' });
-      return;
-    }
-    if (!query.trim()) {
-      res.status(400).json({ error: 'query is required' });
-      return;
-    }
-
-    workerProxy(deps, 'codebase_search',
-      () => ({ workspace: name, query, path, limit }),
-      'Failed to search code',
-    )(req, res);
-  });
-
-  // ── Update plan/tasks ────────────────────────────────────────────────────
-  statusRouter.post('/api/update-plan', (req: StatusRequest, res: Response) => {
-    const userContext = req.userContext;
-    if (!userContext) {
-      res.status(401).json({ error: 'Missing user context' });
-      return;
-    }
-
-    const name = typeof req.body?.name === 'string' ? req.body.name : '';
-    if (!name) {
-      res.status(400).json({ error: 'name is required' });
-      return;
-    }
-
-    const params: Record<string, unknown> = { workspace: name };
-    if (typeof req.body?.plan === 'string') params.plan = req.body.plan;
-    if (Array.isArray(req.body?.tasks)) params.tasks = req.body.tasks;
-    if (Array.isArray(req.body?.task_updates)) params.task_updates = req.body.task_updates;
-
-    workerProxy(deps, 'update_workspace',
-      () => params,
-      'Failed to update workspace plan',
-    )(req, res);
   });
 
   // ── Overview (status page main data) ─────────────────────────────────────

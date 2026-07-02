@@ -16,7 +16,6 @@
     "build:frontend": "cd frontend && npm install && npm run build"
   },
   "dependencies": {
-    "@codebase-indexer/core": "file:../../dev/codebase-indexer/packages/core",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "busboy": "^1.6.0",
     "dotenv": "^17.3.1",

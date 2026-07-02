@@ -35,7 +35,8 @@ import { registerAccountTools } from './tools/account.ts';
 import { registerUploadTools } from './tools/upload.ts';
 import { registerDownloadTools } from './tools/download.ts';
 import { registerFileTools } from './tools/file.ts';
-import { registerCodeIndexTools } from './tools/code-index.ts';
+import { registerFilesystemTools } from './tools/filesystem.ts';
+import { registerTodoTools } from './tools/todo.ts';
 import { registerPrompts } from './prompts/index.ts';
 import { registerWorkspaceResources } from './resources/workspace-resources.ts';
 import { UploadManager } from './upload/upload-manager.ts';
@@ -129,7 +130,7 @@ TOOL USE
 
 Tool Use Guidelines
 1. Assess what information you already have and what you need to proceed.
-2. Choose the most appropriate tool (e.g. list_workspace_files over ls, codebase_search before read_workspace_file when exploring unfamiliar code).
+2. Choose the most appropriate tool (e.g. list_workspace_files over ls when exploring a directory structure).
 3. After each tool use, use the result (output, errors, git status) to decide the next step. Do not assume success without seeing the result.
 
 ====
@@ -141,10 +142,11 @@ OBJECTIVE
 
 CAPABILITIES
 - Each user has their own isolated Linux account: personal home directory with persistent bash history, Git-backed workspaces (a "default" workspace exists automatically), pre-installed runtimes (Node.js, Python 3, Git, Bash, ripgrep, and more), SSH access to GitHub via a shared machine user key. Users can install additional tools in their home (nvm, pip --user, etc.); see runtime_management prompt for details.
-- Use terminal tools (execute_command, write_terminal) to run any command. All commands run in the context of a workspace (default: "default"). File operations, search, and git are done via the terminal. Each terminal response includes workspace git metadata (branch, dirty status).
-- list_workspaces = overview (all workspaces, branch, dirty, plan_preview). get_workspaces(workspace) = full detail (plan, tasks, optional workspace-root AGENTS.md, git status). Use the latter after handoffs or when you need task-level context; use the former to choose or create a workspace. get_workspaces(workspace, { summary_only: true }) for a short overview (plan_summary, task_counts). get_workspaces returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files. update_workspace to set plan, tasks, config, or trigger reindex — all in one call.
+- Use terminal tools (execute_command, write_terminal) to run any command. All commands run in the context of a workspace (default: "default"). Each terminal response includes workspace git metadata (branch, dirty status).
+- Prefer the first-class file tools over the terminal for routine file work: read_workspace_file to read, write to create/overwrite, edit for targeted string replacements, grep to search file contents (ripgrep), glob to find files by pattern. Use the terminal for git, builds, and everything else.
+- For multi-step tasks, track your plan with todowrite (statuses: pending, in_progress, completed); keep exactly one item in_progress.
+- list_workspaces = overview (all workspaces, branch, dirty). get_workspaces(workspace) = full detail (git status, optional workspace-root AGENTS.md). Use the latter after handoffs or when you need workspace context; use the former to choose or create a workspace. get_workspaces(workspace, { summary_only: true }) for the same overview without the full file lists. get_workspaces returns summarized file lists (staged_count, truncated); prefer read_workspace_file with explicit paths for specific files.
 - list_workspace_files: Use to explore directory structure; more effective than ls for getting a structured file list.
-- codebase_search: MUST use FIRST before read_workspace_file when exploring unfamiliar code. Queries in English.
 
 File Upload:
 - create_upload_session to generate a unique upload URL for the user. Uploaded files are saved to ~/workspaces/{workspace}/uploads/. Uploads are ephemeral (may be purged); use clean_workspace_uploads to free space or move/download important outputs. Sessions auto-close after upload and expire after 15 minutes by default. User uploaded → list_upload_sessions, find completed session with uploaded_file, then read_workspace_file(workspace, e.g. uploads/filename). Never read_workspace_file without path from list_upload_sessions when user just uploaded. Close unnecessary active sessions with close_upload_session when appropriate.
@@ -166,7 +168,8 @@ Status page: Users can view and manage their account (workspaces, upload/downloa
   registerUploadTools(server, userManager, uploadManager);
   registerDownloadTools(server, userManager, downloadManager);
   registerFileTools(server, userManager, downloadManager);
-  registerCodeIndexTools(server, userManager, workerManager);
+  registerFilesystemTools(server, userManager, workerManager);
+  registerTodoTools(server);
 
   // Register resources
   registerWorkspaceResources(server, userManager);
@@ -285,25 +288,8 @@ async function createApp(): Promise<express.Application> {
 /**
  * Main entry point
  */
-/**
- * Creates the shared index cache directory with sticky-bit permissions (0o1777).
- * All worker users can create entries; no user can delete another's entries.
- */
-async function ensureSharedIndexDir(): Promise<void> {
-  const sharedDir = process.env.CODE_INDEX_SHARED_DIR?.trim() || '/app/data/index-cache';
-  try {
-    await fs.mkdir(sharedDir, { recursive: true });
-    await fs.chmod(sharedDir, 0o1777);
-  } catch (err) {
-    logger.warn({ error: err, sharedDir }, 'Could not create/chmod shared index cache dir; shared indexing may not work');
-  }
-}
-
 async function main(): Promise<void> {
   try {
-    // Ensure shared index cache directory exists and is world-writable with sticky bit
-    await ensureSharedIndexDir();
-
     // Initialize user manager DB and restore existing users
     await userManager.initialize();
     await userManager.restoreUsers();

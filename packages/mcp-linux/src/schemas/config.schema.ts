@@ -7,7 +7,6 @@ import { z } from 'zod';
 export const WorkspaceTemplateSchema = z.object({
   git_url: z.string(),
   branch: z.string().optional(),
-  code_index_enabled: z.boolean().optional(),
 });
 
 export const ConfigSchema = z.object({

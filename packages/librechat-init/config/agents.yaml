@@ -32,7 +32,6 @@ agents:
       - create_workspace_mcp_linux
       - delete_workspace_mcp_linux
       - get_workspaces_mcp_linux
-      - update_workspace_mcp_linux
       - get_status_mcp_linux
       - reset_account_mcp_linux
       - clean_workspace_uploads_mcp_linux
@@ -44,8 +43,11 @@ agents:
       - close_download_link_mcp_linux
       - read_workspace_file_mcp_linux
       - list_workspace_files_mcp_linux
-      - codebase_search_mcp_linux
-      - get_code_index_status_mcp_linux
+      - write_mcp_linux
+      - edit_mcp_linux
+      - grep_mcp_linux
+      - glob_mcp_linux
+      - todowrite_mcp_linux
       - search_code_mcp_github
       - search_repositories_mcp_github
       - search_issues_mcp_github

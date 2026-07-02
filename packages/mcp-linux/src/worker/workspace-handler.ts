@@ -1,5 +1,5 @@
 /**
- * Workspace handler - CRUD operations, plan/task management, and account tools.
+ * Workspace handler - CRUD operations and account tools.
  */
 
 import { execFile as execFileCb, spawn } from 'node:child_process';
@@ -8,31 +8,19 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { validateWorkspaceName } from '../utils/security.ts';
 import { getDefaultGitIdentity } from '../utils/git-config.ts';
-import {
-  type PlanTask,
-  type WorkspaceConfig,
-  type SubmodulesStatus,
-  isTaskStatus,
-  LIST_WORKSPACES_PLAN_PREVIEW_LEN,
-} from '../workspace-plan.ts';
+import { type SubmodulesStatus } from '../workspace-plan.ts';
 import { getGitMetadata, spawnWithTimeout } from './git-utils.ts';
 import { GIT_TIMEOUT_MS, CLONE_TIMEOUT_MS } from './constants.ts';
 import {
   resolveWorkspacePath,
-  readPlanData,
   readInstructionsFile,
-  writePlanData,
-  readWorkspaceConfig,
-  writeWorkspaceConfig,
   readSubmodulesStatus,
   writeSubmodulesStatus,
-  isCodeIndexEnabledForWorkspace,
-  applyTaskUpdates,
   ensureDefaultGitignore,
   capAndCollapseStatusLists,
   purgeUploadsByAge,
 } from './workspace-utils.ts';
-import type { PlanData, Handler, WorkerContext } from './types.ts';
+import type { Handler, WorkerContext } from './types.ts';
 
 const execFile = promisify(execFileCb);
 
@@ -70,21 +58,12 @@ export function createWorkspaceHandlers(ctx: WorkerContext): Record<string, Hand
           // No remote
         }
 
-        const { plan } = await readPlanData(ctx.workspacesDir, entry.name);
-        const normalized = plan != null && plan.length > 0 ? plan.replace(/\s+/g, ' ').trim() : '';
-        const plan_preview =
-          normalized.length > 0
-            ? normalized.slice(0, LIST_WORKSPACES_PLAN_PREVIEW_LEN) +
-              (normalized.length > LIST_WORKSPACES_PLAN_PREVIEW_LEN ? '…' : '')
-            : null;
-
         workspaces.push({
           name: entry.name,
           path: wsPath,
           branch: meta.branch,
           dirty: meta.dirty,
           remote_url: remoteUrl || null,
-          plan_preview,
         });
       }
 
@@ -168,23 +147,6 @@ export function createWorkspaceHandlers(ctx: WorkerContext): Record<string, Hand
         await execFile('git', ['config', 'user.name', gitName], { cwd: wsPath });
       }
       await ensureDefaultGitignore(wsPath);
-
-      const defaultConfig = params.default_workspace_config as { code_index_enabled?: boolean } | undefined;
-      if (defaultConfig != null && typeof defaultConfig === 'object') {
-        const workspaceConfig: WorkspaceConfig = {};
-        if (typeof defaultConfig.code_index_enabled === 'boolean') {
-          workspaceConfig.code_index_enabled = defaultConfig.code_index_enabled;
-        }
-        if (Object.keys(workspaceConfig).length > 0) {
-          await writeWorkspaceConfig(ctx.workspacesDir, name, workspaceConfig);
-        }
-      }
-
-      if (await isCodeIndexEnabledForWorkspace(ctx, name)) {
-        ctx.getCodeIndexer().indexWorkspace(wsPath).catch((err) => {
-          console.error(`Code indexing failed for ${name}:`, (err as Error).message);
-        });
-      }
 
       const meta = await getGitMetadata(ctx.workspacesDir, name);
       let remoteUrl = '';
@@ -295,11 +257,9 @@ export function createWorkspaceHandlers(ctx: WorkerContext): Record<string, Hand
         behind = parseInt(parts[1] || '0', 10);
       }
 
-      const { plan, tasks } = await readPlanData(ctx.workspacesDir, workspace);
       const instructions = await readInstructionsFile(ctx.workspacesDir, workspace);
 
       const capped = capAndCollapseStatusLists(staged, unstaged, untracked);
-      const config = await readWorkspaceConfig(ctx.workspacesDir, workspace);
 
       // Submodules status
       const submodulesStatusFile = await readSubmodulesStatus(ctx.workspacesDir, workspace);
@@ -314,44 +274,7 @@ export function createWorkspaceHandlers(ctx: WorkerContext): Record<string, Hand
           ? ({ status: 'idle' as const, message: '' } satisfies SubmodulesStatus)
           : ({ status: 'none' as const, message: '' } satisfies SubmodulesStatus));
 
-      // Code index status (enabled + index state when enabled)
-      const codeIndexEnabled = await isCodeIndexEnabledForWorkspace(ctx, workspace);
-      const indexer = ctx.getCodeIndexer();
-      let codeIndexState = indexer.getIndexStatus(wsPath);
-      const hasIndexData = await indexer.hasIndex(wsPath);
-      if (
-        hasIndexData &&
-        codeIndexState.status === 'standby' &&
-        codeIndexState.files_total === 0 &&
-        codeIndexState.files_processed === 0
-      ) {
-        const stats = await indexer.getIndexStats(wsPath);
-        if (stats) {
-          codeIndexState = {
-            status: 'indexed',
-            message: 'Index complete',
-            files_processed: stats.fileCount,
-            files_total: stats.fileCount,
-          };
-        }
-      }
-      const code_index = codeIndexEnabled
-        ? { enabled: true as const, ...codeIndexState, has_index: hasIndexData }
-        : { enabled: false as const };
-
       if (summaryOnly) {
-        const normalized = plan != null && plan.length > 0 ? plan.replace(/\s+/g, ' ').trim() : '';
-        const plan_summary =
-          normalized.length > 0
-            ? normalized.slice(0, LIST_WORKSPACES_PLAN_PREVIEW_LEN) +
-              (normalized.length > LIST_WORKSPACES_PLAN_PREVIEW_LEN ? '…' : '')
-            : null;
-        const task_counts = {
-          done: tasks.filter((t) => t.status === 'done').length,
-          in_progress: tasks.filter((t) => t.status === 'in_progress').length,
-          pending: tasks.filter((t) => t.status === 'pending').length,
-          cancelled: tasks.filter((t) => t.status === 'cancelled').length,
-        };
         return {
           workspace,
           branch: meta.branch,
@@ -366,12 +289,8 @@ export function createWorkspaceHandlers(ctx: WorkerContext): Record<string, Hand
           truncated: capped.truncated,
           ahead,
           behind,
-          plan_summary,
-          task_counts,
           instructions: instructions ?? null,
-          config,
           submodules,
-          code_index,
         };
       }
 
@@ -389,80 +308,9 @@ export function createWorkspaceHandlers(ctx: WorkerContext): Record<string, Hand
         truncated: capped.truncated,
         ahead,
         behind,
-        plan,
-        tasks,
         instructions: instructions ?? null,
-        config,
         submodules,
-        code_index,
       };
-    },
-
-    async update_workspace(params) {
-      const workspace = (params.workspace as string) || 'default';
-      const wsPath = resolveWorkspacePath(ctx.workspacesDir, workspace);
-
-      try {
-        await fs.access(wsPath);
-      } catch {
-        throw new Error(`Workspace "${workspace}" does not exist`);
-      }
-
-      const result: Record<string, unknown> = {};
-
-      // --- Config updates (first, so reindex sees new state) ---
-      const codeIndexEnabled = params.code_index_enabled as boolean | undefined;
-      if (codeIndexEnabled !== undefined) {
-        const current = await readWorkspaceConfig(ctx.workspacesDir, workspace);
-        const next: WorkspaceConfig = { ...current, code_index_enabled: codeIndexEnabled };
-        await writeWorkspaceConfig(ctx.workspacesDir, workspace, next);
-        result.config = next;
-      }
-
-      // --- Plan/tasks updates ---
-      const planProvided = params.plan !== undefined && params.plan !== null;
-      const tasksProvided = params.tasks !== undefined && Array.isArray(params.tasks);
-      const taskUpdates = params.task_updates as Array<{ index: number; status: string }> | undefined;
-      const hasTaskUpdates = taskUpdates != null && taskUpdates.length > 0;
-
-      if (planProvided || tasksProvided || hasTaskUpdates) {
-        const current = await readPlanData(ctx.workspacesDir, workspace);
-        const nextPlan = planProvided ? (params.plan as string) : current.plan;
-        let nextTasks: PlanTask[];
-        if (hasTaskUpdates) {
-          nextTasks = applyTaskUpdates(current.tasks, taskUpdates);
-        } else if (tasksProvided) {
-          nextTasks = (params.tasks as PlanTask[]).map((t): PlanTask => ({
-            title: String(t.title),
-            status: isTaskStatus(t.status) ? t.status : 'pending',
-          }));
-        } else {
-          nextTasks = current.tasks;
-        }
-        const data: PlanData = { plan: nextPlan, tasks: nextTasks };
-        await writePlanData(ctx.workspacesDir, workspace, data);
-        result.plan = data.plan;
-        result.tasks = data.tasks;
-      }
-
-      // --- Reindex action ---
-      if (params.reindex === true) {
-        if (!(await isCodeIndexEnabledForWorkspace(ctx, workspace))) {
-          result.reindex = { status: 'skipped', message: 'Code index is disabled for this workspace' };
-        } else {
-          const state = await ctx.getCodeIndexer().indexWorkspace(wsPath, { force: true });
-          result.reindex = state;
-        }
-      }
-
-      // If nothing was updated, return current state
-      if (Object.keys(result).length === 0) {
-        const config = await readWorkspaceConfig(ctx.workspacesDir, workspace);
-        const { plan, tasks } = await readPlanData(ctx.workspacesDir, workspace);
-        return { config, plan, tasks };
-      }
-
-      return result;
     },
 
     async clean_workspace_uploads(params) {

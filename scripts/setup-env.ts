@@ -249,9 +249,6 @@ const PROMPTS: Record<string, PromptConfig> = {
     'SEARCH_API_KEY': { message: 'Search REST API key (optional; must match external Search):', type: 'password', defaultGen: () => '' },
     'SEARCH_MCP_DOMAIN': { message: 'Search MCP domain for allowlist (optional; e.g. dev-api.faktenforum.org):', type: 'input', defaultGen: () => '' },
 
-    // MCP Linux - Code index (semantic code search; optional)
-    'CODE_INDEX_EMBEDDING_API_KEY': { message: 'Code index embedding API key (optional; OpenRouter or Scaleway for semantic code search):', type: 'password', defaultGen: () => '' },
-
     // Spend Monitor dashboard - Traefik basic auth (prod/dev). Generate: htpasswd -nbB admin <password>
     'SPEND_MONITOR_BASIC_AUTH': { message: 'Spend-monitor dashboard basic auth - htpasswd line "user:hash" (enter to skip; required for the prod/dev dashboard):', type: 'password', defaultGen: () => '' },
 };

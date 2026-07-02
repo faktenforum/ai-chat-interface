@@ -3,9 +3,6 @@
  */
 
 import { z } from 'zod';
-import { TASK_STATUSES, type PlanTask } from '../workspace-plan.ts';
-
-export { TASK_STATUSES, type TaskStatus } from '../workspace-plan.ts';
 
 const WorkspaceNameSchema = z
   .string()
@@ -37,47 +34,4 @@ export const GetWorkspacesSchema = z.object({
 export const CleanWorkspaceUploadsSchema = z.object({
   workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
   olderThanDays: z.number().int().min(0).optional().describe('Delete files in uploads/ older than this many days (default: 7). Use 0 to delete all.'),
-});
-
-const TaskStatusSchema = z.enum(TASK_STATUSES).describe('pending | in_progress | done | cancelled');
-
-const TaskItemSchema = z.object({
-  title: z.string().describe('Task title'),
-  status: TaskStatusSchema.optional().describe('Default: pending.'),
-});
-
-/** Normalized task from update_workspace input (re-export for callers). */
-export type NormalizedTask = PlanTask;
-
-const TaskUpdateItemSchema = z
-  .object({
-    index: z.number().int().min(0).describe('0-based task index from get_workspaces'),
-    status: TaskStatusSchema,
-  })
-  .describe('Partial update: set status of task at index');
-
-export const UpdateWorkspaceSchema = z.object({
-  workspace: WorkspaceNameSchema.default('default').describe('Workspace name (default: "default")'),
-  plan: z.string().optional().describe('Goal or context for this workspace (replaces existing when provided)'),
-  tasks: z
-    .array(z.union([z.string(), TaskItemSchema]))
-    .optional()
-    .transform((arr): PlanTask[] | undefined => {
-      if (arr == null || arr.length === 0) return arr as undefined;
-      return arr.map((item): PlanTask => {
-        if (typeof item === 'string') {
-          return { title: item, status: 'pending' };
-        }
-        return { title: item.title, status: item.status ?? 'pending' };
-      });
-    })
-    .describe('Task list: [{ title, status? }] or string[]. status: pending | in_progress | done | cancelled.'),
-  task_updates: z
-    .array(TaskUpdateItemSchema)
-    .optional()
-    .describe(
-      'Partial updates: set status of task at index (0-based). Use to mark tasks done/in_progress without sending the full task list. Indices from get_workspaces.',
-    ),
-  code_index_enabled: z.boolean().optional().describe('Enable or disable code indexing for this workspace'),
-  reindex: z.boolean().optional().describe('If true, force rebuild the code index for this workspace'),
 });

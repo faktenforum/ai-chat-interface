@@ -2,8 +2,6 @@
  * Shared types for the worker modules.
  */
 
-import type { CodeIndexer } from '@codebase-indexer/core';
-
 export interface TerminalSession {
   id: string;
   pty: import('node-pty').IPty;
@@ -11,11 +9,6 @@ export interface TerminalSession {
   totalLength: number;
   workspace: string;
   createdAt: number;
-}
-
-export interface PlanData {
-  plan: string | null;
-  tasks: import('../workspace-plan.ts').PlanTask[];
 }
 
 export type Handler = (params: Record<string, unknown>) => Promise<unknown>;
@@ -33,15 +26,14 @@ export type WorkerMethod =
   | 'create_workspace'
   | 'delete_workspace'
   | 'get_workspaces'
-  | 'update_workspace'
   | 'clean_workspace_uploads'
   | 'clean_all_workspace_uploads'
   | 'get_system_runtimes'
-  // Code Index
-  | 'index_workspace_code'
-  | 'codebase_search'
-  | 'debug_code_index_list_chunks'
-  | 'debug_code_index_rechunk_file';
+  // Filesystem
+  | 'write_file'
+  | 'edit_file'
+  | 'grep'
+  | 'glob';
 
 export type HandlerMap = Record<WorkerMethod, Handler>;
 
@@ -51,5 +43,4 @@ export type HandlerMap = Record<WorkerMethod, Handler>;
 export interface WorkerContext {
   workspacesDir: string;
   homeDir: string;
-  getCodeIndexer: () => CodeIndexer;
 }

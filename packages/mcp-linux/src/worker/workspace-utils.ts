@@ -1,24 +1,16 @@
 /**
- * Workspace path resolution, plan/config I/O, and file utilities.
+ * Workspace path resolution, instructions/submodule I/O, and file utilities.
  */
 
 import fs from 'node:fs/promises';
 import { join } from 'node:path';
 import { validateWorkspaceName } from '../utils/security.ts';
 import {
-  type PlanTask,
-  type WorkspaceConfig,
   type SubmodulesStatus,
-  isTaskStatus,
-  taskStatusFrom,
   PLAN_DIR,
-  PLAN_MD_FILENAME,
-  TASKS_FILENAME,
   AGENTS_MD_FILENAME,
-  CONFIG_FILENAME,
   SUBMODULES_STATUS_FILENAME,
 } from '../workspace-plan.ts';
-import type { PlanData, WorkerContext } from './types.ts';
 
 // ── Path resolution ──────────────────────────────────────────────────────────
 
@@ -34,45 +26,7 @@ export function getPlanDir(workspacesDir: string, workspace: string): string {
   return join(resolveWorkspacePath(workspacesDir, workspace), PLAN_DIR);
 }
 
-// ── Plan/Task I/O ────────────────────────────────────────────────────────────
-
-export async function readPlanData(workspacesDir: string, workspace: string): Promise<PlanData> {
-  const dir = getPlanDir(workspacesDir, workspace);
-  let plan: string | null = null;
-  const planPath = join(dir, PLAN_MD_FILENAME);
-  try {
-    const raw = (await fs.readFile(planPath, 'utf-8')).trim();
-    plan = raw.length > 0 ? raw : null;
-  } catch {
-    /* file not found or read error */
-  }
-
-  let tasks: PlanTask[] = [];
-  const tasksPath = join(dir, TASKS_FILENAME);
-  try {
-    const raw = await fs.readFile(tasksPath, 'utf-8');
-    const data = JSON.parse(raw) as unknown;
-    const arr =
-      data != null && typeof data === 'object' && !Array.isArray(data) && 'tasks' in data && Array.isArray((data as { tasks: unknown }).tasks)
-        ? (data as { tasks: unknown[] }).tasks
-        : Array.isArray(data)
-          ? data
-          : [];
-    tasks = arr
-      .filter(
-        (t): t is Record<string, unknown> =>
-          t != null && typeof t === 'object' && typeof (t as Record<string, unknown>).title === 'string',
-      )
-      .map((t): PlanTask => {
-        const title = String(t.title);
-        const status = taskStatusFrom(t.status, t.done === true);
-        return { title, status };
-      });
-  } catch {
-    /* parse or read error */
-  }
-  return { plan, tasks };
-}
+// ── Instructions I/O ─────────────────────────────────────────────────────────
 
 export async function readInstructionsFile(workspacesDir: string, workspace: string): Promise<string | null> {
   const path = join(resolveWorkspacePath(workspacesDir, workspace), AGENTS_MD_FILENAME);
@@ -82,46 +36,6 @@ export async function readInstructionsFile(workspacesDir: string, workspace: str
   } catch {
     return null;
   }
-}
-
-export async function writePlanData(workspacesDir: string, workspace: string, data: PlanData): Promise<void> {
-  const dir = getPlanDir(workspacesDir, workspace);
-  await fs.mkdir(dir, { recursive: true });
-
-  const planPath = join(dir, PLAN_MD_FILENAME);
-  if (data.plan != null && data.plan.length > 0) {
-    await fs.writeFile(planPath, data.plan, 'utf-8');
-  } else {
-    try { await fs.unlink(planPath); } catch { /* ignore */ }
-  }
-
-  await fs.writeFile(join(dir, TASKS_FILENAME), JSON.stringify({ tasks: data.tasks }, null, 2), 'utf-8');
-}
-
-// ── Workspace Config I/O ─────────────────────────────────────────────────────
-
-export async function readWorkspaceConfig(workspacesDir: string, workspace: string): Promise<WorkspaceConfig> {
-  const path = join(getPlanDir(workspacesDir, workspace), CONFIG_FILENAME);
-  try {
-    const raw = await fs.readFile(path, 'utf-8');
-    const data = JSON.parse(raw) as unknown;
-    if (data != null && typeof data === 'object' && !Array.isArray(data)) {
-      const obj = data as Record<string, unknown>;
-      return {
-        code_index_enabled:
-          typeof obj.code_index_enabled === 'boolean' ? obj.code_index_enabled : undefined,
-      };
-    }
-  } catch {
-    /* parse or read error */
-  }
-  return {};
-}
-
-export async function writeWorkspaceConfig(workspacesDir: string, workspace: string, config: WorkspaceConfig): Promise<void> {
-  const dir = getPlanDir(workspacesDir, workspace);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(join(dir, CONFIG_FILENAME), JSON.stringify(config, null, 2), 'utf-8');
 }
 
 // ── Submodules Status I/O ────────────────────────────────────────────────────
@@ -161,30 +75,6 @@ export async function writeSubmodulesStatus(workspacesDir: string, workspace: st
     JSON.stringify(data, null, 0),
     'utf-8',
   );
-}
-
-// ── Code Index Helper ────────────────────────────────────────────────────────
-
-/** True if code index is enabled globally and not disabled for this workspace via config.json. */
-export async function isCodeIndexEnabledForWorkspace(ctx: WorkerContext, workspace: string): Promise<boolean> {
-  if (!ctx.getCodeIndexer().isEnabled()) return false;
-  const config = await readWorkspaceConfig(ctx.workspacesDir, workspace);
-  return config.code_index_enabled !== false;
-}
-
-// ── Task Updates ─────────────────────────────────────────────────────────────
-
-export function applyTaskUpdates(
-  current: PlanTask[],
-  updates: Array<{ index: number; status: string }>,
-): PlanTask[] {
-  const result = current.map((t) => ({ ...t }));
-  for (const u of updates) {
-    if (u.index >= 0 && u.index < result.length && isTaskStatus(u.status)) {
-      result[u.index].status = u.status;
-    }
-  }
-  return result;
 }
 
 // ── Git Ignore ───────────────────────────────────────────────────────────────

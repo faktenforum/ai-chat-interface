@@ -13,10 +13,9 @@
 import { createServer, type Socket } from 'node:net';
 import fs from 'node:fs/promises';
 import { join, dirname } from 'node:path';
-import { createFromEnv, type CodeIndexer } from '@codebase-indexer/core';
 import { createTerminalHandlers } from './terminal-handler.ts';
 import { createWorkspaceHandlers } from './workspace-handler.ts';
-import { createCodeIndexHandlers } from './code-index-handler.ts';
+import { createFilesystemHandlers } from './filesystem-handler.ts';
 import type { Handler, HandlerMap, WorkerContext, WorkerMethod } from './types.ts';
 
 // ── CLI Arguments ────────────────────────────────────────────────────────────
@@ -32,28 +31,19 @@ if (!socketPath || !homeDir) {
 
 // ── Context & Handlers ───────────────────────────────────────────────────────
 
-let _codeIndexer: CodeIndexer | null = null;
-function getCodeIndexer(): CodeIndexer {
-  if (!_codeIndexer) {
-    _codeIndexer = createFromEnv();
-  }
-  return _codeIndexer;
-}
-
 const ctx: WorkerContext = {
   workspacesDir: join(homeDir, 'workspaces'),
   homeDir,
-  getCodeIndexer,
 };
 
 const { handlers: terminalHandlers, shutdownTerminals } = createTerminalHandlers(ctx);
 const workspaceHandlers = createWorkspaceHandlers(ctx);
-const codeIndexHandlers = createCodeIndexHandlers(ctx);
+const filesystemHandlers = createFilesystemHandlers(ctx);
 
 const handlers: HandlerMap = {
   ...terminalHandlers,
   ...workspaceHandlers,
-  ...codeIndexHandlers,
+  ...filesystemHandlers,
 } as HandlerMap;
 
 // ── IPC Server ───────────────────────────────────────────────────────────────
