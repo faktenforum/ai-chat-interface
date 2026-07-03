@@ -3,10 +3,16 @@
  * Environment variables are read at startup; missing required values cause exit(1).
  */
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { EXAMPLE_MODEL_ID } from './constants/models.ts';
 
+const pkg = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8'),
+) as { version: string };
+
 export const SERVER_NAME = 'image-generation-mcp-server';
-export const SERVER_VERSION = '1.0.0';
+export const SERVER_VERSION = pkg.version;
 
 export const PORT = parseInt(process.env.PORT ?? '3001', 10);
 export const OPENROUTER_API_KEY =

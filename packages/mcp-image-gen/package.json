@@ -10,7 +10,7 @@
     "dev": "node --watch --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
     "dev:local": "dotenv -e ../../.env.local -- node --watch --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings src/server.ts",
     "lint": "eslint . --ext .ts",
-    "test": "echo \"Tests to be implemented\"",
+    "test": "node --experimental-strip-types --experimental-transform-types --no-warnings --test 'src/**/*.test.ts'",
     "test:integration": "./test/integration.ts",
     "test:integration:local": "dotenv -e ../../.env.local -- ./test/integration.ts",
     "test:http": "./test/http-test.ts",
@@ -20,12 +20,11 @@
     "validate": "tsc --noEmit"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
-    "axios": "^1.13.6",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "pino": "^10.3.1",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

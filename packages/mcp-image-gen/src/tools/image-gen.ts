@@ -1,7 +1,8 @@
+import { z } from 'zod';
 import type { TextContent, ImageContent } from '@modelcontextprotocol/sdk/types.js';
 import { GenerateImageSchema, CheckModelSchema } from '../schemas/image-gen.schema.ts';
 import { OpenRouterClient } from '../services/openrouter.ts';
-import { InvalidInputError, ImageGenError } from '../utils/errors.ts';
+import { ImageGenError } from '../utils/errors.ts';
 import { logger } from '../utils/logger.ts';
 import { parseImageData } from '../utils/data-url.ts';
 import { KNOWN_MODELS, EXAMPLE_MODEL_ID } from '../constants/models.ts';
@@ -28,41 +29,63 @@ interface MergedModel {
 
 // --- generate_image ----------------------------------------------------------
 
+/** Tool result with optional out-of-band metadata (provider cost). */
+type ImageToolResult = {
+  content: Array<TextContent | ImageContent>;
+  _meta?: Record<string, unknown>;
+};
+
 export async function generateImage(
   input: unknown,
   openRouterClient: OpenRouterClient,
-): Promise<{ content: Array<TextContent | ImageContent> }> {
+): Promise<ImageToolResult> {
+  let parsed;
   try {
-    const parsed = GenerateImageSchema.parse(input);
-    logger.info(
-      { model: parsed.model, hasAspectRatio: !!parsed.aspect_ratio, hasImageSize: !!parsed.image_size },
-      'Generating image',
-    );
-
-    const imageUrl = await openRouterClient.generateImage(parsed);
-    return imageUrlToContent(imageUrl);
+    parsed = GenerateImageSchema.parse(input);
   } catch (error) {
-    if (error instanceof InvalidInputError) {
-      return { content: [{ type: 'text', text: `Error: ${error.message}` }] };
+    if (error instanceof z.ZodError) {
+      const detail = error.issues
+        .map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`)
+        .join('; ');
+      return { content: [{ type: 'text', text: `Error: invalid input - ${detail}` }] };
     }
     throw error;
   }
+
+  logger.info(
+    { model: parsed.model, hasAspectRatio: !!parsed.aspect_ratio, hasImageSize: !!parsed.image_size },
+    'Generating image',
+  );
+
+  const { imageUrl, costUsd } = await openRouterClient.generateImage(parsed);
+  return imageResultContent(imageUrl, costUsd, parsed.model);
 }
 
-function imageUrlToContent(
+/**
+ * Builds the tool result and attaches the provider cost (when reported) under
+ * `_meta.cost`. LibreChat reads this to bill the generation against the user's
+ * balance; USD is used as the wire unit and converted downstream.
+ */
+export function imageResultContent(
   imageUrl: string,
-): { content: Array<TextContent | ImageContent> } {
+  costUsd: number | undefined,
+  model: string,
+): ImageToolResult {
   try {
     const { data, mimeType } = parseImageData(imageUrl);
     if (!data?.length) {
       throw new Error('Empty base64 data extracted from image URL');
     }
-    return {
+    const result: ImageToolResult = {
       content: [
         { type: 'text', text: 'Image generated successfully.' },
         { type: 'image', data, mimeType },
       ],
     };
+    if (typeof costUsd === 'number' && costUsd > 0) {
+      result._meta = { cost: { usd: costUsd, model, provider: 'openrouter' } };
+    }
+    return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     logger.error(
@@ -214,8 +237,12 @@ export async function checkModel(
       ],
     };
   } catch (error) {
-    if (error instanceof InvalidInputError) {
-      return { content: [{ type: 'text', text: `Error: ${error.message}` }] };
+    if (error instanceof z.ZodError) {
+      return {
+        content: [
+          { type: 'text', text: `Error: invalid input - ${error.issues[0]?.message ?? 'model is required'}` },
+        ],
+      };
     }
     throw error;
   }

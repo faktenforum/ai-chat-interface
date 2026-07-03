@@ -17,23 +17,3 @@ export class OpenRouterAPIError extends ImageGenError {
   }
 }
 
-export class InvalidInputError extends ImageGenError {
-  constructor(message: string) {
-    super(message, 'INVALID_INPUT', true);
-    this.name = 'InvalidInputError';
-  }
-}
-
-export class ModelNotFoundError extends ImageGenError {
-  constructor(model: string) {
-    super(`Model not found: ${model}`, 'MODEL_NOT_FOUND', true);
-    this.name = 'ModelNotFoundError';
-  }
-}
-
-export class ValidationError extends ImageGenError {
-  constructor(message: string) {
-    super(message, 'VALIDATION_ERROR', true);
-    this.name = 'ValidationError';
-  }
-}

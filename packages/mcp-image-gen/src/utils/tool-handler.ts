@@ -2,7 +2,12 @@ import type { TextContent, ImageContent } from '@modelcontextprotocol/sdk/types.
 import { logger } from './logger.ts';
 import { ImageGenError } from './errors.ts';
 
-type ToolResult = { content: Array<TextContent | ImageContent>; isError?: boolean };
+type ToolResult = {
+  content: Array<TextContent | ImageContent>;
+  isError?: boolean;
+  /** Out-of-band metadata (e.g. provider cost) forwarded to the MCP client. */
+  _meta?: Record<string, unknown>;
+};
 
 export function withToolErrorHandler<TArgs extends unknown[], TResult extends ToolResult>(
   toolName: string,
