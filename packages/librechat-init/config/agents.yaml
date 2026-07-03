@@ -154,10 +154,10 @@ agents:
       - agent: shared-agent-assistant
         description: "Return to the Assistant when the request is outside fact-checking (e.g. general research, coding, documents). Do not hand back merely because the request is ambiguous; ask one short clarifying question or handle it within your role."
     recursion_limit: 25
-    isCollaborative: false # Not yet public
+    isCollaborative: true
     permissions:
-      public: false # Not yet public
-      publicEdit: false # Not yet public
+      public: true
+      publicEdit: false # everyone can use it, only owner can edit its config
 
   - id: shared-agent-image-generation
     name: Image Generation Assistant
