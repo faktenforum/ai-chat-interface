@@ -239,7 +239,7 @@ const PROMPTS: Record<string, PromptConfig> = {
 
     // Faktenforum Search (external MCP; optional)
     'SEARCH_MCP_URL': { message: 'Search MCP URL (optional; empty disables; e.g. https://dev-api.faktenforum.org/search/mcp):', type: 'input', defaultGen: () => '' },
-    'SEARCH_MCP_API_KEY': { message: 'Search MCP API key (optional; must match external Search):', type: 'password', defaultGen: () => '' },
+    'SEARCH_MCP_API_KEY': { message: 'Search MCP API key (optional; must equal SEARCH_BOOTSTRAP_MCP_KEY on the Search deployment, else 401):', type: 'password', defaultGen: () => '' },
     'SEARCH_MCP_DOMAIN': { message: 'Search MCP domain for allowlist (optional; e.g. dev-api.faktenforum.org):', type: 'input', defaultGen: () => '' },
 
     // Spend Monitor dashboard - Traefik basic auth (prod/dev). Generate: htpasswd -nbB admin <password>
