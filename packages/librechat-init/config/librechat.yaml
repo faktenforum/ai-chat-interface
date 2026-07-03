@@ -358,7 +358,7 @@ endpoints:
 #
 # ==========================================
 modelSpecs:
-  prioritize: false  # avoids API warning when default spec + interface.presets are both enabled
+  prioritize: true  # force the default spec (Assistant) as the selection on every new chat, over a user's last-used model; emits a harmless startup warning alongside interface.presets
   list:
     # Assistants: agent specs; post-init patches preset.agent_id to real API id — restart API to apply. Assistant = default.
     # groupIcon is repeated on every spec: the menu takes the icon from the first *visible* spec, and specs whose
