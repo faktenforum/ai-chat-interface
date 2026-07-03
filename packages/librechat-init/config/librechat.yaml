@@ -361,6 +361,8 @@ modelSpecs:
   prioritize: false  # avoids API warning when default spec + interface.presets are both enabled
   list:
     # Assistants: agent specs; post-init patches preset.agent_id to real API id — restart API to apply. Assistant = default.
+    # groupIcon is repeated on every spec: the menu takes the icon from the first *visible* spec, and specs whose
+    # agent the user can't access are filtered out, so putting it only on the default would drop the icon for some users.
     - name: "assistant-agent"
       label: "Assistant"
       description: "General-purpose assistant – coding, Linux/shell, files, data analysis, documents, research and GitHub in one place."
@@ -377,6 +379,7 @@ modelSpecs:
       label: "Faktencheck Assistant"
       description: "Search and present German fact-checks from Faktenforum; verify claims and find existing checks"
       group: "Assistants"
+      groupIcon: "/images/group-assistants.svg"
       order: 2
       preset:
         endpoint: "agents"
@@ -387,6 +390,7 @@ modelSpecs:
       label: "Image Generation Assistant"
       description: "Creates images from text descriptions using AI image generation"
       group: "Assistants"
+      groupIcon: "/images/group-assistants.svg"
       order: 3
       preset:
         endpoint: "agents"
@@ -397,6 +401,7 @@ modelSpecs:
       label: "Travel and Location Assistant"
       description: "Helps with travel planning, location search, route planning and combines geographic information with weather data"
       group: "Assistants"
+      groupIcon: "/images/group-assistants.svg"
       order: 4
       preset:
         endpoint: "agents"
