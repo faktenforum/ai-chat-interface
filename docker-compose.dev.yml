@@ -15,9 +15,14 @@ services:
       LIBRECHAT_ENV: dev
       STACK_NAME: ${STACK_NAME:-prod}
     image: ghcr.io/faktenforum/librechat-init:dev
+    # Named volumes (not bind mounts) so uploads/images survive server rebuilds - they
+    # live on the attached docker-data volume like mongodata. Init runs as root and
+    # chowns them to UID:GID before the api container starts (see setup-permissions.ts).
     volumes:
       - librechat-config:/app/config
-      - ./images:/images
+      - librechat-images:/images
+      - librechat-uploads:/uploads
+      - librechat-logs:/logs
       - mongodata:/mongo_data
       - mongoconfig:/mongo_configdb
 
@@ -54,6 +59,13 @@ services:
     # gating, custom reranker) is baked into this image by the CI build
     # (.github/dockerfiles/librechat-with-agents.Dockerfile), so no host mount is needed.
     image: ghcr.io/faktenforum/librechat:dev
+    # Override the base bind mounts with named volumes so user uploads persist across
+    # server rebuilds (fileStrategy is local). Merged by container path over the base.
+    volumes:
+      - librechat-images:/app/client/public/images
+      - librechat-uploads:/app/uploads
+      - librechat-logs:/app/logs
+      - librechat-config:/app/config:ro
     depends_on:
       librechat-init:
         condition: service_completed_successfully
@@ -299,6 +311,12 @@ volumes:
     name: ${STACK_NAME:-prod}-pgdata2
   librechat-config:
     name: ${STACK_NAME:-prod}-librechat-config
+  librechat-images:
+    name: ${STACK_NAME:-prod}-librechat-images
+  librechat-uploads:
+    name: ${STACK_NAME:-prod}-librechat-uploads
+  librechat-logs:
+    name: ${STACK_NAME:-prod}-librechat-logs
   searxng-config:
     name: ${STACK_NAME:-prod}-searxng-config
   ytptube_config:
