@@ -240,7 +240,6 @@ const PROMPTS: Record<string, PromptConfig> = {
     // Faktenforum Search (external MCP; optional)
     'SEARCH_MCP_URL': { message: 'Search MCP URL (optional; empty disables; e.g. https://dev-api.faktenforum.org/search/mcp):', type: 'input', defaultGen: () => '' },
     'SEARCH_MCP_API_KEY': { message: 'Search MCP API key (optional; must match external Search):', type: 'password', defaultGen: () => '' },
-    'SEARCH_API_KEY': { message: 'Search REST API key (optional; must match external Search):', type: 'password', defaultGen: () => '' },
     'SEARCH_MCP_DOMAIN': { message: 'Search MCP domain for allowlist (optional; e.g. dev-api.faktenforum.org):', type: 'input', defaultGen: () => '' },
 
     // Spend Monitor dashboard - Traefik basic auth (prod/dev). Generate: htpasswd -nbB admin <password>
@@ -263,7 +262,6 @@ const MIGRATIONS: Record<string, string> = {
     'PLAYWRIGHT_MICROSERVICE_URL': 'FIRECRAWL_PLAYWRIGHT_MICROSERVICE_URL',
     'CHECKBOT_RAG_MCP_URL': 'SEARCH_MCP_URL',
     'CHECKBOT_RAG_MCP_API_KEY': 'SEARCH_MCP_API_KEY',
-    'CHECKBOT_RAG_API_KEY': 'SEARCH_API_KEY',
     'CHECKBOT_RAG_MCP_DOMAIN': 'SEARCH_MCP_DOMAIN',
 };
 
