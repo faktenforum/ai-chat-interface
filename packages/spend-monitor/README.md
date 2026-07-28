@@ -2,14 +2,18 @@
 
 Org-wide cost monitor for LibreChat. Aggregates spend from the `transactions`
 collection in LibreChat's MongoDB and serves an in-platform status page.
-Read-only by default; can optionally enforce an org hard cap by zeroing balances
-when over budget (`SPEND_MONITOR_ENFORCE`). Per-user limits stay in LibreChat.
+Reads only, apart from two explicit admin actions: resetting one user's limit and
+lifting an org freeze. It can optionally enforce an org hard cap by zeroing balances
+when over budget (`SPEND_MONITOR_ENFORCE`). Per-user limits are LibreChat's own
+`balance` config — the monitor shows and resets them, it does not define them.
 
 ## Endpoints
 
 - `GET /health` — liveness, `{status:"ok"}`
-- `GET /api/spend` — current-period spend JSON (org total, per-provider, per-model, top users)
+- `GET /api/spend` — current-period spend JSON (org total, per-provider, per-model, per-user)
 - `GET /` — HTML status page (auto-refreshes every `SPEND_MONITOR_POLL_SECONDS`)
+- `POST /users/:id/reset` — set one user's balance back to their configured refill amount
+- `POST /restore` — lift an active freeze and restore balances
 
 ## Config (env)
 
@@ -29,6 +33,20 @@ when over budget (`SPEND_MONITOR_ENFORCE`). Per-user limits stay in LibreChat.
 Spend uses LibreChat's convention: `1,000,000 token credits = 1 USD`. `tokenValue`
 is negative for usage; `tokenType: 'credits'` rows (refills) are excluded.
 Provider split: model ids containing `/` are OpenRouter, bare ids are Scaleway.
+
+## Per-user limits
+
+The users table joins period spend with each user's `balances` document: credits left,
+the amount LibreChat refills, and `lastRefill + refillInterval` — the earliest instant the
+next automatic refill can fire. LibreChat only tops a user up once their credits are
+*used up* **and** that interval has passed, so the date is an eligibility date, not a
+guaranteed reset.
+
+"Reset" writes `tokenCredits = refillAmount` and `lastRefill = now`, i.e. the user gets
+their full allowance immediately and the next automatic refill moves a full interval out.
+It is refused while an org freeze is active (the freeze re-zeroes balances every poll, so
+the reset would not survive) and for users with no refill amount configured, where the
+MCP tool needs an explicit `credits_usd`.
 
 Under this repo's compose these are wired up for you: `PORT` is fixed at 3016 (only
 the host side of the local binding follows `SPEND_MONITOR_PORT`) and

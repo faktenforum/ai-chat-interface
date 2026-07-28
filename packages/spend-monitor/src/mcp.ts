@@ -14,6 +14,7 @@ import type { Config } from './config.ts';
 import type { Snapshot } from './aggregate.ts';
 import type { EnforceState } from './enforce.ts';
 import { restoreBalances } from './enforce.ts';
+import { findUserIdByEmail, resetUserLimit } from './users.ts';
 import { renderMcpUi } from './page.ts';
 import { logger } from './utils/logger.ts';
 
@@ -45,7 +46,8 @@ function createMcpServer(deps: McpDeps): McpServer {
       instructions:
         'Org-wide LibreChat spend monitor (admins only). get_usage_report returns the current ' +
         'spend dashboard as an interactive UI resource - place its marker (\\ui{id}) in your reply. ' +
-        'restore_balances lifts an active spending freeze and restores user balances.',
+        'restore_balances lifts an active spending freeze and restores user balances. ' +
+        'reset_user_limit gives one user their per-period allowance back immediately.',
     },
   );
 
@@ -71,6 +73,7 @@ function createMcpServer(deps: McpDeps): McpServer {
         const summary = {
           period: snap.period,
           period_start: snap.periodStart,
+          period_reset_at: snap.periodResetAt,
           budget_usd: snap.budgetUsd,
           spent_usd: snap.spentUsd,
           used_ratio: snap.usedRatio,
@@ -79,7 +82,13 @@ function createMcpServer(deps: McpDeps): McpServer {
           enforce: deps.cfg.enforce,
           enforcement: { active: enforcement.active, since: enforcement.since, reason: enforcement.reason },
           by_provider: snap.byProvider,
-          top_users: snap.topUsers.slice(0, 5),
+          top_users: snap.users.slice(0, 5).map((u) => ({
+            email: u.email,
+            spent_usd: u.usd,
+            credits_left_usd: u.balanceUsd,
+            next_refill_at: u.nextRefillAt,
+            refill_due: u.refillDue,
+          })),
           updated_at: snap.updatedAt,
         };
         return {
@@ -125,6 +134,53 @@ function createMcpServer(deps: McpDeps): McpServer {
       } catch (error) {
         logger.error({ error: error instanceof Error ? error.message : String(error) }, 'restore_balances failed');
         return textResult({ error: error instanceof Error ? error.message : String(error) }, true);
+      }
+    },
+  );
+
+  server.registerTool(
+    'reset_user_limit',
+    {
+      description:
+        "Give one user their per-period spending allowance back immediately: sets their LibreChat " +
+        'balance to the configured refill amount and restarts their refill interval. Defaults to ' +
+        "the user's own refill amount; pass credits_usd to set a different figure. Requires confirm: true.",
+      inputSchema: {
+        email: z.string().describe('Login email of the user whose limit should be reset'),
+        confirm: z.boolean().describe('Must be true to write the new balance'),
+        credits_usd: z
+          .number()
+          .positive()
+          .optional()
+          .describe('Balance to set in USD (default: the user\'s configured refill amount)'),
+      },
+    },
+    async (args) => {
+      try {
+        if (!args.confirm) {
+          return textResult({ error: 'Must pass confirm: true to reset a user limit.' }, true);
+        }
+        if (deps.getEnforceState().active) {
+          return textResult(
+            { error: 'Org freeze is active - balances are re-zeroed every poll. Restore balances first.' },
+            true,
+          );
+        }
+        const userId = await findUserIdByEmail(deps.db, args.email);
+        if (!userId) {
+          return textResult({ error: `No LibreChat user with email ${args.email}.` }, true);
+        }
+        const result = await resetUserLimit(deps.db, userId, args.credits_usd ?? null, false);
+        await deps.refresh();
+        return textResult({
+          email: result.email,
+          credits_usd: result.creditsUsd,
+          previous_usd: result.previousUsd,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error({ error: message, email: args.email }, 'reset_user_limit failed');
+        return textResult({ error: message }, true);
       }
     },
   );

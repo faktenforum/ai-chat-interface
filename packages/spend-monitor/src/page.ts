@@ -14,15 +14,41 @@ function esc(s: string): string {
   );
 }
 
+/** Sub-cent spend is real; show enough decimals so it does not round away to 0.00. */
+function money(sym: string, n: number): string {
+  const abs = Math.abs(n);
+  const dp = abs > 0 && abs < 0.01 ? 4 : 2;
+  return `${sym}${n.toFixed(dp)}`;
+}
 function usd(n: number): string {
-  return `$${n.toFixed(2)}`;
+  return money('$', n);
 }
 function eur(n: number): string {
-  return `€${n.toFixed(2)}`;
+  return money('€', n);
 }
 
 function rows(cells: string[][]): string {
   return cells.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('');
+}
+
+/** A JS literal safe to inline inside a double-quoted HTML event attribute. */
+function jsArg(value: unknown): string {
+  return esc(JSON.stringify(value));
+}
+
+/** `2026-08-01 00:00 UTC` - short enough for a table cell, unambiguous about the zone. */
+function stamp(iso: string): string {
+  return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
+}
+
+/** Coarse "in 3 days" / "in 5 h" / "due now" for a future instant. */
+function until(fromIso: string, toIso: string): string {
+  const ms = new Date(toIso).getTime() - new Date(fromIso).getTime();
+  if (!Number.isFinite(ms) || ms <= 0) return 'due now';
+  const hours = ms / 3_600_000;
+  if (hours < 1) return `in ${Math.max(1, Math.round(ms / 60_000))} min`;
+  if (hours < 48) return `in ${Math.round(hours)} h`;
+  return `in ${Math.round(hours / 24)} days`;
 }
 
 const STYLES = `
@@ -42,10 +68,16 @@ const STYLES = `
   .enforce.armed { background: #1f2937; color: #9ca3af; }
   .btn { background: #fee2e2; color: #7f1d1d; border: 0; border-radius: 6px; padding: 0.35rem 0.7rem; font-weight: 600; cursor: pointer; }
   .btn.ghost { background: #1f2937; color: #d1d5db; }
+  .btn.sm { padding: 0.15rem 0.5rem; font-size: 0.78rem; font-weight: 500; }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
   .enforce .btn { margin-left: 0.6rem; }
   table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.9rem; }
   th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #1f2937; }
-  td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  td:last-child, th:last-child { text-align: right; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .muted { color: #6b7280; }
+  .due { color: #fbbf24; }
+  section h2 .hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
   section { margin-top: 1.75rem; }
   section h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin: 0 0 0.3rem; }
   footer { margin-top: 2rem; font-size: 0.78rem; color: #6b7280; }
@@ -84,6 +116,64 @@ function enforceStrip(mode: EnforceMode, e: EnforceState, variant: Variant): str
   return '';
 }
 
+/**
+ * Per-user table: spend this period, credits left, when LibreChat's next auto-refill becomes
+ * eligible, and a button that hands the user their full allowance back right now.
+ * The balance columns only appear when LibreChat's balance system is actually in use.
+ */
+function usersSection(s: Snapshot, enforcement: EnforceState, variant: Variant): string {
+  const withBalance = s.users.some((u) => u.balanceUsd != null);
+
+  if (!withBalance) {
+    const body = rows(s.users.map((u) => [esc(u.email), usd(u.usd)]));
+    return `<section>
+    <h2>Users</h2>
+    <table><thead><tr><th>User</th><th>Spend</th></tr></thead><tbody>${
+      body || '<tr><td colspan="2">no usage yet</td></tr>'
+    }</tbody></table>
+  </section>`;
+  }
+
+  const frozen = enforcement.active;
+  const body = s.users
+    .map((u) => {
+      const balance = u.balanceUsd == null ? '<span class="muted">-</span>' : usd(u.balanceUsd);
+      const refill =
+        u.nextRefillAt == null
+          ? '<span class="muted">no auto-refill</span>'
+          : u.refillDue
+            ? `<span class="due">due now</span> <span class="muted">${esc(stamp(u.nextRefillAt))}</span>`
+            : `${esc(stamp(u.nextRefillAt))} <span class="muted">${until(s.updatedAt, u.nextRefillAt)}</span>`;
+
+      let action: string;
+      if (u.balanceUsd == null) {
+        action = `<button class="btn ghost sm" disabled title="no balance record yet">Reset</button>`;
+      } else if (frozen) {
+        action = `<button class="btn ghost sm" disabled title="org freeze active - restore balances first">Reset</button>`;
+      } else if (!(u.refillUsd > 0)) {
+        action = `<button class="btn ghost sm" disabled title="no refill amount configured for this user">Reset</button>`;
+      } else {
+        const label = `Reset to ${usd(u.refillUsd)}`;
+        const confirmMsg = `Reset ${u.email} to ${usd(u.refillUsd)} and restart their refill interval?`;
+        action =
+          variant === 'mcp'
+            ? `<button class="btn ghost sm" onclick="uiTool('reset_user_limit',{email:${jsArg(u.email)},confirm:true},${jsArg(confirmMsg)})">${label}</button>`
+            : `<button class="btn ghost sm" onclick="if(confirm(${jsArg(confirmMsg)})){this.disabled=true;fetch(${jsArg(`/users/${encodeURIComponent(u.id)}/reset`)},{method:'POST'}).then(()=>location.reload())}">${label}</button>`;
+      }
+
+      return `<tr><td>${esc(u.email)}</td><td class="num">${usd(u.usd)}</td><td class="num">${balance}</td><td>${refill}</td><td>${action}</td></tr>`;
+    })
+    .join('');
+
+  return `<section>
+    <h2>Users <span class="hint">- limit resets when depleted after the interval</span></h2>
+    <table>
+      <thead><tr><th>User</th><th class="num">Spend</th><th class="num">Credits left</th><th>Next auto-refill</th><th>Limit</th></tr></thead>
+      <tbody>${body || '<tr><td colspan="5">no users yet</td></tr>'}</tbody>
+    </table>
+  </section>`;
+}
+
 /** Renders the shared dashboard body (banner, enforcement, tables, footer). */
 function dashboardBody(
   s: Snapshot,
@@ -101,7 +191,6 @@ function dashboardBody(
     ['Scaleway', usd(s.byProvider.scaleway)],
   ]);
   const modelRows = rows(s.byModel.slice(0, 20).map((m) => [esc(m.model), m.provider, usd(m.usd)]));
-  const userRows = rows(s.topUsers.map((u) => [esc(u.user), usd(u.usd)]));
 
   const heading =
     variant === 'mcp'
@@ -111,11 +200,16 @@ function dashboardBody(
   const refreshNote =
     variant === 'mcp' ? 'use the Refresh button' : `auto-refresh ${pollSeconds}s`;
 
+  const resetNote =
+    s.periodResetAt == null
+      ? 'rolling window (no reset - the 30-day window slides)'
+      : `resets ${stamp(s.periodResetAt)} (${until(s.updatedAt, s.periodResetAt)})`;
+
   return `${heading}
   <div class="banner" style="background:${c.bg};color:${c.fg}">
     <div class="level">${c.label} &middot; ${pct}% of budget</div>
     <div class="headline">${usd(s.spentUsd)} <span style="opacity:.6;font-size:1.2rem">/ ${usd(s.budgetUsd)}</span></div>
-    <div class="sub">${eur(s.eur.spent)} / ${eur(s.eur.budget)} &middot; period: ${s.period}</div>
+    <div class="sub">${eur(s.eur.spent)} / ${eur(s.eur.budget)} &middot; period: ${s.period} &middot; ${esc(resetNote)}</div>
     <div class="bar"><span style="width:${barWidth}%"></span></div>
   </div>
 
@@ -131,14 +225,13 @@ function dashboardBody(
     <table><thead><tr><th>Model</th><th>Provider</th><th>Spend</th></tr></thead><tbody>${modelRows || '<tr><td colspan="3">no usage yet</td></tr>'}</tbody></table>
   </section>
 
-  <section>
-    <h2>Top users</h2>
-    <table><thead><tr><th>User</th><th>Spend</th></tr></thead><tbody>${userRows || '<tr><td colspan="2">no usage yet</td></tr>'}</tbody></table>
-  </section>
+  ${usersSection(s, enforcement, variant)}
 
   <footer>
     period start <code>${esc(s.periodStart)}</code> &middot; updated <code>${esc(s.updatedAt)}</code> &middot; ${refreshNote} &middot;
-    enforce: <code>${mode}</code> &middot; 1,000,000 credits = $1 &middot; EUR display rate ${s.eur.rate}
+    enforce: <code>${mode}</code> &middot; 1,000,000 credits = $1 &middot; EUR display rate ${s.eur.rate}<br />
+    LibreChat auto-refill only tops a user up once their credits are used up <em>and</em> the interval has passed;
+    &ldquo;Reset&rdquo; grants the full amount immediately and restarts the interval.
   </footer>`;
 }
 

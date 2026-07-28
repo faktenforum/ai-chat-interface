@@ -1,7 +1,7 @@
 {
   "name": "@ai-chat-interface/spend-monitor",
   "version": "1.0.0",
-  "description": "Read-only org-wide cost monitor for LibreChat - aggregates spend from MongoDB transactions and serves an in-platform status page",
+  "description": "Org-wide cost monitor for LibreChat - aggregates spend from MongoDB transactions, serves an in-platform status page and resets per-user limits",
   "type": "module",
   "main": "src/server.ts",
   "scripts": {
