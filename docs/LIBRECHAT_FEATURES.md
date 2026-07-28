@@ -318,6 +318,30 @@ See `modelSpecs.list` for the live models, labels, context/output limits, and th
 - `artifacts` - Artifact generation
 - `context` - Extended context
 - `ocr` - Optical character recognition
+- `vision` - **fork-only**, see below
+
+### Vision gating (fork-only)
+
+Upstream sends whatever the user attached and lets the provider complain. Most of our models
+cannot take images at all - Scaleway and OpenRouter answer with a hard error
+("model is not a multimodal model" / "No endpoints found that support image input") - and image
+generation feeds base64 artifacts back into the run, so a text-only model in a handoff chain
+would break the turn. The fork therefore decides up front whether images travel.
+
+Where it lives after the 2026-07 upstream sync:
+
+| Layer | File | What it does |
+|---|---|---|
+| Config | `librechat.yaml` `endpoints.agents.capabilities` | `vision` must be listed for the toggle to appear |
+| Spec | `modelSpecs.list[].vision` | per-model default (`vision: true` on the image-capable specs) |
+| Builder UI | `Tools/items/catalog.ts` + `selectors.ts` | `vision` is a builtin capability item, toggled like `web_search` |
+| Builder default | `hooks/Agents/useDeriveAgentVision.ts` | seeds the toggle from the model when the agent has no explicit value |
+| Upload gating | `utils/files.ts` `getViableUploadOptions` | withholds direct provider attach for image sets when vision is off |
+| Runtime | `packages/api/src/agents/run.ts` `determineVisionCapability` | resolves agent override -> spec -> model detection, passes `vision` into the agents SDK |
+| SDK | `dev/agents` `stripImagesFromMessages` | strips image parts (URL and data blocks) before the request |
+
+An unset agent value means "follow the model", resolved the same way in the builder and at
+runtime. Explicit `true`/`false` overrides it in both directions.
 
 ### UI Features (All endpoints)
 - `fileSearch: true` - UI checkbox (works in normal chats if RAG available)
