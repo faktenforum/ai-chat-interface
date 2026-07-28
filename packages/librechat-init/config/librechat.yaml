@@ -1,4 +1,4 @@
-version: 1.3.1
+version: 1.3.13
 cache: true
 
 interface:
@@ -113,12 +113,12 @@ endpoints:
         # Focus on top-performance proprietary models for special use cases
         # Note: Open Source models should use Scaleway (Europe) for better privacy
         default: [
-          "anthropic/claude-opus-4.8",        # Strongest coding/agent model (1M Context)
-          "anthropic/claude-sonnet-4.6",      # Top proprietary model (Vision, 1M Context)
-          "openai/gpt-5.5-pro",               # GPT-5.5 Pro (premium tier)
-          "openai/gpt-5.5",                   # Newest GPT-5 flagship (Vision)
-          "openai/gpt-5.4",                   # GPT-5.4 (Vision, cheaper than 5.5)
-          "google/gemini-3.5-flash",          # Google Gemini 3.5 Flash (GA, Vision)
+          "anthropic/claude-opus-5",          # Strongest coding/agent model (1M Context)
+          "anthropic/claude-sonnet-5",        # Top proprietary model (Vision, 1M Context)
+          "openai/gpt-5.6-sol-pro",           # GPT-5.6 Sol Pro (flagship at reasoning.mode=pro)
+          "openai/gpt-5.6-sol",               # GPT-5.6 Sol, the 5.6 flagship (Vision)
+          "openai/gpt-5.6-terra",             # GPT-5.6 Terra (Vision, balanced tier)
+          "google/gemini-3.6-flash",          # Google Gemini 3.6 Flash (GA, Vision)
           "google/gemini-3.1-flash-lite",     # Gemini 3.1 Flash Lite (cheap, fast)
           "google/gemini-3.1-pro-preview",    # Google Gemini 3.1 Pro (Preview from Google)
           "deepseek/deepseek-v4-pro",         # DeepSeek V4 Pro (long context)
@@ -167,6 +167,7 @@ endpoints:
           "qwen3-235b-a22b-instruct-2507",    # Chat - Generally Available
           "qwen3.5-397b-a17b",                # Chat, Vision (frontier MoE) - Generally Available
           "qwen3.6-35b-a3b",                  # Chat, Vision (efficient MoE) - Generally Available
+          "mistral-medium-3.5-128b",          # Chat, Vision (Mistral's premium tier) - Generally Available
           "mistral-small-3.2-24b-instruct-2506", # Chat, Vision - Generally Available
           "devstral-2-123b-instruct-2512",    # Chat (Code) - Generally Available
           "gpt-oss-120b",                      # Chat - Generally Available
@@ -184,9 +185,11 @@ endpoints:
       # OpenAI-standard fields: id/object/created/owned_by), so prices cannot be fetched and must be
       # set here. tokenConfig is authoritative for billing and works alongside fetch: true.
       # Rates are USD per 1M tokens (LibreChat convention: 1,000,000 token credits = 1 USD).
-      # Source: Scaleway model-as-a-service pricing (EUR), converted EUR->USD x1.08 (Jun 2026).
-      # TODO verify against https://www.scaleway.com/en/pricing/model-as-a-service/ — the adversarial
-      # price re-verification did not complete (session limit). Adjust the EUR->USD factor if needed.
+      # Source: Scaleway model-as-a-service pricing (EUR), converted EUR->USD x1.08.
+      # Re-verified 2026-07-28 against https://www.scaleway.com/en/pricing/model-as-a-service/:
+      # every rate below matches the listed EUR price x1.08. Scaleway's serverless catalog held
+      # 18 models that day; the ones missing here are whisper (billed per audio minute, configured
+      # under `speech`) and nothing else.
       tokenConfig:
         llama-3.3-70b-instruct:              { prompt: 0.97, completion: 0.97, context: 100000 }
         qwen3-235b-a22b-instruct-2507:       { prompt: 0.81, completion: 2.43, context: 250000 }
@@ -212,151 +215,32 @@ endpoints:
         HTTP-Referer: "$${SCALEWAY_SITE_URL}"
         X-Title: "$${SCALEWAY_APP_NAME}"
 
-# NOTE: The prose model analysis below is illustrative background and may lag reality.
-# AUTHORITATIVE sources of truth: the actual model ids/params live in modelSpecs.list (below);
-# billing prices live in the Scaleway endpoint `tokenConfig` (USD/1M) and in OpenRouter's live
-# fetch. Do not trust per-model prices/slugs quoted in these comments — verify against those.
+# The model catalog lives in `modelSpecs.list` below - ids, context/output limits and the
+# user-facing labels. Prices: Scaleway from the endpoint `tokenConfig` above (USD/1M, no price
+# feed exists), OpenRouter from its live `fetch`. Nothing here duplicates those numbers, so
+# there is nothing here to go stale.
 #
-# Model Specs: Define default model for new users
-# This prevents "My Agents" from being selected when users have no agents
-# Note: Memory function uses a separate model (configured in memory.agent section)
-# Chat models don't need Function Calling for Memory - Memory works independently
+# Two groups, and the split is the point:
 #
-# ==========================================
-# MODEL ANALYSIS AND GROUPING
-# ==========================================
+# - "Europa & Open Source" (Scaleway): open-weight models on European infrastructure, so
+#   GDPR-relevant and privacy-critical work stays here. Also where the cheap workhorses are
+#   (mistral-small for entry level, glm-5.2 for strong reasoning/code).
+# - "Premium-Modelle" (OpenRouter): proprietary frontier models, hosted in the USA. Only for
+#   material that may leave the EU. The terms-of-service modal tells users this.
 #
-# GROUP 1: "Europe & Open Source" (Scaleway)
-# ------------------------------------------
-# All models in this group are:
-# - Open Source (Apache-2.0, Llama Community, MIT, etc.)
-# - Hosted in Europe (Scaleway Data Centers)
-# - GDPR-compliant
-# - Optimal for privacy-critical applications
+# Both groups are ordered alphabetically by label (`order`), and only these specs plus
+# "My Agents" appear in the selector - prod/dev set `modelSpecs.addedEndpoints: [agents]`,
+# so the raw endpoints stay hidden even though `fetch: true` pulls full model lists.
 #
-# DETAILED MODEL ANALYSIS (Scaleway):
+# Assistants (agent specs) come first; `prioritize: true` makes the default Assistant the
+# selection on every new chat. Memory uses its own model, configured under `memory.agent`.
 #
-# CHAT MODELS (Text-only):
-# -------------------------
-# 1. llama-3.3-70b-instruct (Meta)
-#    - Context: 100K, Output: 4K
-#    - License: Llama 3.3 Community
-#    - Use Case: General conversations, good balance
-#    - Status: Generally Available, recommended by Scaleway
-#
-# 2. qwen3-235b-a22b-instruct-2507 (Qwen)
-#    - Context: 250K (largest available context!), Output: 8K
-#    - License: Apache-2.0
-#    - Use Case: Very complex tasks, extremely long contexts
-#    - Status: Generally Available
-#
-# 3. qwen3-coder-30b-a3b-instruct (Qwen)
-#    - Context: 128K, Output: 8K
-#    - License: Apache-2.0
-#    - Use Case: Programming, code generation, code analysis
-#    - Status: Generally Available
-#
-# 4. gpt-oss-120b (OpenAI Open Source)
-#    - Context: 128K, Output: 8K
-#    - License: Apache-2.0
-#    - Use Case: Complex tasks, GPT-compatible API
-#    - Status: Generally Available
-#
-# CHAT & VISION MODELS:
-# ----------------------
-# 5. mistral-small-3.2-24b-instruct-2506 (Mistral)
-#    - Context: 128K, Output: 8K
-#    - License: Apache-2.0
-#    - Use Case: Cost-effective (3-6x cheaper than 70B), Vision, general tasks
-#    - Status: Generally Available, RECOMMENDED by Scaleway as entry model
-#    - Special feature: Best cost-benefit balance
-#
-# 6. pixtral-12b-2409 (Mistral)
-#    - Context: 128K, Output: 4K
-#    - License: Apache-2.0
-#    - Use Case: Specialized in image understanding, images up to 32M pixels
-#    - Status: Generally Available
-#
-# DEPRECATED MODELS (no longer use):
-# - deepseek-r1-distill-llama-70b (EOL: Apr 16, 2026)
-# - mistral-nemo-instruct-2407 (EOL: Apr 16, 2026)
-# - llama-3.1-8b-instruct (EOL: Apr 16, 2026)
-#
-# GROUP 2: "Premium Models" (OpenRouter)
-# ------------------------------------------
-# These models are:
-# - Top performance for special use cases
-# - Closed Source (Anthropic, OpenAI, Google) or special access required
-# - Hosted via OpenRouter (USA)
-# - Only recommended for non-privacy-critical tasks
-#
-# DETAILED MODEL ANALYSIS (OpenRouter Premium):
-#
-# 1. claude-opus-4.8 (Anthropic) — NEW
-#    - Context: 1M (largest context at Anthropic), Output: 128K
-#    - License: Closed Source (Proprietary)
-#    - Use Case: Coding, Agents, long workflows, complex refactors
-#    - Vision: Yes
-#    - Adaptive thinking: optional preset "effort" ("", "low", "medium", "high", "max")
-#    - Pricing: $5/M input, $25/M output tokens
-#    - Special feature: Strongest Anthropic model, optimized for agents and entire codebases
-#
-# 2. claude-sonnet-4.6 (Anthropic)
-#    - Context: 1M, Output: 64K
-#    - License: Closed Source (Proprietary)
-#    - Use Case: Top performance for complex tasks, programming, reasoning
-#    - Vision: Yes
-#    - Pricing: $3/M input, $15/M output tokens
-#    - Special feature: Excellent reasoning, very good code generation
-#
-# 3. openai/gpt-5.4 (OpenAI)
-#    - Context: 1M, Output: 128K
-#    - License: Closed Source (Proprietary)
-#    - Use Case: Top performance, Dynamic Reasoning, complex problem solving
-#    - Vision: Yes
-#    - Pricing: $2.50/M input, $15/M output tokens
-#    - Special feature: Latest GPT-5 series, strong coding and reasoning
-#
-# 4. google/gemini-3.1-flash-lite (Google)
-#    - Context: Variable, Output: Variable
-#    - License: Closed Source (Proprietary)
-#    - Use Case: Fast and cost-effective, good quality
-#    - Vision: Yes
-#    - Special feature: Optimized for speed with good quality
-#
-# 5. mistralai/mistral-large-2411 (Mistral)
-#    - Context: 256K, Output: 8K
-#    - License: Closed Source (Proprietary)
-#    - Use Case: Premium model, European company
-#    - Special feature: French company, popular with European users
-#
-# 6. glm/glm-4.7 (Z.AI)
-#    - Context: 200K, Output: 128K
-#    - License: Closed Source (Proprietary)
-#    - Use Case: Excellent logical thinking, complex reasoning tasks
-#    - Special feature: Advanced language understanding
-#
-# Exception (Preview from vendor, not provider — included explicitly):
-# - gemma-3-27b-it (Scaleway) — Google Gemma 3 27B
-# - google/gemini-3-flash-preview, google/gemini-3.1-pro-preview (OpenRouter) — Google Gemini 3
-#
-# RECOMMENDATIONS BY USE CASE:
-# ----------------------------------
-# Privacy-critical → Scaleway Models (Europe, Open Source)
-#   - General: mistral-small-3.2-24b (cost-effective, Vision)
-#   - Complex: llama-3.3-70b or qwen3-235b
-#   - Code: devstral-2-123b or qwen3-coder-30b
-#   - Vision: pixtral-12b or mistral-small-3.2-24b
-#
-# Top performance needed → Premium Models (OpenRouter)
-#   - Best Coding/Agents: claude-opus-4.8 (1M Context)
-#   - Best Overall: claude-sonnet-4.6
-#   - Largest Context: openai/gpt-5.4 (1M)
-#   - Fast & Cheap: google/gemini-3.1-flash-lite
-#   - European Premium: mistral-large-2411
-#   - Reasoning: glm/glm-4.7
-#
-# ==========================================
+# Retired on Scaleway (do not re-add, EOL Apr 2026): deepseek-r1-distill-llama-70b,
+# mistral-nemo-instruct-2407, llama-3.1-8b-instruct. Available but deliberately unlisted:
+# gemma-3-27b-it (superseded by gemma-4-26b at the same price), voxtral-small-24b-2507
+# (audio-in), whisper-large-v3 (wired under `speech`), and the two embedding models
+# (used by RAG, not chat).
+
 modelSpecs:
   prioritize: true  # force the default spec (Assistant) as the selection on every new chat, over a user's last-used model; emits a harmless startup warning alongside interface.presets
   list:
@@ -491,11 +375,24 @@ modelSpecs:
         maxContextTokens: 100000   # Generative APIs; Managed Inference up to 128k (instance-dependent)
         maxOutputTokens: 16384
 
+    - name: "scaleway-mistral-medium-3.5"
+      label: "Mistral Medium 3.5 128B"
+      description: "Mistrals Premium-Stufe auf Scaleway. 256K Context, 32K Output. Text, Code und Vision. Europäisch gehostet, deutlich stärker als Mistral Small - aber auch ~10x teurer."
+      group: "Europa & Open Source"
+      order: 6
+      vision: true
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "mistral-medium-3.5-128b"
+        maxContextTokens: 256000
+        maxOutputTokens: 32768
+
     - name: "scaleway-mistral-small-3.2"
       label: "Mistral Small 3.2 24B"
       description: "Kosteneffektiv (3-6x günstiger als 70B Modelle). 128K Context, 8K Output. Unterstützt Chat und Vision. Apache-2.0 License. Empfohlen von Scaleway als Einstiegsmodell."
       group: "Europa & Open Source"
-      order: 6
+      order: 7
       vision: true
       preset:
         endpoint: "Scaleway"
@@ -508,7 +405,7 @@ modelSpecs:
       label: "Pixtral 12B"
       description: "Spezialisiert auf Bildverständnis und Chat. 128K Context, 4K Output. Unterstützt Bilder bis 32M Pixel. Apache-2.0 License."
       group: "Europa & Open Source"
-      order: 7
+      order: 8
       vision: true
       preset:
         endpoint: "Scaleway"
@@ -521,7 +418,7 @@ modelSpecs:
       label: "Qwen3 235B"
       description: "Sehr großes Modell (235B Parameter). 250K Context, 8K Output. Optimal für komplexe Aufgaben und lange Kontexte. Apache-2.0 License."
       group: "Europa & Open Source"
-      order: 8
+      order: 9
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
@@ -533,7 +430,7 @@ modelSpecs:
       label: "Qwen3 Coder 30B"
       description: "Spezialisiert auf Programmierung und Code-Generierung. 128K Context, 8K Output. Apache-2.0 License."
       group: "Europa & Open Source"
-      order: 9
+      order: 10
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
@@ -574,8 +471,8 @@ modelSpecs:
     # Diese Modelle sind Closed Source oder erfordern spezielle Zugänge
     # Hosted über OpenRouter (USA), daher nur für nicht-datenschutzkritische Aufgaben
     # Token limits: OpenRouter API / provider docs (context_length, max_completion_tokens)
-    - name: "claude-opus-4.8"
-      label: "Claude Opus 4.8"
+    - name: "claude-opus-5"
+      label: "Claude Opus 5"
       description: "Anthropics stärkstes Modell für Coding, Agents und lange Workflows. 1M Context, 128K Output. Vision, erweiterte Tool-Nutzung. Closed Source (Anthropic)."
       group: "Premium-Modelle"
       # Lock icon (amber-600 #d97706): proprietary / not open source; good contrast in light and dark
@@ -585,30 +482,31 @@ modelSpecs:
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "anthropic/claude-opus-4.8"
+        model: "anthropic/claude-opus-5"
         maxContextTokens: 1000000
         maxOutputTokens: 128000
-        # effort: optional adaptive thinking (Opus 4.8); values: "" (auto), "low", "medium", "high", "max"
+        # effort: optional adaptive thinking; values: "" (auto), "low", "medium", "high", "max"
         effort: ""
 
-    - name: "claude-sonnet-4.6"
-      label: "Claude Sonnet 4.6"
-      description: "Top-Performance Modell für komplexe Aufgaben, Programmierung und Reasoning. 1M Context, 64K Output. Unterstützt Vision. Closed Source (Anthropic)."
+    - name: "claude-sonnet-5"
+      label: "Claude Sonnet 5"
+      description: "Top-Performance Modell für komplexe Aufgaben, Programmierung und Reasoning. 1M Context, 128K Output. Vision, adaptives Thinking. Günstiger als Opus. Closed Source (Anthropic)."
       group: "Premium-Modelle"
-      order: 3
+      order: 2
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "anthropic/claude-sonnet-4.6"
+        model: "anthropic/claude-sonnet-5"
         maxContextTokens: 1000000
-        maxOutputTokens: 64000
+        maxOutputTokens: 128000
+        effort: ""
 
     - name: "deepseek-v4-pro"
       label: "DeepSeek V4 Pro"
       description: "Starkes Reasoning- und Tool-Use-Modell. 1M Context, 64K Output. Gutes Preis-Leistungs-Verhältnis für Coding und mehrstufige Aufgaben. Open Weights (DeepSeek)."
       group: "Premium-Modelle"
-      order: 4
+      order: 3
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
@@ -620,7 +518,7 @@ modelSpecs:
       label: "Gemini 3.1 Flash Lite"
       description: "Schnell und kostengünstig (Gemini 3 Generation). Optimiert für schnelle Antworten bei guter Qualität. Unterstützt Vision. Closed Source (Google)."
       group: "Premium-Modelle"
-      order: 5
+      order: 4
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -629,16 +527,16 @@ modelSpecs:
         maxContextTokens: 1048576
         maxOutputTokens: 65536
 
-    - name: "google-gemini-3.5-flash"
-      label: "Gemini 3.5 Flash"
-      description: "Google's schnelles Gemini-Modell (GA). Near-Pro Reasoning und Coding zu Flash-Kosten. 1M Context, 64K Output. Vision. Via OpenRouter."
+    - name: "google-gemini-3.6-flash"
+      label: "Gemini 3.6 Flash"
+      description: "Google's schnelles Gemini-Modell (GA). Near-Pro Reasoning und Coding zu Flash-Kosten, stark bei Web- und App-Entwicklung. 1M Context, 64K Output. Vision. Via OpenRouter."
       group: "Premium-Modelle"
       order: 6
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "google/gemini-3.5-flash"
+        model: "google/gemini-3.6-flash"
         maxContextTokens: 1048576
         maxOutputTokens: 65536
 
@@ -646,7 +544,7 @@ modelSpecs:
       label: "Gemini 3.1 Pro (Preview)"
       description: "Google's powerful Gemini-3.1 model (Preview). For demanding tasks and reasoning. Exception: Preview label from Google, not from provider. Via OpenRouter."
       group: "Premium-Modelle"
-      order: 7
+      order: 5
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -655,29 +553,29 @@ modelSpecs:
         maxContextTokens: 1048576
         maxOutputTokens: 65536
 
-    - name: "openai-gpt5-4"
-      label: "GPT-5.4"
-      description: "OpenAI's neuestes Top-Modell. 1M Context, 128K Output. Starkes Reasoning und Coding. Unterstützt Vision. Closed Source (OpenAI)."
+    - name: "openai-gpt5-6-terra"
+      label: "GPT-5.6 Terra"
+      description: "Die ausgewogene Stufe der GPT-5.6-Reihe, zwischen Sol (Flaggschiff) und Luna (günstig). Für alltägliches Coding, Reasoning und Agent-Aufgaben. 1M Context, 128K Output. Vision. Closed Source (OpenAI)."
       group: "Premium-Modelle"
       order: 9
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "openai/gpt-5.4"
+        model: "openai/gpt-5.6-terra"
         maxContextTokens: 1050000
         maxOutputTokens: 128000
 
-    - name: "openai-gpt5-5-pro"
-      label: "GPT-5.5 Pro"
-      description: "OpenAI's leistungsstärkstes Modell für anspruchsvolle Reasoning- und Agent-Aufgaben. 1M Context, 128K Output. Starke Verbesserungen bei Coding und Langkontext. Vision. Closed Source (OpenAI)."
+    - name: "openai-gpt5-6-sol-pro"
+      label: "GPT-5.6 Sol Pro"
+      description: "Dasselbe Modell wie Sol, aber mit reasoning.mode=pro für schwierige Aufgaben - langsamer, dafür gründlicher. 1M Context, 128K Output. Vision. Closed Source (OpenAI)."
       group: "Premium-Modelle"
-      order: 10
+      order: 8
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "openai/gpt-5.5-pro"
+        model: "openai/gpt-5.6-sol-pro"
         maxContextTokens: 1050000
         maxOutputTokens: 128000
 
@@ -694,16 +592,16 @@ modelSpecs:
         maxContextTokens: 262144
         maxOutputTokens: 8192
 
-    - name: "openai-gpt5-5"
-      label: "GPT-5.5"
-      description: "OpenAIs neuestes Top-Modell (GA). Stärkeres Reasoning und Zuverlässigkeit als 5.4. 1M Context, 128K Output. Vision. Closed Source (OpenAI)."
+    - name: "openai-gpt5-6-sol"
+      label: "GPT-5.6 Sol"
+      description: "Das Flaggschiff der GPT-5.6-Reihe. Für komplexes Reasoning, Coding und Agent-Workflows, besonders stark bei mehrstufigen Coding-Aufgaben. 1M Context, 128K Output. Vision. Closed Source (OpenAI)."
       group: "Premium-Modelle"
-      order: 13
+      order: 7
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "openai/gpt-5.5"
+        model: "openai/gpt-5.6-sol"
         maxContextTokens: 1050000
         maxOutputTokens: 128000
 
@@ -711,7 +609,7 @@ modelSpecs:
       label: "Grok 4.3"
       description: "xAIs Reasoning- und Agent-Modell mit hoher Faktentreue. 1M Context. Vision. Gutes Preis-Leistungs-Verhältnis. Closed Source (xAI)."
       group: "Premium-Modelle"
-      order: 14
+      order: 10
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -724,7 +622,7 @@ modelSpecs:
       label: "Kimi K2.6"
       description: "Günstiges Long-Context-Reasoning für Coding und Agents. 262K Context. Vision. Open Weights (Moonshot)."
       group: "Premium-Modelle"
-      order: 15
+      order: 11
       vision: true
       preset:
         endpoint: "OpenRouter"
