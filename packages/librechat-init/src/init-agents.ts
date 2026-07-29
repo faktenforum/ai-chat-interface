@@ -58,6 +58,10 @@ interface AgentConfig {
   category?: string;
   conversation_starters?: string[];
   recursion_limit?: number;
+  /** Artifact rendering mode: 'default' | 'shadcnui' | 'custom'. Empty/omitted disables artifacts. */
+  artifacts?: string;
+  /** Shown in the agent's side panel so users know who to contact about it. */
+  support_contact?: { name?: string; email?: string };
   /** @deprecated Use ACL permissions instead - only set for backward compatibility */
   isCollaborative?: boolean;
   permissions?: {
@@ -188,9 +192,23 @@ function buildAgentCreateData(agentConfig: AgentConfig): AgentCreateParams {
     tools: buildToolsArray(agentConfig),
     conversation_starters: agentConfig.conversation_starters,
     recursion_limit: agentConfig.recursion_limit,
-    support_contact: { name: '', email: '' },
+    support_contact: resolveSupportContact(agentConfig),
     edges: [],
-    artifacts: '',
+    artifacts: agentConfig.artifacts ?? '',
+  };
+}
+
+
+/**
+ * Support contact shown in an agent's side panel. Comes from the environment so one setting
+ * covers every agent, with a per-agent YAML override for the rare case that differs. Empty
+ * strings are what LibreChat stores for "unset", so an unconfigured deployment behaves as
+ * before rather than writing placeholder text.
+ */
+function resolveSupportContact(agentConfig: AgentConfig): { name: string; email: string } {
+  return {
+    name: agentConfig.support_contact?.name ?? process.env.LIBRECHAT_SUPPORT_CONTACT_NAME ?? '',
+    email: agentConfig.support_contact?.email ?? process.env.LIBRECHAT_SUPPORT_CONTACT_EMAIL ?? '',
   };
 }
 
@@ -209,6 +227,8 @@ function buildAgentUpdateData(agentConfig: AgentConfig): AgentUpdateParams {
     tools: buildToolsArray(agentConfig),
     conversation_starters: agentConfig.conversation_starters,
     recursion_limit: agentConfig.recursion_limit,
+    artifacts: agentConfig.artifacts ?? '',
+    support_contact: resolveSupportContact(agentConfig),
     isCollaborative: agentConfig.isCollaborative,
     // Clear edges/agent_ids in pass 1; pass 2 sets resolved values (YAML is source of truth)
     edges: [],

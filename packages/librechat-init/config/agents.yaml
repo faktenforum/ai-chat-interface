@@ -110,6 +110,9 @@ agents:
       - Convert this file to another format
       - Review a pull request or open an issue
       - Research a topic and summarize the findings
+    # Renders code/HTML/mermaid output as an interactive artifact panel instead of a wall of
+    # text. 'default' is the standard renderer ('shadcnui' and 'custom' also exist).
+    artifacts: default
     # Graph steps per run (LangGraph recursionLimit), NOT a lifetime cap on replies: each
     # LLM call and each tool round consumes one. Hitting it aborts that single run with a
     # recursion error. There is no "unlimited" - LangGraph requires a finite number.
