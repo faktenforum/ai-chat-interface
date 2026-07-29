@@ -15,6 +15,9 @@ import type { Snapshot } from './aggregate.ts';
 import type { EnforceState } from './enforce.ts';
 import { restoreBalances } from './enforce.ts';
 import { findUserIdByEmail, resetUserLimit } from './users.ts';
+import { effectiveConfig, updateSettings } from './settings.ts';
+import { PERIODS } from './config.ts';
+import type { Period } from './config.ts';
 import { renderMcpUi } from './page.ts';
 import { logger } from './utils/logger.ts';
 
@@ -25,7 +28,8 @@ const SERVER_VERSION = '1.0.0';
 export interface McpDeps {
   getSnapshot: () => Snapshot | null;
   getEnforceState: () => EnforceState;
-  refresh: () => Promise<void>;
+  /** Re-aggregates and applies enforcement; resolves true when the freeze state flipped. */
+  refresh: () => Promise<boolean>;
   cfg: Config;
   db: Db;
 }
@@ -47,7 +51,8 @@ function createMcpServer(deps: McpDeps): McpServer {
         'Org-wide LibreChat spend monitor (admins only). get_usage_report returns the current ' +
         'spend dashboard as an interactive UI resource - place its marker (\\ui{id}) in your reply. ' +
         'restore_balances lifts an active spending freeze and restores user balances. ' +
-        'reset_user_limit gives one user their per-period allowance back immediately.',
+        'reset_user_limit gives one user their per-period allowance back immediately. ' +
+        'set_org_budget changes the org-wide budget and accounting period without a redeploy.',
     },
   );
 
@@ -70,6 +75,7 @@ function createMcpServer(deps: McpDeps): McpServer {
           return textResult({ error: 'No spend data available yet. Try again shortly.' }, true);
         }
         const enforcement = deps.getEnforceState();
+        const effective = await effectiveConfig(deps.db, deps.cfg);
         const summary = {
           period: snap.period,
           period_start: snap.periodStart,
@@ -81,6 +87,12 @@ function createMcpServer(deps: McpDeps): McpServer {
           eur: snap.eur,
           enforce: deps.cfg.enforce,
           enforcement: { active: enforcement.active, since: enforcement.since, reason: enforcement.reason },
+          settings: {
+            budget_usd: effective.budgetUsd,
+            period: effective.period,
+            overridden: effective.overridden,
+            env_defaults: { budget_usd: deps.cfg.budgetUsd, period: deps.cfg.period },
+          },
           by_provider: snap.byProvider,
           top_users: snap.users.slice(0, 5).map((u) => ({
             email: u.email,
@@ -94,7 +106,10 @@ function createMcpServer(deps: McpDeps): McpServer {
         return {
           content: [
             { type: 'text' as const, text: JSON.stringify(summary, null, 2) },
-            uiResource('ui://spend-monitor/report', renderMcpUi(snap, deps.cfg.enforce, enforcement)),
+            uiResource(
+              'ui://spend-monitor/report',
+              renderMcpUi(snap, deps.cfg.enforce, enforcement, effective, deps.cfg),
+            ),
           ],
         };
       } catch (error) {
@@ -180,6 +195,71 @@ function createMcpServer(deps: McpDeps): McpServer {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logger.error({ error: message, email: args.email }, 'reset_user_limit failed');
+        return textResult({ error: message }, true);
+      }
+    },
+  );
+
+  server.registerTool(
+    'set_org_budget',
+    {
+      description:
+        'Change the org-wide spend budget and/or the accounting period without a redeploy. ' +
+        'Pass budget_usd and/or period; pass reset: true to drop the overrides and fall back to ' +
+        'the deployment defaults. Requires confirm: true. Lowering the budget below current ' +
+        'spend freezes every user on the next poll when enforcement is on.',
+      inputSchema: {
+        confirm: z.boolean().describe('Must be true to write the new settings'),
+        budget_usd: z.number().positive().optional().describe('New org budget in USD'),
+        period: z
+          .enum(PERIODS)
+          .optional()
+          .describe('Accounting window: calendar-month, calendar-week, rolling-30d or rolling-7d'),
+        reset: z
+          .boolean()
+          .optional()
+          .describe('Drop both overrides and use the deployment defaults again'),
+      },
+    },
+    async (args) => {
+      try {
+        if (!args.confirm) {
+          return textResult({ error: 'Must pass confirm: true to change the budget.' }, true);
+        }
+        const reset = args.reset === true;
+        if (!reset && args.budget_usd == null && args.period == null) {
+          return textResult(
+            { error: 'Nothing to change: pass budget_usd and/or period, or reset: true.' },
+            true,
+          );
+        }
+        const applied = await updateSettings(
+          deps.db,
+          deps.cfg,
+          reset
+            ? { budgetUsd: null, period: null }
+            : {
+                ...(args.budget_usd != null ? { budgetUsd: args.budget_usd } : {}),
+                ...(args.period != null ? { period: args.period as Period } : {}),
+              },
+          'mcp',
+        );
+        const enforcementChanged = await deps.refresh();
+        const snap = deps.getSnapshot();
+        return textResult({
+          budget_usd: applied.budgetUsd,
+          period: applied.period,
+          overridden: applied.overridden,
+          level: snap?.level,
+          spent_usd: snap?.spentUsd,
+          period_reset_at: snap?.periodResetAt,
+          /** What the change actually did, not a prediction. */
+          frozen: deps.getEnforceState().active,
+          enforcement_changed: enforcementChanged,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error({ error: message }, 'set_org_budget failed');
         return textResult({ error: message }, true);
       }
     },

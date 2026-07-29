@@ -17,7 +17,10 @@ services:
       # connects to the same database LibreChat uses, in every environment.
       SPEND_MONITOR_MONGO_URI: ${LIBRECHAT_MONGO_URI:-mongodb://${STACK_NAME:-prod}-mongodb:27017/LibreChat}
       SPEND_MONITOR_DB: ${SPEND_MONITOR_DB:-LibreChat}
+      # Budget and period are defaults only: the dashboard writes runtime overrides into
+      # the monitor's own state collection, which win over these. See docs/SPEND_MONITOR.md.
       SPEND_MONITOR_BUDGET_USD: ${SPEND_MONITOR_BUDGET_USD:-100}
+      # calendar-month | calendar-week | rolling-30d | rolling-7d
       SPEND_MONITOR_PERIOD: ${SPEND_MONITOR_PERIOD:-calendar-month}
       SPEND_MONITOR_WARN_PCT: ${SPEND_MONITOR_WARN_PCT:-50}
       SPEND_MONITOR_CRIT_PCT: ${SPEND_MONITOR_CRIT_PCT:-80}

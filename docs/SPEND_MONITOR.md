@@ -3,8 +3,8 @@
 Org-wide cost monitor for LibreChat. It aggregates spend from the `transactions`
 collection in LibreChat's MongoDB and serves an in-platform status page.
 
-**Reads only, apart from two explicit admin actions:** resetting one user's limit and
-lifting an org freeze. Optionally it enforces an org-wide hard cap by zeroing user
+**Reads only, apart from explicit admin actions:** changing the org budget or period,
+resetting one user's limit, and lifting an org freeze. Optionally it enforces an org-wide hard cap by zeroing user
 balances when spend reaches 100% of the budget (`SPEND_MONITOR_ENFORCE`).
 Per-user limits are defined by LibreChat's own `balance` config either way — the monitor
 displays them and can hand a single user their allowance back early.
@@ -16,6 +16,7 @@ A Scaleway billing webhook and email/webhook alerts are possible later phases.
 - `GET /health` — liveness
 - `GET /api/spend` — current-period spend JSON (org total, per-provider, per-model, per-user)
 - `GET /` — HTML status page (auto-refreshes every 30s)
+- `POST /settings` — change the org budget / accounting period (see [Changing the budget](#changing-the-budget-and-period))
 - `POST /users/:id/reset` — reset one user's limit (see [Per-user limits](#per-user-limits))
 - `POST /restore` — lift enforcement and restore balances (only when enforce is `on`/`dry-run`)
 - `POST /mcp` — MCP endpoint (admin-gated; see [MCP endpoint](#mcp-endpoint))
@@ -29,13 +30,41 @@ LibreChat writes one `transactions` row per spend. Convention: **1,000,000 token
 - matches `createdAt >= periodStart` and `tokenType in ['prompt','completion']` (refills, `tokenType: 'credits'`, are excluded)
 - org spend USD = `-sum(tokenValue) / 1_000_000`
 - provider split: model ids containing `/` are OpenRouter, bare ids are Scaleway
-- period: calendar month (default) or rolling 30 days
+- period: calendar month (default), calendar week, or a rolling 30/7-day window
 
 Spend is recorded after a completion, so the total trails real spend by at most the in-flight requests since the last poll. This is a monitor, not a hard cap.
 
-The banner also shows when the org counter restarts: the first of the next UTC month for
-`calendar-month`, and nothing for `rolling-30d` — that window slides continuously instead
-of resetting.
+The banner also shows when the org counter restarts. `calendar-month` restarts on the 1st and
+`calendar-week` on Monday (UTC, ISO weeks); the `rolling-*` windows slide continuously and
+never reset, so nothing is shown for them.
+
+## Changing the budget and period
+
+`SPEND_MONITOR_BUDGET_USD` and `SPEND_MONITOR_PERIOD` are **defaults**, not the last word.
+The dashboard's **Budget** section edits both at runtime and the override is stored in the
+monitor's own `spendmonitor_state` collection, so it survives a restart and needs no
+redeploy. Each field shows whether it is currently overridden, and the tooltip names the
+environment default it would fall back to; **Use env defaults** drops both overrides.
+
+Same thing over HTTP, and via the `set_org_budget` MCP tool:
+
+```bash
+curl -X POST http://spend.localhost/settings \
+  -H 'Content-Type: application/json' \
+  -d '{"budgetUsd": 250, "period": "calendar-week"}'
+
+# drop the overrides again
+curl -X POST http://spend.localhost/settings \
+  -H 'Content-Type: application/json' -d '{"budgetUsd": null, "period": null}'
+```
+
+Periods: `calendar-month` (default), `calendar-week`, `rolling-30d`, `rolling-7d`.
+
+**With `SPEND_MONITOR_ENFORCE=on` this is a live switch, in both directions.** Lowering the
+budget below current spend freezes every user immediately — the response reports
+`frozen: true, enforcementChanged: true` rather than predicting it, and the dashboard says
+so in a dialog. Raising it back above spend lifts the freeze and restores the snapshotted
+balances on the same request.
 
 ## Per-user limits
 
@@ -70,8 +99,8 @@ Amounts are USD; LibreChat stores credits (`1,000,000 credits = $1`). The org-wi
 | Var | Default | Meaning |
 |-----|---------|---------|
 | `SPEND_MONITOR_PORT` | `3016` | port (host + container) |
-| `SPEND_MONITOR_BUDGET_USD` | `100` | monthly org budget (set the real figure) |
-| `SPEND_MONITOR_PERIOD` | `calendar-month` | `calendar-month` or `rolling-30d` |
+| `SPEND_MONITOR_BUDGET_USD` | `100` | org budget default; overridable at runtime |
+| `SPEND_MONITOR_PERIOD` | `calendar-month` | `calendar-month`, `calendar-week`, `rolling-30d`, `rolling-7d`; overridable at runtime |
 | `SPEND_MONITOR_WARN_PCT` | `50` | warn threshold (%) |
 | `SPEND_MONITOR_CRIT_PCT` | `80` | critical threshold (%) |
 | `SPEND_MONITOR_EUR_RATE` | `0.92` | EUR per USD, display only |
@@ -101,6 +130,9 @@ Tools:
 - `reset_user_limit` (`email`, `confirm: true`, optional `credits_usd`) — same effect as a
   row's Reset button. Takes the login email rather than an id, and `credits_usd` overrides
   the default (the user's own refill amount).
+- `set_org_budget` (`confirm: true`, optional `budget_usd` / `period`, or `reset: true`) —
+  same effect as the dashboard's Budget form. Reports what the change actually did, including
+  whether it froze or unfroze the org.
 
 **Access control.** YAML-defined MCP servers are global in LibreChat (`chatMenu: false`
 only hides a server from the chat picker; any agent can still attach it), so the endpoint

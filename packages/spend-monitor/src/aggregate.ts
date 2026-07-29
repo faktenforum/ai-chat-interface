@@ -31,19 +31,41 @@ export interface Snapshot {
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+/** Days since the most recent Monday, in UTC (ISO weeks start Monday; getUTCDay puts Sunday at 0). */
+function daysSinceMonday(now: Date): number {
+  return (now.getUTCDay() + 6) % 7;
+}
+
+function startOfUtcDay(now: Date, offsetDays = 0): Date {
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - offsetDays),
+  );
+}
+
 export function periodStart(period: Period, now: Date): Date {
-  if (period === 'rolling-30d') {
-    return new Date(now.getTime() - 30 * MS_PER_DAY);
+  switch (period) {
+    case 'rolling-30d':
+      return new Date(now.getTime() - 30 * MS_PER_DAY);
+    case 'rolling-7d':
+      return new Date(now.getTime() - 7 * MS_PER_DAY);
+    case 'calendar-week':
+      return startOfUtcDay(now, daysSinceMonday(now));
+    case 'calendar-month':
+      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   }
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
 
 /** Next instant the period counter restarts. Rolling windows never restart - they slide. */
 export function periodResetAt(period: Period, now: Date): Date | null {
-  if (period === 'rolling-30d') {
-    return null;
+  switch (period) {
+    case 'rolling-30d':
+    case 'rolling-7d':
+      return null;
+    case 'calendar-week':
+      return startOfUtcDay(now, daysSinceMonday(now) - 7);
+    case 'calendar-month':
+      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
   }
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
 }
 
 export function levelFor(ratio: number, warnPct: number, critPct: number): Level {

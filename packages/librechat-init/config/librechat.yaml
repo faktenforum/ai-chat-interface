@@ -943,6 +943,16 @@ mcpServers:
     iconPath: /images/mcp-github-icon.svg
     headers:
       Authorization: "Bearer ${MCP_GITHUB_PAT}"
+    # Static machine-user PAT, not OAuth - same reason as the `search` server below.
+    # Without this, LibreChat probes the URL without the Authorization header, gets a 401 +
+    # WWW-Authenticate from GitHub and records `OAuth Required: true`. Every tool call then
+    # tries a per-user OAuth flow instead of using the PAT above, and GitHub's auth server
+    # has no dynamic client registration, so the flow cannot even start:
+    #   Failed to initiate OAuth flow: Incompatible auth server: does not support
+    #   dynamic client registration
+    #   [MCP][github][pull_request_read] Error calling MCP tool: OAuth authentication failed
+    # An explicit value short-circuits the probe (see UserConnectionManager.ts).
+    requiresOAuth: false
     initTimeout: 120000
     chatMenu: true
     startup: true
