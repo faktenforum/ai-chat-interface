@@ -141,6 +141,35 @@ async function main(): Promise<void> {
     console.log('✓ a token seen before the account exists is applied when it is created');
   }
 
+  {
+    /* A revoked token must go even when no shared token exists to fall back to, or git would keep
+     * using the credential the user just removed. */
+    const email = 'revoked.without.fallback@example.com';
+    const shared = process.env.MCP_GITHUB_PAT;
+    delete process.env.MCP_GITHUB_PAT;
+    try {
+      await userManager.setUserGitHubPat(email, 'ghp_soon_revoked');
+      const { username: revokeUsername } = await userManager.ensureUser(email);
+      assert(
+        (await readFileOrNull(`/home/${revokeUsername}/.git-credentials`)) !== null,
+        'own token applied without a shared fallback',
+      );
+
+      await userManager.setUserGitHubPat(email, null);
+      assert(
+        (await readFileOrNull(`/home/${revokeUsername}/.git-credentials`)) === null,
+        'revoked token removed without a shared fallback',
+      );
+      assert(
+        (await gitConfigValue(revokeUsername, 'faktenforum.ownCredentials')) === null,
+        'marker removed without a shared fallback',
+      );
+    } finally {
+      process.env.MCP_GITHUB_PAT = shared;
+    }
+    console.log('✓ revoking a token clears it even with no shared token to fall back to');
+  }
+
   /* The test accounts stay behind - there is no delete path, so run this in a throwaway container. */
   console.log('\n=== All tests passed ===');
 }

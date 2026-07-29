@@ -270,16 +270,10 @@ export class UserManager {
   private async setupGitHubCli(email: string, username: string): Promise<void> {
     const ownPat = this.ownPatByEmail.get(email) ?? null;
     const effectivePat = ownPat ?? process.env.MCP_GITHUB_PAT ?? null;
+    /* Empty string stands for "no token at all", so that state is cached like any other. */
+    const applied = effectivePat ?? '';
 
-    if (!effectivePat) {
-      logger.info(
-        { username },
-        'No GitHub token available (MCP_GITHUB_PAT unset, user has none); gh commands will fail',
-      );
-      return;
-    }
-
-    if (this.appliedPatByUsername.get(username) === effectivePat) {
+    if (this.appliedPatByUsername.get(username) === applied) {
       return;
     }
 
@@ -287,6 +281,21 @@ export class UserManager {
     const ghHostsFile = join(ghConfigDir, 'hosts.yml');
 
     try {
+      /* Runs before the write below so a revoked token is removed even when there is no shared
+       * one to fall back to - otherwise it would stay on disk and keep being used. */
+      if (!ownPat) {
+        await this.clearOwnGitCredentials(username);
+      }
+
+      if (!effectivePat) {
+        this.appliedPatByUsername.set(username, applied);
+        logger.info(
+          { username },
+          'No GitHub token available (MCP_GITHUB_PAT unset, user has none); gh commands will fail',
+        );
+        return;
+      }
+
       await fs.mkdir(ghConfigDir, { recursive: true });
 
       /* `user` is the GitHub login, which only the token knows - MCP_LINUX_GIT_USER_NAME is the
@@ -306,11 +315,9 @@ ${identity ? `    user: ${identity.login}\n` : ''}`;
 
       if (ownPat) {
         await this.enableOwnGitCredentials(username, ownPat, identity);
-      } else {
-        await this.clearOwnGitCredentials(username);
       }
 
-      this.appliedPatByUsername.set(username, effectivePat);
+      this.appliedPatByUsername.set(username, applied);
       logger.info(
         { username, login: identity?.login, own: ownPat !== null },
         'GitHub CLI configured',
