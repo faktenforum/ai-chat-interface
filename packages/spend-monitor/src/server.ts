@@ -30,6 +30,10 @@ import { logNotifier } from './notify.ts';
 import { getEnforceState, enforceCap, restoreBalances, clearStaleOverride } from './enforce.ts';
 import type { EnforceState } from './enforce.ts';
 import { resetUserLimit } from './users.ts';
+import { effectiveConfig, updateSettings } from './settings.ts';
+import type { EffectiveConfig, SettingsPatch } from './settings.ts';
+import { PERIODS } from './config.ts';
+import type { Period } from './config.ts';
 import { renderPage } from './page.ts';
 import { setupMcpEndpoints, extractUserContext } from './utils/http-server.ts';
 import { createSession } from './mcp.ts';
@@ -45,10 +49,19 @@ async function main(): Promise<void> {
   let latest: Snapshot | null = null;
   let prevLevel: Level = 'ok';
   let enforceState: EnforceState = { active: false, since: null, reason: null, overridePeriodStart: null };
+  /** Budget and period can be overridden at runtime, so they are re-read every poll. */
+  let effective: EffectiveConfig = await effectiveConfig(db, cfg);
 
-  async function refresh(): Promise<void> {
+  /**
+   * Re-reads the settings, re-aggregates, and applies enforcement. Returns true when the
+   * freeze state flipped in this pass, so a caller that just changed the budget can report
+   * what actually happened rather than predicting it.
+   */
+  async function refresh(): Promise<boolean> {
     try {
-      const snap = await aggregate(db, cfg, new Date());
+      effective = await effectiveConfig(db, cfg);
+      let snap = await aggregate(db, effective, new Date());
+      const wasActive = enforceState.active;
 
       if (cfg.enforce !== 'off') {
         const dryRun = cfg.enforce === 'dry-run';
@@ -67,6 +80,12 @@ async function main(): Promise<void> {
           await restoreBalances(db, dryRun, null);
         }
         enforceState = await getEnforceState(db);
+        /* Enforcement writes balances after the aggregation read them, so the snapshot would
+         * still show pre-freeze credits for a whole poll. Re-aggregate once when the state
+         * actually flipped. */
+        if (enforceState.active !== wasActive) {
+          snap = await aggregate(db, effective, new Date());
+        }
       }
 
       if (snap.level !== prevLevel) {
@@ -74,11 +93,13 @@ async function main(): Promise<void> {
         prevLevel = snap.level;
       }
       latest = snap;
+      return enforceState.active !== wasActive;
     } catch (error) {
       logger.error(
         { error: error instanceof Error ? error.message : String(error) },
         'Spend refresh failed',
       );
+      return false;
     }
   }
 
@@ -93,7 +114,20 @@ async function main(): Promise<void> {
       res.status(503).json({ error: 'no data yet' });
       return;
     }
-    res.json({ ...latest, enforce: cfg.enforce, enforcement: enforceState });
+    res.json({
+      ...latest,
+      enforce: cfg.enforce,
+      enforcement: enforceState,
+      settings: {
+        budgetUsd: effective.budgetUsd,
+        period: effective.period,
+        overridden: effective.overridden,
+        updatedAt: effective.overrideUpdatedAt,
+        updatedBy: effective.overrideUpdatedBy,
+        envDefaults: { budgetUsd: cfg.budgetUsd, period: cfg.period },
+        periods: PERIODS,
+      },
+    });
   });
 
   app.get('/', async (_req: Request, res: Response) => {
@@ -102,7 +136,51 @@ async function main(): Promise<void> {
       res.status(503).send('no data yet');
       return;
     }
-    res.type('html').send(renderPage(latest, cfg.enforce, enforceState, cfg.pollSeconds));
+    res.type('html').send(
+      renderPage(latest, cfg.enforce, enforceState, cfg.pollSeconds, effective, cfg),
+    );
+  });
+
+  // Change the org-wide budget or accounting period without a redeploy. Stored in the
+  // monitor's own state collection; an empty value clears the override and falls back to
+  // SPEND_MONITOR_BUDGET_USD / SPEND_MONITOR_PERIOD.
+  app.use('/settings', express.urlencoded({ extended: false }), express.json({ limit: '16kb' }));
+  app.post('/settings', async (req: Request, res: Response) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const patch: SettingsPatch = {};
+
+    if ('budgetUsd' in body) {
+      const raw = body.budgetUsd;
+      const text = typeof raw === 'string' ? raw.trim() : raw;
+      patch.budgetUsd = text === '' || text == null ? null : Number(text);
+    }
+    if ('period' in body) {
+      const raw = typeof body.period === 'string' ? body.period.trim() : '';
+      patch.period = raw === '' ? null : (raw as Period);
+    }
+    if (Object.keys(patch).length === 0) {
+      res.status(400).json({ error: 'nothing to change: pass budgetUsd and/or period' });
+      return;
+    }
+
+    try {
+      const applied = await updateSettings(db, cfg, patch, 'dashboard');
+      const enforcementChanged = await refresh();
+      res.json({
+        budgetUsd: applied.budgetUsd,
+        period: applied.period,
+        overridden: applied.overridden,
+        level: latest?.level,
+        /** What the change actually did: a lower budget can freeze everyone immediately,
+         *  a higher one can lift a freeze. */
+        frozen: enforceState.active,
+        enforcementChanged,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ error: message, patch }, 'Settings update failed');
+      res.status(400).json({ error: message });
+    }
   });
 
   // Reset one user's limit (the dashboard's per-row "Reset" button). Writes to the user's

@@ -12,6 +12,7 @@ when over budget (`SPEND_MONITOR_ENFORCE`). Per-user limits are LibreChat's own
 - `GET /health` — liveness, `{status:"ok"}`
 - `GET /api/spend` — current-period spend JSON (org total, per-provider, per-model, per-user)
 - `GET /` — HTML status page (auto-refreshes every `SPEND_MONITOR_POLL_SECONDS`)
+- `POST /settings` — change the org budget / accounting period at runtime
 - `POST /users/:id/reset` — set one user's balance back to their configured refill amount
 - `POST /restore` — lift an active freeze and restore balances
 
@@ -22,8 +23,8 @@ when over budget (`SPEND_MONITOR_ENFORCE`). Per-user limits are LibreChat's own
 | `PORT` | `3016` | listen port |
 | `SPEND_MONITOR_MONGO_URI` | `mongodb://prod-mongodb:27017/LibreChat` | LibreChat MongoDB |
 | `SPEND_MONITOR_DB` | `LibreChat` | database name |
-| `SPEND_MONITOR_BUDGET_USD` | `100` | monthly org budget (USD) |
-| `SPEND_MONITOR_PERIOD` | `calendar-month` | `calendar-month` or `rolling-30d` |
+| `SPEND_MONITOR_BUDGET_USD` | `100` | org budget (USD); a runtime override in the DB wins |
+| `SPEND_MONITOR_PERIOD` | `calendar-month` | `calendar-month`, `calendar-week`, `rolling-30d`, `rolling-7d`; a runtime override wins |
 | `SPEND_MONITOR_WARN_PCT` | `50` | warn threshold (%) |
 | `SPEND_MONITOR_CRIT_PCT` | `80` | critical threshold (%) |
 | `SPEND_MONITOR_EUR_RATE` | `0.92` | EUR per USD, display only |
@@ -33,6 +34,14 @@ when over budget (`SPEND_MONITOR_ENFORCE`). Per-user limits are LibreChat's own
 Spend uses LibreChat's convention: `1,000,000 token credits = 1 USD`. `tokenValue`
 is negative for usage; `tokenType: 'credits'` rows (refills) are excluded.
 Provider split: model ids containing `/` are OpenRouter, bare ids are Scaleway.
+
+## Org budget and period
+
+Both env vars above are defaults. `POST /settings` (dashboard form, or the `set_org_budget`
+MCP tool) stores an override in `spendmonitor_state`, so the figure survives restarts and
+changes without a redeploy; posting `null` for a field drops the override. With
+`SPEND_MONITOR_ENFORCE=on` the change takes effect immediately in both directions - a budget
+below current spend freezes every user on the spot, and raising it back restores them.
 
 ## Per-user limits
 

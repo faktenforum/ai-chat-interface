@@ -1,5 +1,8 @@
 import type { Level, Snapshot } from './aggregate.ts';
 import type { EnforceMode, EnforceState } from './enforce.ts';
+import type { Config } from './config.ts';
+import { PERIODS } from './config.ts';
+import type { EffectiveConfig } from './settings.ts';
 
 const COLORS: Record<Level, { bg: string; fg: string; label: string }> = {
   ok: { bg: '#065f46', fg: '#d1fae5', label: 'OK' },
@@ -76,6 +79,12 @@ const STYLES = `
   td:last-child, th:last-child { text-align: right; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .muted { color: #6b7280; }
+  .settings { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem; margin-top: 0.5rem; }
+  .settings label { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; margin-bottom: 0.2rem; }
+  .settings input, .settings select { background: #111827; color: #e5e7eb; border: 1px solid #374151; border-radius: 6px; padding: 0.35rem 0.5rem; font: inherit; font-size: 0.85rem; }
+  .settings input { width: 8rem; font-variant-numeric: tabular-nums; }
+  .badge { display: inline-block; font-size: 0.7rem; padding: 0.05rem 0.4rem; border-radius: 999px; background: #1f2937; color: #9ca3af; margin-left: 0.4rem; }
+  .badge.on { background: #1e3a8a; color: #bfdbfe; }
   .due { color: #fbbf24; }
   section h2 .hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
   section { margin-top: 1.75rem; }
@@ -83,6 +92,30 @@ const STYLES = `
   footer { margin-top: 2rem; font-size: 0.78rem; color: #6b7280; }
   code { color: #93c5fd; }
 `;
+
+/** Submits the budget form without leaving the page. Hosted variant only. */
+const SETTINGS_JS = `
+function postSettings(payload,confirmMsg,el){
+  if(confirmMsg&&!window.confirm(confirmMsg))return false;
+  if(el)el.disabled=true;
+  fetch('/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(function(r){return r.json().then(function(b){return {ok:r.ok,body:b}})})
+    .then(function(res){
+      if(!res.ok){window.alert('Could not save: '+(res.body&&res.body.error||'unknown error'));if(el)el.disabled=false;return;}
+      if(res.body&&res.body.enforcementChanged)window.alert(res.body.frozen?'Saved. Spend is over the new budget - every user has been frozen.':'Saved. Spend is now under budget - the freeze has been lifted and balances restored.');
+      location.reload();
+    })
+    .catch(function(e){window.alert('Could not save: '+e.message);if(el)el.disabled=false;});
+  return false;
+}
+function saveSettings(ev,confirmMsg){
+  ev.preventDefault();
+  var f=ev.target;
+  return postSettings({budgetUsd:f.budgetUsd.value,period:f.period.value},confirmMsg,f.querySelector('button[type=submit]'));
+}
+function resetSettings(ev){
+  return postSettings({budgetUsd:null,period:null},'Drop both overrides and use the environment defaults again?',ev.target);
+}`;
 
 /** Posts iframe size and forwards tool actions. Used only by the MCP variant. */
 const MCP_JS = `
@@ -174,6 +207,76 @@ function usersSection(s: Snapshot, enforcement: EnforceState, variant: Variant):
   </section>`;
 }
 
+
+/** Human label for a period, so the select does not read like an enum dump. */
+const PERIOD_LABELS: Record<string, string> = {
+  'calendar-month': 'Calendar month (resets on the 1st)',
+  'calendar-week': 'Calendar week (resets Monday)',
+  'rolling-30d': 'Rolling 30 days (slides, never resets)',
+  'rolling-7d': 'Rolling 7 days (slides, never resets)',
+};
+
+/**
+ * Budget and period editor. Both normally come from the environment, so each field shows
+ * whether it is currently overridden and what the env default would be - otherwise a
+ * surprising budget is impossible to explain without reading the deployment.
+ */
+function settingsSection(
+  effective: EffectiveConfig,
+  envDefaults: Pick<Config, 'budgetUsd' | 'period'>,
+  mode: EnforceMode,
+  variant: Variant,
+): string {
+  const badge = (on: boolean, envValue: string) =>
+    on
+      ? `<span class="badge on" title="Overridden here; environment default is ${esc(envValue)}">override</span>`
+      : '<span class="badge">from env</span>';
+
+  const options = PERIODS.map(
+    (p) =>
+      `<option value="${p}"${p === effective.period ? ' selected' : ''}>${esc(PERIOD_LABELS[p] ?? p)}</option>`,
+  ).join('');
+
+  const changedNote =
+    effective.overrideUpdatedAt != null
+      ? `<div class="sub muted" style="margin-top:.5rem">last changed ${esc(stamp(effective.overrideUpdatedAt))}${
+          effective.overrideUpdatedBy != null ? ` by ${esc(effective.overrideUpdatedBy)}` : ''
+        }</div>`
+      : '';
+
+  const freezeWarning =
+    mode === 'on'
+      ? 'Lowering the budget below current spend will freeze every user on the next poll. Continue?'
+      : 'Apply the new budget and period?';
+
+  if (variant === 'mcp') {
+    return `<section>
+    <h2>Budget <span class="hint">- change via the set_org_budget tool</span></h2>
+    <table><tbody>
+      <tr><td>Budget</td><td>${usd(effective.budgetUsd)} ${badge(effective.overridden.budgetUsd, usd(envDefaults.budgetUsd))}</td></tr>
+      <tr><td>Period</td><td>${esc(PERIOD_LABELS[effective.period] ?? effective.period)} ${badge(effective.overridden.period, envDefaults.period)}</td></tr>
+    </tbody></table>${changedNote}
+  </section>`;
+  }
+
+  return `<section>
+    <h2>Budget</h2>
+    <form class="settings" onsubmit="return saveSettings(event, ${jsArg(freezeWarning)})">
+      <div>
+        <label for="budgetUsd">Budget (USD) ${badge(effective.overridden.budgetUsd, usd(envDefaults.budgetUsd))}</label>
+        <input id="budgetUsd" name="budgetUsd" type="number" min="0" step="0.01" value="${effective.budgetUsd}" />
+      </div>
+      <div>
+        <label for="period">Period ${badge(effective.overridden.period, envDefaults.period)}</label>
+        <select id="period" name="period">${options}</select>
+      </div>
+      <button class="btn" type="submit">Save</button>
+      <button class="btn ghost" type="button" onclick="return resetSettings(event)"
+        title="Drop the overrides and use SPEND_MONITOR_BUDGET_USD / SPEND_MONITOR_PERIOD again">Use env defaults</button>
+    </form>${changedNote}
+  </section>`;
+}
+
 /** Renders the shared dashboard body (banner, enforcement, tables, footer). */
 function dashboardBody(
   s: Snapshot,
@@ -181,6 +284,8 @@ function dashboardBody(
   enforcement: EnforceState,
   variant: Variant,
   pollSeconds: number,
+  effective: EffectiveConfig,
+  envDefaults: Pick<Config, 'budgetUsd' | 'period'>,
 ): string {
   const c = COLORS[s.level];
   const pct = Math.round(s.usedRatio * 100);
@@ -225,6 +330,8 @@ function dashboardBody(
     <table><thead><tr><th>Model</th><th>Provider</th><th>Spend</th></tr></thead><tbody>${modelRows || '<tr><td colspan="3">no usage yet</td></tr>'}</tbody></table>
   </section>
 
+  ${settingsSection(effective, envDefaults, mode, variant)}
+
   ${usersSection(s, enforcement, variant)}
 
   <footer>
@@ -241,6 +348,8 @@ export function renderPage(
   mode: EnforceMode,
   enforcement: EnforceState,
   pollSeconds: number,
+  effective: EffectiveConfig,
+  envDefaults: Pick<Config, 'budgetUsd' | 'period'>,
 ): string {
   return `<!doctype html>
 <html lang="en">
@@ -252,13 +361,20 @@ export function renderPage(
 <style>${STYLES}</style>
 </head>
 <body>
-<div class="wrap">${dashboardBody(s, mode, enforcement, 'hosted', pollSeconds)}</div>
+<div class="wrap">${dashboardBody(s, mode, enforcement, 'hosted', pollSeconds, effective, envDefaults)}</div>
+<script>${SETTINGS_JS}</script>
 </body>
 </html>`;
 }
 
 /** Embedded MCP-UI variant: no meta-refresh; buttons post tool actions. */
-export function renderMcpUi(s: Snapshot, mode: EnforceMode, enforcement: EnforceState): string {
+export function renderMcpUi(
+  s: Snapshot,
+  mode: EnforceMode,
+  enforcement: EnforceState,
+  effective: EffectiveConfig,
+  envDefaults: Pick<Config, 'budgetUsd' | 'period'>,
+): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -268,7 +384,7 @@ export function renderMcpUi(s: Snapshot, mode: EnforceMode, enforcement: Enforce
 <style>${STYLES}</style>
 </head>
 <body>
-<div class="wrap">${dashboardBody(s, mode, enforcement, 'mcp', 0)}</div>
+<div class="wrap">${dashboardBody(s, mode, enforcement, 'mcp', 0, effective, envDefaults)}</div>
 <script>${MCP_JS}</script>
 </body>
 </html>`;
