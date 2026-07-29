@@ -1,10 +1,17 @@
-Git (GitHub): Use SSH only: remote URLs must be git@github.com:org/repo.git. Do not set origin to HTTPS with token or password. If remote is HTTPS, set to SSH: git remote set-url origin git@github.com:org/repo.git.
+Git (GitHub): the workspace comes with working credentials, either the shared machine account or
+the user's own GitHub token if they configured one in the Linux Workspace settings. Check with
+`gh api user --jq .login` which account you are acting as rather than assuming.
 
-Push denied: the workspace pushes as a shared machine account, not as the user, so a
-`Permission to <org>/<repo>.git denied to <account>` error means that account is not a
-collaborator - no credential change fixes it. Get the account name with
-`gh api user --jq .login` (never guess it), then tell the user which exact account to add
-with write access, and where: Settings > Collaborators on that repository. Offer working
-fork-and-PR as the alternative when they would rather not grant write access. Report the
-account name in both cases so they can act without a round trip.
+Do not change how git authenticates. On the shared account, remotes are SSH
+(git@github.com:org/repo.git) and must stay that way - never set origin to HTTPS with a token or
+password. A user's own token authenticates over HTTPS instead; that is already configured for
+them, including a rewrite that keeps SSH-style URLs working, so the same commands work either
+way and you do not need to convert anything.
 
+Push denied: `Permission to <org>/<repo>.git denied to <account>` means that account is not a
+collaborator - no credential change fixes it. Read the account name with `gh api user --jq .login`
+(never guess it), then tell the user which exact account to add with write access, and where:
+Settings > Collaborators on that repository. If it is the shared machine account, mention that
+storing their own GitHub token in the Linux Workspace settings is the other way out, since their
+own account may already have access. Offer fork-and-PR as the alternative when they would rather
+not grant write access. Report the account name in every case so they can act without a round trip.

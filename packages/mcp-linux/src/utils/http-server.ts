@@ -14,6 +14,8 @@ export interface UserContext {
   userId: string;
   email: string;
   username: string;
+  /** GitHub token this user configured themselves; absent means the shared bot account. */
+  githubPat: string | null;
 }
 
 /**
@@ -23,6 +25,7 @@ export interface UserContext {
  * - X-User-ID: unique user identifier
  * - X-User-Email: user email address
  * - X-User-Username: username
+ * - X-User-Github-Pat: the user's own GitHub token, from an optional customUserVar
  */
 export function extractUserContext(headers: Request['headers']): UserContext | null {
   const userId = headers['x-user-id'];
@@ -37,7 +40,24 @@ export function extractUserContext(headers: Request['headers']): UserContext | n
     userId: typeof userId === 'string' ? userId : '',
     email,
     username: typeof username === 'string' ? username : '',
+    githubPat: readUserSuppliedHeader(headers['x-user-github-pat']),
   };
+}
+
+/**
+ * A value LibreChat substituted from a user-configured variable. An unset variable leaves the
+ * literal `{{NAME}}` behind on older LibreChat builds, which is not a credential - treat it,
+ * and anything blank, as absent.
+ */
+function readUserSuppliedHeader(value: string | string[] | undefined): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (trimmed === '' || /^\{\{.*\}\}$/.test(trimmed)) {
+    return null;
+  }
+  return trimmed;
 }
 
 /**

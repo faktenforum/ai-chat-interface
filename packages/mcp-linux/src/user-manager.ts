@@ -38,8 +38,21 @@ export interface UserMappingDB {
   nextUid: number;
 }
 
+/** The account a GitHub token belongs to, as GitHub reports it. */
+interface GitHubIdentity {
+  login: string;
+  id: number;
+}
+
 export class UserManager {
   private db: UserMappingDB = { users: {}, nextUid: BASE_UID };
+
+  /** Tokens users configured for themselves in LibreChat, keyed by email. Memory only - they
+   * arrive with every request, so nothing is persisted here. */
+  private readonly ownPatByEmail = new Map<string, string>();
+
+  /** Token last written to a user's gh/git config, so unchanged requests do no filesystem work. */
+  private readonly appliedPatByUsername = new Map<string, string>();
 
   constructor() {
     // DB loaded via async initialize()
@@ -245,16 +258,22 @@ export class UserManager {
   }
 
   /**
-   * Configures GitHub CLI authentication if MCP_GITHUB_PAT is set
-   * Uses the same PAT as GitHub MCP for consistency
+   * Writes the GitHub credentials this user should act under.
+   *
+   * Everyone starts on the shared bot account: its PAT for `gh`, its SSH key for git. A user who
+   * configured their own token in LibreChat gets that instead, over HTTPS - a token cannot
+   * authenticate an SSH remote, so git URLs are rewritten to HTTPS for them and their commits are
+   * authored under their own GitHub identity.
+   *
+   * Cheap to call repeatedly: nothing is written while the effective token is unchanged.
    */
-  private async setupGitHubCli(username: string): Promise<void> {
-    const githubPat = process.env.MCP_GITHUB_PAT;
-    if (!githubPat) {
-      logger.info(
-        { username },
-        'MCP_GITHUB_PAT not set; GitHub CLI stays unauthenticated (gh commands will fail)',
-      );
+  private async setupGitHubCli(email: string, username: string): Promise<void> {
+    const ownPat = this.ownPatByEmail.get(email) ?? null;
+    const effectivePat = ownPat ?? process.env.MCP_GITHUB_PAT ?? null;
+    /* Empty string stands for "no token at all", so that state is cached like any other. */
+    const applied = effectivePat ?? '';
+
+    if (this.appliedPatByUsername.get(username) === applied) {
       return;
     }
 
@@ -262,16 +281,31 @@ export class UserManager {
     const ghHostsFile = join(ghConfigDir, 'hosts.yml');
 
     try {
+      /* Runs before the write below so a revoked token is removed even when there is no shared
+       * one to fall back to - otherwise it would stay on disk and keep being used. */
+      if (!ownPat) {
+        await this.clearOwnGitCredentials(username);
+      }
+
+      if (!effectivePat) {
+        this.appliedPatByUsername.set(username, applied);
+        logger.info(
+          { username },
+          'No GitHub token available (MCP_GITHUB_PAT unset, user has none); gh commands will fail',
+        );
+        return;
+      }
+
       await fs.mkdir(ghConfigDir, { recursive: true });
 
       /* `user` is the GitHub login, which only the token knows - MCP_LINUX_GIT_USER_NAME is the
        * git author display name and was the wrong source. Resolve it from the API and omit the
        * field entirely when that fails, since gh can derive it from the token itself. */
-      const login = await this.resolveGitHubLogin(githubPat);
+      const identity = await this.resolveGitHubIdentity(effectivePat);
       const ghHostsConfig = `github.com:
-    oauth_token: ${githubPat}
-    git_protocol: ssh
-${login ? `    user: ${login}\n` : ''}`;
+    oauth_token: ${effectivePat}
+    git_protocol: ${ownPat ? 'https' : 'ssh'}
+${identity ? `    user: ${identity.login}\n` : ''}`;
       await fs.writeFile(ghHostsFile, ghHostsConfig, { mode: 0o600 });
 
       // Set ownership and permissions
@@ -279,17 +313,145 @@ ${login ? `    user: ${login}\n` : ''}`;
       await execFile('chown', ['-R', `${username}:${username}`, ghConfigDir]);
       await fs.chmod(ghHostsFile, 0o600);
 
-      logger.info({ username, login }, 'GitHub CLI configured with PAT');
+      if (ownPat) {
+        await this.enableOwnGitCredentials(username, ownPat, identity);
+      }
+
+      this.appliedPatByUsername.set(username, applied);
+      logger.info(
+        { username, login: identity?.login, own: ownPat !== null },
+        'GitHub CLI configured',
+      );
     } catch (error) {
       logger.warn({ username, error }, 'Failed to configure GitHub CLI');
     }
   }
 
   /**
-   * Looks up the login belonging to the PAT. Returns null on any failure - an unresolved
-   * login is not worth failing the whole user setup over, and gh works without the field.
+   * Records the token a user configured for themselves in LibreChat and applies it if their
+   * account already exists. Passing null puts them back on the shared bot account.
    */
-  private async resolveGitHubLogin(pat: string): Promise<string | null> {
+  async setUserGitHubPat(email: string, pat: string | null): Promise<void> {
+    const current = this.ownPatByEmail.get(email) ?? null;
+    if (current === pat) {
+      return;
+    }
+
+    if (pat) {
+      this.ownPatByEmail.set(email, pat);
+    } else {
+      this.ownPatByEmail.delete(email);
+    }
+
+    const username = this.getUsername(email);
+    if (!username) {
+      /* Account not created yet - ensureUser applies it as part of setup. */
+      return;
+    }
+    await this.setupGitHubCli(email, username);
+  }
+
+  /**
+   * Points git at the user's own token: stored as an HTTPS credential, with SSH URLs rewritten so
+   * remotes cloned under the bot account keep working, and commits authored as them.
+   *
+   * The `ownCredentials` marker records that these values came from us, so switching back can
+   * remove exactly what we set and nothing a user configured by hand in the terminal.
+   */
+  private async enableOwnGitCredentials(
+    username: string,
+    pat: string,
+    identity: GitHubIdentity | null,
+  ): Promise<void> {
+    const credentialsFile = `/home/${username}/.git-credentials`;
+    await fs.writeFile(credentialsFile, `https://x-access-token:${pat}@github.com\n`, {
+      mode: 0o600,
+    });
+    await execFile('chown', [`${username}:${username}`, credentialsFile]);
+
+    await this.gitConfig(username, ['credential.helper', 'store']);
+    await this.gitConfig(username, ['url.https://github.com/.insteadOf', 'git@github.com:']);
+    await this.gitConfig(username, ['url.https://github.com/.insteadOf', 'ssh://git@github.com/'], {
+      add: true,
+    });
+
+    if (identity) {
+      await this.gitConfig(username, ['user.name', identity.login]);
+      /* The noreply address attributes the commit to their account without exposing a private
+       * address; the numeric-id form is the one GitHub accepts for every account age. */
+      await this.gitConfig(username, [
+        'user.email',
+        `${identity.id}+${identity.login}@users.noreply.github.com`,
+      ]);
+    }
+
+    await this.gitConfig(username, ['faktenforum.ownCredentials', 'true']);
+  }
+
+  /** Undoes enableOwnGitCredentials, leaving anything the user set by hand alone. */
+  private async clearOwnGitCredentials(username: string): Promise<void> {
+    if (!(await this.hasOwnCredentialsMarker(username))) {
+      return;
+    }
+
+    await fs.rm(`/home/${username}/.git-credentials`, { force: true });
+    for (const args of [
+      ['--unset-all', 'credential.helper'],
+      ['--remove-section', 'url.https://github.com/'],
+      ['--unset', 'user.name'],
+      ['--unset', 'user.email'],
+      ['--unset', 'faktenforum.ownCredentials'],
+    ]) {
+      await this.gitConfig(username, args);
+    }
+    logger.info({ username }, 'Reverted git credentials to the shared account');
+  }
+
+  private async hasOwnCredentialsMarker(username: string): Promise<boolean> {
+    try {
+      const { stdout } = await execFile('runuser', [
+        '-u',
+        username,
+        '--',
+        'git',
+        'config',
+        '--global',
+        '--get',
+        'faktenforum.ownCredentials',
+      ]);
+      return stdout.trim() === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  /** Runs `git config --global` as the user; a missing key to unset is not an error worth raising. */
+  private async gitConfig(
+    username: string,
+    args: string[],
+    options: { add?: boolean } = {},
+  ): Promise<void> {
+    try {
+      await execFile('runuser', [
+        '-u',
+        username,
+        '--',
+        'git',
+        'config',
+        '--global',
+        ...(options.add === true ? ['--add'] : []),
+        ...args,
+      ]);
+    } catch (error) {
+      logger.debug({ username, args, error }, 'git config call did not apply');
+    }
+  }
+
+  /**
+   * Looks up the account belonging to the PAT. Returns null on any failure - an unresolved
+   * identity is not worth failing the whole user setup over, and gh works without the field.
+   */
+  private async resolveGitHubIdentity(pat: string): Promise<GitHubIdentity | null> {
     try {
       const response = await fetch('https://api.github.com/user', {
         headers: {
@@ -300,13 +462,16 @@ ${login ? `    user: ${login}\n` : ''}`;
         signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok) {
-        logger.warn({ status: response.status }, 'Could not resolve the GitHub login for the PAT');
+        logger.warn({ status: response.status }, 'Could not resolve the GitHub account for the PAT');
         return null;
       }
-      const body = (await response.json()) as { login?: unknown };
-      return typeof body.login === 'string' && body.login.length > 0 ? body.login : null;
+      const body = (await response.json()) as { login?: unknown; id?: unknown };
+      if (typeof body.login !== 'string' || body.login.length === 0) {
+        return null;
+      }
+      return { login: body.login, id: typeof body.id === 'number' ? body.id : 0 };
     } catch (error) {
-      logger.warn({ error }, 'Could not resolve the GitHub login for the PAT');
+      logger.warn({ error }, 'Could not resolve the GitHub account for the PAT');
       return null;
     }
   }
@@ -321,10 +486,11 @@ ${login ? `    user: ${login}\n` : ''}`;
     if (existing) {
       // Ensure Linux user exists (may be missing after image upgrade)
       if (!await this.linuxUserExists(existing.username)) {
+        this.appliedPatByUsername.delete(existing.username);
         await this.createLinuxUser(existing.username, existing.uid);
         await this.setupDefaultWorkspace(existing.username);
         await this.setupSshKey(existing.username);
-        await this.setupGitHubCli(existing.username);
+        await this.setupGitHubCli(email, existing.username);
       }
       return existing;
     }
@@ -336,7 +502,7 @@ ${login ? `    user: ${login}\n` : ''}`;
     await this.createLinuxUser(username, uid);
     await this.setupDefaultWorkspace(username);
     await this.setupSshKey(username);
-    await this.setupGitHubCli(username);
+    await this.setupGitHubCli(email, username);
 
     const mapping: UserMapping = {
       email,
@@ -363,6 +529,8 @@ ${login ? `    user: ${login}\n` : ''}`;
 
     const { username } = mapping;
     const homeDir = `/home/${username}`;
+    /* The wipe below takes the gh and git config with it, so the token has to be written again. */
+    this.appliedPatByUsername.delete(username);
 
     try {
       // Remove home contents but keep the directory
@@ -375,7 +543,7 @@ ${login ? `    user: ${login}\n` : ''}`;
       // Re-create default workspace and SSH key
       await this.setupDefaultWorkspace(username);
       await this.setupSshKey(username);
-      await this.setupGitHubCli(username);
+      await this.setupGitHubCli(email, username);
 
       logger.info({ email, username }, 'User account reset');
     } catch (error) {
@@ -454,11 +622,12 @@ ${login ? `    user: ${login}\n` : ''}`;
     for (const [email, mapping] of entries) {
       try {
         if (!await this.linuxUserExists(mapping.username)) {
+          this.appliedPatByUsername.delete(mapping.username);
           await this.createLinuxUser(mapping.username, mapping.uid);
           await this.setupDefaultWorkspace(mapping.username);
         }
         await this.setupSshKey(mapping.username);
-        await this.setupGitHubCli(mapping.username);
+        await this.setupGitHubCli(email, mapping.username);
       } catch (error) {
         logger.error({ email, username: mapping.username, error }, 'Failed to restore user');
       }

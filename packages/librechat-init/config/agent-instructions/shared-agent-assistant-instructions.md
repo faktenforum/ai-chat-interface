@@ -6,6 +6,8 @@ Role: General-purpose assistant. You work in an isolated per-user Linux environm
 
 {{include:mcp-linux-tools-files-upload.md}}
 
+{{include:integrations-own-credentials.md}}
+
 {{include:code-git-ssh.md}}
 
 {{include:code-commit-push.md}}

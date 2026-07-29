@@ -390,6 +390,11 @@ services:
     build:
       context: ./packages/mcp-linux
       dockerfile: Dockerfile
+    # SELinux: bind-mounted ./packages/mcp-linux/src (user_home_t) is unreadable to the
+    # confined container under rootless Podman -> Cannot find module '/app/src/server.ts'.
+    # Mirrors docker-compose.local.yml (no-op under Docker).
+    security_opt:
+      - label=disable
     ports:
       - "127.0.0.1:${MCP_LINUX_PORT:-3015}:${MCP_LINUX_PORT:-3015}"  # Cursor IDE – local only
     volumes:

@@ -923,6 +923,19 @@ mcpServers:
       X-User-ID: '{{LIBRECHAT_USER_ID}}'
       X-User-Username: '{{LIBRECHAT_USER_USERNAME}}'
       X-User-Email: '{{LIBRECHAT_USER_EMAIL}}'
+      # Optional override: unset means the header is not sent at all and git keeps running under
+      # the shared bot account, so the workspace stays usable for everyone who configures nothing.
+      X-User-Github-Pat: '{{GITHUB_PAT}}'
+    customUserVars:
+      GITHUB_PAT:
+        title: Eigener GitHub Token
+        description: >-
+          Optional. Ohne Token laufen git und `gh` im Linux-Workspace über das gemeinsame
+          Bot-Konto. Mit eigenem Token (https://github.com/settings/tokens, klassisch mit Scope
+          `repo`) arbeitest du auf deinen eigenen Repos, und Commits erscheinen unter deinem
+          Namen. Gilt nur für den Linux-Workspace - für die GitHub-Tools gibt es den Server
+          "GitHub eigener Zugang".
+        optional: true
 
   spend:
     type: streamable-http
@@ -972,6 +985,35 @@ mcpServers:
     initTimeout: 120000
     chatMenu: true
     startup: true
+    serverInstructions: true
+
+  # Optional per-user alternative to the shared machine account above. The token is entered
+  # by each user in LibreChat's MCP settings and stored encrypted per user; `{{GITHUB_PAT}}`
+  # is substituted at connection time. A server whose customUserVars are unset has its tools
+  # hidden from the model entirely (upstream #10969), so this simply stays invisible until a
+  # user configures it - it cannot break the shared `github` server above.
+  github-personal:
+    type: streamable-http
+    url: https://api.githubcopilot.com/mcp/
+    title: GitHub eigener Zugang
+    description: GitHub mit deinem persönlichen Token statt des gemeinsamen Bot-Kontos
+    iconPath: /images/mcp-github-icon.svg
+    headers:
+      Authorization: "Bearer {{GITHUB_PAT}}"
+    customUserVars:
+      GITHUB_PAT:
+        title: GitHub Personal Access Token
+        description: >-
+          Erstellen unter https://github.com/settings/tokens - klassisch mit Scope `repo`
+          (und `read:org` für Organisationen). Ersetzt das gemeinsame Bot-Konto, damit Commits
+          und Pull Requests unter deinem Namen erscheinen und du Zugriff auf deine eigenen
+          Repos hast.
+    # Static token, not OAuth - see the note on the `github` server above.
+    requiresOAuth: false
+    initTimeout: 120000
+    chatMenu: true
+    # Lazy: without a configured token there is nothing to connect to.
+    startup: false
     serverInstructions: true
 
   mapbox:
