@@ -70,6 +70,38 @@ function formatTextPage(content: string, offset: number, limit: number): string 
   );
 }
 
+/**
+ * Whether a file with an unrecognised extension is really text.
+ *
+ * The extension list can never be complete - `env.prod.example`, `Dockerfile.tpl`, `.env.secret`
+ * and friends all read as unknown, and handing back a download link for them makes the agent fall
+ * back to `cat` in the terminal: another round trip, and the output arrives without line numbers.
+ * A NUL byte is the same signal `file` and git use to call something binary.
+ */
+export async function looksLikeText(absolutePath: string): Promise<boolean> {
+  let handle: fs.FileHandle | undefined;
+  try {
+    handle = await fs.open(absolutePath, 'r');
+    const { buffer, bytesRead } = await handle.read(Buffer.alloc(8192), 0, 8192, 0);
+    const sample = buffer.subarray(0, bytesRead);
+    if (sample.includes(0)) {
+      return false;
+    }
+    /* Control characters other than tab, newline and carriage return point at binary content. */
+    let suspicious = 0;
+    for (const byte of sample) {
+      if (byte < 0x09 || (byte > 0x0d && byte < 0x20)) {
+        suspicious++;
+      }
+    }
+    return bytesRead === 0 || suspicious / bytesRead < 0.05;
+  } catch {
+    return false;
+  } finally {
+    await handle?.close();
+  }
+}
+
 /** Maximum text file size to inline (1 MB) */
 const MAX_TEXT_SIZE = 1 * 1024 * 1024;
 /** Maximum binary file size to inline as base64 (10 MB) */
@@ -205,7 +237,18 @@ export function registerFileTools(
           };
         }
 
-        // ── Unknown / binary files ─────────────────────────────────
+        // ── Unknown extension: decide by content ───────────────────
+        if (fileSize <= MAX_TEXT_SIZE && (await looksLikeText(absolutePath))) {
+          const rawContent = await fs.readFile(absolutePath, 'utf-8');
+          const text = args.line_ranges?.length
+            ? formatTextWithLineNumbers(rawContent, args.line_ranges)
+            : formatTextPage(rawContent, args.offset ?? 1, args.limit ?? DEFAULT_LINE_LIMIT);
+          return {
+            content: [{ type: 'text' as const, text }],
+          };
+        }
+
+        // ── Binary files ───────────────────────────────────────────
         return await createDownloadFallback(
           email, mapping.username, args.workspace, args.file_path,
           fileSize, downloadManager,

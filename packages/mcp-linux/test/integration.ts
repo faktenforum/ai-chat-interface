@@ -173,4 +173,33 @@ function runTests(): void {
   console.log('\n=== All tests passed ===');
 }
 
+/** Content-based text detection, exercised against real files. */
+async function runFileTypeTests(): Promise<void> {
+  const { mkdtemp, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { looksLikeText } = await import('../src/tools/file.ts');
+
+  const dir = await mkdtemp(join(tmpdir(), 'mcp-linux-filetype-'));
+
+  const cases: Array<[string, Buffer | string, boolean]> = [
+    ['env.prod.example', 'DOMAIN=localhost\nPORT=3080\n', true],
+    ['Dockerfile.tpl', 'FROM node:24\nRUN echo hi\n', true],
+    ['empty.unknown', '', true],
+    ['binary.bin', Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x01, 0x02, 0x03]), false],
+    ['control.bin', Buffer.from(Array.from({ length: 200 }, (_, i) => (i % 2 ? 0x01 : 0x41))), false],
+  ];
+
+  for (const [name, content, expected] of cases) {
+    const path = join(dir, name);
+    await writeFile(path, content);
+    const result = await looksLikeText(path);
+    assert(result === expected, `looksLikeText(${name}): expected ${expected}, got ${result}`);
+  }
+  assert((await looksLikeText(join(dir, 'missing.file'))) === false, 'looksLikeText: missing file is not text');
+  console.log('✓ looksLikeText: .example and .tpl read as text, NUL and control bytes do not');
+}
+
 runTests();
+await runFileTypeTests();
+console.log('=== File-type tests passed ===');
