@@ -143,6 +143,7 @@ If you run **both** stacks on one host they also share the external network `loa
 | `MCP_LINUX_STATUS_COLLAPSE_DIRS` | `uploads,venv,.venv` | Comma-separated dirs whose paths are collapsed to one summary line in status |
 | `MCP_LINUX_RESOURCE_LIST_DIRS` | `uploads,outputs` | Comma-separated dirs listed in MCP resources (allowlist); only these appear in list |
 | `MCP_LINUX_UPLOADS_MAX_AGE_DAYS` | `0` (disabled) | If > 0, server runs daily cleanup of `uploads/` files older than N days |
+| `MCP_LINUX_MAX_OUTPUT_CHARS` | `40000` | Cap on terminal output returned per call (head 2/3 + tail 1/3, middle dropped). Uncapped output is re-sent with every model call for the rest of the turn and burns the provider's tokens-per-minute quota; `read_terminal_output` with an explicit `length` still pages the full text |
 
 ## Inline UI (MCP-UI)
 

@@ -11,7 +11,13 @@ agents:
     model_parameters:
       temperature: 0.4
       top_p: 0.9
-      maxContextTokens: 262144   # GLM 5.2 (Scaleway: 262144 context, 16384 output cap)
+      # The model window is 262144, but Scaleway's quota is 200000 tokens *per minute* for the
+      # whole organization, and one agent turn sends the context again per tool round. A request
+      # over that budget can never succeed - it fails with 429 "INSUFFICIENT QUOTA" no matter how
+      # often it is retried - so the cap stays well below it and LibreChat truncates instead.
+      # 64000 leaves room for three tool rounds in one minute (3 x 64000 < 200000); this agent has
+      # the most tools and therefore the longest chains. Raise it once the Scaleway quota is raised.
+      maxContextTokens: 64000    # GLM 5.2 (window 262144, output cap 16384)
     tools:
       - web_search
       - file_search
@@ -208,7 +214,7 @@ agents:
     model_parameters:
       temperature: 0.7
       top_p: 0.8
-      maxContextTokens: 250000   # Qwen3 235B; Scaleway has no endpointTokenConfig
+      maxContextTokens: 96000    # Qwen3 235B (window 250000); capped for the same quota reason
     tools: []
     mcpServers:
       - mapbox

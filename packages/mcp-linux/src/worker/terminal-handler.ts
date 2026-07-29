@@ -7,6 +7,7 @@ import { join, relative } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { validateTerminalId } from '../utils/security.ts';
 import { stripAnsi } from '../utils/strip-ansi.ts';
+import { capOutput } from '../utils/cap-output.ts';
 import { escapeForDoubleQuotedShell, getGitMetadata } from './git-utils.ts';
 import { resolveWorkspacePath } from './workspace-utils.ts';
 import {
@@ -188,7 +189,7 @@ export function createTerminalHandlers(ctx: WorkerContext): {
 
       return {
         terminal_id: terminalId,
-        output: stripAnsi(newOutput),
+        ...capOutput(stripAnsi(newOutput)),
         workspace,
         cwd,
         cwd_relative_to_workspace: cwdRelative || undefined,
@@ -213,9 +214,11 @@ export function createTerminalHandlers(ctx: WorkerContext): {
       const slice = length ? fullOutput.slice(offset, offset + length) : fullOutput.slice(offset);
       const meta = await getGitMetadata(ctx.workspacesDir, session.workspace);
 
+      /* An explicit length is a deliberate page and is returned as asked; an open-ended read is
+       * capped like any other output, since it would otherwise pull the whole scrollback. */
       return {
         terminal_id: terminalId,
-        output: stripAnsi(slice),
+        ...(length ? { output: stripAnsi(slice) } : capOutput(stripAnsi(slice))),
         total_length: fullOutput.length,
         ...meta,
       };
@@ -244,7 +247,7 @@ export function createTerminalHandlers(ctx: WorkerContext): {
 
       return {
         terminal_id: terminalId,
-        output: stripAnsi(newOutput),
+        ...capOutput(stripAnsi(newOutput)),
         ...meta,
       };
     },

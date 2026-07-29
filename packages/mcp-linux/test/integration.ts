@@ -7,6 +7,7 @@
 
 import { deriveUsername, addUsernameSuffix, sanitizeWorkspaceName, validateWorkspaceName } from '../src/utils/security.ts';
 import { extractUserContext } from '../src/utils/http-server.ts';
+import { capOutput } from '../src/utils/cap-output.ts';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) {
@@ -131,6 +132,42 @@ function runTests(): void {
     const context = extractUserContext({ 'x-user-github-pat': 'ghp_usertoken' } as never);
     assert(context === null, 'extractUserContext: email stays required');
     console.log('✓ extractUserContext: a token without an email is not a user context');
+  }
+
+  // ── capOutput ───────────────────────────────────────────────────────────────
+
+  {
+    const result = capOutput('short output', 1000);
+    assert(result.output === 'short output', 'capOutput: below the limit stays untouched');
+    assert(result.output_truncated === undefined, 'capOutput: no truncation marker when unneeded');
+    assert(result.omitted_chars === undefined, 'capOutput: no counters when unneeded');
+    console.log('✓ capOutput: output below the limit is returned unchanged');
+  }
+
+  {
+    const text = 'A'.repeat(500) + 'MIDDLE' + 'B'.repeat(500);
+    const result = capOutput(text, 600);
+    assert(result.output_truncated === true, 'capOutput: marks truncation');
+    assert(result.omitted_chars === text.length - 600, `capOutput: omitted count, got ${result.omitted_chars}`);
+    assert(result.total_chars === text.length, 'capOutput: reports the original size');
+    assert(result.output.startsWith('A'), 'capOutput: keeps the head');
+    assert(result.output.endsWith('B'), 'capOutput: keeps the tail');
+    assert(!result.output.includes('MIDDLE'), 'capOutput: drops the middle');
+    assert(result.output.includes('read_terminal_output'), 'capOutput: says how to page the rest');
+    console.log('✓ capOutput: keeps head and tail, drops the middle, points at paging');
+  }
+
+  {
+    const result = capOutput('X'.repeat(1000), 100);
+    assert(result.output.startsWith('X'.repeat(100)), 'capOutput: tiny limit keeps the head only');
+    assert(result.omitted_chars === 900, 'capOutput: tiny limit counts correctly');
+    console.log('✓ capOutput: a limit too small to split keeps the head');
+  }
+
+  {
+    const exact = 'Y'.repeat(500);
+    assert(capOutput(exact, 500).output_truncated === undefined, 'capOutput: exact length is not truncated');
+    console.log('✓ capOutput: output exactly at the limit is not truncated');
   }
 
   console.log('\n=== All tests passed ===');
