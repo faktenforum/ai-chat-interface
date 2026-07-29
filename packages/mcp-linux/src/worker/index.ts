@@ -16,6 +16,7 @@ import { join, dirname } from 'node:path';
 import { createTerminalHandlers } from './terminal-handler.ts';
 import { createWorkspaceHandlers } from './workspace-handler.ts';
 import { createFilesystemHandlers } from './filesystem-handler.ts';
+import { createJobHandlers } from './job-handler.ts';
 import type { Handler, HandlerMap, WorkerContext, WorkerMethod } from './types.ts';
 
 // ── CLI Arguments ────────────────────────────────────────────────────────────
@@ -39,11 +40,13 @@ const ctx: WorkerContext = {
 const { handlers: terminalHandlers, shutdownTerminals } = createTerminalHandlers(ctx);
 const workspaceHandlers = createWorkspaceHandlers(ctx);
 const filesystemHandlers = createFilesystemHandlers(ctx);
+const jobHandlers = createJobHandlers(ctx);
 
 const handlers: HandlerMap = {
   ...terminalHandlers,
   ...workspaceHandlers,
   ...filesystemHandlers,
+  ...jobHandlers,
 } as HandlerMap;
 
 // ── IPC Server ───────────────────────────────────────────────────────────────

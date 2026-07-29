@@ -33,7 +33,13 @@ export type WorkerMethod =
   | 'write_file'
   | 'edit_file'
   | 'grep'
-  | 'glob';
+  | 'glob'
+  // Background jobs
+  | 'start_job'
+  | 'list_jobs'
+  | 'job_status'
+  | 'read_job_output'
+  | 'kill_job';
 
 export type HandlerMap = Record<WorkerMethod, Handler>;
 
