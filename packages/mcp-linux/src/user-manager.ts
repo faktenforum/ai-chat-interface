@@ -250,7 +250,13 @@ export class UserManager {
    */
   private async setupGitHubCli(username: string): Promise<void> {
     const githubPat = process.env.MCP_GITHUB_PAT;
-    if (!githubPat) return;
+    if (!githubPat) {
+      logger.info(
+        { username },
+        'MCP_GITHUB_PAT not set; GitHub CLI stays unauthenticated (gh commands will fail)',
+      );
+      return;
+    }
 
     const ghConfigDir = `/home/${username}/.config/gh`;
     const ghHostsFile = join(ghConfigDir, 'hosts.yml');
@@ -258,13 +264,14 @@ export class UserManager {
     try {
       await fs.mkdir(ghConfigDir, { recursive: true });
 
-      // Write GitHub CLI hosts config with PAT authentication
-      const gitUserName = process.env.MCP_LINUX_GIT_USER_NAME || 'faktenforum-mcp-bot';
+      /* `user` is the GitHub login, which only the token knows - MCP_LINUX_GIT_USER_NAME is the
+       * git author display name and was the wrong source. Resolve it from the API and omit the
+       * field entirely when that fails, since gh can derive it from the token itself. */
+      const login = await this.resolveGitHubLogin(githubPat);
       const ghHostsConfig = `github.com:
     oauth_token: ${githubPat}
     git_protocol: ssh
-    user: ${gitUserName}
-`;
+${login ? `    user: ${login}\n` : ''}`;
       await fs.writeFile(ghHostsFile, ghHostsConfig, { mode: 0o600 });
 
       // Set ownership and permissions
@@ -272,9 +279,35 @@ export class UserManager {
       await execFile('chown', ['-R', `${username}:${username}`, ghConfigDir]);
       await fs.chmod(ghHostsFile, 0o600);
 
-      logger.info({ username }, 'GitHub CLI configured with PAT');
+      logger.info({ username, login }, 'GitHub CLI configured with PAT');
     } catch (error) {
       logger.warn({ username, error }, 'Failed to configure GitHub CLI');
+    }
+  }
+
+  /**
+   * Looks up the login belonging to the PAT. Returns null on any failure - an unresolved
+   * login is not worth failing the whole user setup over, and gh works without the field.
+   */
+  private async resolveGitHubLogin(pat: string): Promise<string | null> {
+    try {
+      const response = await fetch('https://api.github.com/user', {
+        headers: {
+          Authorization: `Bearer ${pat}`,
+          Accept: 'application/vnd.github+json',
+          'User-Agent': 'mcp-linux',
+        },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) {
+        logger.warn({ status: response.status }, 'Could not resolve the GitHub login for the PAT');
+        return null;
+      }
+      const body = (await response.json()) as { login?: unknown };
+      return typeof body.login === 'string' && body.login.length > 0 ? body.login : null;
+    } catch (error) {
+      logger.warn({ error }, 'Could not resolve the GitHub login for the PAT');
+      return null;
     }
   }
 

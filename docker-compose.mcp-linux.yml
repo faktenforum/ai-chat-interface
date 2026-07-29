@@ -12,6 +12,10 @@ services:
       WORKER_IDLE_TIMEOUT: ${MCP_LINUX_WORKER_IDLE_TIMEOUT:-1800000}
       MCP_LINUX_WORKER_REQUEST_TIMEOUT_MS: ${MCP_LINUX_WORKER_REQUEST_TIMEOUT_MS:-120000}
       GIT_SSH_KEY: ${MCP_LINUX_GIT_SSH_KEY:-}
+      # Authenticates the `gh` CLI inside each workspace (user-manager writes ~/.config/gh/
+      # hosts.yml from it). Without this the image ships gh but no credentials, so every
+      # gh command fails. Same machine-user PAT the GitHub MCP server uses.
+      MCP_GITHUB_PAT: ${MCP_GITHUB_PAT:-}
       MCP_LINUX_GIT_USER_NAME: ${MCP_LINUX_GIT_USER_NAME:-}
       MCP_LINUX_GIT_USER_EMAIL: ${MCP_LINUX_GIT_USER_EMAIL:-}
       MCP_LINUX_UPLOAD_BASE_URL: ${MCP_LINUX_UPLOAD_BASE_URL:-}
