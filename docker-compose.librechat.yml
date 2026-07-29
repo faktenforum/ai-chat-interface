@@ -11,6 +11,9 @@ services:
     environment:
       MONGO_URI: ${LIBRECHAT_MONGO_URI:-mongodb://${STACK_NAME:-prod}-mongodb:27017/LibreChat}
       LIBRECHAT_DEFAULT_ADMINS: ${LIBRECHAT_DEFAULT_ADMINS:-}
+      # Support contact stamped onto every seeded agent (per-agent override in agents.yaml).
+      LIBRECHAT_SUPPORT_CONTACT_NAME: ${LIBRECHAT_SUPPORT_CONTACT_NAME:-}
+      LIBRECHAT_SUPPORT_CONTACT_EMAIL: ${LIBRECHAT_SUPPORT_CONTACT_EMAIL:-}
       UID: ${UID:-1000}
       GID: ${GID:-1000}
       LIBRECHAT_CUSTOM_WELCOME: ${LIBRECHAT_CUSTOM_WELCOME:-}
@@ -48,6 +51,9 @@ services:
     environment:
       MONGO_URI: ${LIBRECHAT_MONGO_URI:-mongodb://${STACK_NAME:-prod}-mongodb:27017/LibreChat}
       LIBRECHAT_DEFAULT_ADMINS: ${LIBRECHAT_DEFAULT_ADMINS:-}
+      # Support contact stamped onto every seeded agent (per-agent override in agents.yaml).
+      LIBRECHAT_SUPPORT_CONTACT_NAME: ${LIBRECHAT_SUPPORT_CONTACT_NAME:-}
+      LIBRECHAT_SUPPORT_CONTACT_EMAIL: ${LIBRECHAT_SUPPORT_CONTACT_EMAIL:-}
       LIBRECHAT_API_URL: ${LIBRECHAT_API_URL:-http://api:3080}
       LIBRECHAT_JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
       JWT_SECRET: ${LIBRECHAT_JWT_SECRET}
