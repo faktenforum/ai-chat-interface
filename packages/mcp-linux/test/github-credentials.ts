@@ -125,7 +125,23 @@ async function main(): Promise<void> {
     console.log('✓ removing the token reverts to the shared bot account');
   }
 
-  /* The test account stays behind - there is no delete path, so run this in a throwaway container. */
+  {
+    /* Production order: the header arrives before any tool call has created the account, so the
+     * token is only recorded here and has to be applied as part of user setup. */
+    const newEmail = 'first.request@example.com';
+    await userManager.setUserGitHubPat(newEmail, 'ghp_before_account');
+    const { username: newUsername } = await userManager.ensureUser(newEmail);
+    const hosts = await readFileOrNull(`/home/${newUsername}/.config/gh/hosts.yml`);
+    assert(hosts?.includes('oauth_token: ghp_before_account') === true, 'token applied at setup');
+    assert(hosts?.includes('git_protocol: https') === true, 'setup used https for the own token');
+    assert(
+      (await gitConfigValue(newUsername, 'faktenforum.ownCredentials')) === 'true',
+      'marker set at setup',
+    );
+    console.log('✓ a token seen before the account exists is applied when it is created');
+  }
+
+  /* The test accounts stay behind - there is no delete path, so run this in a throwaway container. */
   console.log('\n=== All tests passed ===');
 }
 
