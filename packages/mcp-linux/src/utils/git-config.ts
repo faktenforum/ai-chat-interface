@@ -51,7 +51,32 @@ async function getUserGitConfigAsUser(username: string): Promise<{ name: string;
   return null;
 }
 
+/**
+ * Whether the user's global git identity was written from their own GitHub token.
+ *
+ * Set by mcp-linux when a user configures a personal token, so authorship follows the credentials
+ * that push the commit instead of the deployment-wide bot name.
+ */
+async function hasOwnCredentials(username?: string): Promise<boolean> {
+  const args = ['config', '--global', '--get', 'faktenforum.ownCredentials'];
+  try {
+    const { stdout } = username
+      ? await execFile('runuser', ['-u', username, '--', 'git', ...args])
+      : await execFile('git', args);
+    return stdout.trim() === 'true';
+  } catch {
+    return false;
+  }
+}
+
 export async function getDefaultGitIdentity(username?: string): Promise<{ name: string; email: string }> {
+  if (await hasOwnCredentials(username)) {
+    const ownConfig = username ? await getUserGitConfigAsUser(username) : await getUserGitConfig();
+    if (ownConfig) {
+      return ownConfig;
+    }
+  }
+
   // First priority: environment variables
   const envName = process.env.MCP_LINUX_GIT_USER_NAME?.trim() || process.env.GIT_USER_NAME?.trim();
   const envEmail = process.env.MCP_LINUX_GIT_USER_EMAIL?.trim() || process.env.GIT_USER_EMAIL?.trim();

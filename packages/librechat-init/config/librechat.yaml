@@ -923,6 +923,19 @@ mcpServers:
       X-User-ID: '{{LIBRECHAT_USER_ID}}'
       X-User-Username: '{{LIBRECHAT_USER_USERNAME}}'
       X-User-Email: '{{LIBRECHAT_USER_EMAIL}}'
+      # Optional override: unset means the header is not sent at all and git keeps running under
+      # the shared bot account, so the workspace stays usable for everyone who configures nothing.
+      X-User-Github-Pat: '{{GITHUB_PAT}}'
+    customUserVars:
+      GITHUB_PAT:
+        title: Eigener GitHub Token
+        description: >-
+          Optional. Ohne Token laufen git und `gh` im Linux-Workspace über das gemeinsame
+          Bot-Konto. Mit eigenem Token (https://github.com/settings/tokens, klassisch mit Scope
+          `repo`) arbeitest du auf deinen eigenen Repos, und Commits erscheinen unter deinem
+          Namen. Gilt nur für den Linux-Workspace - für die GitHub-Tools gibt es den Server
+          "GitHub eigener Zugang".
+        optional: true
 
   spend:
     type: streamable-http

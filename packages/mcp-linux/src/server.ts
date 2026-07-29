@@ -177,16 +177,28 @@ async function createApp(): Promise<express.Application> {
   // User-context extraction middleware: maps session ID to user email
   app.use('/mcp', (req, _res, next) => {
     const userContext = extractUserContext(req.headers);
-    if (userContext) {
-      logger.debug({ email: userContext.email }, 'Request from user');
-
-      // Store email for session-based lookup in tool handlers
-      const sessionId = req.headers['mcp-session-id'];
-      if (sessionId && typeof sessionId === 'string') {
-        sessionEmailMap.set(sessionId, userContext.email);
-      }
+    if (!userContext) {
+      next();
+      return;
     }
-    next();
+
+    logger.debug({ email: userContext.email }, 'Request from user');
+
+    // Store email for session-based lookup in tool handlers
+    const sessionId = req.headers['mcp-session-id'];
+    if (sessionId && typeof sessionId === 'string') {
+      sessionEmailMap.set(sessionId, userContext.email);
+    }
+
+    /* The token travels with every request, so this is where a change becomes visible. Awaited
+     * because the tools in this same request must already run under the new credentials; it is a
+     * no-op unless the token actually changed. */
+    userManager
+      .setUserGitHubPat(userContext.email, userContext.githubPat)
+      .catch((error: unknown) =>
+        logger.warn({ email: userContext.email, error }, 'Failed to apply the user GitHub token'),
+      )
+      .finally(() => next());
   });
 
   setupMcpEndpoints(app, {

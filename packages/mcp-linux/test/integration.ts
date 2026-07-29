@@ -6,6 +6,7 @@
  */
 
 import { deriveUsername, addUsernameSuffix, sanitizeWorkspaceName, validateWorkspaceName } from '../src/utils/security.ts';
+import { extractUserContext } from '../src/utils/http-server.ts';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) {
@@ -97,6 +98,39 @@ function runTests(): void {
     const result = validateWorkspaceName('path/traversal');
     assert(result !== null, 'validateWorkspaceName: expected error for path separator');
     console.log('✓ validateWorkspaceName: path separator is invalid');
+  }
+
+  // ── extractUserContext ──────────────────────────────────────────────────────
+
+  {
+    const context = extractUserContext({
+      'x-user-email': 'jane.doe@example.com',
+      'x-user-github-pat': 'ghp_usertoken',
+    } as never);
+    assert(context?.githubPat === 'ghp_usertoken', 'extractUserContext: own PAT should be read');
+    console.log('✓ extractUserContext: reads the user GitHub token');
+  }
+
+  {
+    /* LibreChat drops the header for an unset optional var, but an older build sends the literal
+     * placeholder - which is not a credential. */
+    for (const value of ['{{GITHUB_PAT}}', '', '   ', undefined]) {
+      const context = extractUserContext({
+        'x-user-email': 'jane.doe@example.com',
+        ...(value === undefined ? {} : { 'x-user-github-pat': value }),
+      } as never);
+      assert(
+        context?.githubPat === null,
+        `extractUserContext: ${JSON.stringify(value)} should count as no token`,
+      );
+    }
+    console.log('✓ extractUserContext: placeholder, blank and absent all mean no token');
+  }
+
+  {
+    const context = extractUserContext({ 'x-user-github-pat': 'ghp_usertoken' } as never);
+    assert(context === null, 'extractUserContext: email stays required');
+    console.log('✓ extractUserContext: a token without an email is not a user context');
   }
 
   console.log('\n=== All tests passed ===');
