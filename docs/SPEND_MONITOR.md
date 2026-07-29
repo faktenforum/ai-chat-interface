@@ -3,17 +3,20 @@
 Org-wide cost monitor for LibreChat. It aggregates spend from the `transactions`
 collection in LibreChat's MongoDB and serves an in-platform status page.
 
-**Read-only by default.** Optionally it enforces an org-wide hard cap by zeroing
-user balances when spend reaches 100% of the budget (`SPEND_MONITOR_ENFORCE`).
-Per-user limits stay in LibreChat's own balance system either way.
+**Reads only, apart from two explicit admin actions:** resetting one user's limit and
+lifting an org freeze. Optionally it enforces an org-wide hard cap by zeroing user
+balances when spend reaches 100% of the budget (`SPEND_MONITOR_ENFORCE`).
+Per-user limits are defined by LibreChat's own `balance` config either way — the monitor
+displays them and can hand a single user their allowance back early.
 
 A Scaleway billing webhook and email/webhook alerts are possible later phases.
 
 ## Endpoints
 
 - `GET /health` — liveness
-- `GET /api/spend` — current-period spend JSON (org total, per-provider, per-model, top users)
+- `GET /api/spend` — current-period spend JSON (org total, per-provider, per-model, per-user)
 - `GET /` — HTML status page (auto-refreshes every 30s)
+- `POST /users/:id/reset` — reset one user's limit (see [Per-user limits](#per-user-limits))
 - `POST /restore` — lift enforcement and restore balances (only when enforce is `on`/`dry-run`)
 - `POST /mcp` — MCP endpoint (admin-gated; see [MCP endpoint](#mcp-endpoint))
 
@@ -29,6 +32,38 @@ LibreChat writes one `transactions` row per spend. Convention: **1,000,000 token
 - period: calendar month (default) or rolling 30 days
 
 Spend is recorded after a completion, so the total trails real spend by at most the in-flight requests since the last poll. This is a monitor, not a hard cap.
+
+The banner also shows when the org counter restarts: the first of the next UTC month for
+`calendar-month`, and nothing for `rolling-30d` — that window slides continuously instead
+of resetting.
+
+## Per-user limits
+
+The **Users** table joins each user's period spend with their `balances` document in
+LibreChat: credits left, the amount LibreChat refills, and `lastRefill + refillInterval`
+as **Next auto-refill**.
+
+That date is an *eligibility* date, not a scheduled reset. LibreChat's balance check only
+tops a user up when their credits are used up **and** the interval has passed
+(`packages/api/src/middleware/checkBalance.ts`), and it *adds* `refillAmount` rather than
+resetting to it — an unused balance is not zeroed at the interval boundary. Rows whose
+interval has already elapsed are marked `due now`: those users get their top-up the moment
+they run out.
+
+**Reset** (per row, or `POST /users/:id/reset`, or the `reset_user_limit` MCP tool) sets
+`tokenCredits` to the user's configured `refillAmount` and moves `lastRefill` to now. So
+the user can work again immediately and the next automatic refill is a full interval away.
+
+It is refused when:
+
+- an org freeze is active (`409`) — the freeze re-zeroes balances every poll, so the reset
+  would be undone on the next tick. Restore first, then reset.
+- the user has no `refillAmount` (auto-refill off) — there is no per-user allowance to
+  infer, so the HTTP route returns `400` and the MCP tool needs an explicit `credits_usd`.
+- the user has no `balances` document yet (LibreChat creates it on their first request).
+
+Amounts are USD; LibreChat stores credits (`1,000,000 credits = $1`). The org-wide
+`balance` defaults themselves live in `librechat.prod.yaml` / `librechat.dev.yaml`.
 
 ## Configuration (env)
 
@@ -63,6 +98,9 @@ Tools:
   LibreChat, arriving as new messages that ask the agent to run the matching tool.
 - `restore_balances` (requires `confirm: true`) — same effect as the dashboard's Restore
   button / `POST /restore`.
+- `reset_user_limit` (`email`, `confirm: true`, optional `credits_usd`) — same effect as a
+  row's Reset button. Takes the login email rather than an id, and `credits_usd` overrides
+  the default (the user's own refill amount).
 
 **Access control.** YAML-defined MCP servers are global in LibreChat (`chatMenu: false`
 only hides a server from the chat picker; any agent can still attach it), so the endpoint

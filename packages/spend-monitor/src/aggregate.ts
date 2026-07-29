@@ -1,5 +1,7 @@
 import type { Db } from 'mongodb';
 import type { Config, Period } from './config.ts';
+import { CREDITS_PER_USD, loadUserSpend } from './users.ts';
+import type { UserSpend } from './users.ts';
 
 export type Level = 'ok' | 'warn' | 'crit' | 'over';
 
@@ -11,14 +13,11 @@ export interface ModelSpend {
   usd: number;
 }
 
-export interface UserSpend {
-  user: string;
-  usd: number;
-}
-
 export interface Snapshot {
   period: Period;
   periodStart: string;
+  /** Instant the org counter goes back to zero; null for rolling-30d (the window never resets). */
+  periodResetAt: string | null;
   budgetUsd: number;
   spentUsd: number;
   usedRatio: number;
@@ -26,12 +25,10 @@ export interface Snapshot {
   eur: { rate: number; spent: number; budget: number };
   byProvider: Record<Provider, number>;
   byModel: ModelSpend[];
-  topUsers: UserSpend[];
+  users: UserSpend[];
   updatedAt: string;
 }
 
-/** LibreChat convention: 1,000,000 token credits = 1 USD. */
-const CREDITS_PER_USD = 1_000_000;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export function periodStart(period: Period, now: Date): Date {
@@ -39,6 +36,14 @@ export function periodStart(period: Period, now: Date): Date {
     return new Date(now.getTime() - 30 * MS_PER_DAY);
   }
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
+/** Next instant the period counter restarts. Rolling windows never restart - they slide. */
+export function periodResetAt(period: Period, now: Date): Date | null {
+  if (period === 'rolling-30d') {
+    return null;
+  }
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
 }
 
 export function levelFor(ratio: number, warnPct: number, critPct: number): Level {
@@ -92,7 +97,6 @@ export async function aggregate(db: Db, cfg: Config, now: Date): Promise<Snapsho
       { $match: match },
       { $group: { _id: '$user', credits: { $sum: '$tokenValue' } } },
       { $sort: { credits: 1 } },
-      { $limit: 10 },
     ])
     .toArray();
 
@@ -113,14 +117,17 @@ export async function aggregate(db: Db, cfg: Config, now: Date): Promise<Snapsho
   const spentUsd = -spentCredits / CREDITS_PER_USD;
   const usedRatio = cfg.budgetUsd > 0 ? spentUsd / cfg.budgetUsd : 0;
 
-  const topUsers: UserSpend[] = byUserRows.map((row) => ({
-    user: String(row._id),
-    usd: round(-(row.credits ?? 0) / CREDITS_PER_USD),
-  }));
+  const spendUsdById = new Map<string, number>();
+  for (const row of byUserRows) {
+    spendUsdById.set(String(row._id), -(row.credits ?? 0) / CREDITS_PER_USD);
+  }
+  const users = await loadUserSpend(db, spendUsdById, now);
+  const reset = periodResetAt(cfg.period, now);
 
   return {
     period: cfg.period,
     periodStart: start.toISOString(),
+    periodResetAt: reset?.toISOString() ?? null,
     budgetUsd: cfg.budgetUsd,
     spentUsd: round(spentUsd),
     usedRatio: round(usedRatio),
@@ -128,7 +135,7 @@ export async function aggregate(db: Db, cfg: Config, now: Date): Promise<Snapsho
     eur: { rate: cfg.eurRate, spent: round(spentUsd * cfg.eurRate), budget: round(cfg.budgetUsd * cfg.eurRate) },
     byProvider: { openrouter: round(byProvider.openrouter), scaleway: round(byProvider.scaleway) },
     byModel,
-    topUsers,
+    users,
     updatedAt: now.toISOString(),
   };
 }

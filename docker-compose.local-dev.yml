@@ -248,6 +248,11 @@ services:
     extends: { file: docker-compose.mcp-calculator.yml, service: mcp-calculator }
     container_name: ${STACK_NAME:-local}-mcp-calculator
     env_file: .env.local
+    # Override: build from source. Without this, local-dev would run the published
+    # :latest image and silently ignore local changes to mcp-calculator.
+    build:
+      context: ./packages/mcp-calculator
+      dockerfile: Dockerfile
     ports:
       - "127.0.0.1:${MCP_CALCULATOR_PORT:-3012}:${MCP_CALCULATOR_PORT:-3012}"  # Cursor IDE – local only
     # No Traefik labels - internal service only
@@ -256,6 +261,11 @@ services:
     extends: { file: docker-compose.mcp-wikipedia.yml, service: mcp-wikipedia }
     container_name: ${STACK_NAME:-local}-mcp-wikipedia
     env_file: .env.local
+    # Override: build from source. Without this, local-dev would run the published
+    # :latest image and silently ignore local changes to mcp-wikipedia.
+    build:
+      context: ./packages/mcp-wikipedia
+      dockerfile: Dockerfile
     ports:
       - "127.0.0.1:${MCP_WIKIPEDIA_PORT:-3017}:${MCP_WIKIPEDIA_PORT:-3017}"  # Cursor IDE – local only
     # No Traefik labels - internal service only
@@ -264,6 +274,11 @@ services:
     extends: { file: docker-compose.mcp-image-gen.yml, service: mcp-image-gen }
     container_name: ${STACK_NAME:-local}-mcp-image-gen
     env_file: .env.local
+    # Override: build from source. Without this, local-dev would run the published
+    # :latest image and silently ignore local changes to mcp-image-gen.
+    build:
+      context: ./packages/mcp-image-gen
+      dockerfile: Dockerfile
     ports:
       - "127.0.0.1:${MCP_IMAGE_GEN_PORT:-3013}:${MCP_IMAGE_GEN_PORT:-3013}"  # Cursor IDE – local only
     # No Traefik labels - internal service only
@@ -399,6 +414,11 @@ services:
     extends: { file: docker-compose.spend-monitor.yml, service: spend-monitor }
     container_name: ${STACK_NAME:-local}-spend-monitor
     env_file: .env.local
+    # Override: build from source. Without this, local-dev would run the published
+    # :latest image and silently ignore local changes to spend-monitor.
+    build:
+      context: ./packages/spend-monitor
+      dockerfile: Dockerfile
     ports:
       - "127.0.0.1:${SPEND_MONITOR_PORT:-3016}:3016"
     labels:

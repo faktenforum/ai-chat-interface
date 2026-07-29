@@ -6,7 +6,10 @@
  * Aggregates org-wide spend from LibreChat's `transactions` collection and serves an
  * in-platform status page (GET /) and JSON (GET /api/spend).
  *
- * Read-only by default. When SPEND_MONITOR_ENFORCE is `on` (or `dry-run`), it adds an
+ * Reads only, apart from two explicit admin actions: POST /users/:id/reset hands one user
+ * their per-period allowance back, and POST /restore lifts an active freeze.
+ *
+ * When SPEND_MONITOR_ENFORCE is `on` (or `dry-run`), it adds an
  * org-wide HARD STOP: once spend reaches 100% of the budget it snapshots and zeroes all
  * user balances so LibreChat's own pre-request balance check blocks further requests. The
  * freeze is held by re-zeroing balances every poll - LibreChat's per-request config-sync
@@ -26,6 +29,7 @@ import type { Level, Snapshot } from './aggregate.ts';
 import { logNotifier } from './notify.ts';
 import { getEnforceState, enforceCap, restoreBalances, clearStaleOverride } from './enforce.ts';
 import type { EnforceState } from './enforce.ts';
+import { resetUserLimit } from './users.ts';
 import { renderPage } from './page.ts';
 import { setupMcpEndpoints, extractUserContext } from './utils/http-server.ts';
 import { createSession } from './mcp.ts';
@@ -99,6 +103,25 @@ async function main(): Promise<void> {
       return;
     }
     res.type('html').send(renderPage(latest, cfg.enforce, enforceState, cfg.pollSeconds));
+  });
+
+  // Reset one user's limit (the dashboard's per-row "Reset" button). Writes to the user's
+  // LibreChat balance, so it is refused while an org freeze is re-zeroing balances every poll.
+  app.post('/users/:id/reset', async (req: Request, res: Response) => {
+    if (enforceState.active) {
+      res.status(409).json({ error: 'org freeze active - restore balances before resetting a user' });
+      return;
+    }
+    const userId = String(req.params.id);
+    try {
+      const result = await resetUserLimit(db, userId, null, false);
+      await refresh();
+      res.json(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ error: message, userId }, 'User limit reset failed');
+      res.status(400).json({ error: message });
+    }
   });
 
   // Manually lift enforcement and restore balances (the dashboard's "Restore" button).

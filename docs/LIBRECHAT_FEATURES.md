@@ -288,21 +288,44 @@ See `modelSpecs.list` for the live models, labels, context/output limits, and th
 - `enabled: true` - Web search is enabled
 - `searchProvider: "searxng"` - Search provider (self-hosted)
 - `scraperProvider: "firecrawl"` - Content scraper
-- `rerankerType: "jina"` - Reranker for better relevance
+- `rerankerType: "custom"` - Reranker for better relevance, see below
 - `scraperTimeout: 7500` - Timeout in milliseconds
 - `safeSearch: 1` - SafeSearch level (0=Off, 1=Moderate, 2=Strict)
 
 ### Components
 1. **SearXNG:** `searxngInstanceUrl`, `searxngApiKey` (optional)
 2. **Firecrawl:** `firecrawlApiKey`, `firecrawlApiUrl`, `firecrawlVersion`
-3. **Jina:** `jinaApiKey`, `jinaApiUrl`
+3. **Reranker (Scaleway):** `customRerankerApiUrl`, `customRerankerApiKey`, `customRerankerModel`
+
+### Reranking runs on Scaleway, not Jina
+
+`custom` is a fork-only reranker type (`dev/agents` `src/tools/search/rerankers.ts`) that posts to
+any OpenAI-compatible `/rerank` endpoint. We point it at Scaleway, so it uses the API key we
+already have and no separate Jina subscription:
+
+```
+LIBRECHAT_CUSTOM_RERANKER_API_URL=${SCALEWAY_BASE_URL}/rerank
+LIBRECHAT_CUSTOM_RERANKER_API_KEY=${SCALEWAY_API_KEY}
+LIBRECHAT_CUSTOM_RERANKER_MODEL=qwen3-embedding-8b
+```
+
+Notes worth knowing:
+
+- `qwen3-embedding-8b` is the **only** Scaleway model whose `/v1/rerank` route works;
+  `bge-multilingual-gemma2` answers `422 ROUTE NOT SUPPORTED`.
+- Billed as embedding input, €0.10 per 1M tokens, output free. These calls do **not** create
+  LibreChat `transactions` rows, so reranking cost never shows up in the Spend Monitor.
+- `rerankerType` must stay set explicitly. The agents factory falls back to **Jina** for unknown
+  or missing values, and with no Jina key that silently degrades to "first N results, score 0".
+- Upstream's `infinity` type is still a placeholder that returns the default ranking, so it is not
+  a substitute.
 
 ### Workflow
 1. User enables web search
 2. AI sends query to SearXNG
 3. SearXNG returns results
 4. Firecrawl scrapes content from URLs
-5. Jina reranks results
+5. The Scaleway reranker scores and orders the passages
 6. AI uses ranked results for answer
 
 ---
@@ -318,6 +341,30 @@ See `modelSpecs.list` for the live models, labels, context/output limits, and th
 - `artifacts` - Artifact generation
 - `context` - Extended context
 - `ocr` - Optical character recognition
+- `vision` - **fork-only**, see below
+
+### Vision gating (fork-only)
+
+Upstream sends whatever the user attached and lets the provider complain. Most of our models
+cannot take images at all - Scaleway and OpenRouter answer with a hard error
+("model is not a multimodal model" / "No endpoints found that support image input") - and image
+generation feeds base64 artifacts back into the run, so a text-only model in a handoff chain
+would break the turn. The fork therefore decides up front whether images travel.
+
+Where it lives after the 2026-07 upstream sync:
+
+| Layer | File | What it does |
+|---|---|---|
+| Config | `librechat.yaml` `endpoints.agents.capabilities` | `vision` must be listed for the toggle to appear |
+| Spec | `modelSpecs.list[].vision` | per-model default (`vision: true` on the image-capable specs) |
+| Builder UI | `Tools/items/catalog.ts` + `selectors.ts` | `vision` is a builtin capability item, toggled like `web_search` |
+| Builder default | `hooks/Agents/useDeriveAgentVision.ts` | seeds the toggle from the model when the agent has no explicit value |
+| Upload gating | `utils/files.ts` `getViableUploadOptions` | withholds direct provider attach for image sets when vision is off |
+| Runtime | `packages/api/src/agents/run.ts` `determineVisionCapability` | resolves agent override -> spec -> model detection, passes `vision` into the agents SDK |
+| SDK | `dev/agents` `stripImagesFromMessages` | strips image parts (URL and data blocks) before the request |
+
+An unset agent value means "follow the model", resolved the same way in the builder and at
+runtime. Explicit `true`/`false` overrides it in both directions.
 
 ### UI Features (All endpoints)
 - `fileSearch: true` - UI checkbox (works in normal chats if RAG available)
