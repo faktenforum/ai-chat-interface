@@ -110,8 +110,13 @@ agents:
       - Convert this file to another format
       - Review a pull request or open an issue
       - Research a topic and summarize the findings
-    # Single agent, long sessions, no router chain.
-    recursion_limit: 150
+    # Graph steps per run (LangGraph recursionLimit), NOT a lifetime cap on replies: each
+    # LLM call and each tool round consumes one. Hitting it aborts that single run with a
+    # recursion error. There is no "unlimited" - LangGraph requires a finite number.
+    # 500 because this agent runs long single-agent sessions with many tool rounds
+    # (shell, file, GitHub) and 150 was being exhausted. No endpoint-level maxRecursionLimit
+    # is set, so this value applies as-is.
+    recursion_limit: 500
     handoffs:
       - agent: shared-agent-faktencheck
         description: "Transfer to Faktencheck Assistant for German fact-checks, verifying claims, or finding existing checks in Faktenforum"
