@@ -969,7 +969,7 @@ mcpServers:
       # Address and password are required, so the tools stay hidden until the account is
       # set up - unlike the Linux server, none of them mean anything without a mailbox.
       MAIL_ADDRESS:
-        title: Postfach-Adresse
+        title: E-Mail-Adresse
         description: >-
           Deine eigene Adresse, z.B. vorname.nachname@correctiv.org. Von dieser Adresse
           wird gesendet, und dieses Postfach wird gelesen.
