@@ -41,18 +41,21 @@ import { setupUploadRoutes } from './upload/upload-routes.ts';
 import { DownloadManager } from './download/download-manager.ts';
 import { setupDownloadRoutes } from './download/download-routes.ts';
 import { createMailServer } from './mail/mcp-server.ts';
+import { createCalendarServer } from './calendar/mcp-server.ts';
 
 const PORT = parseInt(process.env.PORT || '3015', 10);
 const SERVER_NAME = 'mcp-linux-server';
 const SERVER_VERSION = '1.0.0';
 
-/** Where the mail server answers. Same container, own tool list, own credentials. */
+/** Where the other servers answer. Same container, own tool lists, own credentials. */
 const MAIL_PATH = '/mcp/mail';
+const CALENDAR_PATH = '/mcp/calendar';
 
 // Session management
 const transports = new Map<string, StreamableHTTPServerTransport>();
-/** Mail sessions are tracked apart from the Linux ones; the paths are separate servers. */
+/** Tracked apart from the Linux ones; each path is a separate MCP server. */
 const mailTransports = new Map<string, StreamableHTTPServerTransport>();
+const calendarTransports = new Map<string, StreamableHTTPServerTransport>();
 /** Last activity timestamp per session (for idle timeout and leak prevention) */
 const sessionLastActivity = new Map<string, number>();
 
@@ -181,29 +184,30 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
 }
 
 /**
- * Session for the mail endpoint. Same transport settings as the Linux one; the
- * only difference is which tools the server carries.
+ * Session for one of the extra endpoints. Same transport settings as the Linux
+ * one; the only difference is which tools the server carries.
  */
-function createMailSession(): {
-  server: McpServer;
-  transport: StreamableHTTPServerTransport;
-} {
-  const server = createMailServer(userManager);
+function createExtraSession(
+  label: string,
+  make: () => McpServer,
+  sessions: Map<string, StreamableHTTPServerTransport>,
+): { server: McpServer; transport: StreamableHTTPServerTransport } {
+  const server = make();
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
     enableJsonResponse: false,
     onsessioninitialized: (sessionId: string) => {
-      logger.info({ sessionId, totalSessions: mailTransports.size + 1 }, 'Mail session initialized');
-      mailTransports.set(sessionId, transport);
+      logger.info({ sessionId, label, totalSessions: sessions.size + 1 }, 'Session initialized');
+      sessions.set(sessionId, transport);
       sessionLastActivity.set(sessionId, Date.now());
     },
   });
 
   server.server.onclose = async () => {
     const sid = transport.sessionId;
-    if (sid && mailTransports.has(sid)) {
-      logger.info({ sessionId: sid, totalSessions: mailTransports.size - 1 }, 'Mail session closed');
-      mailTransports.delete(sid);
+    if (sid && sessions.has(sid)) {
+      logger.info({ sessionId: sid, label, totalSessions: sessions.size - 1 }, 'Session closed');
+      sessions.delete(sid);
       sessionLastActivity.delete(sid);
     }
   };
@@ -264,7 +268,11 @@ async function createApp(): Promise<express.Application> {
   setupHealthEndpoint(app, {
     serverName: SERVER_NAME,
     version: SERVER_VERSION,
-    sessionCounts: () => ({ linux: transports.size, mail: mailTransports.size }),
+    sessionCounts: () => ({
+      linux: transports.size,
+      mail: mailTransports.size,
+      calendar: calendarTransports.size,
+    }),
   });
 
   setupMcpEndpoints(app, {
@@ -283,7 +291,20 @@ async function createApp(): Promise<express.Application> {
     port: PORT,
     path: MAIL_PATH,
     transports: mailTransports,
-    createServer: createMailSession,
+    createServer: () =>
+      createExtraSession('mail', () => createMailServer(userManager), mailTransports),
+    logger,
+    onSessionActivity: (sessionId: string) => sessionLastActivity.set(sessionId, Date.now()),
+  });
+
+  setupMcpEndpoints(app, {
+    serverName: SERVER_NAME,
+    version: SERVER_VERSION,
+    port: PORT,
+    path: CALENDAR_PATH,
+    transports: calendarTransports,
+    createServer: () =>
+      createExtraSession('calendar', createCalendarServer, calendarTransports),
     logger,
     onSessionActivity: (sessionId: string) => sessionLastActivity.set(sessionId, Date.now()),
   });
@@ -313,7 +334,13 @@ async function main(): Promise<void> {
       for (const [sessionId, lastActivity] of sessionLastActivity.entries()) {
         if (now - lastActivity < sessionIdleTimeoutMs) continue;
         /* One activity map covers both endpoints, so find which one owns the session. */
-        const owner = transports.has(sessionId) ? transports : mailTransports;
+        const owner = [transports, mailTransports, calendarTransports].find((map) =>
+          map.has(sessionId),
+        );
+        if (!owner) {
+          sessionLastActivity.delete(sessionId);
+          continue;
+        }
         const t = owner.get(sessionId);
         if (!t) {
           sessionLastActivity.delete(sessionId);
@@ -328,7 +355,11 @@ async function main(): Promise<void> {
         sessionEmailMap.delete(sessionId);
         sessionLastActivity.delete(sessionId);
         logger.info(
-          { sessionId, totalSessions: transports.size + mailTransports.size },
+          {
+            sessionId,
+            totalSessions:
+              transports.size + mailTransports.size + calendarTransports.size,
+          },
           'Session evicted (idle timeout)',
         );
       }
@@ -366,7 +397,7 @@ async function main(): Promise<void> {
       logger.info({ port: PORT, server: SERVER_NAME, version: SERVER_VERSION }, 'MCP Linux Server started');
     });
 
-    setupGracefulShutdown(server, transports, logger, mailTransports);
+    setupGracefulShutdown(server, transports, logger, mailTransports, calendarTransports);
 
     // Also clean up workers, upload manager, and download manager on shutdown
     process.on('SIGTERM', async () => {

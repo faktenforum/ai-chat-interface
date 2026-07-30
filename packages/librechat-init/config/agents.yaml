@@ -24,6 +24,7 @@ agents:
     mcpServers:
       - linux
       - mail
+      - calendar
       - github
       - docs
       - stackoverflow
@@ -55,8 +56,8 @@ agents:
       - grep_mcp_linux
       - glob_mcp_linux
       - todowrite_mcp_linux
-      # The mail server hides its tools until the user has entered credentials, so
-      # listing them here costs nothing for anyone who has not.
+      # Mail and calendar. Both servers hide their tools until the user has entered
+      # credentials, so listing them here costs nothing for anyone who has not.
       - list_mailboxes_mcp_mail
       - list_messages_mcp_mail
       - search_messages_mcp_mail
@@ -66,6 +67,13 @@ agents:
       - move_message_mcp_mail
       - delete_message_mcp_mail
       - save_attachment_mcp_mail
+      - list_calendars_mcp_calendar
+      - list_events_mcp_calendar
+      - read_event_mcp_calendar
+      - create_event_mcp_calendar
+      - update_event_mcp_calendar
+      - delete_event_mcp_calendar
+      - find_free_time_mcp_calendar
       - search_code_mcp_github
       - search_repositories_mcp_github
       - search_issues_mcp_github
