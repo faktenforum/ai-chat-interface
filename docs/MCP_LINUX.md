@@ -175,6 +175,58 @@ cd packages/mcp-linux && npm run test:mail
 
 Each run tags its own messages, so it can run repeatedly against the same mailbox. `MCP_MAIL_TLS_INSECURE=true` relaxes certificate checks and the STARTTLS requirement for that test server - never set it against a real mailbox.
 
+## Calendar (CalDAV) at /mcp/calendar
+
+A third MCP server on the same container, for the user's calendars. Separate from mail for the same reason mail is separate from the Linux tools: different credentials, and LibreChat gates them per server.
+
+Written against **RFC 4791**, not against one provider's API, so Nextcloud, Radicale, Baikal and Fastmail all work. Discovery follows the standard chain - well-known URI, `current-user-principal`, `calendar-home-set`, then the collections in that home - because none of those paths can be guessed: Nextcloud puts calendars under `/remote.php/dav/calendars/`, Radicale under a bare user path, and both are configurable. The base URL of the instance is enough.
+
+### Credentials
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `CALDAV_USERNAME` | yes | Login on the calendar server |
+| `CALDAV_PASSWORD` | yes | App password. On Nextcloud: Settings → Security → new app password. |
+| `CALDAV_URL` | no | Base URL, overrides `MCP_CALDAV_URL` |
+
+The URL must be `https` unless it points at localhost - the password travels with every request. As with mail, nothing is stored on disk and nothing is cached between requests.
+
+### Tools
+
+| Tool | Purpose |
+|---|---|
+| `list_calendars` | Discovers the calendars with their URLs, colours and whether they are writable. Start here. |
+| `list_events` | Events in a window, all calendars or one, with a text filter. Repeating events are expanded per occurrence. |
+| `read_event` | One event in full, including the raw iCalendar |
+| `create_event` | Timed or all-day, with description, location and attendees |
+| `update_event` | Partial change; keeps alarms, attendee replies and repeat rules, and refuses to overwrite a concurrent edit |
+| `delete_event` | Removes an event, or the whole series of a repeating one |
+| `find_free_time` | The gaps of at least N minutes in a window, merging overlaps, all-day events counting as busy all day |
+
+Design notes worth knowing:
+
+- **Recurrence is expanded on the client**, with `ical.js`. The CalDAV `expand` element is optional and servers disagree about it, while every server returns the `RRULE`. Expansion is capped at 200 occurrences per event.
+- **Events are addressed by URL**, not by id. That is how CalDAV works, and handing the URL back is what lets a later update or delete hit the right object without a second lookup.
+- **`update_event` reads before it writes** and sends `If-Match`, so a change someone else made in between produces an error instead of being silently overwritten.
+- **Writing iCalendar is done by hand**, with explicit RFC 5545 escaping and 75-octet line folding (counted in bytes, never splitting a multi-byte character). Reading goes through `ical.js`, which is where TZID references and floating times actually need handling.
+
+### Testing
+
+`test/calendar.ts` drives the endpoint through the official MCP SDK client against a real CalDAV server:
+
+```bash
+mkdir -p /tmp/radicale/config /tmp/radicale/data
+printf 'caltest:secret\n' > /tmp/radicale/config/users
+printf '[server]\nhosts = 0.0.0.0:5232\n[auth]\ntype = htpasswd\nhtpasswd_filename = /config/users\nhtpasswd_encryption = plain\n[storage]\nfilesystem_folder = /data/collections\n' > /tmp/radicale/config/config
+podman run -d --rm --name radicale-test -p 127.0.0.1:5232:5232 \
+  -v /tmp/radicale/config:/config:ro,Z -v /tmp/radicale/data:/data:Z \
+  docker.io/tomsquest/docker-radicale:latest
+
+cd packages/mcp-linux && npm run test:calendar
+```
+
+Each run creates its own calendar collection, so it can run repeatedly.
+
 ## MCP transport and sessions
 
 The server uses **Streamable HTTP** (POST for JSON-RPC, GET for SSE). Each client gets a **session** (created on `initialize`); sessions are **in-memory only** and are lost on server restart or process exit.
@@ -200,6 +252,7 @@ If you run **both** stacks on one host they also share the external network `loa
 | `MCP_MAIL_SMTP` | - | Default SMTP `host[:port]` for the mail server, overridable per user |
 | `MCP_MAIL_MAX_BODY_CHARS` | `8000` | Cap on the message body handed to the model |
 | `MCP_MAIL_TLS_INSECURE` | - | `true` relaxes TLS for a test server. Never in production. |
+| `MCP_CALDAV_URL` | - | Default CalDAV base URL, overridable per user |
 | `MCP_LINUX_LOG_LEVEL` | `info` | Log level |
 | `MCP_LINUX_WORKER_IDLE_TIMEOUT` | `1800000` | Worker idle timeout (ms) |
 | `MCP_LINUX_WORKER_REQUEST_TIMEOUT_MS` | `120000` | Max time (ms) for a single worker request (e.g. `create_workspace` git clone). Increase if clones time out. |

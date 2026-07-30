@@ -1001,6 +1001,47 @@ mcpServers:
           Der Name, den Empfänger sehen, z.B. "Vorname Nachname | CORRECTIV".
         optional: true
 
+  calendar:
+    type: streamable-http
+    # Same container as the Linux workspace and the mail server, own endpoint and own
+    # credentials. Speaks plain CalDAV, so Nextcloud, Radicale and Baikal all work.
+    url: http://$${STACK_NAME:-prod}-mcp-linux:3015/mcp/calendar
+    title: Kalender
+    description: Eigene Kalender lesen, Termine anlegen und freie Zeiten finden (CalDAV)
+    iconPath: /images/mcp-calendar-icon.svg
+    initTimeout: 120000
+    timeout: 120000
+    chatMenu: true
+    startup: true
+    serverInstructions: true
+    requiresOAuth: false
+    headers:
+      X-User-ID: '{{LIBRECHAT_USER_ID}}'
+      X-User-Username: '{{LIBRECHAT_USER_USERNAME}}'
+      X-User-Email: '{{LIBRECHAT_USER_EMAIL}}'
+      X-Caldav-Username: '{{CALDAV_USERNAME}}'
+      X-Caldav-Password: '{{CALDAV_PASSWORD}}'
+      # Unset means the header is not sent and the server falls back to MCP_CALDAV_URL.
+      X-Caldav-Url: '{{CALDAV_URL}}'
+    customUserVars:
+      CALDAV_USERNAME:
+        title: Benutzername
+        description: >-
+          Dein Anmeldename auf dem Kalenderserver, bei Nextcloud der Nextcloud-Benutzername.
+      CALDAV_PASSWORD:
+        title: App-Passwort
+        description: >-
+          Bei Nextcloud unter Einstellungen → Sicherheit → "Neues App-Passwort erstellen"
+          anlegen, nicht das Login-Passwort verwenden. Wird verschlüsselt gespeichert und
+          nur an den Kalenderserver weitergegeben. Gib es niemals im Chat ein.
+        sensitive: true
+      CALDAV_URL:
+        title: Server-Adresse (optional)
+        description: >-
+          Nur nötig für einen anderen Kalenderserver als den voreingestellten. Die
+          Basis-Adresse reicht, z.B. https://cloud.example.org - der Rest wird gefunden.
+        optional: true
+
   spend:
     type: streamable-http
     url: http://$${STACK_NAME:-prod}-spend-monitor:3016/mcp
