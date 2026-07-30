@@ -183,6 +183,15 @@ const AUTO_GENERATED: Record<string, () => string> = {
 /** Values that trigger auto-generation for specific keys (in addition to empty / change-me) */
 const AUTO_GENERATE_PLACEHOLDERS: Record<string, string[]> = {
     'FIRECRAWL_BULL_AUTH_KEY': ['my-secret-key'],
+    // env.local.example ships these as well-formed hex strings of the correct length,
+    // so the length check alone won't catch them. They are obvious placeholders though,
+    // so we list them explicitly to make sure they get regenerated on first run.
+    'LIBRECHAT_CREDS_KEY': ['0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'],
+    'LIBRECHAT_CREDS_IV': ['abcdef9876543210abcdef9876543210'],
+    'LIBRECHAT_SESSION_SECRET': ['change-me'],
+    'LIBRECHAT_JWT_SECRET': ['change-me-jwt'],
+    'LIBRECHAT_JWT_REFRESH_SECRET': ['change-me-refresh'],
+    'LIBRECHAT_MEILI_MASTER_KEY': ['change-me-meili-master-key'],
 };
 
 type PromptType = 'input' | 'password';

@@ -38,3 +38,11 @@ Variants: `green`, `amber`, `purple`, `gray`, `light`, `dark`, and `green-bg`, `
 ## Docs
 
 - [Submodule Sync Guide](../docs/SUBMODULE_SYNC.md) — Update/sync workflow (status, merge, conflicts).
+
+## Machine-user key rotation
+
+**rotate-github-machine-user-key.sh** — Generates a new ed25519 SSH key for the GitHub machine user and prints the public key (for GitHub) and the base64 private key (for `MCP_LINUX_GIT_SSH_KEY` in `.env`). Does not touch the live environment. See [GitHub Machine User](../docs/GITHUB_MACHINE_USER.md) for the full rotation procedure.
+
+```bash
+./scripts/rotate-github-machine-user-key.sh [comment-email]
+```
