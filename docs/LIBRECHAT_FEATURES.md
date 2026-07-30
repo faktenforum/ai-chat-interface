@@ -203,22 +203,38 @@ We only ever see about half the stated limit available at once, so plan against 
 
 **We are on the lower of two tiers.** Scaleway's [quota table](https://www.scaleway.com/en/docs/organizations-and-projects/additional-content/organization-quotas/#generative-apis---serverless) grants 200k tokens/minute per model with a payment method alone, and much more once the *identity* is verified as well - `glm-5.2` and `qwen3-235b` go to 1 000k, `mistral-small-3.2` to 2 000k. Verifying the identity in the console is therefore a 5x increase for the Assistant with no code change, and the single most effective fix here. Beyond that: the Batches API has no rate limit at all (-50% price, not usable for interactive chat), Dedicated Deployments have none either, and support raises quotas on request.
 
-A request whose prompt alone exceeds the remaining budget cannot succeed. It fails with
+#### All three limits report the same error
+
+Whichever axis breaks, the body is the same and only `message` differs - and `message` is what the OpenAI SDK throws away, since `APIError` keeps `body.error` alone:
 
 ```
-429 {"error":"INSUFFICIENT QUOTA","message":"You exceeded your current quota of tokens per minute."}
+HTTP/2 429
+{"status":429,"error":"INSUFFICIENT QUOTA","message":"You exceeded your current limit of concurrent requests."}
 ```
 
-surfaced in the chat as `An error occurred while processing the request: 429 "INSUFFICIENT QUOTA"`. Retrying does not help, and the agents package sets `maxRetries: 0` on the OpenAI-compatible path, so the run ends immediately.
+So the chat only ever shows `An error occurred while processing the request: 429 "INSUFFICIENT QUOTA"`, and it is not possible to tell from that whether the token bucket, the request rate or the concurrency limit was hit. There are no `x-ratelimit-*` and no `retry-after` headers on a 429; successful responses do carry the former. Measured 2026-07-30: 150 concurrent two-token requests produced 27 of these.
 
-Two things make this hit sooner than the raw numbers suggest:
+#### Transient ones are retried
+
+Two of the three axes clear on their own - concurrency in milliseconds, the token bucket inside the minute - so our `@librechat/agents` fork retries them instead of ending the turn ([fork PR #6](https://github.com/faktenforum/agents/pull/6), upstream [#358](https://github.com/danny-avila/agents/pull/358)). LangChain refused to: its classifier reads any "insufficient quota" wording as an account out of credit and stops.
+
+Measured through `ChatOpenAI` on 2026-07-30:
+
+| Load | before | after |
+|---|---|---|
+| 150 concurrent two-token requests | 123/150 | **150/150**, +0.8s |
+| 4 x 30k-token requests | 2/4 | **4/4**, 58s |
+
+The 58 seconds is the token bucket refilling. A slow turn instead of a dead one, and a rejected request is not billed, so the retries cost waiting only.
+
+What still fails outright is a **single request larger than the whole bucket** - waiting cannot make it fit. Two things make that hit sooner than the raw numbers suggest:
 
 - an agent turn sends the whole context **once per tool round**, so a 60k-token conversation with four tool calls spends ~240k tokens in one turn;
 - every user on that model draws from the same budget, so concurrent chats add up.
 
-Therefore agent `maxContextTokens` is capped **below** the per-minute quota rather than at the model window (`Assistant`/glm-5.2: 96000 of 262144; `Faktencheck`/qwen3: 96000 of 250000). LibreChat then truncates old messages instead of building a request that cannot be served. Tool output is capped as well - see `MCP_LINUX_MAX_OUTPUT_CHARS` in [MCP Linux](MCP_LINUX.md).
+Therefore agent `maxContextTokens` is capped **below** the per-minute quota rather than at the model window (`Assistant`/glm-5.2: 64000 of 262144; `Travel and Location`/qwen3: 96000 of 250000). LibreChat then truncates old messages instead of building a request that cannot be served. Tool output is capped as well - see `MCP_LINUX_MAX_OUTPUT_CHARS` in [MCP Linux](MCP_LINUX.md).
 
-The real fix is a higher quota: Scaleway raises the standard limits once a payment method and identity validation are in place, and grants more on request. Batch workloads can use the Batches API, which has no rate limit and costs 50% less - not applicable to interactive chat.
+The remaining fix is a higher quota: verifying the identity lifts the per-model budget 5x ([#90](https://github.com/faktenforum/ai-chat-interface/issues/90)), and support raises quotas on request. Batch workloads can use the Batches API, which has no rate limit and costs 50% less - not applicable to interactive chat.
 
 **Sources:** [Rate limits for Generative APIs](https://www.scaleway.com/en/docs/generative-apis/reference-content/rate-limits/), [Understanding common errors](https://www.scaleway.com/en/docs/generative-apis/api-cli/understanding-errors/).
 
