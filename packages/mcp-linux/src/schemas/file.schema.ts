@@ -14,6 +14,18 @@ export const ReadWorkspaceFileSchema = z.object({
     .array(z.tuple([z.number().int().min(1), z.number().int().min(1)]))
     .optional()
     .describe('Optional line ranges to read, e.g. [[1,50],[100,150]]. 1-based inclusive.'),
+  offset: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('First line to read (1-based). Use with limit to page through a long file.'),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe('Maximum number of lines to return (default 1200). Read further with offset.'),
 });
 
 export const ListWorkspaceFilesSchema = z.object({

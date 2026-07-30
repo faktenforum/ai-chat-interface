@@ -31,6 +31,7 @@ import { registerUploadTools } from './tools/upload.ts';
 import { registerDownloadTools } from './tools/download.ts';
 import { registerFileTools } from './tools/file.ts';
 import { registerFilesystemTools } from './tools/filesystem.ts';
+import { registerJobTools } from './tools/job.ts';
 import { registerTodoTools } from './tools/todo.ts';
 import { registerPrompts } from './prompts/index.ts';
 import { registerWorkspaceResources } from './resources/workspace-resources.ts';
@@ -109,7 +110,13 @@ File Download:
 - create_download_link for a temporary download URL for any workspace file; share the URL with the user. Links are single-use, expire after 60 minutes by default. Cleanup: list_download_links, close_download_link to limit exposure.
 
 Reading Files:
-- read_workspace_file returns content with line numbers for diffing. Use optional line_ranges for specific sections. Text files are returned inline; images and audio as base64; large or binary files get a download link instead.
+- read_workspace_file returns content with line numbers for diffing. Use optional line_ranges for specific sections, or offset/limit to page through a long file - it returns the first 1200 lines by default and tells you the total, so read the part you need rather than the whole file. Text files are returned inline; images and audio as base64; large or binary files get a download link instead.
+
+Long-running commands:
+- execute_command has to answer within the call timeout, so use start_job for anything slow: installs, builds, test suites, downloads, long scripts. It returns a job_id immediately and the job keeps running after the turn ends.
+- Then either wait_for_job(job_id) to be handed the exit code and output as soon as it finishes (the call reports progress while waiting, so several minutes are fine), or carry on with other work and check job_status / read_job_output later. list_jobs finds jobs from earlier turns. kill_job stops one.
+- You are not notified on your own when a job finishes - nothing wakes you between turns. So either wait for it in the same turn, or tell the user you will report back and check with list_jobs at the start of your next reply.
+- Terminal and job output is capped per call (head and tail, middle dropped, with the omitted count). When you need the middle, page it with read_terminal_output / read_job_output using offset and length instead of re-running the command.
 
 Status card: Users can view and manage their account (workspaces, upload/download sessions, terminals) inline. Call get_status and place the returned UI resource marker (\\ui{id}) in your reply to render the interactive card. Its buttons (delete workspace, close upload session, revoke download link, kill terminal, refresh) arrive back as new messages asking you to run the matching tool; run it and report the result. There is no external status page. See the account_status prompt for details.`,
     },
@@ -123,6 +130,7 @@ Status card: Users can view and manage their account (workspaces, upload/downloa
   registerDownloadTools(server, userManager, downloadManager);
   registerFileTools(server, userManager, downloadManager);
   registerFilesystemTools(server, userManager, workerManager);
+  registerJobTools(server, userManager, workerManager);
   registerTodoTools(server);
 
   // Register resources
@@ -141,7 +149,10 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
   const server = createMcpServer();
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
-    enableJsonResponse: true,
+    /* SSE responses, not plain JSON: a JSON response is a single body with no room for
+     * notifications/progress, so wait_for_job could never report progress and the client would cut
+     * the call off at its tool timeout. Every MCP client accepts text/event-stream by spec. */
+    enableJsonResponse: false,
     onsessioninitialized: (sessionId: string) => {
       logger.info({ sessionId, totalSessions: transports.size + 1 }, 'Session initialized');
       transports.set(sessionId, transport);

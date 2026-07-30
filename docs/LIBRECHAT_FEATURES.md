@@ -186,6 +186,42 @@ Compose sets `LIBRECHAT_ENV` per stack (local: `local`, dev: `dev`, prod: `prod`
 - `titleConvo: true` - Auto-generates conversation titles
 - `summarize: true` - Enables summarization for long conversations
 
+### Scaleway: tokens-per-minute quota caps the usable context
+
+Scaleway rate-limits on three axes - **tokens per minute (input + output), requests per minute, and concurrent requests** - and the limits apply to the **Organization**, shared by all its Projects ([rate limits](https://www.scaleway.com/en/docs/generative-apis/reference-content/rate-limits/)).
+
+The token budget is **per model**, not one pot for everything. Measured 2026-07-29: a ~120k-token request on `glm-5.2` drove its `x-ratelimit-remaining-tokens` to 0 while `mistral-small-3.2` stayed untouched at ~99995. So agents on different models do not compete for the same budget; all users on the *same* model do.
+
+Two numbers matter, and they are not the same:
+
+| | value |
+|---|---|
+| `x-ratelimit-limit-tokens` reported for every model | 200000 |
+| `x-ratelimit-remaining-tokens` when idle | ~100000 |
+
+We only ever see about half the stated limit available at once, so plan against ~100k per minute per model, not 200k.
+
+**We are on the lower of two tiers.** Scaleway's [quota table](https://www.scaleway.com/en/docs/organizations-and-projects/additional-content/organization-quotas/#generative-apis---serverless) grants 200k tokens/minute per model with a payment method alone, and much more once the *identity* is verified as well - `glm-5.2` and `qwen3-235b` go to 1 000k, `mistral-small-3.2` to 2 000k. Verifying the identity in the console is therefore a 5x increase for the Assistant with no code change, and the single most effective fix here. Beyond that: the Batches API has no rate limit at all (-50% price, not usable for interactive chat), Dedicated Deployments have none either, and support raises quotas on request.
+
+A request whose prompt alone exceeds the remaining budget cannot succeed. It fails with
+
+```
+429 {"error":"INSUFFICIENT QUOTA","message":"You exceeded your current quota of tokens per minute."}
+```
+
+surfaced in the chat as `An error occurred while processing the request: 429 "INSUFFICIENT QUOTA"`. Retrying does not help, and the agents package sets `maxRetries: 0` on the OpenAI-compatible path, so the run ends immediately.
+
+Two things make this hit sooner than the raw numbers suggest:
+
+- an agent turn sends the whole context **once per tool round**, so a 60k-token conversation with four tool calls spends ~240k tokens in one turn;
+- every user on that model draws from the same budget, so concurrent chats add up.
+
+Therefore agent `maxContextTokens` is capped **below** the per-minute quota rather than at the model window (`Assistant`/glm-5.2: 96000 of 262144; `Faktencheck`/qwen3: 96000 of 250000). LibreChat then truncates old messages instead of building a request that cannot be served. Tool output is capped as well - see `MCP_LINUX_MAX_OUTPUT_CHARS` in [MCP Linux](MCP_LINUX.md).
+
+The real fix is a higher quota: Scaleway raises the standard limits once a payment method and identity validation are in place, and grants more on request. Batch workloads can use the Batches API, which has no rate limit and costs 50% less - not applicable to interactive chat.
+
+**Sources:** [Rate limits for Generative APIs](https://www.scaleway.com/en/docs/generative-apis/reference-content/rate-limits/), [Understanding common errors](https://www.scaleway.com/en/docs/generative-apis/api-cli/understanding-errors/).
+
 ### Scaleway: parallel tool calls
 
 **Config:** Scaleway endpoint uses `addParams: { parallel_tool_calls: false }`.

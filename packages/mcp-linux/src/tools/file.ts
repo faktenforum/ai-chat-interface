@@ -17,6 +17,15 @@ import { resolveSafePath, ensureFileExists, ensureDirExists } from '../utils/fs-
 
 const SKIP_DIR_NAMES = new Set(['.git', 'node_modules', '.venv', 'venv']);
 
+/**
+ * Lines returned when the caller asks for no particular range.
+ *
+ * A whole file used to be inlined up to 1 MB, which is roughly 250k tokens - more than a provider
+ * grants per minute, so one read could make the rest of the turn impossible. Paging is the same
+ * bargain other coding agents strike: enough to work with, and an explicit way to ask for more.
+ */
+const DEFAULT_LINE_LIMIT = 1200;
+
 /** Format text with line numbers (1-based) for diffing or discussion. Optionally restrict to line ranges (1-based inclusive). */
 function formatTextWithLineNumbers(
   content: string,
@@ -35,6 +44,62 @@ function formatTextWithLineNumbers(
     }
   }
   return out.join('\n');
+}
+
+/** Renders a page of a text file with line numbers, plus a note when more lines exist. */
+function formatTextPage(content: string, offset: number, limit: number): string {
+  const lines = content.split(/\r?\n/);
+  const from = Math.min(Math.max(1, offset), Math.max(1, lines.length));
+  const to = Math.min(lines.length, from + limit - 1);
+
+  const body: string[] = [];
+  for (let i = from; i <= to; i++) {
+    body.push(`${i} | ${lines[i - 1] ?? ''}`);
+  }
+
+  if (from === 1 && to === lines.length) {
+    return body.join('\n');
+  }
+
+  const rest =
+    to < lines.length
+      ? ` Read on with offset=${to + 1}.`
+      : '';
+  return (
+    `[lines ${from}-${to} of ${lines.length}.${rest}]\n` + body.join('\n')
+  );
+}
+
+/**
+ * Whether a file with an unrecognised extension is really text.
+ *
+ * The extension list can never be complete - `env.prod.example`, `Dockerfile.tpl`, `.env.secret`
+ * and friends all read as unknown, and handing back a download link for them makes the agent fall
+ * back to `cat` in the terminal: another round trip, and the output arrives without line numbers.
+ * A NUL byte is the same signal `file` and git use to call something binary.
+ */
+export async function looksLikeText(absolutePath: string): Promise<boolean> {
+  let handle: fs.FileHandle | undefined;
+  try {
+    handle = await fs.open(absolutePath, 'r');
+    const { buffer, bytesRead } = await handle.read(Buffer.alloc(8192), 0, 8192, 0);
+    const sample = buffer.subarray(0, bytesRead);
+    if (sample.includes(0)) {
+      return false;
+    }
+    /* Control characters other than tab, newline and carriage return point at binary content. */
+    let suspicious = 0;
+    for (const byte of sample) {
+      if (byte < 0x09 || (byte > 0x0d && byte < 0x20)) {
+        suspicious++;
+      }
+    }
+    return bytesRead === 0 || suspicious / bytesRead < 0.05;
+  } catch {
+    return false;
+  } finally {
+    await handle?.close();
+  }
 }
 
 /** Maximum text file size to inline (1 MB) */
@@ -130,7 +195,11 @@ export function registerFileTools(
           }
 
           const rawContent = await fs.readFile(absolutePath, 'utf-8');
-          const text = formatTextWithLineNumbers(rawContent, args.line_ranges);
+          /* Explicit line_ranges are a deliberate request and are honoured as given; everything
+           * else is paged so a long file cannot swallow the turn's token budget. */
+          const text = args.line_ranges?.length
+            ? formatTextWithLineNumbers(rawContent, args.line_ranges)
+            : formatTextPage(rawContent, args.offset ?? 1, args.limit ?? DEFAULT_LINE_LIMIT);
           return {
             content: [{ type: 'text' as const, text }],
           };
@@ -168,7 +237,18 @@ export function registerFileTools(
           };
         }
 
-        // ── Unknown / binary files ─────────────────────────────────
+        // ── Unknown extension: decide by content ───────────────────
+        if (fileSize <= MAX_TEXT_SIZE && (await looksLikeText(absolutePath))) {
+          const rawContent = await fs.readFile(absolutePath, 'utf-8');
+          const text = args.line_ranges?.length
+            ? formatTextWithLineNumbers(rawContent, args.line_ranges)
+            : formatTextPage(rawContent, args.offset ?? 1, args.limit ?? DEFAULT_LINE_LIMIT);
+          return {
+            content: [{ type: 'text' as const, text }],
+          };
+        }
+
+        // ── Binary files ───────────────────────────────────────────
         return await createDownloadFallback(
           email, mapping.username, args.workspace, args.file_path,
           fileSize, downloadManager,

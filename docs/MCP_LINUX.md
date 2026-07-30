@@ -26,6 +26,20 @@ LibreChat can use one app-level MCP connection (`startup: true`), so one MCP ses
 | `list_terminals` | List active sessions |
 | `kill_terminal` | Terminate a session |
 
+Terminal output is capped per call (`MCP_LINUX_MAX_OUTPUT_CHARS`, default 40000): head two thirds, tail one third, with the omitted character count. Uncapped output was re-sent with every model call for the rest of the turn, which is what exhausts a provider's tokens-per-minute quota. Page the middle with `read_terminal_output` using `offset`/`length`.
+
+### Background jobs
+| Tool | Description |
+|------|-------------|
+| `start_job` | Run a command detached; returns `job_id` immediately and survives the turn |
+| `job_status` | State, exit code, output size, finish time |
+| `read_job_output` | Combined stdout/stderr, capped by default, pageable |
+| `wait_for_job` | Block until the job ends, reporting progress so the call does not time out |
+| `list_jobs` | Jobs newest first, including ones from earlier turns |
+| `kill_job` | SIGTERM to the process group |
+
+See [Background Jobs](#background-jobs) for how it works and what push notifications cannot do.
+
 A workspace is a plain per-project directory under `~/workspaces/`. Git is available on demand (init, clone, commit, push) but not required; a workspace can just hold files. One workspace = one task context.
 
 ### Workspace
@@ -80,7 +94,7 @@ First-class file tools (opencode-style) run in the per-user worker, so file owne
 
 | Tool | Description |
 |------|-------------|
-| `read_workspace_file` | Read a file as structured MCP content (text, image, audio). Text inline with line numbers; images/audio as base64; large or binary files get a download link. Limits: text 1 MB, binary 10 MB. |
+| `read_workspace_file` | Read a file as structured MCP content (text, image, audio). Text inline with line numbers, first 1200 lines by default - page further with `offset`/`limit`, or ask for exact `line_ranges`; the header states which lines of how many were returned. Images/audio as base64; large or binary files get a download link. Limits: text 1 MB, binary 10 MB. |
 | `list_workspace_files` | List files in a workspace directory; more effective than `ls` for exploring structure. |
 | `write` | Create (with parent dirs) or overwrite a file. Prefer over echoing content through `execute_command`. |
 | `edit` | Replace an exact string in an existing file. `old_string` must match exactly and be unique unless `replace_all: true`. |
@@ -143,6 +157,7 @@ If you run **both** stacks on one host they also share the external network `loa
 | `MCP_LINUX_STATUS_COLLAPSE_DIRS` | `uploads,venv,.venv` | Comma-separated dirs whose paths are collapsed to one summary line in status |
 | `MCP_LINUX_RESOURCE_LIST_DIRS` | `uploads,outputs` | Comma-separated dirs listed in MCP resources (allowlist); only these appear in list |
 | `MCP_LINUX_UPLOADS_MAX_AGE_DAYS` | `0` (disabled) | If > 0, server runs daily cleanup of `uploads/` files older than N days |
+| `MCP_LINUX_MAX_OUTPUT_CHARS` | `40000` | Cap on terminal output returned per call (head 2/3 + tail 1/3, middle dropped). Uncapped output is re-sent with every model call for the rest of the turn and burns the provider's tokens-per-minute quota; `read_terminal_output` with an explicit `length` still pages the full text |
 
 ## Inline UI (MCP-UI)
 
@@ -152,6 +167,25 @@ The server ships small self-contained HTML views as MCP-UI resources (`ui://` te
 - `create_upload_session` returns an **upload widget** (drag & drop, progress) plus a browser URL. The widget renders inline; the same widget is served standalone at `GET /upload/:token` for a shareable link.
 
 The upload widget's iframe has an opaque origin, so `POST /upload/:token` and `GET /upload/:token/{config,status}` send permissive CORS headers (the token in the URL is the capability; no cookies are used). Downloads happen via the shared text URL: the chat iframe sandbox has no `allow-downloads`, so links inside the card are also shown as selectable text.
+
+## Background Jobs
+
+`execute_command` must answer inside the MCP call timeout, so anything that takes minutes (installs, builds, test suites) needs a different shape. `start_job` spawns the command detached and returns a `job_id` immediately; the job survives both the tool call and the end of the conversation turn.
+
+| Tool | Purpose |
+|------|---------|
+| `start_job` | Start a command in the background, returns `job_id` + `pid` |
+| `job_status` | State (`running`, `finished`, `failed`, `unknown`), exit code, output size |
+| `read_job_output` | Combined stdout/stderr, capped by default, pageable with `offset`/`length` |
+| `wait_for_job` | Blocks until the job ends, emitting `notifications/progress` every 2s |
+| `list_jobs` | All jobs, newest first - finds jobs started in an earlier turn |
+| `kill_job` | SIGTERM to the process group; output stays readable |
+
+State is files, not memory, so a worker restart does not lose a running job: `~/.mcp_jobs/<id>.json` (metadata), `<id>.log` (output), `<id>.exit` (exit code). The command runs in a subshell so that a `exit N` inside it still lets the wrapper record the code.
+
+**Why `wait_for_job` can run for minutes:** the MCP client resets its tool-call timeout on every progress notification (LibreChat sets `resetTimeoutOnProgress: true`). Verified with the official SDK client: a 6-second job returned successfully through a **4-second** client timeout, with 3 progress callbacks. This requires SSE responses, so the transport runs with `enableJsonResponse: false` - a JSON response is one body with no room for notifications.
+
+**What is not possible:** nothing wakes the agent between turns. LibreChat registers exactly one server-initiated notification handler (`notifications/resources/list_changed`, which only refreshes the resource list), and its agent loop has no entry point for an unsolicited event - a finished run cannot be resumed. So "notify me when the build is done" works *within* a turn via `wait_for_job`, or by the agent checking `list_jobs` when the user writes again. A real push would need LibreChat to consume MCP notifications and re-invoke the agent (upstream does not handle even `tools/list_changed` yet, see danny-avila/LibreChat#7117).
 
 ## Traefik Routing
 
