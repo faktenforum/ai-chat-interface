@@ -123,6 +123,13 @@ export interface HttpServerConfig {
   serverName: string;
   version: string;
   port: number;
+  /**
+   * Path this MCP server answers on. One container hosts several - the Linux
+   * tools on /mcp, mail on /mcp/mail - because they share the per-user accounts
+   * and workspaces while LibreChat treats them as separate servers with their
+   * own tool lists and their own credentials.
+   */
+  path?: string;
   transports: Map<string, StreamableHTTPServerTransport>;
   createServer: () => {
     server: { connect: (transport: StreamableHTTPServerTransport) => Promise<void> };
@@ -134,23 +141,38 @@ export interface HttpServerConfig {
 }
 
 /**
+ * Registers the health endpoint. Separate from the MCP endpoints because a
+ * container with several MCP servers still has exactly one health check.
+ */
+export function setupHealthEndpoint(
+  app: express.Application,
+  config: {
+    serverName: string;
+    version: string;
+    sessionCounts: () => Record<string, number>;
+  },
+): void {
+  app.get('/health', (_req: Request, res: Response) => {
+    const counts = config.sessionCounts();
+    res.json({
+      status: 'ok',
+      server: config.serverName,
+      version: config.version,
+      activeSessions: Object.values(counts).reduce((sum, n) => sum + n, 0),
+      sessions: counts,
+    });
+  });
+}
+
+/**
  * Creates standard Express endpoints for MCP HTTP server
  */
 export function setupMcpEndpoints(app: express.Application, config: HttpServerConfig): void {
-  const { serverName, version, transports, createServer, logger, onSessionActivity } = config;
-
-  // Health check endpoint
-  app.get('/health', (_req: Request, res: Response) => {
-    res.json({
-      status: 'ok',
-      server: serverName,
-      version,
-      activeSessions: transports.size,
-    });
-  });
+  const { transports, createServer, logger, onSessionActivity } = config;
+  const path = config.path ?? '/mcp';
 
   // SSE stream endpoint (GET /mcp)
-  app.get('/mcp', async (req: Request, res: Response) => {
+  app.get(path, async (req: Request, res: Response) => {
     const sessionId = getSessionId(req.headers);
 
     if (!sessionId) {
@@ -160,7 +182,7 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
 
     const transport = transports.get(sessionId);
     if (!transport) {
-      sendSessionNotFound(res, sessionId, 'GET /mcp', transports.size, logger);
+      sendSessionNotFound(res, sessionId, `GET ${path}`, transports.size, logger);
       return;
     }
 
@@ -177,7 +199,7 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
   });
 
   // Session termination endpoint (DELETE /mcp)
-  app.delete('/mcp', async (req: Request, res: Response) => {
+  app.delete(path, async (req: Request, res: Response) => {
     const sessionId = getSessionId(req.headers);
 
     if (!sessionId) {
@@ -187,7 +209,7 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
 
     const transport = transports.get(sessionId);
     if (!transport) {
-      sendSessionNotFound(res, sessionId, 'DELETE /mcp', transports.size, logger);
+      sendSessionNotFound(res, sessionId, `DELETE ${path}`, transports.size, logger);
       return;
     }
 
@@ -205,7 +227,7 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
   });
 
   // Main MCP endpoint (POST /mcp)
-  app.post('/mcp', async (req: Request, res: Response) => {
+  app.post(path, async (req: Request, res: Response) => {
     try {
       const sessionId = getSessionId(req.headers);
       const requestId =
@@ -219,7 +241,7 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
           await transport.handleRequest(req, res, req.body);
           return;
         }
-        sendSessionNotFound(res, sessionId, 'POST /mcp', transports.size, logger, requestId);
+        sendSessionNotFound(res, sessionId, `POST ${path}`, transports.size, logger, requestId);
         return;
       }
 
@@ -255,20 +277,23 @@ export function setupGracefulShutdown(
   server: ReturnType<express.Application['listen']>,
   transports: Map<string, StreamableHTTPServerTransport>,
   logger?: Logger,
+  ...moreTransports: Map<string, StreamableHTTPServerTransport>[]
 ): void {
   const shutdown = async () => {
     logger?.info('Shutting down...');
-    for (const [sessionId, transport] of transports.entries()) {
-      try {
-        await transport.close();
-      } catch (error) {
-        logger?.error(
-          { error: error instanceof Error ? error.message : String(error), sessionId },
-          'Error closing transport',
-        );
+    for (const map of [transports, ...moreTransports]) {
+      for (const [sessionId, transport] of map.entries()) {
+        try {
+          await transport.close();
+        } catch (error) {
+          logger?.error(
+            { error: error instanceof Error ? error.message : String(error), sessionId },
+            'Error closing transport',
+          );
+        }
       }
+      map.clear();
     }
-    transports.clear();
     await new Promise<void>((resolve) => server.close(() => resolve()));
     process.exit(0);
   };

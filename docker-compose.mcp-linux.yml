@@ -24,6 +24,11 @@ services:
       MCP_LINUX_DOWNLOAD_BASE_URL: ${MCP_LINUX_DOWNLOAD_BASE_URL:-}
       MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN: ${MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN:-60}
       MCP_LINUX_SESSION_IDLE_TIMEOUT_MIN: ${MCP_LINUX_SESSION_IDLE_TIMEOUT_MIN:-30}
+      # Mail server at /mcp/mail. Defaults only; the credentials are per user and
+      # come from LibreChat's encrypted store, never from here.
+      MCP_MAIL_IMAP: ${MCP_MAIL_IMAP:-}
+      MCP_MAIL_SMTP: ${MCP_MAIL_SMTP:-}
+      MCP_MAIL_MAX_BODY_CHARS: ${MCP_MAIL_MAX_BODY_CHARS:-8000}
     expose:
       - "3015"
     # Traefik labels defined in docker-compose.prod.yml and docker-compose.local.yml

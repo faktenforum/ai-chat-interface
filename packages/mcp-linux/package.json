@@ -10,23 +10,30 @@
     "lint": "eslint . --ext .ts",
     "test": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/integration.ts",
     "test:e2e": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/http-test.ts",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "test:mail": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/mail.ts",
+    "test:jobs": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/jobs.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "busboy": "^1.6.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "html-to-text": "^10.0.0",
+    "imapflow": "^1.6.5",
     "js-yaml": "^4.1.1",
     "node-pty": "^1.1.0",
+    "nodemailer": "^9.0.3",
     "pino": "^10.3.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/busboy": "^1.5.4",
     "@types/express": "^5.0.6",
+    "@types/html-to-text": "^9.0.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.5.0",
+    "@types/nodemailer": "^8.0.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   },
