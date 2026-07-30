@@ -19,6 +19,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { logger } from './utils/logger.ts';
 import {
   setupMcpEndpoints,
+  setupHealthEndpoint,
   setupGracefulShutdown,
   extractUserContext,
 } from './utils/http-server.ts';
@@ -39,13 +40,19 @@ import { UploadManager } from './upload/upload-manager.ts';
 import { setupUploadRoutes } from './upload/upload-routes.ts';
 import { DownloadManager } from './download/download-manager.ts';
 import { setupDownloadRoutes } from './download/download-routes.ts';
+import { createMailServer } from './mail/mcp-server.ts';
 
 const PORT = parseInt(process.env.PORT || '3015', 10);
 const SERVER_NAME = 'mcp-linux-server';
 const SERVER_VERSION = '1.0.0';
 
+/** Where the mail server answers. Same container, own tool list, own credentials. */
+const MAIL_PATH = '/mcp/mail';
+
 // Session management
 const transports = new Map<string, StreamableHTTPServerTransport>();
+/** Mail sessions are tracked apart from the Linux ones; the paths are separate servers. */
+const mailTransports = new Map<string, StreamableHTTPServerTransport>();
 /** Last activity timestamp per session (for idle timeout and leak prevention) */
 const sessionLastActivity = new Map<string, number>();
 
@@ -174,6 +181,37 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
 }
 
 /**
+ * Session for the mail endpoint. Same transport settings as the Linux one; the
+ * only difference is which tools the server carries.
+ */
+function createMailSession(): {
+  server: McpServer;
+  transport: StreamableHTTPServerTransport;
+} {
+  const server = createMailServer(userManager);
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => randomUUID(),
+    enableJsonResponse: false,
+    onsessioninitialized: (sessionId: string) => {
+      logger.info({ sessionId, totalSessions: mailTransports.size + 1 }, 'Mail session initialized');
+      mailTransports.set(sessionId, transport);
+      sessionLastActivity.set(sessionId, Date.now());
+    },
+  });
+
+  server.server.onclose = async () => {
+    const sid = transport.sessionId;
+    if (sid && mailTransports.has(sid)) {
+      logger.info({ sessionId: sid, totalSessions: mailTransports.size - 1 }, 'Mail session closed');
+      mailTransports.delete(sid);
+      sessionLastActivity.delete(sid);
+    }
+  };
+
+  return { server, transport };
+}
+
+/**
  * Creates and configures the Express application
  */
 async function createApp(): Promise<express.Application> {
@@ -187,6 +225,17 @@ async function createApp(): Promise<express.Application> {
 
   // User-context extraction middleware: maps session ID to user email
   app.use('/mcp', (req, _res, next) => {
+    /**
+     * express strips the mount path, so '/' is the Linux endpoint itself and
+     * '/mail' is the other server on this container. Only the Linux endpoint
+     * carries a GitHub token, and applying this to /mcp/mail would read a
+     * missing header as "the user revoked their token".
+     */
+    if (req.path !== '/') {
+      next();
+      return;
+    }
+
     const userContext = extractUserContext(req.headers);
     if (!userContext) {
       next();
@@ -212,12 +261,29 @@ async function createApp(): Promise<express.Application> {
       .finally(() => next());
   });
 
+  setupHealthEndpoint(app, {
+    serverName: SERVER_NAME,
+    version: SERVER_VERSION,
+    sessionCounts: () => ({ linux: transports.size, mail: mailTransports.size }),
+  });
+
   setupMcpEndpoints(app, {
     serverName: SERVER_NAME,
     version: SERVER_VERSION,
     port: PORT,
     transports,
     createServer: createSession,
+    logger,
+    onSessionActivity: (sessionId: string) => sessionLastActivity.set(sessionId, Date.now()),
+  });
+
+  setupMcpEndpoints(app, {
+    serverName: SERVER_NAME,
+    version: SERVER_VERSION,
+    port: PORT,
+    path: MAIL_PATH,
+    transports: mailTransports,
+    createServer: createMailSession,
     logger,
     onSessionActivity: (sessionId: string) => sessionLastActivity.set(sessionId, Date.now()),
   });
@@ -246,7 +312,9 @@ async function main(): Promise<void> {
       const now = Date.now();
       for (const [sessionId, lastActivity] of sessionLastActivity.entries()) {
         if (now - lastActivity < sessionIdleTimeoutMs) continue;
-        const t = transports.get(sessionId);
+        /* One activity map covers both endpoints, so find which one owns the session. */
+        const owner = transports.has(sessionId) ? transports : mailTransports;
+        const t = owner.get(sessionId);
         if (!t) {
           sessionLastActivity.delete(sessionId);
           continue;
@@ -256,10 +324,13 @@ async function main(): Promise<void> {
         } catch (err) {
           logger.error({ error: err, sessionId }, 'Error closing idle session');
         }
-        transports.delete(sessionId);
+        owner.delete(sessionId);
         sessionEmailMap.delete(sessionId);
         sessionLastActivity.delete(sessionId);
-        logger.info({ sessionId, totalSessions: transports.size }, 'Session evicted (idle timeout)');
+        logger.info(
+          { sessionId, totalSessions: transports.size + mailTransports.size },
+          'Session evicted (idle timeout)',
+        );
       }
     }, SESSION_CLEANUP_INTERVAL_MS);
     sessionCleanupTimer.unref();
@@ -295,7 +366,7 @@ async function main(): Promise<void> {
       logger.info({ port: PORT, server: SERVER_NAME, version: SERVER_VERSION }, 'MCP Linux Server started');
     });
 
-    setupGracefulShutdown(server, transports, logger);
+    setupGracefulShutdown(server, transports, logger, mailTransports);
 
     // Also clean up workers, upload manager, and download manager on shutdown
     process.on('SIGTERM', async () => {

@@ -120,6 +120,61 @@ The **Assistant** agent (id: `shared-agent-assistant`) uses these tools. It is t
 
 For searching code in a workspace, use the `grep` and `glob` file tools above.
 
+## Mail (IMAP/SMTP) at /mcp/mail
+
+The same container also serves a **separate MCP server** for the user's own mailbox, at `/mcp/mail`. LibreChat lists it as its own server ("E-Mail") with its own tool list and its own credentials.
+
+Why one container and two endpoints:
+
+- LibreChat gates credentials **per server**. Mail needs an address and a password before any of its tools mean anything; requiring them on the Linux server would hide the terminal tools from everyone who has not set up mail.
+- Attachments cross over. `save_attachment` writes into `~/workspaces/<workspace>/mail/` as the user, and `send_message` attaches files from the same place - so "fetch the invoice from my mail and convert it" is one conversation. That only works because both servers share the per-user Linux accounts.
+
+### Credentials
+
+Each user enters them once in the LibreChat server settings; LibreChat stores them encrypted and sends them as headers on every request. **Nothing is written to disk and nothing is cached between requests**, so a changed or revoked password takes effect on the next call. The agent is instructed never to ask for a password in the chat.
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `MAIL_ADDRESS` | yes | The address to send from and the mailbox to read |
+| `MAIL_PASSWORD` | yes | Mailbox password, or an app password where the provider offers one |
+| `MAIL_LOGIN` | no | Only when the login name is not the address |
+| `MAIL_IMAP` | no | `host[:port]`, overrides `MCP_MAIL_IMAP` |
+| `MAIL_SMTP` | no | `host[:port]`, overrides `MCP_MAIL_SMTP` |
+| `MAIL_FROM_NAME` | no | Display name recipients see |
+
+Hosts are **not** hardcoded to one provider. Set `MCP_MAIL_IMAP` and `MCP_MAIL_SMTP` and the whole company only fills in address and password; anyone with a different provider overrides them. The format accepts `host`, `host:port`, and an explicit scheme when the port is unusual: `imaps://host:993` for TLS from the first byte, `imap://host:143` for STARTTLS. Without a scheme the port decides, the way every mail client does it - 993 and 465 are TLS, everything else is upgraded.
+
+### Tools
+
+| Tool | Purpose |
+|---|---|
+| `list_mailboxes` | Folder paths with message and unread counts. Start here: names differ per provider and language. |
+| `list_messages` | Envelopes only (uid, subject, from, date, flags, attachment_count), newest first, `offset` to page back |
+| `search_messages` | Server-side search over the whole mailbox: sender, subject, body text, date range, unread |
+| `read_message` | Body text plus the attachment list. HTML-only mail is converted. Does not mark as read unless asked. |
+| `send_message` | Send or reply (`reply_to_uid` sets the threading headers, the `Re:` prefix and the answered flag), attach workspace files, filed in Sent |
+| `set_message_flags` | Read/unread, star, answered |
+| `move_message` | Move to another folder |
+| `delete_message` | To the trash folder the server names itself; `permanent: true` is irreversible |
+| `save_attachment` | Writes one attachment into the workspace and returns its path |
+
+Bodies are capped at `MCP_MAIL_MAX_BODY_CHARS` characters (default 8000) with the omitted count reported, for the same reason terminal output is capped: the model pays for every character again on each tool round, and the provider quota is what runs out first.
+
+### Testing
+
+`test/mail.ts` drives the endpoint through the official MCP SDK client against a real IMAP/SMTP server, credentials in headers included:
+
+```bash
+podman run -d --rm --name greenmail-test \
+  -p 127.0.0.1:3025:3025 -p 127.0.0.1:3143:3143 \
+  -e GREENMAIL_OPTS="-Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.users=mailtest:secret@example.org" \
+  docker.io/greenmail/standalone:2.1.9
+
+cd packages/mcp-linux && npm run test:mail
+```
+
+Each run tags its own messages, so it can run repeatedly against the same mailbox. `MCP_MAIL_TLS_INSECURE=true` relaxes certificate checks and the STARTTLS requirement for that test server - never set it against a real mailbox.
+
 ## MCP transport and sessions
 
 The server uses **Streamable HTTP** (POST for JSON-RPC, GET for SSE). Each client gets a **session** (created on `initialize`); sessions are **in-memory only** and are lost on server restart or process exit.
@@ -140,7 +195,11 @@ If you run **both** stacks on one host they also share the external network `loa
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MCP_LINUX_PORT` | `3015` | Server port |
+| `MCP_LINUX_PORT` | `3015` | Server port; serves both `/mcp` and `/mcp/mail` |
+| `MCP_MAIL_IMAP` | - | Default IMAP `host[:port]` for the mail server, overridable per user |
+| `MCP_MAIL_SMTP` | - | Default SMTP `host[:port]` for the mail server, overridable per user |
+| `MCP_MAIL_MAX_BODY_CHARS` | `8000` | Cap on the message body handed to the model |
+| `MCP_MAIL_TLS_INSECURE` | - | `true` relaxes TLS for a test server. Never in production. |
 | `MCP_LINUX_LOG_LEVEL` | `info` | Log level |
 | `MCP_LINUX_WORKER_IDLE_TIMEOUT` | `1800000` | Worker idle timeout (ms) |
 | `MCP_LINUX_WORKER_REQUEST_TIMEOUT_MS` | `120000` | Max time (ms) for a single worker request (e.g. `create_workspace` git clone). Increase if clones time out. |

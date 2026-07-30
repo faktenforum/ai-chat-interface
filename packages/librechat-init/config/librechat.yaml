@@ -937,6 +937,70 @@ mcpServers:
           "GitHub eigener Zugang".
         optional: true
 
+  mail:
+    type: streamable-http
+    # Same container as the Linux workspace, own endpoint: the tools share the per-user
+    # accounts and workspaces (attachments land in a workspace) while LibreChat treats
+    # this as a separate server with its own tool list and its own credentials.
+    url: http://$${STACK_NAME:-prod}-mcp-linux:3015/mcp/mail
+    title: E-Mail
+    description: Eigenes Postfach lesen, durchsuchen und beantworten (IMAP/SMTP)
+    iconPath: /images/mcp-mail-icon.svg
+    initTimeout: 120000
+    timeout: 120000
+    chatMenu: true
+    startup: true
+    serverInstructions: true
+    requiresOAuth: false
+    headers:
+      X-User-ID: '{{LIBRECHAT_USER_ID}}'
+      X-User-Username: '{{LIBRECHAT_USER_USERNAME}}'
+      X-User-Email: '{{LIBRECHAT_USER_EMAIL}}'
+      X-Mail-Address: '{{MAIL_ADDRESS}}'
+      X-Mail-Password: '{{MAIL_PASSWORD}}'
+      # Unset means the header is not sent and the server falls back to MCP_MAIL_* .
+      X-Mail-Login: '{{MAIL_LOGIN}}'
+      X-Mail-Imap: '{{MAIL_IMAP}}'
+      X-Mail-Smtp: '{{MAIL_SMTP}}'
+      X-Mail-From-Name: '{{MAIL_FROM_NAME}}'
+    customUserVars:
+      # Address and password are required, so the tools stay hidden until the account is
+      # set up - unlike the Linux server, none of them mean anything without a mailbox.
+      MAIL_ADDRESS:
+        title: E-Mail-Adresse
+        description: >-
+          Deine eigene Adresse, z.B. vorname.nachname@correctiv.org. Von dieser Adresse
+          wird gesendet, und dieses Postfach wird gelesen.
+      MAIL_PASSWORD:
+        title: Passwort
+        description: >-
+          Das Passwort zum Postfach - wo der Anbieter App-Passwörter anbietet, bitte eins
+          davon benutzen. Wird verschlüsselt gespeichert und nur an den Mailserver
+          weitergegeben. Gib es niemals im Chat ein.
+        sensitive: true
+      MAIL_LOGIN:
+        title: Benutzername (optional)
+        description: >-
+          Nur nötig, wenn der Anmeldename nicht die E-Mail-Adresse ist.
+        optional: true
+      MAIL_IMAP:
+        title: IMAP-Server (optional)
+        description: >-
+          Nur nötig für ein Postfach außerhalb der Standardeinstellung, z.B.
+          mail.example.org:993. Port 993 bedeutet TLS, 143 STARTTLS.
+        optional: true
+      MAIL_SMTP:
+        title: SMTP-Server (optional)
+        description: >-
+          Nur nötig für ein Postfach außerhalb der Standardeinstellung, z.B.
+          mail.example.org:465. Port 465 bedeutet TLS, 587 STARTTLS.
+        optional: true
+      MAIL_FROM_NAME:
+        title: Absendername (optional)
+        description: >-
+          Der Name, den Empfänger sehen, z.B. "Vorname Nachname | CORRECTIV".
+        optional: true
+
   spend:
     type: streamable-http
     url: http://$${STACK_NAME:-prod}-spend-monitor:3016/mcp
