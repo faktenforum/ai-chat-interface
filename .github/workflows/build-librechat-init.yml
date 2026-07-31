@@ -19,6 +19,49 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # librechat.yaml ships inside this image, and LibreChat exits instead of
+      # starting when the file violates its schema. Validate before the image
+      # exists, not after it is deployed.
+      - name: Resolve the pinned LibreChat fork commit
+        id: fork
+        run: echo "sha=$(git rev-parse HEAD:dev/librechat)" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the LibreChat fork
+        # Only this one submodule, at the pinned commit. `submodules: true` would
+        # clone all fifteen of them for a config lint.
+        uses: actions/checkout@v4
+        with:
+          repository: faktenforum/LibreChat
+          ref: ${{ steps.fork.outputs.sha }}
+          path: dev/librechat
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          # This repo does not commit its own lockfile (see .gitignore), so the
+          # cache key hangs off the fork's, which is what the slow install needs.
+          cache-dependency-path: dev/librechat/package-lock.json
+
+      - name: Install the validator's dependencies
+        # Root only. The workspaces under packages/ are not needed to validate a
+        # config file, and installing them would put node_modules into the build
+        # context below.
+        run: npm install --workspaces=false --include-workspace-root --ignore-scripts --no-audit --no-fund
+
+      - name: Build the fork's config schema
+        # The validator requires data-provider's compiled configSchema. Building
+        # that one workspace avoids installing the whole LibreChat monorepo.
+        run: |
+          cd dev/librechat
+          npm ci --workspace packages/data-provider --ignore-scripts
+          npm run build --workspace packages/data-provider
+
+      - name: Validate librechat.yaml
+        run: npm run validate:config
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 

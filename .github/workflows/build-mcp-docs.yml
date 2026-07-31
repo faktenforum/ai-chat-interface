@@ -7,6 +7,8 @@ on:
       - dev/docs-mcp-server
       - dev/docs-mcp-server/**
       - .github/workflows/build-mcp-docs.yml
+      # A url change here repoints the submodule this image is built from
+      - .gitmodules
   workflow_dispatch:
 
 jobs:

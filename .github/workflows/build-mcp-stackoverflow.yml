@@ -7,6 +7,8 @@ on:
       - dev/stackoverflow-mcp
       - dev/stackoverflow-mcp/**
       - .github/workflows/build-mcp-stackoverflow.yml
+      # A url change here repoints the submodule this image is built from
+      - .gitmodules
   workflow_dispatch:
 
 jobs:

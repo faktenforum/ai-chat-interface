@@ -11,6 +11,8 @@ on:
       - dev/agents/**
       - .github/workflows/build-librechat.yml
       - .github/dockerfiles/librechat-with-agents.Dockerfile
+      # A url change here repoints the submodules this image is built from
+      - .gitmodules
   workflow_dispatch:
 
 jobs:

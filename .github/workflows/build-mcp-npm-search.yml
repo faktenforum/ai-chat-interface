@@ -7,6 +7,8 @@ on:
       - dev/npm-search-mcp
       - dev/npm-search-mcp/**
       - .github/workflows/build-mcp-npm-search.yml
+      # A url change here repoints the submodule this image is built from
+      - .gitmodules
   workflow_dispatch:
 
 jobs:
