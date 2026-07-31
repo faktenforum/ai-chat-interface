@@ -27,14 +27,18 @@ Optional (if shown in PAT UI): **Releases** Read-only (list_releases, get_latest
 
 | Credential | Env var | Used by |
 |------------|---------|---------|
-| Private SSH key (base64) | `MCP_LINUX_GIT_SSH_KEY` | mcp-linux (written to `~/.ssh/` per user) |
+| Private SSH key (base64) | `MCP_LINUX_GIT_SSH_KEY` | mcp-linux (passed to the container as `GIT_SSH_KEY`, written to `~/.ssh/id_ed25519` per user) |
 | Git default name | `MCP_LINUX_GIT_USER_NAME` | mcp-linux (`git config user.name` for new/init repos) |
 | Git default email | `MCP_LINUX_GIT_USER_EMAIL` | mcp-linux (`git config user.email` for new/init repos) |
-| PAT | `MCP_GITHUB_PAT` | LibreChat API (GitHub MCP headers) |
+| PAT | `MCP_GITHUB_PAT` | LibreChat API (GitHub MCP headers) **and** mcp-linux (`gh` in every workspace, `~/.config/gh/hosts.yml`) |
 
 Set in `.env.local` / `.env.prod` / `.env.dev`. Never commit secrets; see [environment-variables](../.cursor/rules/environment-variables.mdc). Rotate PAT/key if compromised; restart mcp-linux or API as needed.
 
-**MCP_LINUX_GIT_SSH_KEY:** Must be the **full** base64 string (e.g. `base64 -w0` = one line). If the value in .env is truncated at the first newline, the written key will be invalid (`error in libcrypto`). Use a single line or quote the value; after changing the key, restart mcp-linux and run `reset_account` (Linux MCP) so the key is rewritten for existing users.
+**MCP_LINUX_GIT_SSH_KEY:** Must be the **full** base64 string (e.g. `base64 -w0` = one line). If the value in .env is truncated at the first newline, the written key will be invalid (`error in libcrypto`). Use a single line or quote the value. A restart is enough to roll a new key out: mcp-linux rewrites `~/.ssh/` for every existing user on start. `reset_account` is not needed - it wipes the whole home, workspaces included.
+
+**MCP_GITHUB_PAT:** The shared token is written per user on their first request after a restart, not at startup, so that a user with their own `GITHUB_PAT` keeps it. Rotating it therefore takes effect for each user on their next message, without a `reset_account`.
+
+**Host keys:** git in the workspace verifies github.com against the keys shipped in `packages/mcp-linux/src/utils/github-known-hosts.ts` (`StrictHostKeyChecking yes`, own `~/.ssh/known_hosts_github`). When GitHub rotates a host key, update that file - clones fail with `Host key verification failed` until it matches.
 
 ## References
 

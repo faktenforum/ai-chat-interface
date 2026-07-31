@@ -51,6 +51,11 @@ export function registerAccountTools(
           disk_usage: u.diskUsage,
           created_at: u.createdAt,
           runtimes: u.runtimes,
+          github: {
+            token: overview.github.tokenSource,
+            shared_ssh_key: overview.github.sharedSshKey,
+            note: overview.github.message,
+          },
           workspaces: overview.workspaces,
           active_upload_sessions: overview.upload_sessions
             .filter((s) => s.status === 'active')

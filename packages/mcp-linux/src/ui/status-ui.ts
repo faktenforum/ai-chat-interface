@@ -27,6 +27,12 @@ function statusBadge(status: string): string {
   return `<span class="badge">${esc(status)}</span>`;
 }
 
+const GITHUB_TOKEN_LABEL: Record<StatusOverview['github']['tokenSource'], string> = {
+  user: 'own token',
+  shared: 'shared bot account',
+  none: 'no token',
+};
+
 function accountCard(o: StatusOverview): string {
   const u = o.user;
   const facts = [
@@ -34,7 +40,14 @@ function accountCard(o: StatusOverview): string {
     u.diskUsage ? `<span class="badge">disk: ${esc(u.diskUsage)}</span>` : '',
     u.home ? `<span class="badge">home: ${esc(u.home)}</span>` : '',
     u.createdAt ? `<span class="badge">since: ${esc(fmtDate(u.createdAt))}</span>` : '',
+    `<span class="badge">github: ${esc(GITHUB_TOKEN_LABEL[o.github.tokenSource])}</span>`,
   ].join('');
+
+  /* The one state a user has to act on themselves, so it gets words instead of a badge. */
+  const githubHint =
+    o.github.tokenSource === 'none'
+      ? '<p class="muted" style="margin-top:.6rem">No GitHub token configured. Add it as <code>GITHUB_PAT</code> in the Linux Workspace server settings in LibreChat.</p>'
+      : '';
 
   const runtimes = u.runtimes && Object.keys(u.runtimes).length
     ? `<p class="muted" style="margin-top:.6rem">runtimes</p><div class="row">${Object.entries(u.runtimes)
@@ -45,6 +58,7 @@ function accountCard(o: StatusOverview): string {
   return `<div class="card">
     <p style="font-weight:600">${esc(u.email)}</p>
     <div class="row">${facts}</div>
+    ${githubHint}
     ${runtimes}
   </div>`;
 }

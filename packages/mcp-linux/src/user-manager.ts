@@ -17,6 +17,7 @@ import { logger } from './utils/logger.ts';
 import { UserCreationError } from './utils/errors.ts';
 import { deriveUsername, addUsernameSuffix } from './utils/security.ts';
 import { getDefaultGitIdentity } from './utils/git-config.ts';
+import { GITHUB_KNOWN_HOSTS } from './utils/github-known-hosts.ts';
 
 const execFile = promisify(execFileCb);
 
@@ -43,6 +44,21 @@ interface GitHubIdentity {
   login: string;
   id: number;
 }
+
+/** Whose GitHub token the user's `gh` and HTTPS git remotes authenticate with. */
+export type GitHubTokenSource = 'user' | 'shared' | 'none';
+
+export interface GitHubCredentialStatus {
+  tokenSource: GitHubTokenSource;
+  /** The shared bot SSH key, which is what makes `git@github.com:` remotes work. */
+  sharedSshKey: boolean;
+  /** Plain state for the model, plus the one action that fixes it when something is missing. */
+  message: string;
+}
+
+/** The LibreChat setting a user has to fill in - named here so every message says the same thing. */
+const GITHUB_PAT_SETTING = 'GITHUB_PAT in the Linux Workspace server settings in LibreChat';
+const NEVER_ASK_IN_CHAT = 'Never ask the user to paste a token into the chat.';
 
 export class UserManager {
   private db: UserMappingDB = { users: {}, nextUid: BASE_UID };
@@ -226,6 +242,10 @@ export class UserManager {
     const sshDir = `/home/${username}/.ssh`;
     const keyPath = join(sshDir, 'id_ed25519');
     const configPath = join(sshDir, 'config');
+    /* Own file, not ~/.ssh/known_hosts: this one is rewritten on every start (so a GitHub host key
+     * rotation reaches existing accounts) and the default file stays the user's, with whatever
+     * other hosts they added. It applies to github.com only, via the config block below. */
+    const knownHostsPath = join(sshDir, 'known_hosts_github');
 
     try {
       await fs.mkdir(sshDir, { recursive: true });
@@ -235,13 +255,17 @@ export class UserManager {
       const keyContent = Buffer.from(base64Normalized, 'base64').toString('utf-8');
       await fs.writeFile(keyPath, keyContent, { mode: 0o600 });
 
-      // Write SSH config
+      await fs.writeFile(knownHostsPath, GITHUB_KNOWN_HOSTS, { mode: 0o644 });
+
+      /* The last two lines are the point: without host key verification, anything that answers as
+       * github.com gets the bot key offered to it. The keys ship with the image, see
+       * utils/github-known-hosts.ts. */
       const sshConfig = `Host github.com
   HostName github.com
   User git
   IdentityFile ${keyPath}
-  StrictHostKeyChecking no
-  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking yes
+  UserKnownHostsFile ${knownHostsPath}
 `;
       await fs.writeFile(configPath, sshConfig, { mode: 0o644 });
 
@@ -250,6 +274,7 @@ export class UserManager {
       await execFile('chown', ['-R', `${username}:${username}`, sshDir]);
       await fs.chmod(keyPath, 0o600);
       await fs.chmod(configPath, 0o644);
+      await fs.chmod(knownHostsPath, 0o644);
 
       logger.info({ username }, 'SSH key configured for git access');
     } catch (error) {
@@ -277,7 +302,8 @@ export class UserManager {
       return;
     }
 
-    const ghConfigDir = `/home/${username}/.config/gh`;
+    const xdgConfigDir = `/home/${username}/.config`;
+    const ghConfigDir = join(xdgConfigDir, 'gh');
     const ghHostsFile = join(ghConfigDir, 'hosts.yml');
 
     try {
@@ -308,7 +334,11 @@ export class UserManager {
 ${identity ? `    user: ${identity.login}\n` : ''}`;
       await fs.writeFile(ghHostsFile, ghHostsConfig, { mode: 0o600 });
 
-      // Set ownership and permissions
+      /* mkdir -p created ~/.config as root on the way to gh/, and chowning only the leaf left the
+       * user unable to add any other XDG config dir - which every tool they install wants. Mode is
+       * left as it is: whoever created the directory picked it. */
+      await execFile('chown', [`${username}:${username}`, xdgConfigDir]);
+
       await fs.chmod(ghConfigDir, 0o700);
       await execFile('chown', ['-R', `${username}:${username}`, ghConfigDir]);
       await fs.chmod(ghHostsFile, 0o600);
@@ -330,13 +360,13 @@ ${identity ? `    user: ${identity.login}\n` : ''}`;
   /**
    * Records the token a user configured for themselves in LibreChat and applies it if their
    * account already exists. Passing null puts them back on the shared bot account.
+   *
+   * Called on every request, including the ones that change nothing. It does not shortcut on an
+   * unchanged token, because right after a container start "unchanged" still means the home on the
+   * persistent volume was never reconciled with this process - setupGitHubCli's own cache is what
+   * keeps this to one write per user per start.
    */
   async setUserGitHubPat(email: string, pat: string | null): Promise<void> {
-    const current = this.ownPatByEmail.get(email) ?? null;
-    if (current === pat) {
-      return;
-    }
-
     if (pat) {
       this.ownPatByEmail.set(email, pat);
     } else {
@@ -349,6 +379,44 @@ ${identity ? `    user: ${identity.login}\n` : ''}`;
       return;
     }
     await this.setupGitHubCli(email, username);
+  }
+
+  /**
+   * What this user's git and `gh` authenticate as right now.
+   *
+   * Exists so a failing tool can say why instead of handing the model a bare
+   * `Permission denied (publickey)`, which it then explains by guessing.
+   */
+  describeGitHubCredentials(email: string): GitHubCredentialStatus {
+    const hasOwn = this.ownPatByEmail.has(email);
+    const hasShared = (process.env.MCP_GITHUB_PAT ?? '').trim() !== '';
+    const sharedSshKey =
+      (process.env.GIT_SSH_KEY ?? process.env.MCP_LINUX_GIT_SSH_KEY ?? '').trim() !== '';
+    const tokenSource: GitHubTokenSource = hasOwn ? 'user' : hasShared ? 'shared' : 'none';
+
+    if (tokenSource === 'user') {
+      return {
+        tokenSource,
+        sharedSshKey,
+        message: `Using the GitHub token this user configured as ${GITHUB_PAT_SETTING}. Commits are authored under their GitHub account and remotes go over HTTPS.`,
+      };
+    }
+
+    if (tokenSource === 'shared') {
+      return {
+        tokenSource,
+        sharedSshKey,
+        message: `Using the shared bot GitHub account, which only reaches repositories that account has access to. To work as themselves, the user sets ${GITHUB_PAT_SETTING}. ${NEVER_ASK_IN_CHAT}`,
+      };
+    }
+
+    return {
+      tokenSource,
+      sharedSshKey,
+      message: sharedSshKey
+        ? `No GitHub token is configured, so \`gh\` and HTTPS remotes cannot authenticate; only the shared SSH key works, and only for repositories that bot account can reach. The user has to set ${GITHUB_PAT_SETTING}. ${NEVER_ASK_IN_CHAT}`
+        : `No GitHub credentials are configured at all: no personal token, no shared token, no shared SSH key. Nothing can authenticate against GitHub until the user sets ${GITHUB_PAT_SETTING}. ${NEVER_ASK_IN_CHAT}`,
+    };
   }
 
   /**
@@ -619,7 +687,7 @@ ${identity ? `    user: ${identity.login}\n` : ''}`;
 
     logger.info({ count: entries.length }, 'Restoring users from mapping');
 
-    for (const [email, mapping] of entries) {
+    for (const [, mapping] of entries) {
       try {
         if (!await this.linuxUserExists(mapping.username)) {
           this.appliedPatByUsername.delete(mapping.username);
@@ -627,9 +695,13 @@ ${identity ? `    user: ${identity.login}\n` : ''}`;
           await this.setupDefaultWorkspace(mapping.username);
         }
         await this.setupSshKey(mapping.username);
-        await this.setupGitHubCli(email, mapping.username);
+        /* No GitHub credentials here on purpose. Tokens are per user and only a request carries
+         * one, so startup could write nothing but the shared bot token - over the configuration of
+         * every user who has their own, until their next request repaired it. The first request of
+         * each user applies the right token instead (setUserGitHubPat), and a user who configured
+         * none still gets the shared one that way. */
       } catch (error) {
-        logger.error({ email, username: mapping.username, error }, 'Failed to restore user');
+        logger.error({ email: mapping.email, username: mapping.username, error }, 'Failed to restore user');
       }
     }
   }

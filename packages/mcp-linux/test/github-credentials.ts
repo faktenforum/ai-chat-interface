@@ -2,8 +2,8 @@
  * Credential-switching test for the per-user GitHub token.
  *
  * Needs root, useradd and runuser, so it runs inside the container - not on the host:
- *   podman exec -e MCP_GITHUB_PAT=shared-token <container> \
- *     node --experimental-strip-types --experimental-transform-types --no-warnings \
+ *   podman exec -e MCP_GITHUB_PAT=shared-token -e GIT_SSH_KEY=$(printf fake-key | base64 -w0) \
+ *     <container> node --experimental-strip-types --experimental-transform-types --no-warnings \
  *     test/github-credentials.ts
  *
  * The GitHub API is not reachable with the fake tokens used here, so identity resolution is
@@ -59,6 +59,10 @@ async function main(): Promise<void> {
   console.log('=== per-user GitHub credentials ===\n');
   assert(process.getuid?.() === 0, 'must run as root inside the container');
   assert(!!process.env.MCP_GITHUB_PAT, 'MCP_GITHUB_PAT must be set to test the shared default');
+  assert(
+    !!(process.env.GIT_SSH_KEY || process.env.MCP_LINUX_GIT_SSH_KEY),
+    'GIT_SSH_KEY must be set (any base64 value) to test the ssh setup',
+  );
 
   const userManager = new UserManager();
   await userManager.initialize();
@@ -74,6 +78,56 @@ async function main(): Promise<void> {
     assert((await readFileOrNull(`${home}/.git-credentials`)) === null, 'no https credentials yet');
     assert((await gitConfigValue(username, 'faktenforum.ownCredentials')) === null, 'no marker yet');
     console.log('✓ starts on the shared bot account over ssh');
+  }
+
+  {
+    /* ~/.config is created on the way to gh/, so it has to end up the user's - otherwise no other
+     * tool they install can put its config there. */
+    const { uid } = await fs.stat(`${home}/.config`);
+    const { stdout } = await execFile('id', ['-u', username]);
+    assert(
+      uid === Number(stdout.trim()),
+      `~/.config must belong to ${username}, owner uid is ${uid}`,
+    );
+    await execFile('runuser', ['-u', username, '--', 'mkdir', '-p', `${home}/.config/probe-writable`]);
+    console.log('✓ the user owns ~/.config and can add their own config dirs');
+  }
+
+  {
+    const sshConfig = await readFileOrNull(`${home}/.ssh/config`);
+    const knownHosts = await readFileOrNull(`${home}/.ssh/known_hosts_github`);
+    assert(sshConfig?.includes('StrictHostKeyChecking yes') === true, 'host key checking is strict');
+    assert(sshConfig?.includes('UserKnownHostsFile /dev/null') !== true, 'known hosts is a real file');
+    assert(
+      sshConfig?.includes(`UserKnownHostsFile ${home}/.ssh/known_hosts_github`) === true,
+      'the config points at the shipped known_hosts',
+    );
+    assert(knownHosts?.includes('github.com ssh-ed25519 ') === true, 'ed25519 host key present');
+    assert(knownHosts?.includes('github.com ssh-rsa ') === true, 'rsa host key present');
+    assert(knownHosts?.includes('github.com ecdsa-sha2-nistp256 ') === true, 'ecdsa host key present');
+    console.log('✓ github.com is verified against the shipped host keys');
+  }
+
+  {
+    const missing = userManager.describeGitHubCredentials('nobody.configured@example.com');
+    assert(missing.tokenSource === 'shared', 'falls back to the shared token when set');
+    const shared = process.env.MCP_GITHUB_PAT;
+    delete process.env.MCP_GITHUB_PAT;
+    try {
+      const none = userManager.describeGitHubCredentials('nobody.configured@example.com');
+      assert(none.tokenSource === 'none', 'reports no token when there is none');
+      assert(
+        none.message.includes('GITHUB_PAT in the Linux Workspace server settings in LibreChat'),
+        `the message names the setting, got: ${none.message}`,
+      );
+      assert(
+        none.message.includes('Never ask the user to paste a token into the chat.'),
+        'the message keeps tokens out of the chat',
+      );
+    } finally {
+      process.env.MCP_GITHUB_PAT = shared;
+    }
+    console.log('✓ a missing token is reported as such, naming the setting that fixes it');
   }
 
   await userManager.setUserGitHubPat(TEST_EMAIL, 'ghp_ownuser_token');
@@ -168,6 +222,52 @@ async function main(): Promise<void> {
       process.env.MCP_GITHUB_PAT = shared;
     }
     console.log('✓ revoking a token clears it even with no shared token to fall back to');
+  }
+
+  {
+    /* A restart must leave a user who configured their own token alone: startup has no token to
+     * apply, so anything it wrote would be the shared bot one, over their configuration. */
+    const email = 'survives.restart@example.com';
+    await userManager.setUserGitHubPat(email, 'ghp_own_before_restart');
+    const { username: restartUsername } = await userManager.ensureUser(email);
+    assert(
+      (await gitConfigValue(restartUsername, 'faktenforum.ownCredentials')) === 'true',
+      'own token applied before the restart',
+    );
+
+    /* The restart itself: new process, empty in-memory token map, same home on the volume. */
+    const afterRestart = new UserManager();
+    await afterRestart.initialize();
+    await afterRestart.restoreUsers();
+
+    const hosts = await readFileOrNull(`/home/${restartUsername}/.config/gh/hosts.yml`);
+    assert(
+      hosts?.includes('oauth_token: ghp_own_before_restart') === true,
+      'the own token is still configured after the restart',
+    );
+    assert(
+      (await readFileOrNull(`/home/${restartUsername}/.git-credentials`)) !== null,
+      'the https credential survives the restart',
+    );
+    assert(
+      (await gitConfigValue(restartUsername, 'faktenforum.ownCredentials')) === 'true',
+      'the marker survives the restart',
+    );
+    console.log('✓ a restart does not overwrite a user who has their own token');
+
+    /* The other half: a user who has no token must still end up on the shared account, and that
+     * now happens on their first request - where the token is unchanged (still none). */
+    await afterRestart.setUserGitHubPat(email, null);
+    const reverted = await readFileOrNull(`/home/${restartUsername}/.config/gh/hosts.yml`);
+    assert(
+      reverted?.includes(`oauth_token: ${process.env.MCP_GITHUB_PAT}`) === true,
+      'the shared token is applied on the first request after a restart',
+    );
+    assert(
+      (await readFileOrNull(`/home/${restartUsername}/.git-credentials`)) === null,
+      'the own credential is cleared once the token is gone',
+    );
+    console.log('✓ the first request after a restart reconciles even an unchanged token');
   }
 
   /* The test accounts stay behind - there is no delete path, so run this in a throwaway container. */
