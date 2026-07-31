@@ -8,7 +8,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import type { UserManager } from './user-manager.ts';
+import type { GitHubCredentialStatus, UserManager } from './user-manager.ts';
 import type { WorkerManager } from './worker-manager.ts';
 import type { UploadManager, SessionInfo } from './upload/upload-manager.ts';
 import type { DownloadManager, DownloadSessionInfo } from './download/download-manager.ts';
@@ -33,6 +33,7 @@ export interface StatusUser {
 
 export interface StatusOverview {
   user: StatusUser;
+  github: GitHubCredentialStatus;
   workspaces: string[];
   upload_sessions: SessionInfo[];
   download_sessions: DownloadSessionInfo[];
@@ -105,6 +106,7 @@ export async function buildStatusOverview(deps: StatusDeps, email: string): Prom
 
   return {
     user,
+    github: deps.userManager.describeGitHubCredentials(email),
     workspaces,
     upload_sessions: uploadSessions,
     download_sessions: downloadSessions,

@@ -265,9 +265,10 @@ async function createApp(): Promise<express.Application> {
       sessionEmailMap.set(sessionId, userContext.email);
     }
 
-    /* The token travels with every request, so this is where a change becomes visible. Awaited
-     * because the tools in this same request must already run under the new credentials; it is a
-     * no-op unless the token actually changed. */
+    /* The token travels with every request, so this is where it becomes visible - and the only
+     * place a per-user token is applied at all, since startup has no token to apply. Awaited
+     * because the tools in this same request must already run under the new credentials; after the
+     * first request of a user it writes nothing until their token changes. */
     userManager
       .setUserGitHubPat(userContext.email, userContext.githubPat)
       .catch((error: unknown) =>

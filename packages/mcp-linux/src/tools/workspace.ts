@@ -97,7 +97,7 @@ export function registerWorkspaceTools(
         });
 
         if (response.error) {
-          return errorResult(response.error);
+          return errorResult(explainGitAuthFailure(userManager, email, response.error));
         }
 
         return { content: [{ type: 'text', text: JSON.stringify(response.result, null, 2) }] };
@@ -196,6 +196,35 @@ export function registerWorkspaceTools(
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * How git and gh report a credential they do not have. None of these name the cause, which is why
+ * the model otherwise invents one ("the repository may not exist").
+ */
+const GIT_AUTH_FAILURE_PATTERNS = [
+  /permission denied \(publickey/i,
+  /could not read (username|password)/i,
+  /authentication failed/i,
+  /invalid username or (token|password)/i,
+  /terminal prompts disabled/i,
+  /repository not found/i,
+  /correct access rights/i,
+];
+
+/**
+ * Appends the current GitHub credential state to a failed clone, so the model reports the real
+ * problem instead of guessing. Other failures (bad branch, bad name, timeout) pass through.
+ */
+function explainGitAuthFailure(
+  userManager: UserManager,
+  email: string,
+  error: string,
+): string {
+  if (!GIT_AUTH_FAILURE_PATTERNS.some((pattern) => pattern.test(error))) {
+    return error;
+  }
+  return `${error}\n\nGitHub credentials: ${userManager.describeGitHubCredentials(email).message}`;
+}
 
 /**
  * Resolves user email from MCP extra context.
