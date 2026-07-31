@@ -235,6 +235,8 @@ When a request references a missing session (e.g. after restart), the server ret
 
 Sessions that have no activity for **MCP_LINUX_SESSION_IDLE_TIMEOUT_MIN** minutes are evicted periodically (every 5 min) to avoid unbounded growth when clients disconnect without sending DELETE.
 
+**A client holding its SSE stream open is never evicted**, however long ago it last sent a request. LibreChat opens that stream once and then keeps it, so measuring idleness as "time since the last request" used to evict live connections: prod logged `404 with active session - session lost, triggering reconnection` for every user every 35 minutes (30 min timeout + the 5 min cleanup tick), followed by two failed reconnects before the client rebuilt the transport. `/health` reports `openStreams` so this is observable from outside.
+
 ### Prod and dev on the same Portainer host
 
 All services already use **STACK_NAME** in names: `container_name: ${STACK_NAME:-prod}-<service>`, networks like `${STACK_NAME:-prod}-app-net`, volumes like `${STACK_NAME:-prod}-mcp-linux-homes`. So set **STACK_NAME=dev** for the dev stack so prod and dev get separate networks/volumes/containers.
@@ -264,7 +266,7 @@ If you run **both** stacks on one host they also share the external network `loa
 | `MCP_LINUX_UPLOAD_SESSION_TIMEOUT_MIN` | `15` | Upload session expiry (min) |
 | `MCP_LINUX_DOWNLOAD_BASE_URL` | *(falls back to upload URL)* | Public base URL for download links |
 | `MCP_LINUX_DOWNLOAD_SESSION_TIMEOUT_MIN` | `60` | Download link expiry (min) |
-| `MCP_LINUX_SESSION_IDLE_TIMEOUT_MIN` | `30` | MCP session idle timeout (min); sessions with no activity are evicted to prevent leak |
+| `MCP_LINUX_SESSION_IDLE_TIMEOUT_MIN` | `30` | Idle timeout (min) for sessions with **no open SSE stream**; a connected client is exempt |
 | `MCP_LINUX_STATUS_MAX_FILES` | `50` | Max file entries per status category (staged/unstaged/untracked) before capping |
 | `MCP_LINUX_STATUS_COLLAPSE_DIRS` | `uploads,venv,.venv` | Comma-separated dirs whose paths are collapsed to one summary line in status |
 | `MCP_LINUX_RESOURCE_LIST_DIRS` | `uploads,outputs` | Comma-separated dirs listed in MCP resources (allowlist); only these appear in list |
