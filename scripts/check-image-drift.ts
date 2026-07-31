@@ -73,6 +73,19 @@ function toPathspec(pattern: string): string {
   return pattern.replace(/\/\*\*$/, '');
 }
 
+/**
+ * Watched by a workflow but never baked into its image, so a change here means
+ * "the recipe changed", not "the published image is stale".
+ *
+ * Both belong in the trigger - a workflow edit or a repointed submodule URL should
+ * produce a fresh build - but comparing against them retroactively marks every
+ * older image stale the moment either file is touched. This branch touching seven
+ * workflow files is exactly that case: it would have reported seven drifting
+ * images for a change that cannot reach any image. A check that is red on day one
+ * gets ignored, which would cost more than the coarseness it buys.
+ */
+const NOT_IMAGE_CONTENT = [':!.github', ':!.gitmodules'];
+
 function readTargets(): Target[] {
   const targets: Target[] = [];
 
@@ -193,7 +206,15 @@ function git(args: string[]): { status: number; stdout: string; stderr: string }
 }
 
 function driftingFiles(revision: string, ref: string, pathspecs: string[]): string[] {
-  const diff = git(['diff', '--name-only', revision, ref, '--', ...pathspecs]);
+  const diff = git([
+    'diff',
+    '--name-only',
+    revision,
+    ref,
+    '--',
+    ...pathspecs,
+    ...NOT_IMAGE_CONTENT,
+  ]);
   if (diff.status !== 0) {
     throw new Error(`git diff failed: ${diff.stderr.trim()}`);
   }
@@ -273,6 +294,16 @@ async function main(): Promise<void> {
   if (resolved.status !== 0) {
     console.error(`Cannot resolve ${ref}: ${resolved.stderr.trim()}`);
     process.exit(1);
+  }
+
+  /* Run on a ref that predates main and every image built from a later commit looks
+   * stale, because the diff reads those commits as absent. The workflow only runs
+   * this on main; a developer running it on a branch needs to know why. */
+  const behindMain = git(['merge-base', '--is-ancestor', 'origin/main', ref]);
+  if (behindMain.status === 1) {
+    console.error(
+      `Note: ${ref} does not contain origin/main, so images built from newer commits will be reported as drifting. Rebase before trusting this.\n`,
+    );
   }
 
   const targets = readTargets();
