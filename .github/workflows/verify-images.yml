@@ -1,0 +1,43 @@
+name: Verify Published Images
+
+# Runs no docker build. It reads the org.opencontainers.image.revision label of
+# every :latest tag out of ghcr and fails if main has changes that the image was
+# never built from. Deliberately has no paths filter: the failure it catches is a
+# push whose diff matches no paths filter at all, so filtering it would blind it.
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Catches images that fell behind without a push of their own, e.g. a build
+    # that failed and nobody noticed.
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # The check diffs against the commit each image was built from, which is
+          # older than a shallow clone reaches.
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        # Root only, and no lockfile to install from - this repo does not commit
+        # one. The check needs js-yaml and nothing else.
+        run: npm install --workspaces=false --include-workspace-root --ignore-scripts --no-audit --no-fund
+
+      - name: Verify every image against this commit
+        # On a push the builds for that same commit are still running, so give them
+        # time instead of reporting the race. Scheduled runs have nothing to wait for.
+        run: npm run verify:images -- --wait ${{ github.event_name == 'push' && '20' || '0' }}
