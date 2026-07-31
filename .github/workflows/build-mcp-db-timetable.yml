@@ -7,6 +7,8 @@ on:
       - dev/db-timetable-mcp
       - dev/db-timetable-mcp/**
       - .github/workflows/build-mcp-db-timetable.yml
+      # A url change here repoints the submodule this image is built from
+      - .gitmodules
   workflow_dispatch:
 
 jobs:

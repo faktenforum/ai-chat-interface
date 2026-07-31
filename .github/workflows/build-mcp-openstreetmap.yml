@@ -7,6 +7,8 @@ on:
       - dev/open-streetmap-mcp
       - dev/open-streetmap-mcp/**
       - .github/workflows/build-mcp-openstreetmap.yml
+      # A url change here repoints the submodule this image is built from
+      - .gitmodules
   workflow_dispatch:
 
 jobs:
