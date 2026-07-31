@@ -138,6 +138,43 @@ export interface HttpServerConfig {
   logger?: Logger;
   /** Called when a session is used (GET or POST with existing session). Used for idle timeout. */
   onSessionActivity?: (sessionId: string) => void;
+  /**
+   * Called when a client opens its SSE stream, and again when that stream ends.
+   *
+   * A client holding a stream open is present, however long ago it last sent a
+   * request, so the idle timeout must not reach it. Without this the server
+   * evicted live sessions on the clock and the client answered with
+   * "session lost, triggering reconnection" every idle timeout.
+   */
+  onStreamOpen?: (sessionId: string) => void;
+  onStreamClose?: (sessionId: string) => void;
+}
+
+/**
+ * Sessions to close because nothing has used them for too long.
+ *
+ * Split out from the interval that calls it so the policy can be asserted
+ * without waiting on a clock: pass a `now` and get back the verdict.
+ *
+ * Held-open streams are excluded. The timeout exists for clients that vanish
+ * without sending DELETE, and a client whose stream is still connected has not
+ * vanished - its stream ending is what puts it back in scope.
+ */
+export function idleSessionIds(args: {
+  lastActivity: Map<string, number>;
+  openStreams: ReadonlySet<string>;
+  idleTimeoutMs: number;
+  now: number;
+}): string[] {
+  const { lastActivity, openStreams, idleTimeoutMs, now } = args;
+  return [...lastActivity.entries()]
+    .filter(([sessionId, seen]) => {
+      if (openStreams.has(sessionId)) {
+        return false;
+      }
+      return now - seen >= idleTimeoutMs;
+    })
+    .map(([sessionId]) => sessionId);
 }
 
 /**
@@ -150,6 +187,8 @@ export function setupHealthEndpoint(
     serverName: string;
     version: string;
     sessionCounts: () => Record<string, number>;
+    /** Clients currently holding an SSE stream open, i.e. really connected. */
+    openStreams?: () => number;
   },
 ): void {
   app.get('/health', (_req: Request, res: Response) => {
@@ -160,6 +199,7 @@ export function setupHealthEndpoint(
       version: config.version,
       activeSessions: Object.values(counts).reduce((sum, n) => sum + n, 0),
       sessions: counts,
+      ...(config.openStreams != null ? { openStreams: config.openStreams() } : {}),
     });
   });
 }
@@ -169,6 +209,7 @@ export function setupHealthEndpoint(
  */
 export function setupMcpEndpoints(app: express.Application, config: HttpServerConfig): void {
   const { transports, createServer, logger, onSessionActivity } = config;
+  const { onStreamOpen, onStreamClose } = config;
   const path = config.path ?? '/mcp';
 
   // SSE stream endpoint (GET /mcp)
@@ -187,6 +228,14 @@ export function setupMcpEndpoints(app: express.Application, config: HttpServerCo
     }
 
     onSessionActivity?.(sessionId);
+    /* Registered before handing over to the transport, which does not return
+     * until the stream ends. 'close' fires on client disconnect as well as on a
+     * normal end, so the session becomes evictable again either way. */
+    onStreamOpen?.(sessionId);
+    res.on('close', () => {
+      onStreamClose?.(sessionId);
+      onSessionActivity?.(sessionId);
+    });
     try {
       await transport.handleRequest(req, res, null);
     } catch (error) {

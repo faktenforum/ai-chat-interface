@@ -22,6 +22,7 @@ import {
   setupHealthEndpoint,
   setupGracefulShutdown,
   extractUserContext,
+  idleSessionIds,
 } from './utils/http-server.ts';
 import { UserManager } from './user-manager.ts';
 import { WorkerManager } from './worker-manager.ts';
@@ -58,6 +59,14 @@ const mailTransports = new Map<string, StreamableHTTPServerTransport>();
 const calendarTransports = new Map<string, StreamableHTTPServerTransport>();
 /** Last activity timestamp per session (for idle timeout and leak prevention) */
 const sessionLastActivity = new Map<string, number>();
+/**
+ * Sessions whose client currently holds its SSE stream open. They are exempt
+ * from the idle timeout: LibreChat opens the stream once and then keeps it, so
+ * measuring idleness as "time since the last request" evicted connections that
+ * were very much alive - the client answered every timeout with
+ * "session lost, triggering reconnection".
+ */
+const openStreams = new Set<string>();
 
 // Shared managers (singleton per container)
 const userManager = new UserManager();
@@ -177,6 +186,7 @@ function createSession(): { server: McpServer; transport: StreamableHTTPServerTr
       transports.delete(sid);
       sessionEmailMap.delete(sid);
       sessionLastActivity.delete(sid);
+      openStreams.delete(sid);
     }
   };
 
@@ -209,6 +219,7 @@ function createExtraSession(
       logger.info({ sessionId: sid, label, totalSessions: sessions.size - 1 }, 'Session closed');
       sessions.delete(sid);
       sessionLastActivity.delete(sid);
+      openStreams.delete(sid);
     }
   };
 
@@ -273,6 +284,7 @@ async function createApp(): Promise<express.Application> {
       mail: mailTransports.size,
       calendar: calendarTransports.size,
     }),
+    openStreams: () => openStreams.size,
   });
 
   setupMcpEndpoints(app, {
@@ -283,6 +295,8 @@ async function createApp(): Promise<express.Application> {
     createServer: createSession,
     logger,
     onSessionActivity: (sessionId: string) => sessionLastActivity.set(sessionId, Date.now()),
+    onStreamOpen: (sessionId: string) => openStreams.add(sessionId),
+    onStreamClose: (sessionId: string) => openStreams.delete(sessionId),
   });
 
   setupMcpEndpoints(app, {
@@ -295,6 +309,8 @@ async function createApp(): Promise<express.Application> {
       createExtraSession('mail', () => createMailServer(userManager), mailTransports),
     logger,
     onSessionActivity: (sessionId: string) => sessionLastActivity.set(sessionId, Date.now()),
+    onStreamOpen: (sessionId: string) => openStreams.add(sessionId),
+    onStreamClose: (sessionId: string) => openStreams.delete(sessionId),
   });
 
   setupMcpEndpoints(app, {
@@ -307,6 +323,8 @@ async function createApp(): Promise<express.Application> {
       createExtraSession('calendar', createCalendarServer, calendarTransports),
     logger,
     onSessionActivity: (sessionId: string) => sessionLastActivity.set(sessionId, Date.now()),
+    onStreamOpen: (sessionId: string) => openStreams.add(sessionId),
+    onStreamClose: (sessionId: string) => openStreams.delete(sessionId),
   });
 
   return app;
@@ -330,19 +348,20 @@ async function main(): Promise<void> {
     const sessionIdleTimeoutMs = sessionIdleTimeoutMin * 60 * 1000;
     const SESSION_CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // run every 5 min
     const sessionCleanupTimer = setInterval(() => {
-      const now = Date.now();
-      for (const [sessionId, lastActivity] of sessionLastActivity.entries()) {
-        if (now - lastActivity < sessionIdleTimeoutMs) continue;
-        /* One activity map covers both endpoints, so find which one owns the session. */
+      const stale = idleSessionIds({
+        lastActivity: sessionLastActivity,
+        openStreams,
+        idleTimeoutMs: sessionIdleTimeoutMs,
+        now: Date.now(),
+      });
+
+      for (const sessionId of stale) {
+        /* One activity map covers all endpoints, so find which one owns the session. */
         const owner = [transports, mailTransports, calendarTransports].find((map) =>
           map.has(sessionId),
         );
-        if (!owner) {
-          sessionLastActivity.delete(sessionId);
-          continue;
-        }
-        const t = owner.get(sessionId);
-        if (!t) {
+        const t = owner?.get(sessionId);
+        if (!owner || !t) {
           sessionLastActivity.delete(sessionId);
           continue;
         }
@@ -354,6 +373,7 @@ async function main(): Promise<void> {
         owner.delete(sessionId);
         sessionEmailMap.delete(sessionId);
         sessionLastActivity.delete(sessionId);
+        openStreams.delete(sessionId);
         logger.info(
           {
             sessionId,
