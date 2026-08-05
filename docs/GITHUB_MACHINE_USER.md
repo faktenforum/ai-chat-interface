@@ -32,7 +32,7 @@ Optional (if shown in PAT UI): **Releases** Read-only (list_releases, get_latest
 | Git default email | `MCP_LINUX_GIT_USER_EMAIL` | mcp-linux (`git config user.email` for new/init repos) |
 | PAT | `MCP_GITHUB_PAT` | LibreChat API (GitHub MCP headers) **and** mcp-linux (`gh` in every workspace, `~/.config/gh/hosts.yml`) |
 
-Set in `.env.local` / `.env.prod` / `.env.dev`. Never commit secrets; see [environment-variables](../.cursor/rules/environment-variables.mdc). Rotate PAT/key if compromised; restart mcp-linux or API as needed.
+Set in `.env.local` / `.env.prod` / `.env.dev`. Never commit secrets; see [env-vars](../.claude/rules/env-vars.md). Rotate PAT/key if compromised; restart mcp-linux or API as needed.
 
 **MCP_LINUX_GIT_SSH_KEY:** Must be the **full** base64 string (e.g. `base64 -w0` = one line). If the value in .env is truncated at the first newline, the written key will be invalid (`error in libcrypto`). Use a single line or quote the value. A restart is enough to roll a new key out: mcp-linux rewrites `~/.ssh/` for every existing user on start. `reset_account` is not needed - it wipes the whole home, workspaces included.
 
