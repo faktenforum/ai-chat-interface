@@ -21,9 +21,10 @@ prod and dev.
 `npm run setup` writes `.env.local`, `setup:prod` and `setup:dev` the others, and `--yes` skips every
 prompt.
 
-**Auto-generated secrets** go in the `AUTO_GENERATED` map, keyed by variable name with a generator:
-`genSecret(n)` for hex, `genBase64Secret(n)`, `genPassword(n)` for mixed-case with digits,
-`genUsername(prefix)`. Generation triggers when the value is missing, empty, contains `change-me`, or
+**Auto-generated secrets** go in the `AUTO_GENERATED` map, keyed by variable name with a generator. Three
+exist: `genSecret(n)` for a hex string (default 32 bytes), `genPassword(n)` for mixed case with digits
+(default 16), and `genUsername(prefix)`. A value that has to be base64 needs its own generator written
+first. Generation triggers when the value is missing, empty, contains `change-me`, or
 matches a key-specific placeholder in `AUTO_GENERATE_PLACEHOLDERS`. So a secret in an example file
 belongs there as `change-me` or empty, never as a real value.
 

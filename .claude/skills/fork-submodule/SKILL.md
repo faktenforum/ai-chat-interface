@@ -46,8 +46,9 @@ this repo `git add dev/<submodule>` and commit the pointer on its own.
 
 ## Building and publishing the image
 
-Only when we publish, which is the case for `mcp-docs`, `mcp-db-timetable`, `mcp-stackoverflow`,
-`mcp-npm-search`, `mcp-openstreetmap` and `mcp-youtube-transcript`.
+Only when we publish. Today that is `mcp-docs`, `mcp-db-timetable`, `mcp-stackoverflow`,
+`mcp-npm-search` and `mcp-openstreetmap` - one `build-mcp-<name>.yml` workflow each. A submodule without
+such a workflow, `dev/mcp-youtube-transcript` for instance, is checked out but not built by us.
 
 | File | `build:` | `image:` |
 |---|---|---|

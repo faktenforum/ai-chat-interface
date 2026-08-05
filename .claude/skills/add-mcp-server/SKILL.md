@@ -98,11 +98,12 @@ The description is what a user reads in the UI. Say what the tool does; avoid "M
 match exactly. `librechat-init` copies `mcp-*-icon.svg` into `/images/`, so no code change is needed.
 After an icon change, rebuild `librechat-init` and restart the stack.
 
-## Local testing from an IDE
+## Testing it locally
 
 Add `ports: ["127.0.0.1:{PORT}:{PORT}"]` in `docker-compose.local.yml` with a comment marking it
-local-only, and register the server in the local MCP client config (`.cursor/mcp.json`) as
-`"{name}": { "url": "http://localhost:{PORT}/mcp" }`. Tool or schema changes are not picked up until the
+local-only, then point your own agent at it so you can call the tools directly:
+`claude mcp add --transport http mcp-{name} http://localhost:{PORT}/mcp`. Behaviour there, including
+errors and timing, is what production sees. Tool or schema changes are not picked up until the
 MCP connection is refreshed, and a code change needs the container rebuilt first. Watch
 `docker logs -f mcp-{name}` and the logs of whatever upstream service the tool calls - failures usually
 surface there first. Add `logger.debug` at tool entry, around external calls and on error, and include a
