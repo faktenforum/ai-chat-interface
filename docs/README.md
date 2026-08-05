@@ -53,7 +53,7 @@ They are baked into the init image and written into the config volume at startup
 - **[Testing internal MCPs from Cursor](SERVICES.md#testing-internal-mcps-from-cursor-ide)** - Use local-stack MCPs from Cursor IDE for testing
 - **[LibreChat Testing](LIBRECHAT_TESTING.md)** - Running LibreChat unit and E2E tests using the dedicated test stack
 - **[Submodule Sync Guide](SUBMODULE_SYNC.md)** - Syncing fork submodules with upstream
-- **[Cursor Rules](CURSOR_RULES.md)** - Integrating services and MCP servers
+- **[Agent Rules](AGENT_RULES.md)** - How agent instructions split across AGENTS.md, path-scoped rules and skills
 - **[Cursor MongoDB MCP](CURSOR_MONGODB_MCP.md)** - Cursor MongoDB integration
 - **[Agent Firecrawl Tools](AGENT_FIRECRAWL_TOOLS.md)** - Firecrawl MCP tool guide
 - **[MCP Server Best Practices](MCP_SERVER_BEST_PRACTICES.md)** - Conventions for building, wiring, and testing MCP servers
