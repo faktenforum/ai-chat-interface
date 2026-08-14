@@ -1,1 +1,1 @@
-AGENTS.md
+See [AGENTS.md](./AGENTS.md) for all project instructions, conventions and footguns.
