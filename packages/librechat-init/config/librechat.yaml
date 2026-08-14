@@ -1,4 +1,4 @@
-version: 1.3.13
+version: 1.3.14
 cache: true
 
 interface:
@@ -121,11 +121,12 @@ endpoints:
           "openai/gpt-5.6-sol-pro",           # GPT-5.6 Sol Pro (flagship at reasoning.mode=pro)
           "openai/gpt-5.6-sol",               # GPT-5.6 Sol, the 5.6 flagship (Vision)
           "openai/gpt-5.6-terra",             # GPT-5.6 Terra (Vision, balanced tier)
-          "google/gemini-3.6-flash",          # Google Gemini 3.6 Flash (GA, Vision)
+          "google/gemini-3.7-flash",          # Google Gemini 3.7 Flash (GA, Vision)
           "google/gemini-3.1-flash-lite",     # Gemini 3.1 Flash Lite (cheap, fast)
           "google/gemini-3.1-pro-preview",    # Google Gemini 3.1 Pro (Preview from Google)
           "deepseek/deepseek-v4-pro",         # DeepSeek V4 Pro (long context)
-          "x-ai/grok-4.3",                    # xAI reasoning model (Vision)
+          "x-ai/grok-4.6",                    # xAI reasoning model (Vision, 500K Context)
+          "x-ai/grok-4.3",                    # xAI reasoning model (Vision, 1M Context, cheaper)
           "moonshotai/kimi-k2.6",             # Cheap long-context reasoning (Vision)
           "moonshotai/kimi-k3",               # Kimi K3 (1M Context, Vision) - premium tier
           "mistralai/mistral-large-2512"      # European premium option (French)
@@ -173,12 +174,11 @@ endpoints:
           "qwen3.6-35b-a3b",                  # Chat, Vision (efficient MoE) - Generally Available
           "mistral-medium-3.5-128b",          # Chat, Vision (Mistral's premium tier) - Generally Available
           "mistral-small-3.2-24b-instruct-2506", # Chat, Vision - Generally Available
-          "devstral-2-123b-instruct-2512",    # Chat (Code) - Generally Available
+          "deepseek-v4-flash-0731",           # Chat (Reasoning/Code), 1M context - Generally Available
           "gpt-oss-120b",                      # Chat - Generally Available
           "gemma-4-26b-a4b-it",               # Chat, Vision - Generally Available
           "qwen3-coder-30b-a3b-instruct",     # Chat (Code) - Generally Available
           "pixtral-12b-2409",                 # Chat, Vision - Generally Available
-          "holo2-30b-a3b",                    # Chat, Vision (GUI analysis) - Generally Available
           "qwen3-embedding-8b",               # Embeddings - Generally Available
           "bge-multilingual-gemma2"           # Embeddings - Generally Available
         ]
@@ -190,27 +190,25 @@ endpoints:
       # set here. tokenConfig is authoritative for billing and works alongside fetch: true.
       # Rates are USD per 1M tokens (LibreChat convention: 1,000,000 token credits = 1 USD).
       # Source: Scaleway model-as-a-service pricing (EUR), converted EUR->USD x1.08.
-      # Re-verified 2026-07-28 against https://www.scaleway.com/en/pricing/model-as-a-service/:
-      # every rate below matches the listed EUR price x1.08. Scaleway's serverless catalog held
-      # 18 models that day; the ones missing here are whisper (billed per audio minute, configured
-      # under `speech`) and nothing else.
+      # Re-verified 2026-08-14 against https://www.scaleway.com/en/pricing/model-as-a-service/ and
+      # the live GET /v1/models catalog: every rate matches the listed EUR price x1.08, and every
+      # key is a model Scaleway still serves. The catalog held 15 that day and 14 are priced here;
+      # the one left out is whisper, billed per audio minute and configured under `speech`.
+      # Devstral 2, Holo2, Gemma 3 and Voxtral Small were withdrawn and are gone from both.
       tokenConfig:
         llama-3.3-70b-instruct:              { prompt: 0.97, completion: 0.97, context: 100000 }
         qwen3-235b-a22b-instruct-2507:       { prompt: 0.81, completion: 2.43, context: 250000 }
         mistral-small-3.2-24b-instruct-2506: { prompt: 0.16, completion: 0.38, context: 128000 }
-        devstral-2-123b-instruct-2512:       { prompt: 0.43, completion: 2.16, context: 200000 }
         gpt-oss-120b:                        { prompt: 0.16, completion: 0.65, context: 128000 }
-        gemma-3-27b-it:                      { prompt: 0.27, completion: 0.54, context: 40000 }
         qwen3-coder-30b-a3b-instruct:        { prompt: 0.22, completion: 0.86, context: 128000 }
         pixtral-12b-2409:                    { prompt: 0.22, completion: 0.22, context: 128000 }
-        holo2-30b-a3b:                       { prompt: 0.32, completion: 0.76, context: 22000 }
-        voxtral-small-24b-2507:              { prompt: 0.16, completion: 0.38, context: 32000 }
-        # Newer models, verified available on Scaleway serverless (Jun 2026). Same EUR->USD x1.08.
         gemma-4-26b-a4b-it:                  { prompt: 0.27, completion: 0.54, context: 256000 }
         qwen3.5-397b-a17b:                   { prompt: 0.65, completion: 3.89, context: 250000 }
         qwen3.6-35b-a3b:                     { prompt: 0.27, completion: 1.62, context: 256000 }
         mistral-medium-3.5-128b:             { prompt: 1.62, completion: 8.10, context: 256000 }
         glm-5.2:                             { prompt: 1.94, completion: 5.94, context: 262144 }
+        # Scaleway documents no serverless context cap for it, so the model's native 1M applies.
+        deepseek-v4-flash-0731:              { prompt: 0.43, completion: 0.86, context: 1000000 }
         qwen3-embedding-8b:                  { prompt: 0.11, completion: 0, context: 32000 }
         bge-multilingual-gemma2:             { prompt: 0.11, completion: 0, context: 8000 }
       titleConvo: true
@@ -239,11 +237,11 @@ endpoints:
 # Assistants (agent specs) come first; `prioritize: true` makes the default Assistant the
 # selection on every new chat. Memory uses its own model, configured under `memory.agent`.
 #
-# Retired on Scaleway (do not re-add, EOL Apr 2026): deepseek-r1-distill-llama-70b,
-# mistral-nemo-instruct-2407, llama-3.1-8b-instruct. Available but deliberately unlisted:
-# gemma-3-27b-it (superseded by gemma-4-26b at the same price), voxtral-small-24b-2507
-# (audio-in), whisper-large-v3 (wired under `speech`), and the two embedding models
-# (used by RAG, not chat).
+# Retired on Scaleway (do not re-add): deepseek-r1-distill-llama-70b, mistral-nemo-instruct-2407,
+# llama-3.1-8b-instruct (EOL Apr 2026); devstral-2-123b-instruct-2512, holo2-30b-a3b,
+# gemma-3-27b-it, voxtral-small-24b-2507 (withdrawn by Aug 2026 - deepseek-v4-flash-0731 took
+# over the coding slot). Served but deliberately unlisted: whisper-large-v3 (wired under
+# `speech`) and the two embedding models (used by RAG, not chat).
 
 modelSpecs:
   prioritize: true  # force the default spec (Assistant) as the selection on every new chat, over a user's last-used model; emits a harmless startup warning alongside interface.presets
@@ -315,9 +313,9 @@ modelSpecs:
         maxContextTokens: 262144
         maxOutputTokens: 16384
 
-    - name: "scaleway-devstral-2-123b"
-      label: "Devstral 2 123B"
-      description: "Coding and agent model (Mistral). 200K Context, 8K Output. Ideal for code, tools and software agents. Modified MIT."
+    - name: "scaleway-deepseek-v4-flash"
+      label: "DeepSeek V4 Flash"
+      description: "Günstiges Reasoning- und Coding-Modell (DeepSeek, MoE). 1M Context, 32K Output. Nur Text. Übernimmt die Coding-Rolle von Devstral 2, das Scaleway zurückgezogen hat. Open Weights (DeepSeek)."
       group: "Europa & Open Source"
       # Bot icon (green-600 #059669): Open Source / automation; good contrast in light and dark
       groupIcon: "/images/group-europa.svg"
@@ -325,9 +323,9 @@ modelSpecs:
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
-        model: "devstral-2-123b-instruct-2512"
-        maxContextTokens: 200000
-        maxOutputTokens: 16384
+        model: "deepseek-v4-flash-0731"
+        maxContextTokens: 1000000
+        maxOutputTokens: 32768
 
     - name: "scaleway-gemma-4-26b"
       label: "Gemma 4 26B"
@@ -354,24 +352,11 @@ modelSpecs:
         maxContextTokens: 128000
         maxOutputTokens: 32768
 
-    - name: "scaleway-holo2-30b"
-      label: "Holo2 30B"
-      description: "Chat and vision model focused on GUI analysis (browser, software interfaces). 22K Context, 8K Output. CC-BY-NC-4.0; usage via Scaleway allowed. For testing UI/UX understanding."
-      group: "Europa & Open Source"
-      order: 4
-      vision: true
-      preset:
-        endpoint: "Scaleway"
-        endpointType: "custom"
-        model: "holo2-30b-a3b"
-        maxContextTokens: 22000
-        maxOutputTokens: 8192
-
     - name: "scaleway-llama-3.3-70b"
       label: "Llama 3.3 70B"
       description: "Meta's latest model. 100K Context, 4K Output. Very good for general conversations and tasks. Llama 3.3 Community License. Recommended by Scaleway."
       group: "Europa & Open Source"
-      order: 5
+      order: 4
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
@@ -383,7 +368,7 @@ modelSpecs:
       label: "Mistral Medium 3.5 128B"
       description: "Mistrals Premium-Stufe auf Scaleway. 256K Context, 32K Output. Text, Code und Vision. Europäisch gehostet, deutlich stärker als Mistral Small - aber auch ~10x teurer."
       group: "Europa & Open Source"
-      order: 6
+      order: 5
       vision: true
       preset:
         endpoint: "Scaleway"
@@ -396,7 +381,7 @@ modelSpecs:
       label: "Mistral Small 3.2 24B"
       description: "Kosteneffektiv (3-6x günstiger als 70B Modelle). 128K Context, 8K Output. Unterstützt Chat und Vision. Apache-2.0 License. Empfohlen von Scaleway als Einstiegsmodell."
       group: "Europa & Open Source"
-      order: 7
+      order: 6
       vision: true
       preset:
         endpoint: "Scaleway"
@@ -409,7 +394,7 @@ modelSpecs:
       label: "Pixtral 12B"
       description: "Spezialisiert auf Bildverständnis und Chat. 128K Context, 4K Output. Unterstützt Bilder bis 32M Pixel. Apache-2.0 License."
       group: "Europa & Open Source"
-      order: 8
+      order: 7
       vision: true
       preset:
         endpoint: "Scaleway"
@@ -422,7 +407,7 @@ modelSpecs:
       label: "Qwen3 235B"
       description: "Sehr großes Modell (235B Parameter). 250K Context, 8K Output. Optimal für komplexe Aufgaben und lange Kontexte. Apache-2.0 License."
       group: "Europa & Open Source"
-      order: 9
+      order: 8
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
@@ -434,7 +419,7 @@ modelSpecs:
       label: "Qwen3 Coder 30B"
       description: "Spezialisiert auf Programmierung und Code-Generierung. 128K Context, 8K Output. Apache-2.0 License."
       group: "Europa & Open Source"
-      order: 10
+      order: 9
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
@@ -446,7 +431,7 @@ modelSpecs:
       label: "Qwen3.5 397B"
       description: "Neues Frontier-Modell (Qwen, MoE 397B/17B aktiv). 250K Context, 16K Output. Text, Code und Vision. Stärkstes Scaleway-Modell. Apache-2.0 License."
       group: "Europa & Open Source"
-      order: 11
+      order: 10
       vision: true
       preset:
         endpoint: "Scaleway"
@@ -459,7 +444,7 @@ modelSpecs:
       label: "Qwen3.6 35B"
       description: "Günstiges, modernes MoE-Modell (Qwen). 256K Context, 32K Output. Text, Code und Vision. Sehr gutes Preis-Leistungs-Verhältnis. Apache-2.0 License."
       group: "Europa & Open Source"
-      order: 12
+      order: 11
       vision: true
       preset:
         endpoint: "Scaleway"
@@ -531,16 +516,16 @@ modelSpecs:
         maxContextTokens: 1048576
         maxOutputTokens: 65536
 
-    - name: "google-gemini-3.6-flash"
-      label: "Gemini 3.6 Flash"
-      description: "Google's schnelles Gemini-Modell (GA). Near-Pro Reasoning und Coding zu Flash-Kosten, stark bei Web- und App-Entwicklung. 1M Context, 64K Output. Vision. Via OpenRouter."
+    - name: "google-gemini-3.7-flash"
+      label: "Gemini 3.7 Flash"
+      description: "Google's schnelles Gemini-Modell (GA). Near-Pro Reasoning und Coding zu Flash-Kosten, stark bei Web- und App-Entwicklung. 1M Context, 64K Output. Vision. Halb so teuer wie 3.6 Flash. Via OpenRouter."
       group: "Premium-Modelle"
       order: 6
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "google/gemini-3.6-flash"
+        model: "google/gemini-3.7-flash"
         maxContextTokens: 1048576
         maxOutputTokens: 65536
 
@@ -587,7 +572,7 @@ modelSpecs:
       label: "Kimi K3"
       description: "Moonshots Frontier-Modell (2.8T Parameter, MoE). 1M Context, 64K Output. Text, Code und Vision, stark bei langen Agent-Workflows. Achtung: mit $3/$15 pro 1M Token teurer als Claude Sonnet 5 - für Standardaufgaben ist Kimi K2.6 die günstigere Wahl. Open Weights (Moonshot)."
       group: "Premium-Modelle"
-      order: 12
+      order: 13
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -602,7 +587,7 @@ modelSpecs:
       label: "Mistral Large 3 2512"
       description: "Mistrals aktuellstes Großmodell (675B MoE, 41B aktiv). 262K Context. Text + Vision. Apache 2.0. Gute Option für Europa-relevante Premium-Aufgaben."
       group: "Premium-Modelle"
-      order: 13
+      order: 14
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -624,9 +609,11 @@ modelSpecs:
         maxContextTokens: 1050000
         maxOutputTokens: 128000
 
+    # Both Grok generations stay listed: 4.6 is the stronger model, 4.3 is half the price with
+    # twice the context. Neither dominates the other, so the choice belongs to the user.
     - name: "x-ai-grok-4.3"
       label: "Grok 4.3"
-      description: "xAIs Reasoning- und Agent-Modell mit hoher Faktentreue. 1M Context. Vision. Gutes Preis-Leistungs-Verhältnis. Closed Source (xAI)."
+      description: "xAIs Reasoning- und Agent-Modell mit hoher Faktentreue. 1M Context. Vision. Günstiger und deutlich langkontextiger als Grok 4.6, dafür die ältere Generation. Closed Source (xAI)."
       group: "Premium-Modelle"
       order: 10
       vision: true
@@ -637,11 +624,24 @@ modelSpecs:
         maxContextTokens: 1000000
         maxOutputTokens: 64000
 
+    - name: "x-ai-grok-4.6"
+      label: "Grok 4.6"
+      description: "xAIs aktuelles Reasoning- und Agent-Modell. 500K Context. Vision. Stärker als Grok 4.3, dafür halber Context und rund doppelter Preis. Closed Source (xAI)."
+      group: "Premium-Modelle"
+      order: 11
+      vision: true
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "x-ai/grok-4.6"
+        maxContextTokens: 500000
+        maxOutputTokens: 64000
+
     - name: "moonshotai-kimi-k2.6"
       label: "Kimi K2.6"
       description: "Günstiges Long-Context-Reasoning für Coding und Agents. 262K Context, 64K Output. Vision. Rund 5x günstiger als Kimi K3 - erste Wahl, wenn 262K Context reichen. Open Weights (Moonshot)."
       group: "Premium-Modelle"
-      order: 11
+      order: 12
       vision: true
       preset:
         endpoint: "OpenRouter"

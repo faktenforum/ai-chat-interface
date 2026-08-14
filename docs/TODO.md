@@ -125,22 +125,28 @@
 
 ### danny-avila/LibreChat
 
-Status verified and customizations decided during the 2026-06 upstream sync (forks merged up to upstream/main); PR statuses refreshed 2026-06-20.
+All branches rebased onto upstream/main during the 2026-08 sync to `v0.8.8-rc1`; every PR below is mergeable as of 2026-08-14.
 
 | Status | Branch | PR | Description / sync decision |
 |--------|--------|----|-------------|
-| Open (draft) | `feat/vision-capability` | [#13860](https://github.com/danny-avila/LibreChat/pull/13860) | Optional `vision` flag on the OpenAI LLM config, forwarded onto the chat-client options so image content is stripped for non-vision models. **Clean minimal re-attempt** off upstream/main; depends on [agents#257](https://github.com/danny-avila/agents/pull/257). Pairs with the load-bearing fork vision feature (non-vision Scaleway/OpenRouter models error on image input). |
-| Open | `fix/mcp-parser` | [#12103](https://github.com/danny-avila/LibreChat/pull/12103) | Auto-detect OpenAI-compatible custom endpoints in formatToolContent. **Kept** (Scaleway depends on it); merged with upstream's new MCP image-size validation. |
+| Merged upstream | `upstream-pr/tools-list-changed` | [#14686](https://github.com/danny-avila/LibreChat/pull/14686) | Refresh MCP tools after `notifications/tools/list_changed`. Upstream took it (our #14517 closed) and hardened it with retry, cross-replica cache fencing and per-request revision tickets. **Our implementation is reverted from the fork**; upstream's replaces it. |
+| Open | `upstream-pr/optional-custom-user-vars` | [#14513](https://github.com/danny-avila/LibreChat/pull/14513) | `customUserVars.optional`: an override rather than a requirement, so a server that only declares optional vars stays usable instead of showing as needing setup. **Kept.** |
+| Open | `feat/mcp-tool-provider-cost` | [#14490](https://github.com/danny-avila/LibreChat/pull/14490) | Bill a tool's reported provider cost (`_meta.cost`) against the user balance. **Kept.** |
+| Open | `fix/audio-input-openai-compatible` | [#13980](https://github.com/danny-avila/LibreChat/pull/13980) | Send `input_audio` to every OpenAI-compatible provider, not only OpenRouter. **Kept.** |
+| Open (draft) | `feat/vision-capability` | [#13860](https://github.com/danny-avila/LibreChat/pull/13860) | Optional `vision` flag on the OpenAI LLM config, forwarded onto the chat-client options so image content is stripped for non-vision models. Depends on [agents#257](https://github.com/danny-avila/agents/pull/257). Pairs with the load-bearing fork vision feature (non-vision Scaleway/OpenRouter models error on image input). |
+| Open | `fix/mcp-parser` | [#12103](https://github.com/danny-avila/LibreChat/pull/12103) | Let callers declare an OpenAI-compatible endpoint in `formatToolContent` via an opt-in flag. **Kept** (Scaleway depends on the fork's implicit variant). |
+| Open | `feat/custom-reranker-provider` | [#12121](https://github.com/danny-avila/LibreChat/pull/12121) | Custom reranker provider (configurable URL + model, e.g. Scaleway), now also registered in upstream's admin secret registry. **Kept**: depends on [agents#66](https://github.com/danny-avila/agents/pull/66). |
 | Open | `feat/stt` | [#11528](https://github.com/danny-avila/LibreChat/pull/11528) | Prefer ogg/wav in external STT recording. Not affected by the sync. |
-| Open | — | depends on [#10574](https://github.com/danny-avila/LibreChat/pull/10574) | Replace Jina reranker with RAG API reranker (`rerankerType: "simple"`); not our PR. |
-| Open | `feat/custom-reranker-provider` | [#12121](https://github.com/danny-avila/LibreChat/pull/12121) | Custom reranker provider (configurable URL + model, e.g. Scaleway). **Kept** — depends on [agents#66](https://github.com/danny-avila/agents/pull/66). |
+| Open | — | depends on [#10574](https://github.com/danny-avila/LibreChat/pull/10574) | Replace Jina reranker with RAG API reranker; not our PR. Upstream shipped a `rag-api` reranker type in agents v3.4.x. |
 
 ### danny-avila/agents
 
 | Status | Branch | PR | Description / sync decision |
 |--------|--------|----|-------------|
-| Open | `feat/vision-capability` | [#257](https://github.com/danny-avila/agents/pull/257) | Optional vision gating: a `vision` constructor flag + `stripImagesFromMessages()` that strips `image_url` parts before `super._streamResponseChunks` when the model lacks vision support. **Clean minimal re-attempt** (3 files, with tests); supersedes the closed #48. Consumed by LibreChat [#13860](https://github.com/danny-avila/LibreChat/pull/13860). |
-| Open | `feat/custom-reranker-provider` | [#66](https://github.com/danny-avila/agents/pull/66) | Custom reranker provider (configurable URL + model). **Kept.** |
+| Open | `fix/retry-transient-429` | [#358](https://github.com/danny-avila/agents/pull/358) | Retry a transient provider 429 instead of ending the run. **Kept**: Scaleway's per-model token bucket makes this load-bearing, see [LIBRECHAT_FEATURES](LIBRECHAT_FEATURES.md#scaleway-tokens-per-minute-quota-caps-the-usable-context). |
+| Open | `fix/tool-image-role-order-scaleway` | [#287](https://github.com/danny-avila/agents/pull/287) | Bridge tool image artifacts with an assistant message for providers that reject a user message after a tool message. **Kept.** |
+| Open | `feat/vision-capability` | [#257](https://github.com/danny-avila/agents/pull/257) | Optional vision gating: a `vision` constructor flag + `stripImagesFromMessages()` before `super._streamResponseChunks`. Supersedes the closed #48. Consumed by LibreChat [#13860](https://github.com/danny-avila/LibreChat/pull/13860). |
+| Open | `feat/custom-reranker-provider` | [#66](https://github.com/danny-avila/agents/pull/66) | Custom reranker provider (configurable URL + model), now with the `httpAgent`/`httpsAgent` support upstream gave the other rerankers. **Kept**: upstream's new `rag-api` and placeholder `infinity` types do not cover a Jina-shaped endpoint. |
 
 ### arabold/docs-mcp-server
 
