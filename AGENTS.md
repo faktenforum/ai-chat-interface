@@ -53,6 +53,10 @@ Each of these has cost someone real time.
 - **Build only the service you need.** A full `docker compose build` covers a dozen images and BuildKit
   caches every layer per context, which grows past 100 GB. Reclaim with `docker builder prune -af`,
   check with `docker system df`.
+- **No symlinks anywhere in this repo.** Portainer clones it to deploy the stacks and refuses outright:
+  `repository contains a symlink, which is not allowed for security reasons`. Every prod and dev deploy
+  is blocked until the symlink is gone. `CLAUDE.md` is therefore a one-line file pointing at
+  `AGENTS.md`, not a `ln -s` sibling. Check with `git ls-files -s | awk '$1=="120000"'`.
 
 ## dev/ submodules
 
