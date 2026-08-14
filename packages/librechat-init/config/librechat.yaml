@@ -125,7 +125,8 @@ endpoints:
           "google/gemini-3.1-flash-lite",     # Gemini 3.1 Flash Lite (cheap, fast)
           "google/gemini-3.1-pro-preview",    # Google Gemini 3.1 Pro (Preview from Google)
           "deepseek/deepseek-v4-pro",         # DeepSeek V4 Pro (long context)
-          "x-ai/grok-4.6",                    # xAI reasoning model (Vision)
+          "x-ai/grok-4.6",                    # xAI reasoning model (Vision, 500K Context)
+          "x-ai/grok-4.3",                    # xAI reasoning model (Vision, 1M Context, cheaper)
           "moonshotai/kimi-k2.6",             # Cheap long-context reasoning (Vision)
           "moonshotai/kimi-k3",               # Kimi K3 (1M Context, Vision) - premium tier
           "mistralai/mistral-large-2512"      # European premium option (French)
@@ -571,7 +572,7 @@ modelSpecs:
       label: "Kimi K3"
       description: "Moonshots Frontier-Modell (2.8T Parameter, MoE). 1M Context, 64K Output. Text, Code und Vision, stark bei langen Agent-Workflows. Achtung: mit $3/$15 pro 1M Token teurer als Claude Sonnet 5 - für Standardaufgaben ist Kimi K2.6 die günstigere Wahl. Open Weights (Moonshot)."
       group: "Premium-Modelle"
-      order: 12
+      order: 13
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -586,7 +587,7 @@ modelSpecs:
       label: "Mistral Large 3 2512"
       description: "Mistrals aktuellstes Großmodell (675B MoE, 41B aktiv). 262K Context. Text + Vision. Apache 2.0. Gute Option für Europa-relevante Premium-Aufgaben."
       group: "Premium-Modelle"
-      order: 13
+      order: 14
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -608,11 +609,26 @@ modelSpecs:
         maxContextTokens: 1050000
         maxOutputTokens: 128000
 
-    - name: "x-ai-grok-4.6"
-      label: "Grok 4.6"
-      description: "xAIs Reasoning- und Agent-Modell mit hoher Faktentreue. 500K Context. Vision. Nachfolger von Grok 4.3: stärker, aber halber Context und rund doppelter Preis. Closed Source (xAI)."
+    # Both Grok generations stay listed: 4.6 is the stronger model, 4.3 is half the price with
+    # twice the context. Neither dominates the other, so the choice belongs to the user.
+    - name: "x-ai-grok-4.3"
+      label: "Grok 4.3"
+      description: "xAIs Reasoning- und Agent-Modell mit hoher Faktentreue. 1M Context. Vision. Günstiger und deutlich langkontextiger als Grok 4.6, dafür die ältere Generation. Closed Source (xAI)."
       group: "Premium-Modelle"
       order: 10
+      vision: true
+      preset:
+        endpoint: "OpenRouter"
+        endpointType: "custom"
+        model: "x-ai/grok-4.3"
+        maxContextTokens: 1000000
+        maxOutputTokens: 64000
+
+    - name: "x-ai-grok-4.6"
+      label: "Grok 4.6"
+      description: "xAIs aktuelles Reasoning- und Agent-Modell. 500K Context. Vision. Stärker als Grok 4.3, dafür halber Context und rund doppelter Preis. Closed Source (xAI)."
+      group: "Premium-Modelle"
+      order: 11
       vision: true
       preset:
         endpoint: "OpenRouter"
@@ -625,7 +641,7 @@ modelSpecs:
       label: "Kimi K2.6"
       description: "Günstiges Long-Context-Reasoning für Coding und Agents. 262K Context, 64K Output. Vision. Rund 5x günstiger als Kimi K3 - erste Wahl, wenn 262K Context reichen. Open Weights (Moonshot)."
       group: "Premium-Modelle"
-      order: 11
+      order: 12
       vision: true
       preset:
         endpoint: "OpenRouter"
