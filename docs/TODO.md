@@ -126,9 +126,11 @@
 ### danny-avila/LibreChat
 
 All branches rebased onto upstream/main during the 2026-08 sync to `v0.8.8-rc1`; every PR below is mergeable as of 2026-08-14.
+The fork's `main` carries one upstream fix on top of that tag because no release contains it yet; drop it at the next sync.
 
 | Status | Branch | PR | Description / sync decision |
 |--------|--------|----|-------------|
+| Cherry-picked | `fix/mcp-app-tool-publication` | [#14858](https://github.com/danny-avila/LibreChat/pull/14858) | App-level MCP tool catalogs were discarded unless the publication carried a reserved revision, and only the `list_changed` refresh ever reserved one. Every agent on a shared MCP server then failed each turn with "configured to use MCP tools, but none are available" ([issue 14857](https://github.com/danny-avila/LibreChat/issues/14857)); prod hit it on 2026-08-18. Merged upstream a day after `v0.8.8-rc1` was cut, so it is **cherry-picked onto the fork** ([fork PR 10](https://github.com/faktenforum/LibreChat/pull/10)). Remove the pick when a release carries it. |
 | Merged upstream | `upstream-pr/tools-list-changed` | [#14686](https://github.com/danny-avila/LibreChat/pull/14686) | Refresh MCP tools after `notifications/tools/list_changed`. Upstream took it (our #14517 closed) and hardened it with retry, cross-replica cache fencing and per-request revision tickets. **Our implementation is reverted from the fork**; upstream's replaces it. |
 | Open | `upstream-pr/optional-custom-user-vars` | [#14513](https://github.com/danny-avila/LibreChat/pull/14513) | `customUserVars.optional`: an override rather than a requirement, so a server that only declares optional vars stays usable instead of showing as needing setup. **Kept.** |
 | Open | `feat/mcp-tool-provider-cost` | [#14490](https://github.com/danny-avila/LibreChat/pull/14490) | Bill a tool's reported provider cost (`_meta.cost`) against the user balance. **Kept.** |
