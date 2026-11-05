@@ -105,3 +105,12 @@ test('generateImage: a 404 names the model and points to list_models', async () 
     /nobody\/none.*list_models/,
   );
 });
+
+test('generateImage: a 402 tells the agent that no model will work', async () => {
+  stubFetch({ error: { message: 'Insufficient credits.', code: 402 } }, 402);
+  const client = new OpenRouterClient('test-key');
+  await assert.rejects(
+    client.generateImage({ prompt: 'x', model: 'black-forest-labs/flux-3-image' }),
+    /run out of credits.*do not retry/,
+  );
+});

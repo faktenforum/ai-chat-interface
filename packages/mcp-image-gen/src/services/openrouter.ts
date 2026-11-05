@@ -83,6 +83,10 @@ function noEndpointMessage(modelId: string): string {
   return `Model "${modelId}" is not available for image generation on OpenRouter (no endpoint for image output). Use list_models or check_model to pick a supported model (e.g. ${EXAMPLE_MODEL_ID}).`;
 }
 
+/** OpenRouter answers 402 for every model once the account balance is too low, so retrying with another model cannot help. */
+const NO_CREDITS_MESSAGE =
+  'Image generation is unavailable: the OpenRouter account behind this service has run out of credits. This affects every image model, so do not retry with another one. Tell the user that image generation is temporarily unavailable and that an administrator has to top up the credits.';
+
 function errorMessageFromBody(body: unknown, fallback: string): string {
   if (typeof body === 'object' && body !== null && 'error' in body) {
     const err = (body as { error?: { message?: string } }).error;
@@ -126,6 +130,9 @@ export class OpenRouterClient {
       logger.error({ error: message, model }, 'Error generating image');
       if (status === 404) {
         throw new OpenRouterAPIError(noEndpointMessage(model), status);
+      }
+      if (status === 402) {
+        throw new OpenRouterAPIError(NO_CREDITS_MESSAGE, status);
       }
       if (error instanceof OpenRouterAPIError) {
         throw error;
