@@ -14,6 +14,8 @@ services:
       DB_TIMETABLE_CLIENT_SECRET: ${MCP_DB_TIMETABLE_CLIENT_SECRET}
       LOG_LEVEL: ${MCP_DB_TIMETABLE_LOG_LEVEL:-info}
       SSE_ENDPOINT: ${MCP_DB_TIMETABLE_SSE_ENDPOINT:-/mcp}
+      # Required by upstream v2 when HOST is 0.0.0.0 (Host header allow-list, names without port)
+      ALLOWED_HOSTS: ${MCP_DB_TIMETABLE_ALLOWED_HOSTS:-mcp-db-timetable,localhost,127.0.0.1}
     expose:
       - "3007"
     networks:
