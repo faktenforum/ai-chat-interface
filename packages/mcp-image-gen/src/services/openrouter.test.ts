@@ -9,62 +9,58 @@ afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
-/** Stub fetch, capturing the request body sent to /chat/completions. */
-function stubFetch(responseBody: unknown): { lastBody: () => Record<string, unknown> } {
+/** Stub fetch, capturing the URL and request body of the last call. */
+function stubFetch(
+  responseBody: unknown,
+  status = 200,
+): { lastBody: () => Record<string, unknown>; lastUrl: () => string } {
   let captured: Record<string, unknown> = {};
-  globalThis.fetch = (async (_url: string, init?: RequestInit) => {
+  let url = '';
+  globalThis.fetch = (async (input: string, init?: RequestInit) => {
+    url = input;
     captured = init?.body ? JSON.parse(init.body as string) : {};
     return new Response(JSON.stringify(responseBody), {
-      status: 200,
+      status,
       headers: { 'Content-Type': 'application/json' },
     });
   }) as typeof fetch;
-  return { lastBody: () => captured };
+  return { lastBody: () => captured, lastUrl: () => url };
 }
 
-test('extractImageUrl: reads message.images[]', () => {
-  const url = extractImageUrl({
-    choices: [{ message: { images: [{ type: 'image_url', image_url: { url: DATA_URL } }] } }],
-  });
-  assert.equal(url, DATA_URL);
+test('extractImageUrl: builds a data URL from data[].b64_json', () => {
+  assert.equal(extractImageUrl({ data: [{ b64_json: 'AAAB', media_type: 'image/png' }] }), DATA_URL);
 });
 
-test('extractImageUrl: falls back to message.content[] image_url', () => {
-  const url = extractImageUrl({
-    choices: [{ message: { content: [{ type: 'image_url', image_url: { url: DATA_URL } }] } }],
-  });
-  assert.equal(url, DATA_URL);
+test('extractImageUrl: keeps a non-PNG media type', () => {
+  assert.equal(
+    extractImageUrl({ data: [{ b64_json: 'AAAB', media_type: 'image/jpeg' }] }),
+    'data:image/jpeg;base64,AAAB',
+  );
 });
 
-test('extractImageUrl: wraps a bare base64 string as a data URL', () => {
-  const url = extractImageUrl({
-    choices: [{ message: { images: [{ type: 'image_url', image_url: { url: 'ABC123' } }] } }],
-  });
-  assert.equal(url, 'data:image/png;base64,ABC123');
+test('extractImageUrl: assumes PNG when the media type is missing', () => {
+  assert.equal(extractImageUrl({ data: [{ b64_json: 'AAAB' }] }), DATA_URL);
 });
 
 test('extractImageUrl: throws when no image present', () => {
-  assert.throws(() => extractImageUrl({ choices: [{ message: {} }] }));
+  assert.throws(() => extractImageUrl({ data: [] }));
 });
 
-test('generateImage: extracts the provider cost from usage.cost', async () => {
-  stubFetch({
-    choices: [{ message: { images: [{ type: 'image_url', image_url: { url: DATA_URL } }] } }],
-    usage: { cost: 0.042 },
-  });
+test('generateImage: posts to the Image API and reads usage.cost', async () => {
+  const stub = stubFetch({ data: [{ b64_json: 'AAAB', media_type: 'image/png' }], usage: { cost: 0.042 } });
   const client = new OpenRouterClient('test-key');
   const result = await client.generateImage({
     prompt: 'a red square',
     model: 'black-forest-labs/flux-3-image',
   });
+  assert.equal(stub.lastUrl(), 'https://openrouter.ai/api/v1/images');
+  assert.deepEqual(stub.lastBody(), { model: 'black-forest-labs/flux-3-image', prompt: 'a red square' });
   assert.equal(result.imageUrl, DATA_URL);
   assert.equal(result.costUsd, 0.042);
 });
 
 test('generateImage: costUsd is undefined when no usage returned', async () => {
-  stubFetch({
-    choices: [{ message: { images: [{ type: 'image_url', image_url: { url: DATA_URL } }] } }],
-  });
+  stubFetch({ data: [{ b64_json: 'AAAB' }] });
   const client = new OpenRouterClient('test-key');
   const result = await client.generateImage({
     prompt: 'a red square',
@@ -73,33 +69,39 @@ test('generateImage: costUsd is undefined when no usage returned', async () => {
   assert.equal(result.costUsd, undefined);
 });
 
-test('generateImage: sends usage.include and image_config for a size-capable model', async () => {
-  const stub = stubFetch({
-    choices: [{ message: { images: [{ type: 'image_url', image_url: { url: DATA_URL } }] } }],
-    usage: { cost: 0.01 },
-  });
+test('generateImage: sends aspect_ratio and resolution for a model that takes both', async () => {
+  const stub = stubFetch({ data: [{ b64_json: 'AAAB' }] });
   const client = new OpenRouterClient('test-key');
   await client.generateImage({
     prompt: 'a landscape',
-    model: 'google/gemini-3.1-flash-image',
-    aspect_ratio: '16:9',
-    image_size: '2K',
-  });
-  const body = stub.lastBody();
-  assert.deepEqual(body.usage, { include: true });
-  assert.deepEqual(body.image_config, { aspect_ratio: '16:9', image_size: '2K' });
-});
-
-test('generateImage: omits image_config for a model that supports neither option', async () => {
-  const stub = stubFetch({
-    choices: [{ message: { images: [{ type: 'image_url', image_url: { url: DATA_URL } }] } }],
-  });
-  const client = new OpenRouterClient('test-key');
-  await client.generateImage({
-    prompt: 'a red square',
     model: 'black-forest-labs/flux-3-image',
     aspect_ratio: '16:9',
     image_size: '2K',
   });
-  assert.equal(stub.lastBody().image_config, undefined);
+  const body = stub.lastBody();
+  assert.equal(body.aspect_ratio, '16:9');
+  assert.equal(body.resolution, '2K');
+});
+
+test('generateImage: drops resolution for a model without it', async () => {
+  const stub = stubFetch({ data: [{ b64_json: 'AAAB' }] });
+  const client = new OpenRouterClient('test-key');
+  await client.generateImage({
+    prompt: 'a red square',
+    model: 'openai/gpt-image-2',
+    aspect_ratio: '16:9',
+    image_size: '2K',
+  });
+  const body = stub.lastBody();
+  assert.equal(body.aspect_ratio, '16:9');
+  assert.equal(body.resolution, undefined);
+});
+
+test('generateImage: a 404 names the model and points to list_models', async () => {
+  stubFetch({ error: { message: 'Model not found' } }, 404);
+  const client = new OpenRouterClient('test-key');
+  await assert.rejects(
+    client.generateImage({ prompt: 'x', model: 'nobody/none' }),
+    /nobody\/none.*list_models/,
+  );
 });
