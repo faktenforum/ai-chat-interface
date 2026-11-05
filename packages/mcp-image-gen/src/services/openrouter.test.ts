@@ -81,7 +81,7 @@ test('generateImage: sends usage.include and image_config for a size-capable mod
   const client = new OpenRouterClient('test-key');
   await client.generateImage({
     prompt: 'a landscape',
-    model: 'google/gemini-2.5-flash-image',
+    model: 'google/gemini-3.1-flash-image',
     aspect_ratio: '16:9',
     image_size: '2K',
   });

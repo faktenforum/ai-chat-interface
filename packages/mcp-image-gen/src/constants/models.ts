@@ -84,24 +84,24 @@ export const KNOWN_MODELS = {
             completion: '0.014', // First megapixel $0.014, subsequent MP $0.001 per MP
         },
     },
-    'bytedance-seed/seedream-4.5': {
-        id: 'bytedance-seed/seedream-4.5',
-        name: 'Seedream 4.5',
-        modalityRequest: 'image_and_text' as const,
-        description: 'Seedream 4.5 is the latest in-house image generation model developed by ByteDance. Compared with Seedream 4.0, it delivers comprehensive improvements, especially in editing consistency, including better preservation of subject details, lighting, and color tone. It also enhances portrait refinement and small-text rendering. The model\'s multi-image composition capabilities have been significantly strengthened, and both reasoning performance and visual aesthetics continue to advance, enabling more accurate and artistically expressive image generation.',
+    'bytedance-seed/seedream-5-0-pro': {
+        id: 'bytedance-seed/seedream-5-0-pro',
+        name: 'Seedream 5.0 Pro',
+        modalityRequest: 'image_only' as const,
+        description: 'Seedream 5.0 Pro is ByteDance\'s image generation and editing model, successor of Seedream 4.5, with strong editing consistency, portrait refinement and small-text rendering.',
         supportsAspectRatio: false,
         supportsImageSize: false,
-        strengths: ['Editing consistency', 'Subject detail preservation', 'Lighting preservation', 'Color tone preservation', 'Portrait refinement', 'Small-text rendering', 'Multi-image composition'],
+        strengths: ['Editing consistency', 'Portrait refinement', 'Small-text rendering', 'Multi-image composition'],
         weaknesses: ['No aspect ratio control', 'No resolution options'],
         recommended_for: ['Image editing', 'Portrait refinement', 'Text rendering', 'Multi-image composition', 'Artistic expression'],
         pricing: {
             prompt: '0',
-            completion: '0.04', // $0.04 per output image, regardless of size
+            completion: '0.003', // per output image, see OpenRouter for the live token price
         },
     },
-    'google/gemini-2.5-flash-image': {
-        id: 'google/gemini-2.5-flash-image',
-        name: 'Gemini 2.5 Flash Image',
+    'google/gemini-3.1-flash-image': {
+        id: 'google/gemini-3.1-flash-image',
+        name: 'Gemini 3.1 Flash Image',
         modalityRequest: 'response_modalities' as const,
         description: 'Fast image generation with aspect ratio and resolution control',
         supportsAspectRatio: true,
@@ -110,38 +110,23 @@ export const KNOWN_MODELS = {
         weaknesses: ['May have lower quality than FLUX.2 Pro for some use cases'],
         recommended_for: ['Social media', 'Quick iterations', 'Custom aspect ratios', 'Multiple resolutions'],
         pricing: {
-            prompt: '0.0000003',
-            completion: '0.0000025',
+            prompt: '0.0000005',
+            completion: '0.000003',
         }
     },
-    'openai/gpt-5-image': {
-        id: 'openai/gpt-5-image',
-        name: 'GPT-5 Image',
-        modalityRequest: 'image_and_text' as const,
-        description: 'GPT-5 Image combines OpenAI\'s GPT-5 model with state-of-the-art image generation capabilities. It offers major improvements in reasoning, code quality, and user experience while incorporating GPT Image 1\'s superior instruction following, text rendering, and detailed image editing.',
+    'openai/gpt-image-2': {
+        id: 'openai/gpt-image-2',
+        name: 'GPT Image 2',
+        modalityRequest: 'image_only' as const,
+        description: 'OpenAI\'s image generation and editing model with strong prompt adherence, text rendering and detailed image editing.',
         supportsAspectRatio: false,
         supportsImageSize: false,
-        strengths: ['State-of-the-art reasoning', 'Excellent prompt adherence', 'High detail', 'Superior instruction following', 'Text rendering', 'Detailed image editing', 'Code quality'],
-        weaknesses: ['High cost compared to Gemini'],
-        recommended_for: ['Complex prompt instructions', 'Creative art', 'High-quality visuals', 'Instruction-heavy tasks', 'Text in images'],
-        pricing: {
-            prompt: '0.00001', // $10/M input tokens
-            completion: '0.00001', // $10/M output tokens
-        },
-    },
-    'openai/gpt-5-image-mini': {
-        id: 'openai/gpt-5-image-mini',
-        name: 'GPT-5 Image Mini',
-        modalityRequest: 'image_and_text' as const,
-        description: 'GPT-5 Image Mini combines OpenAI\'s advanced language capabilities, powered by GPT-5 Mini, with GPT Image 1 Mini for efficient image generation. This natively multimodal model features superior instruction following, text rendering, and detailed image editing with reduced latency and cost. It excels at high-quality visual creation while maintaining strong text understanding, making it ideal for applications that require both efficient image generation and text processing at scale.',
-        supportsAspectRatio: false,
-        supportsImageSize: false,
-        strengths: ['Efficient generation', 'Reduced latency', 'Lower cost', 'Superior instruction following', 'Text rendering', 'Detailed image editing', 'Strong text understanding'],
+        strengths: ['Excellent prompt adherence', 'High detail', 'Text rendering', 'Detailed image editing'],
         weaknesses: ['No aspect ratio control', 'No resolution options'],
-        recommended_for: ['Cost-effective generation', 'High-volume applications', 'Text-heavy images', 'Instruction following', 'Scale applications'],
+        recommended_for: ['Complex prompt instructions', 'Creative art', 'High-quality visuals', 'Text in images'],
         pricing: {
-            prompt: '0.0000025', // $2.50/M input tokens
-            completion: '0.000002', // $2/M output tokens
+            prompt: '0.000008', // $8/M input tokens
+            completion: '0.000008', // $8/M output tokens
         },
     },
 } as const;
