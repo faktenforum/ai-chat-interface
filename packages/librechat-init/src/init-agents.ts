@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import { readFileSync, existsSync } from 'fs';
-import { basename } from 'path';
 import { connectToMongoDB, disconnectFromMongoDB, User } from './utils/mongodb.ts';
 import { getSystemUserId } from './utils/config.ts';
 import { loadPublicPrivateConfigs } from './utils/config-loader.ts';
@@ -34,7 +33,7 @@ import {
   patchModelSpecAgentIds,
   saveAgentIdMap,
 } from './utils/patch-model-spec-agent-ids.ts';
-import { join, relative, resolve, dirname } from 'path';
+import { basename, join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
