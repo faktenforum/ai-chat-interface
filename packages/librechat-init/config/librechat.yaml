@@ -10,7 +10,7 @@ interface:
     externalUrl: '$${LIBRECHAT_TERMS_OF_SERVICE_URL}'
     openNewTab: true
     modalAcceptance: true
-    modalTitle: 'Kleingedrucktes'
+    modalTitle: 'Fine Print'
     modalContent: |
       # Terms of Use
 
@@ -18,7 +18,9 @@ interface:
       All responses from this AI system should always be reviewed by humans. AI-generated content may contain errors and should not be used as the sole source for important decisions.
 
       **Data Processing and Hosting**
-      We strive to host as many components as possible ourselves. Currently we still use external services such as OpenRouter, which means data is currently transferred to servers in the USA. Our goal is to fully switch to self-hosted or European services.
+      We host as many components as possible ourselves. The models in the group "Europa & Open Source" are open-weight models that run in the EU with Scaleway, a European provider. In addition, the group "Premium-Modelle" offers proprietary models from US providers, reached through OpenRouter. When you use one of these, your data is transferred to servers in the USA. Some features, such as file search and image generation, currently use OpenRouter as well.
+
+      For personal or sensitive data, choose a model from "Europa & Open Source".
   endpointsMenu: true
   modelSelect: true
   parameters: true
