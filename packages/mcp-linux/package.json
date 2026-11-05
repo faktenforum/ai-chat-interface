@@ -14,7 +14,8 @@
     "test:mail": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/mail.ts",
     "test:jobs": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/jobs.mjs",
     "test:calendar": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/calendar.ts",
-    "test:endpoints": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/endpoints.ts"
+    "test:endpoints": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/endpoints.ts",
+    "test:uid": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/uid-consistency.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
