@@ -91,7 +91,13 @@ cd dev/agents && git diff upstream/main --stat
 cd dev/agents && git diff upstream/main -- path/to/file
 ```
 
-**LibreChat** — Vision + artifact handling: `validateVisionModel`, `getVisionCapability`, `processArtifactsForAssistants` in ToolService; vision in agent config/run and client (ImageVision, useVisionModel); MCP artifact processing (base64 → files, contentParts). **Agents** — Tool definitions (Calculator, CodeExecutor, WebSearch, ProgrammaticToolCalling) kept aligned so `packages/api` can import from `@librechat/agents`.
+As of the 2026-11 sync (LibreChat `v0.8.9-rc1`, agents `v4.1.1`):
+
+**LibreChat** — Vision capability: `validateVisionModel` + the `visionModels` list, `vision?: boolean` on the `Agent` type, `useDeriveAgentVision`, and the attachment filter in `hooks/Input/useAttachItems.tsx`. MCP: OpenAI-compatible auto-detection in `formatToolContent` (`isOpenAICompatibleProvider`, `NON_OPENAI_PROVIDERS`), `customUserVars.optional`, tool-cost billing, the `ItemIconBadge` builtin icon treatment, and `clearVars` in `utils/env.ts`. Plus the custom reranker, Scaleway support and open-weight model pricing.
+
+**Agents** — Custom reranker provider (`CustomReranker`), vision gating, transient-429 retry, and the tool-image role ordering Scaleway needs.
+
+Three former customizations are gone because `v0.8.9-rc1` carries them: app-level MCP tool catalogs (taken upstream verbatim), `input_audio` for OpenAI-compatible providers, and ogg-first STT recording. See [TODO.md](TODO.md#upstream-contributions).
 
 ## Adding New Fork Submodules
 
