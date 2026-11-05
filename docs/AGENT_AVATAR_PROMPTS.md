@@ -28,7 +28,7 @@ Model: black-forest-labs/flux-3-image
 Aspect ratio: 1:1 (square; LibreChat crops to circle).
 ```
 
-After generation, save the image from the chat (e.g. right‑click → Save image as) into `packages/librechat-init/assets/agent-avatars/` using the filename from that folder’s README, then assign it in LibreChat (Agent settings → Avatar upload).
+After generation, save the image as `packages/librechat-init/assets/agent-avatars/<agent-id>.png`. The `avatar:` field in `config/agents.yaml` points to it, and librechat-init uploads it on the next run. No manual upload in the LibreChat UI is needed.
 
 ## Optional: consistent style prefix
 

@@ -27,12 +27,13 @@ import {
   MCP_ALL,
   SEARCH_MCP_SERVER_NAME,
   DEFAULT_API_URL,
+  ASSETS_DIR,
 } from './utils/constants.ts';
 import {
   patchModelSpecAgentIds,
   saveAgentIdMap,
 } from './utils/patch-model-spec-agent-ids.ts';
-import { join, relative, resolve, dirname } from 'path';
+import { basename, join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -56,6 +57,8 @@ interface AgentConfig {
   /** Optional: Explicit MCP tool keys (format: toolName_mcp_serverName). If specified, only these tools are enabled. */
   mcpTools?: string[];
   category?: string;
+  /** Filename in assets/agent-avatars/. Uploaded only while the agent has no avatar. */
+  avatar?: string;
   conversation_starters?: string[];
   recursion_limit?: number;
   /** Lets images reach the model. Omitted = LibreChat derives it from the model name, and its
@@ -453,6 +456,37 @@ async function resolveOwnerUserId(
 }
 
 /**
+ * Uploads the configured avatar unless the agent already has one, so an avatar set by hand in
+ * the UI is never overwritten. Failures only warn: a missing picture must not fail the init.
+ */
+async function ensureAgentAvatar(
+  agentConfig: AgentConfig,
+  agent: Agent,
+  client: LibreChatAPIClient,
+  userId: string
+): Promise<void> {
+  if (!agentConfig.avatar || agent.avatar?.filepath) return;
+
+  try {
+    const avatarDir = existsSync(join(ASSETS_DIR, 'agent-avatars'))
+      ? join(ASSETS_DIR, 'agent-avatars')
+      : join(__dirname, '..', 'assets', 'agent-avatars');
+    const fileName = basename(agentConfig.avatar);
+    const filePath = join(avatarDir, fileName);
+    if (!existsSync(filePath)) {
+      console.log(`    ⚠ Avatar file not found: ${filePath}`);
+      return;
+    }
+    await client.uploadAgentAvatar(agent.id, fileName, readFileSync(filePath), userId);
+    console.log(`    ✓ Uploaded avatar ${fileName}`);
+  } catch (error) {
+    console.log(
+      `    ⚠ Avatar upload failed for "${agentConfig.name}": ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
+
+/**
  * Processes a single agent: creates or updates it and sets permissions.
  * Returns the LibreChat agent ID for use in pass 2 (handoff/chain resolution).
  */
@@ -479,6 +513,13 @@ async function processAgent(
       `  ✓ Updated agent: ${agentConfig.name} (${existingAgent.id}) - ${savedAgent.provider}/${savedAgent.model}`
     );
   }
+
+  await ensureAgentAvatar(
+    agentConfig,
+    { ...savedAgent, avatar: savedAgent.avatar ?? existingAgent?.avatar },
+    client,
+    systemUserId
+  );
 
   const agentObjectId = savedAgent._id;
   if (!agentObjectId) {
