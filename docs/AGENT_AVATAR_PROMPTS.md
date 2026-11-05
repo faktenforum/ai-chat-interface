@@ -1,6 +1,6 @@
 # Agent Avatar Prompts (Image-Gen MCP)
 
-Prompts for generating round agent avatars for LibreChat. Style: playful and friendly, with soft colors and a clear symbol per agent. Use with the image-gen MCP tool (e.g. `black-forest-labs/flux.2-pro`). Output is square; LibreChat displays it `rounded-full`.
+Prompts for generating round agent avatars for LibreChat. Style: playful and friendly, with soft colors and a clear symbol per agent. Use with the image-gen MCP tool (e.g. `black-forest-labs/flux-3-image`). Output is square; LibreChat displays it `rounded-full`.
 
 ## Design constraints (use in every prompt)
 
@@ -24,7 +24,7 @@ Example for one agent (Assistant):
 
 ```
 Prompt: Playful round avatar, soft gradient background (e.g. soft blue to purple or warm amber). Centered cute sparkle or star with little rays, friendly and universal. Slightly whimsical, no text.
-Model: black-forest-labs/flux.2-pro
+Model: black-forest-labs/flux-3-image
 Aspect ratio: 1:1 (square; LibreChat crops to circle).
 ```
 

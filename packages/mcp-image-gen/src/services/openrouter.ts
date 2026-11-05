@@ -5,7 +5,6 @@ import {
   KNOWN_MODELS,
   MODEL_ID_PREFIXES,
   EXAMPLE_MODEL_ID,
-  type ModalityRequest,
 } from '../constants/models.ts';
 
 // --- OpenRouter API types ----------------------------------------------------
@@ -36,28 +35,18 @@ interface OpenRouterUsage {
   total_tokens?: number;
 }
 
+/** Response of POST /images: base64 bytes plus the format, when OpenRouter can tell it. */
 interface OpenRouterImageResponse {
-  choices: Array<{
-    message: {
-      images?: Array<{ type: string; image_url: { url: string } }>;
-      content?: Array<{
-        type: string;
-        text?: string;
-        image_url?: { url: string };
-      }>;
-    };
-  }>;
+  data?: Array<{ b64_json?: string; media_type?: string }>;
   usage?: OpenRouterUsage;
 }
 
-/** Request body for POST /chat/completions (image generation). */
-interface ChatCompletionRequest {
+/** Request body for POST /images, OpenRouter's Image API. */
+interface ImageGenerationRequest {
   model: string;
-  messages: Array<{ role: string; content: string }>;
-  modalities?: string[];
-  response_modalities?: string[];
-  image_config?: { aspect_ratio?: string; image_size?: string };
-  usage?: { include: boolean };
+  prompt: string;
+  aspect_ratio?: string;
+  resolution?: string;
 }
 
 /** A generated image plus the provider cost, when OpenRouter reports one. */
@@ -68,7 +57,6 @@ export interface GeneratedImage {
 }
 
 const REQUEST_TIMEOUT_MS = 120_000;
-const NO_ENDPOINTS_PATTERN = /no endpoints found.*output modalities|modalities.*image/i;
 
 /** Error carrying the HTTP status so callers can branch (e.g. no-endpoints 404 retry). */
 class OpenRouterHttpError extends Error {
@@ -82,26 +70,22 @@ class OpenRouterHttpError extends Error {
 }
 
 export function extractImageUrl(response: OpenRouterImageResponse): string {
-  const message = response.choices?.[0]?.message;
-  let url = message?.images?.[0]?.image_url?.url;
-
-  if (!url && Array.isArray(message?.content)) {
-    url = message.content.find((c) => c.type === 'image_url' && c.image_url?.url)
-      ?.image_url?.url;
-  }
-
-  if (!url) {
+  const image = response.data?.[0];
+  if (!image?.b64_json) {
     throw new OpenRouterAPIError(
       'No image data in OpenRouter response. The model may not support image generation or the request failed.',
     );
   }
-
-  return url.startsWith('data:') ? url : `data:image/png;base64,${url}`;
+  return `data:${image.media_type ?? 'image/png'};base64,${image.b64_json}`;
 }
 
 function noEndpointMessage(modelId: string): string {
   return `Model "${modelId}" is not available for image generation on OpenRouter (no endpoint for image output). Use list_models or check_model to pick a supported model (e.g. ${EXAMPLE_MODEL_ID}).`;
 }
+
+/** OpenRouter answers 402 for every model once the account balance is too low, so retrying with another model cannot help. */
+const NO_CREDITS_MESSAGE =
+  'Image generation is unavailable: the OpenRouter account behind this service has run out of credits. This affects every image model, so do not retry with another one. Tell the user that image generation is temporarily unavailable and that an administrator has to top up the credits.';
 
 function errorMessageFromBody(body: unknown, fallback: string): string {
   if (typeof body === 'object' && body !== null && 'error' in body) {
@@ -135,34 +119,20 @@ export class OpenRouterClient {
 
     const requestBody = this.buildRequestBody({ model, prompt, aspect_ratio, image_size });
 
-    logger.debug(
-      { model, modalities: requestBody.modalities ?? requestBody.response_modalities },
-      'Generating image',
-    );
+    logger.debug({ model }, 'Generating image');
 
     try {
-      const response = await this.post<OpenRouterImageResponse>('/chat/completions', requestBody);
+      const response = await this.post<OpenRouterImageResponse>('/images', requestBody);
       return this.toGeneratedImage(response);
     } catch (error) {
       const status = error instanceof OpenRouterHttpError ? error.status : undefined;
       const message = error instanceof Error ? error.message : String(error);
-      const isNoEndpoints404 = status === 404 && NO_ENDPOINTS_PATTERN.test(message);
-
-      if (isNoEndpoints404 && requestBody.modalities?.includes('text')) {
-        logger.info({ model }, 'Retrying with modalities ["image"] only');
-        requestBody.modalities = ['image'];
-        try {
-          const retry = await this.post<OpenRouterImageResponse>('/chat/completions', requestBody);
-          return this.toGeneratedImage(retry);
-        } catch (retryErr) {
-          logger.error({ error: String(retryErr), model }, 'Retry failed');
-          throw new OpenRouterAPIError(noEndpointMessage(model), status);
-        }
-      }
-
       logger.error({ error: message, model }, 'Error generating image');
-      if (isNoEndpoints404) {
+      if (status === 404) {
         throw new OpenRouterAPIError(noEndpointMessage(model), status);
+      }
+      if (status === 402) {
+        throw new OpenRouterAPIError(NO_CREDITS_MESSAGE, status);
       }
       if (error instanceof OpenRouterAPIError) {
         throw error;
@@ -290,32 +260,11 @@ export class OpenRouterClient {
     prompt: string;
     aspect_ratio?: string;
     image_size?: string;
-  }): ChatCompletionRequest {
+  }): ImageGenerationRequest {
     const { model, prompt, aspect_ratio, image_size } = input;
-    const modality = this.getModalityRequest(model);
-    const useAspectRatio = Boolean(aspect_ratio) && this.supportsAspectRatio(model);
-    const useImageSize = Boolean(image_size) && this.supportsImageSize(model);
-
-    const body: ChatCompletionRequest = {
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      usage: { include: true },
-    };
-
-    if (modality === 'response_modalities') {
-      body.response_modalities = ['image'];
-    } else if (modality === 'image_only') {
-      body.modalities = ['image'];
-    } else {
-      body.modalities = ['image', 'text'];
-    }
-
-    if (useAspectRatio || useImageSize) {
-      body.image_config = {};
-      if (useAspectRatio) body.image_config.aspect_ratio = aspect_ratio;
-      if (useImageSize) body.image_config.image_size = image_size;
-    }
-
+    const body: ImageGenerationRequest = { model, prompt };
+    if (aspect_ratio && this.supportsAspectRatio(model)) body.aspect_ratio = aspect_ratio;
+    if (image_size && this.supportsImageSize(model)) body.resolution = image_size;
     return body;
   }
 
@@ -357,11 +306,6 @@ export class OpenRouterClient {
       if (key) return KNOWN_MODELS[key as keyof typeof KNOWN_MODELS];
     }
     return undefined;
-  }
-
-  private getModalityRequest(modelId: string): ModalityRequest {
-    const known = KNOWN_MODELS[modelId as keyof typeof KNOWN_MODELS];
-    return known?.modalityRequest ?? 'image_and_text';
   }
 
   private supportsAspectRatio(modelId: string): boolean {

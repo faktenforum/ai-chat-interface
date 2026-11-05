@@ -47,7 +47,7 @@ prompts:
     prompt: |
       Process the GitHub Pull Request {{Github Pull Request URL}} completely.
 
-      **Important**: For implementations use the Developer Quality agent (Claude Opus 4.8); the Code Reviewer and Code Refactorer run GLM 5.2. The Opus developer variant costs more per run.
+      **Important**: For implementations use the Developer Quality agent (Claude Opus 4.8); the Code Reviewer and Code Refactorer run GLM 5.3. The Opus developer variant costs more per run.
 
       ## Process
 

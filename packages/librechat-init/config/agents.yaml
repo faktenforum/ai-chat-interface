@@ -6,8 +6,8 @@ agents:
     description: General-purpose assistant – coding, Linux/shell, files, data analysis, documents, research and GitHub in one place.
     instructionsFile: shared-agent-assistant-instructions.md
     provider: Scaleway
-    model: glm-5.2
-    # No vision: glm-5.2 is text/code only. Image uploads fall back to OCR / "Upload as Text".
+    model: glm-5.3
+    # No vision: glm-5.3 is text/code only. Image uploads fall back to OCR / "Upload as Text".
     model_parameters:
       temperature: 0.4
       top_p: 0.9
@@ -17,7 +17,7 @@ agents:
       # often it is retried - so the cap stays well below it and LibreChat truncates instead.
       # 64000 leaves room for three tool rounds in one minute (3 x 64000 < 200000); this agent has
       # the most tools and therefore the longest chains. Raise it once the Scaleway quota is raised.
-      maxContextTokens: 64000    # GLM 5.2 (window 262144, output cap 16384)
+      maxContextTokens: 64000    # GLM 5.3 (window 262144, output cap 16384)
     tools:
       - web_search
       - file_search
@@ -167,6 +167,8 @@ agents:
     instructionsFile: shared-agent-faktencheck-instructions.md
     provider: Scaleway
     model: mistral-small-3.2-24b-instruct-2506
+    # Mistral Small 3.2 sees images, but LibreChat's name-based detection misses it.
+    vision: true
     model_parameters:
       temperature: 0.4
       top_p: 0.9
@@ -199,6 +201,8 @@ agents:
     instructionsFile: shared-agent-image-generation-instructions.md
     provider: Scaleway
     model: mistral-small-3.2-24b-instruct-2506
+    # Mistral Small 3.2 sees images, but LibreChat's name-based detection misses it.
+    vision: true
     model_parameters:
       temperature: 0.7
       top_p: 0.9

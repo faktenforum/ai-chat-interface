@@ -10,7 +10,7 @@ handoff chain, quality-variant split, and per-workspace plan/task state unnecess
 
 | Agent | ID | Provider / Model | Distinct backend / tools |
 |-------|----|------------------|--------------------------|
-| Assistant (default) | `shared-agent-assistant` | Scaleway / glm-5.2 (text/code, no vision) | linux, github (read+write), docs, stackoverflow, npm-search, wikipedia, web_search, file_search |
+| Assistant (default) | `shared-agent-assistant` | Scaleway / glm-5.3 (text/code, no vision) | linux, github (read+write), docs, stackoverflow, npm-search, wikipedia, web_search, file_search |
 | Faktencheck | `shared-agent-faktencheck` | Scaleway / mistral-small-3.2 | checkbot-rag `search` MCP (still `public: false`) |
 | Travel and Location | `shared-agent-travel-location` | Scaleway / qwen3-235b | mapbox, openstreetmap, weather, db-timetable |
 | Image Generation | `shared-agent-image-generation` | Scaleway / mistral-small-3.2 | image-gen MCP |

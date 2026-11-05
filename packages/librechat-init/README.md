@@ -60,7 +60,7 @@ agents:
   - id: shared-agent-assistant
     name: Assistant
     provider: Scaleway
-    model: glm-5.2
+    model: glm-5.3
     tools:
       - web_search
       - file_search

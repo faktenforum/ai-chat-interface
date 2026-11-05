@@ -58,6 +58,9 @@ interface AgentConfig {
   category?: string;
   conversation_starters?: string[];
   recursion_limit?: number;
+  /** Lets images reach the model. Omitted = LibreChat derives it from the model name, and its
+   * list does not know every vision model (e.g. Mistral Small 3.2 on Scaleway). */
+  vision?: boolean;
   /** Artifact rendering mode: 'default' | 'shadcnui' | 'custom'. Empty/omitted disables artifacts. */
   artifacts?: string;
   /** Shown in the agent's side panel so users know who to contact about it. */
@@ -192,6 +195,7 @@ function buildAgentCreateData(agentConfig: AgentConfig): AgentCreateParams {
     tools: buildToolsArray(agentConfig),
     conversation_starters: agentConfig.conversation_starters,
     recursion_limit: agentConfig.recursion_limit,
+    vision: agentConfig.vision,
     support_contact: resolveSupportContact(agentConfig),
     edges: [],
     artifacts: agentConfig.artifacts ?? '',
@@ -227,6 +231,7 @@ function buildAgentUpdateData(agentConfig: AgentConfig): AgentUpdateParams {
     tools: buildToolsArray(agentConfig),
     conversation_starters: agentConfig.conversation_starters,
     recursion_limit: agentConfig.recursion_limit,
+    vision: agentConfig.vision,
     artifacts: agentConfig.artifacts ?? '',
     support_contact: resolveSupportContact(agentConfig),
     isCollaborative: agentConfig.isCollaborative,
