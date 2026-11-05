@@ -70,6 +70,9 @@ export class UserManager {
   /** Token last written to a user's gh/git config, so unchanged requests do no filesystem work. */
   private readonly appliedPatByUsername = new Map<string, string>();
 
+  /** Tail of the queue that serializes account creation, see withAccountLock. */
+  private accountLock: Promise<void> = Promise.resolve();
+
   constructor() {
     // DB loaded via async initialize()
   }
@@ -136,12 +139,56 @@ export class UserManager {
    * Checks if a Linux username already exists in the system
    */
   private async linuxUserExists(username: string): Promise<boolean> {
+    return (await this.linuxUid(username)) !== null;
+  }
+
+  /**
+   * The uid /etc/passwd has for a username - what runuser and the worker actually run as.
+   */
+  private async linuxUid(username: string): Promise<number | null> {
     try {
-      await execFile('id', [username]);
-      return true;
+      const { stdout } = await execFile('id', ['-u', username]);
+      return Number(stdout.trim());
     } catch {
-      return false;
+      return null;
     }
+  }
+
+  /**
+   * Runs account changes one at a time. Concurrent first requests of one user each saw no
+   * mapping, each took a fresh uid and the last write won, while the home belonged to the first.
+   */
+  private withAccountLock<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.accountLock.then(task, task);
+    this.accountLock = run.then(() => undefined, () => undefined);
+    return run;
+  }
+
+  /**
+   * A home owned by any other uid than the account's locks the user out of it: every worker dies
+   * on EACCES (#106). useradd leaves an existing home alone, so a home on the persistent volume
+   * keeps the uid it was created with even when the account comes back with a different one.
+   */
+  private async alignHomeOwner(username: string, uid: number): Promise<void> {
+    const homeDir = `/home/${username}`;
+    try {
+      const { uid: owner } = await fs.stat(homeDir);
+      if (owner === uid) return;
+      logger.warn({ username, owner, uid }, 'Home owned by another uid, repairing ownership');
+      await execFile('chown', ['-R', `${username}:${username}`, homeDir]);
+    } catch (error) {
+      logger.error({ username, error }, 'Failed to align home ownership');
+    }
+  }
+
+  /**
+   * Stores the uid the account really has, if the mapping says otherwise.
+   */
+  private async syncMappingUid(mapping: UserMapping, uid: number): Promise<void> {
+    if (mapping.uid === uid) return;
+    logger.warn({ username: mapping.username, stored: mapping.uid, uid }, 'Correcting stored uid');
+    mapping.uid = uid;
+    await this.saveDb();
   }
 
   /**
@@ -172,9 +219,10 @@ export class UserManager {
   }
 
   /**
-   * Creates a Linux user account
+   * Creates a Linux user account and returns the uid it really has, which differs from the
+   * requested one when the account already existed.
    */
-  private async createLinuxUser(username: string, uid: number): Promise<void> {
+  private async createLinuxUser(username: string, uid: number): Promise<number> {
     try {
       await execFile('useradd', [
         '-m',
@@ -186,12 +234,17 @@ export class UserManager {
       logger.info({ username, uid }, 'Created Linux user');
     } catch {
       // User may already exist (e.g., from a previous container with the same volume)
-      if (await this.linuxUserExists(username)) {
-        logger.info({ username }, 'Linux user already exists, skipping creation');
-        return;
+      if (!await this.linuxUserExists(username)) {
+        throw new UserCreationError(`Failed to create Linux user ${username}`);
       }
-      throw new UserCreationError(`Failed to create Linux user ${username}`);
+      logger.info({ username }, 'Linux user already exists, skipping creation');
     }
+    const actual = await this.linuxUid(username);
+    if (actual === null) {
+      throw new UserCreationError(`Linux user ${username} has no uid after creation`);
+    }
+    await this.alignHomeOwner(username, actual);
+    return actual;
   }
 
   /**
@@ -549,13 +602,23 @@ ${identity ? `    user: ${identity.login}\n` : ''}`;
    * Creates the user if new, returns the Linux username.
    */
   async ensureUser(email: string): Promise<UserMapping> {
-    // Check if user already exists in mapping
+    // Fast path without the lock: the account exists and nothing needs to change
+    const known = this.db.users[email];
+    if (known && await this.linuxUserExists(known.username)) {
+      return known;
+    }
+    return this.withAccountLock(() => this.ensureUserLocked(email));
+  }
+
+  private async ensureUserLocked(email: string): Promise<UserMapping> {
+    // Check again: a request queued before this one may have created the user meanwhile
     const existing = this.db.users[email];
     if (existing) {
       // Ensure Linux user exists (may be missing after image upgrade)
       if (!await this.linuxUserExists(existing.username)) {
         this.appliedPatByUsername.delete(existing.username);
-        await this.createLinuxUser(existing.username, existing.uid);
+        const actual = await this.createLinuxUser(existing.username, existing.uid);
+        await this.syncMappingUid(existing, actual);
         await this.setupDefaultWorkspace(existing.username);
         await this.setupSshKey(existing.username);
         await this.setupGitHubCli(email, existing.username);
@@ -565,9 +628,8 @@ ${identity ? `    user: ${identity.login}\n` : ''}`;
 
     // New user: derive username, assign UID, create account
     const username = this.resolveUniqueUsername(email);
-    const uid = this.db.nextUid++;
-
-    await this.createLinuxUser(username, uid);
+    const uid = await this.createLinuxUser(username, this.db.nextUid);
+    this.db.nextUid = Math.max(this.db.nextUid, uid) + 1;
     await this.setupDefaultWorkspace(username);
     await this.setupSshKey(username);
     await this.setupGitHubCli(email, username);
@@ -691,8 +753,16 @@ ${identity ? `    user: ${identity.login}\n` : ''}`;
       try {
         if (!await this.linuxUserExists(mapping.username)) {
           this.appliedPatByUsername.delete(mapping.username);
-          await this.createLinuxUser(mapping.username, mapping.uid);
+          const actual = await this.createLinuxUser(mapping.username, mapping.uid);
+          await this.syncMappingUid(mapping, actual);
           await this.setupDefaultWorkspace(mapping.username);
+        } else {
+          /* Homes broken by #106 before this fix: the account exists, the home is someone else's. */
+          const actual = await this.linuxUid(mapping.username);
+          if (actual !== null) {
+            await this.syncMappingUid(mapping, actual);
+            await this.alignHomeOwner(mapping.username, actual);
+          }
         }
         await this.setupSshKey(mapping.username);
         /* No GitHub credentials here on purpose. Tokens are per user and only a request carries
