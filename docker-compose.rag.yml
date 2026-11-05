@@ -1,7 +1,7 @@
 services:
   vectordb:
     container_name: vectordb
-    image: pgvector/pgvector:0.8.0-pg15-trixie
+    image: pgvector/pgvector:0.8.7-pg15-trixie
     environment:
       POSTGRES_DB: ${LIBRECHAT_VECTORDB_DB:-vectordb}
       POSTGRES_USER: ${LIBRECHAT_VECTORDB_USER:-vectordb}
