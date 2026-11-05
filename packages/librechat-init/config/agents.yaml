@@ -2,6 +2,7 @@ agents:
   # Universal assistant. Handles coding, Linux/shell, files, data, documents, research and
   # GitHub in one place. Replaces the former developer/workspace stack and both routers.
   - id: shared-agent-assistant
+    avatar: shared-agent-assistant.png
     name: Assistant
     description: General-purpose assistant – coding, Linux/shell, files, data analysis, documents, research and GitHub in one place.
     instructionsFile: shared-agent-assistant-instructions.md
@@ -162,6 +163,7 @@ agents:
       publicEdit: true
 
   - id: shared-agent-faktencheck
+    avatar: shared-agent-faktencheck.png
     name: Faktencheck Assistant
     description: Search and present German fact-checks from Faktenforum; verify claims and find existing checks
     instructionsFile: shared-agent-faktencheck-instructions.md
@@ -194,6 +196,7 @@ agents:
       publicEdit: false # everyone can use it, only owner can edit its config
 
   - id: shared-agent-image-generation
+    avatar: shared-agent-image-generation.png
     name: Image Generation Assistant
     description: Creates images from text descriptions using AI image generation
     instructionsFile: shared-agent-image-generation-instructions.md
@@ -210,7 +213,7 @@ agents:
       - generate_image_mcp_image-gen
       - list_models_mcp_image-gen
       - check_model_mcp_image-gen
-    category: creative
+    category: general
     conversation_starters:
       - Create an image of a mountain landscape at sunset
       - Show me different styles for portraits
@@ -226,6 +229,7 @@ agents:
       publicEdit: true
 
   - id: shared-agent-travel-location
+    avatar: shared-agent-travel-location.png
     name: Travel and Location Assistant
     description: Helps with travel planning, location search, route planning and combines geographic information with weather data
     instructionsFile: shared-agent-travel-location-instructions.md
@@ -274,7 +278,7 @@ agents:
       - getRecentChanges_mcp_db-timetable
       - getPlannedTimetable_mcp_db-timetable
       - findStations_mcp_db-timetable
-    category: productivity
+    category: general
     conversation_starters:
       - Find the best route from Berlin to Munich
       - Show me restaurants near Berlin Central Station

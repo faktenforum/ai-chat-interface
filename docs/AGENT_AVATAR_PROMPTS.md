@@ -1,6 +1,6 @@
 # Agent Avatar Prompts (Image-Gen MCP)
 
-Prompts for generating round agent avatars for LibreChat. Style: playful and friendly, with soft colors and a clear symbol per agent. Use with the image-gen MCP tool (e.g. `black-forest-labs/flux.2-pro`). Output is square; LibreChat displays it `rounded-full`.
+Prompts for generating round agent avatars for LibreChat. Style: playful and friendly, with soft colors and a clear symbol per agent. Use with the image-gen MCP tool (e.g. `black-forest-labs/flux-3-image`). Output is square; LibreChat displays it `rounded-full`.
 
 ## Design constraints (use in every prompt)
 
@@ -24,11 +24,11 @@ Example for one agent (Assistant):
 
 ```
 Prompt: Playful round avatar, soft gradient background (e.g. soft blue to purple or warm amber). Centered cute sparkle or star with little rays, friendly and universal. Slightly whimsical, no text.
-Model: black-forest-labs/flux.2-pro
+Model: black-forest-labs/flux-3-image
 Aspect ratio: 1:1 (square; LibreChat crops to circle).
 ```
 
-After generation, save the image from the chat (e.g. right‑click → Save image as) into `packages/librechat-init/assets/agent-avatars/` using the filename from that folder’s README, then assign it in LibreChat (Agent settings → Avatar upload).
+After generation, save the image as `packages/librechat-init/assets/agent-avatars/<agent-id>.png`. The `avatar:` field in `config/agents.yaml` points to it, and librechat-init uploads it on the next run. No manual upload in the LibreChat UI is needed.
 
 ## Optional: consistent style prefix
 

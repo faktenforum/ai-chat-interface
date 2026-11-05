@@ -278,6 +278,28 @@ export class LibreChatAPIClient {
   }
 
   /**
+   * Uploads an avatar image for an agent (needs EDIT permission for userId).
+   */
+  async uploadAgentAvatar(agentId: string, fileName: string, data: Uint8Array, userId: string): Promise<void> {
+    const form = new FormData();
+    form.append('file', new Blob([new Uint8Array(data)], { type: 'image/png' }), fileName);
+    const headers = this.getRequestHeaders(userId);
+    // fetch sets the multipart Content-Type with its boundary
+    delete headers['Content-Type'];
+    const response = await fetch(
+      `${this.baseURL}/api/files/images/agents/${encodeURIComponent(agentId)}/avatar`,
+      { method: 'POST', headers, body: form }
+    );
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(
+        this.extractErrorMessage(text, response.headers.get('content-type') || '') ||
+          `HTTP ${response.status}: ${response.statusText}`
+      );
+    }
+  }
+
+  /**
    * Updates agent permissions.
    */
   async updateAgentPermissions(

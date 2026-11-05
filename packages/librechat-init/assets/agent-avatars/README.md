@@ -2,20 +2,15 @@
 
 Round, playful avatars for LibreChat shared agents. Generated via image-gen MCP (see [docs/AGENT_AVATAR_PROMPTS.md](../../../docs/AGENT_AVATAR_PROMPTS.md)).
 
-## Saving generated images
+## Automatic upload
 
-The image-gen MCP shows each generated image in the chat. To use them:
+Each agent in `config/agents.yaml` can name a file in this folder with `avatar:`. When librechat-init creates or updates the agent, it uploads that file through the LibreChat API, but only if the agent has no avatar yet. An avatar set by hand in the UI is never overwritten. A failed upload logs a warning and does not fail the init.
 
-1. In the chat where the avatars were generated, save each image (e.g. right‑click → Save image as).
-2. Name files by agent ID and put them here:
+| Agent ID | Filename |
+|----------|----------|
+| shared-agent-assistant | shared-agent-assistant.png |
+| shared-agent-faktencheck | shared-agent-faktencheck.png |
+| shared-agent-image-generation | shared-agent-image-generation.png |
+| shared-agent-travel-location | shared-agent-travel-location.png |
 
-| Order | Agent ID | Suggested filename |
-|-------|----------|---------------------|
-| 1 | shared-agent-assistant | shared-agent-assistant.png |
-| 2 | shared-agent-faktencheck | shared-agent-faktencheck.png |
-| 3 | shared-agent-image-generation | shared-agent-image-generation.png |
-| 4 | shared-agent-travel-location | shared-agent-travel-location.png |
-
-3. In LibreChat: open each agent in the sidebar → Agent settings → upload the matching avatar image.
-
-Avatars are stored per agent in the backend (DB); this folder is for your copies and version control if desired.
+To replace an avatar that was already uploaded, change it in LibreChat (Agent settings) or clear it there first.
