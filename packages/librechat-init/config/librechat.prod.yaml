@@ -32,7 +32,7 @@ endpoints:
       - "vision"
 
 # Cost control (enterprise): per-user token balance.
-# Credit convention: 1,000,000 token credits = 1 USD. So $30 = 30,000,000 credits.
+# Credit convention: 1,000,000 token credits = 1 USD. So $50 = 50,000,000 credits.
 # The check is pre-request on prompt tokens; an out-of-credit user is blocked with an error.
 # Auto-refill ADDS refillAmount once the balance is depleted (<= 0) and refillIntervalValue
 # units have elapsed since the last refill (it does not reset unused balance each month).
@@ -43,10 +43,10 @@ endpoints:
 #   npm run user-stats                       # per-user spend
 balance:
   enabled: true
-  startBalance: 30000000        # $30 starting budget for new users
+  startBalance: 50000000        # $50 starting budget for new users
   autoRefillEnabled: true
   refillIntervalValue: 1
   refillIntervalUnit: months
-  refillAmount: 30000000        # $30 topped up when depleted after a month
+  refillAmount: 50000000        # $50 topped up when depleted after a month
 transactions:
   enabled: true

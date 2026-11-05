@@ -99,7 +99,7 @@ Amounts are USD; LibreChat stores credits (`1,000,000 credits = $1`). The org-wi
 | Var | Default | Meaning |
 |-----|---------|---------|
 | `SPEND_MONITOR_PORT` | `3016` | port (host + container) |
-| `SPEND_MONITOR_BUDGET_USD` | `100` | org budget default; overridable at runtime |
+| `SPEND_MONITOR_BUDGET_USD` | `500` | org budget default; overridable at runtime |
 | `SPEND_MONITOR_PERIOD` | `calendar-month` | `calendar-month`, `calendar-week`, `rolling-30d`, `rolling-7d`; overridable at runtime |
 | `SPEND_MONITOR_WARN_PCT` | `50` | warn threshold (%) |
 | `SPEND_MONITOR_CRIT_PCT` | `80` | critical threshold (%) |
