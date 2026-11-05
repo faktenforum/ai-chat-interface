@@ -6,7 +6,7 @@
 services:
   mongodb:
     container_name: librechat-tests-mongodb
-    image: mongo
+    image: mongo:8.2
     restart: always
     command: mongod --noauth
     ports:
