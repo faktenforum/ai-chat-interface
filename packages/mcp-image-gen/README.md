@@ -4,7 +4,7 @@ MCP server providing image generation capabilities via OpenRouter API for LibreC
 
 ## Overview
 
-This server implements the Model Context Protocol (MCP) to provide image generation tools using various models available through OpenRouter, including FLUX.2 Pro, FLUX.2 Flex, and Gemini models.
+This server implements the Model Context Protocol (MCP) to provide image generation tools using various models available through OpenRouter, including FLUX.3, GPT Image 2, and Gemini models.
 
 ## Tools
 
@@ -14,7 +14,7 @@ This server implements the Model Context Protocol (MCP) to provide image generat
 
 ## Features
 
-- ✅ Multiple model support (FLUX.2 Pro, FLUX.2 Flex, Gemini, etc.)
+- ✅ Multiple model support (FLUX.3, GPT Image 2, Gemini, etc.)
 - ✅ Model metadata with characteristics and recommendations
 - ✅ Aspect ratio and image size control (Gemini models)
 - ✅ Stateless HTTP transport (streamable-http)
@@ -50,9 +50,9 @@ The server uses:
 
 ## Model Recommendations
 
-- **High Quality**: FLUX.2 Pro or FLUX.2 Flex
+- **High Quality**: FLUX.3 or GPT Image 2
 - **Fast/Cost-Effective with Aspect Ratio Control**: Gemini models
-- **Default**: FLUX.2 Pro (highest quality, more expensive)
+- **Default**: FLUX.3 (highest quality, more expensive)
 
 ## License
 

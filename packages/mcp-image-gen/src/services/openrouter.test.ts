@@ -55,7 +55,7 @@ test('generateImage: extracts the provider cost from usage.cost', async () => {
   const client = new OpenRouterClient('test-key');
   const result = await client.generateImage({
     prompt: 'a red square',
-    model: 'black-forest-labs/flux.2-pro',
+    model: 'black-forest-labs/flux-3-image',
   });
   assert.equal(result.imageUrl, DATA_URL);
   assert.equal(result.costUsd, 0.042);
@@ -68,7 +68,7 @@ test('generateImage: costUsd is undefined when no usage returned', async () => {
   const client = new OpenRouterClient('test-key');
   const result = await client.generateImage({
     prompt: 'a red square',
-    model: 'black-forest-labs/flux.2-pro',
+    model: 'black-forest-labs/flux-3-image',
   });
   assert.equal(result.costUsd, undefined);
 });
@@ -97,7 +97,7 @@ test('generateImage: omits image_config for a model that supports neither option
   const client = new OpenRouterClient('test-key');
   await client.generateImage({
     prompt: 'a red square',
-    model: 'black-forest-labs/flux.2-pro',
+    model: 'black-forest-labs/flux-3-image',
     aspect_ratio: '16:9',
     image_size: '2K',
   });

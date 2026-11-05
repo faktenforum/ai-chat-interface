@@ -14,11 +14,11 @@ test('imageResultContent: attaches cost to _meta when reported', () => {
 });
 
 test('imageResultContent: no _meta when cost is undefined', () => {
-  const result = imageResultContent(DATA_URL, undefined, 'black-forest-labs/flux.2-pro');
+  const result = imageResultContent(DATA_URL, undefined, 'black-forest-labs/flux-3-image');
   assert.equal(result._meta, undefined);
 });
 
 test('imageResultContent: no _meta when cost is zero', () => {
-  const result = imageResultContent(DATA_URL, 0, 'black-forest-labs/flux.2-pro');
+  const result = imageResultContent(DATA_URL, 0, 'black-forest-labs/flux-3-image');
   assert.equal(result._meta, undefined);
 });

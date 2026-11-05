@@ -122,13 +122,13 @@ endpoints:
           "openai/gpt-6.1-sol",               # GPT-6.1 Sol, the 6.1 flagship (Vision)
           "openai/gpt-6.1-terra",             # GPT-6.1 Terra (Vision, balanced tier)
           "google/gemini-3.8-flash",          # Google Gemini 3.8 Flash (GA, Vision)
-          "google/gemini-3.1-flash-lite",     # Gemini 3.1 Flash Lite (cheap, fast)
+          "google/gemini-3.5-flash-lite",     # Gemini 3.5 Flash Lite (cheap, fast)
           "google/gemini-4-argon",            # Google Gemini 4 Argon (flagship reasoning, Vision)
           "deepseek/deepseek-v4-pro-0813",    # DeepSeek V4 Pro (GA, long context)
           "x-ai/grok-4.7",                    # xAI reasoning model (Vision, 500K Context)
           "moonshotai/kimi-k2.6",             # Cheap long-context reasoning (Vision)
           "moonshotai/kimi-k3.1-pro",         # Kimi K3.1 Pro (1M Context, Vision) - premium tier
-          "mistralai/mistral-large-2512"      # European premium option (French)
+          "mistralai/mistral-large-4-0"      # European premium option (French)
         ]
         # fetch all models from the API. Prod also uses fetch: true now; the selector stays
         # curated via modelSpecs.addedEndpoints, and fetch lets OpenRouter feed live prices.
@@ -170,10 +170,11 @@ endpoints:
           "llama-3.3-70b-instruct",           # Chat - Generally Available
           "qwen3-235b-a22b-instruct-2507",    # Chat - Generally Available
           "qwen3.5-397b-a17b",                # Chat, Vision (frontier MoE) - Generally Available
-          "qwen3.6-35b-a3b",                  # Chat, Vision (efficient MoE) - Generally Available
+          "qwen3.8-27b",                      # Chat, Vision (efficient) - Generally Available
           "mistral-medium-3.5-128b",          # Chat, Vision (Mistral's premium tier) - Generally Available
           "mistral-small-3.2-24b-instruct-2506", # Chat, Vision - Generally Available
-          "deepseek-v4-flash-0731",           # Chat (Reasoning/Code), 1M context - Generally Available
+          "deepseek-v4.1-flash-1017",         # Chat, Vision (Reasoning/Code), 256K context - Generally Available
+          "deepseek-v4-flash-0731",           # Chat (Reasoning/Code), 1M context, cheaper - Generally Available
           "gpt-oss-120b",                      # Chat - Generally Available
           "gemma-4-26b-a4b-it",               # Chat, Vision - Generally Available
           "qwen3-embedding-8b",               # Embeddings - Generally Available
@@ -199,10 +200,11 @@ endpoints:
         gpt-oss-120b:                        { prompt: 0.16, completion: 0.65, context: 128000 }
         gemma-4-26b-a4b-it:                  { prompt: 0.27, completion: 0.54, context: 256000 }
         qwen3.5-397b-a17b:                   { prompt: 0.65, completion: 3.89, context: 250000 }
-        qwen3.6-35b-a3b:                     { prompt: 0.27, completion: 1.62, context: 256000 }
+        qwen3.8-27b:                         { prompt: 0.65, completion: 3.56, context: 256000 }
         mistral-medium-3.5-128b:             { prompt: 1.62, completion: 8.10, context: 180000 }
         glm-5.3:                             { prompt: 1.94, completion: 5.94, context: 262144 }
-        # Scaleway documents no serverless context cap for it, so the model's native 1M applies.
+        # Scaleway documents no serverless context cap for 0731, so the model's native 1M applies.
+        deepseek-v4.1-flash-1017:            { prompt: 0.65, completion: 1.94, context: 256000 }
         deepseek-v4-flash-0731:              { prompt: 0.43, completion: 0.86, context: 1000000 }
         qwen3-embedding-8b:                  { prompt: 0.11, completion: 0, context: 32000 }
         bge-multilingual-gemma2:             { prompt: 0.11, completion: 0, context: 8000 }
@@ -234,7 +236,7 @@ endpoints:
 #
 # Retired on Scaleway (do not re-add): deepseek-r1-distill-llama-70b, mistral-nemo-instruct-2407,
 # llama-3.1-8b-instruct (EOL Apr 2026); pixtral-12b-2409, qwen3-coder-30b-a3b-instruct (EOL Oct 2026,
-# routed to mistral-small-3.2 and qwen3.6-35b); glm-5.2 (EOL Nov 2026, replaced by glm-5.3); devstral-2-123b-instruct-2512, holo2-30b-a3b,
+# routed to mistral-small-3.2 and qwen3.6-35b); qwen3.6-35b-a3b (replaced by qwen3.8-27b); glm-5.2 (EOL Nov 2026, replaced by glm-5.3); devstral-2-123b-instruct-2512, holo2-30b-a3b,
 # gemma-3-27b-it, voxtral-small-24b-2507 (withdrawn by Aug 2026 - deepseek-v4-flash-0731 took
 # over the coding slot). Served but deliberately unlisted: whisper-large-v3 (wired under
 # `speech`) and the two embedding models (used by RAG, not chat).
@@ -309,13 +311,27 @@ modelSpecs:
         maxContextTokens: 262144
         maxOutputTokens: 16384
 
-    - name: "scaleway-deepseek-v4-flash"
-      label: "DeepSeek V4 Flash"
-      description: "Günstiges Reasoning- und Coding-Modell (DeepSeek, MoE). 1M Context, 32K Output. Nur Text. Übernimmt die Coding-Rolle von Devstral 2, das Scaleway zurückgezogen hat. Open Weights (DeepSeek)."
+    - name: "scaleway-deepseek-v4-1-flash"
+      label: "DeepSeek V4.1 Flash"
+      description: "Günstiges Reasoning- und Coding-Modell (DeepSeek, MoE). 256K Context, 32K Output. Text, Code und Vision. Nachfolger von DeepSeek V4 Flash, etwas teurer. Open Weights (DeepSeek)."
       group: "Europa & Open Source"
       # Bot icon (green-600 #059669): Open Source / automation; good contrast in light and dark
       groupIcon: "/images/group-europa.svg"
       order: 1
+      vision: true
+      preset:
+        endpoint: "Scaleway"
+        endpointType: "custom"
+        model: "deepseek-v4.1-flash-1017"
+        maxContextTokens: 256000
+        maxOutputTokens: 32768
+
+    - name: "scaleway-deepseek-v4-flash"
+      label: "DeepSeek V4 Flash"
+      description: "Der günstigere Vorgänger von V4.1 Flash, dafür nur Text, aber mit 1M Context und 32K Output. Open Weights (DeepSeek)."
+      group: "Europa & Open Source"
+      groupIcon: "/images/group-europa.svg"
+      order: 2
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
@@ -327,7 +343,7 @@ modelSpecs:
       label: "Gemma 4 26B"
       description: "Kompaktes Chat- und Vision-Modell (Google, MoE). 256K Context, 32K Output. Ablöser von Gemma 3 27B: gleicher Preis, deutlich größerer Kontext. Gemma License."
       group: "Europa & Open Source"
-      order: 2
+      order: 3
       vision: true
       preset:
         endpoint: "Scaleway"
@@ -340,7 +356,7 @@ modelSpecs:
       label: "GPT-OSS 120B"
       description: "Large model for complex tasks. 128K Context, 8K Output. Apache-2.0 License."
       group: "Europa & Open Source"
-      order: 3
+      order: 4
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
@@ -352,7 +368,7 @@ modelSpecs:
       label: "Llama 3.3 70B"
       description: "Meta's latest model. 100K Context, 4K Output. Very good for general conversations and tasks. Llama 3.3 Community License. Recommended by Scaleway."
       group: "Europa & Open Source"
-      order: 4
+      order: 5
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
@@ -364,7 +380,7 @@ modelSpecs:
       label: "Mistral Medium 3.5 128B"
       description: "Mistrals Premium-Stufe auf Scaleway. 180K Context, 16K Output. Text, Code und Vision. Europäisch gehostet, deutlich stärker als Mistral Small - aber auch ~10x teurer."
       group: "Europa & Open Source"
-      order: 5
+      order: 6
       vision: true
       preset:
         endpoint: "Scaleway"
@@ -377,7 +393,7 @@ modelSpecs:
       label: "Mistral Small 3.2 24B"
       description: "Kosteneffektiv (3-6x günstiger als 70B Modelle). 128K Context, 8K Output. Unterstützt Chat und Vision. Apache-2.0 License. Empfohlen von Scaleway als Einstiegsmodell."
       group: "Europa & Open Source"
-      order: 6
+      order: 7
       vision: true
       preset:
         endpoint: "Scaleway"
@@ -390,7 +406,7 @@ modelSpecs:
       label: "Qwen3 235B"
       description: "Sehr großes Modell (235B Parameter). 250K Context, 8K Output. Optimal für komplexe Aufgaben und lange Kontexte. Apache-2.0 License."
       group: "Europa & Open Source"
-      order: 7
+      order: 8
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
@@ -402,7 +418,7 @@ modelSpecs:
       label: "Qwen3.5 397B"
       description: "Neues Frontier-Modell (Qwen, MoE 397B/17B aktiv). 250K Context, 16K Output. Text, Code und Vision. Stärkstes Scaleway-Modell. Apache-2.0 License."
       group: "Europa & Open Source"
-      order: 8
+      order: 9
       vision: true
       preset:
         endpoint: "Scaleway"
@@ -411,16 +427,16 @@ modelSpecs:
         maxContextTokens: 250000
         maxOutputTokens: 16384
 
-    - name: "scaleway-qwen3.6-35b"
-      label: "Qwen3.6 35B"
-      description: "Günstiges, modernes MoE-Modell (Qwen). 256K Context, 32K Output. Text, Code und Vision. Sehr gutes Preis-Leistungs-Verhältnis. Apache-2.0 License."
+    - name: "scaleway-qwen3.8-27b"
+      label: "Qwen3.8 27B"
+      description: "Modernes, effizientes Modell (Qwen). 256K Context, 32K Output. Text, Code und Vision. Ersetzt Qwen3.6 35B, ist aber teurer. Apache-2.0 License."
       group: "Europa & Open Source"
-      order: 9
+      order: 10
       vision: true
       preset:
         endpoint: "Scaleway"
         endpointType: "custom"
-        model: "qwen3.6-35b-a3b"
+        model: "qwen3.8-27b"
         maxContextTokens: 256000
         maxOutputTokens: 32768
 
@@ -474,16 +490,16 @@ modelSpecs:
         maxContextTokens: 1048576
         maxOutputTokens: 65536
 
-    - name: "google-gemini-3.1-flash-lite"
-      label: "Gemini 3.1 Flash Lite"
-      description: "Schnell und kostengünstig (Gemini 3 Generation). Optimiert für schnelle Antworten bei guter Qualität. Unterstützt Vision. Closed Source (Google)."
+    - name: "google-gemini-3.5-flash-lite"
+      label: "Gemini 3.5 Flash Lite"
+      description: "Schnell und kostengünstig (Gemini 3.5 Generation). Optimiert für schnelle Antworten bei guter Qualität. Unterstützt Vision. Closed Source (Google)."
       group: "Premium-Modelle"
       order: 4
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "google/gemini-3.1-flash-lite"
+        model: "google/gemini-3.5-flash-lite"
         maxContextTokens: 1048576
         maxOutputTokens: 65536
 
@@ -554,18 +570,18 @@ modelSpecs:
         maxContextTokens: 1000000
         maxOutputTokens: 65536
 
-    - name: "mistral-large-2512"
-      label: "Mistral Large 3 2512"
-      description: "Mistrals aktuellstes Großmodell (675B MoE, 41B aktiv). 262K Context. Text + Vision. Apache 2.0. Gute Option für Europa-relevante Premium-Aufgaben."
+    - name: "mistral-large-4"
+      label: "Mistral Large 4"
+      description: "Mistrals aktuelles Großmodell. 1M Context, 64K Output. Text + Vision. Gute Option für Europa-relevante Premium-Aufgaben."
       group: "Premium-Modelle"
       order: 13
       vision: true
       preset:
         endpoint: "OpenRouter"
         endpointType: "custom"
-        model: "mistralai/mistral-large-2512"
-        maxContextTokens: 262144
-        maxOutputTokens: 8192
+        model: "mistralai/mistral-large-4-0"
+        maxContextTokens: 1048576
+        maxOutputTokens: 65536
 
     - name: "openai-gpt6-1-sol"
       label: "GPT-6.1 Sol"
