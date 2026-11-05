@@ -167,6 +167,8 @@ agents:
     instructionsFile: shared-agent-faktencheck-instructions.md
     provider: Scaleway
     model: mistral-small-3.2-24b-instruct-2506
+    # Mistral Small 3.2 sees images, but LibreChat's name-based detection misses it.
+    vision: true
     model_parameters:
       temperature: 0.4
       top_p: 0.9
@@ -199,6 +201,8 @@ agents:
     instructionsFile: shared-agent-image-generation-instructions.md
     provider: Scaleway
     model: mistral-small-3.2-24b-instruct-2506
+    # Mistral Small 3.2 sees images, but LibreChat's name-based detection misses it.
+    vision: true
     model_parameters:
       temperature: 0.7
       top_p: 0.9

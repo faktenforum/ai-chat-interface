@@ -473,6 +473,7 @@ export interface AgentCreateParams {
   category?: string;
   conversation_starters?: string[];
   recursion_limit?: number;
+  vision?: boolean;
   artifacts?: string;
   support_contact?: SupportContact;
   edges?: unknown[];
@@ -496,6 +497,7 @@ export interface AgentUpdateParams {
   category?: string;
   conversation_starters?: string[];
   recursion_limit?: number;
+  vision?: boolean;
   artifacts?: string;
   support_contact?: SupportContact;
   edges?: unknown[];
