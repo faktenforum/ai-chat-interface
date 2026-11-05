@@ -17,28 +17,28 @@
     "test:endpoints": "node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings test/endpoints.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "busboy": "^1.6.0",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "fast-xml-parser": "^5.10.1",
-    "html-to-text": "^10.0.0",
+    "express": "^5.3.0",
+    "fast-xml-parser": "^5.12.0",
+    "html-to-text": "^10.0.1",
     "ical.js": "^2.2.1",
     "imapflow": "^1.6.5",
     "js-yaml": "^4.1.1",
     "node-pty": "^1.1.0",
     "nodemailer": "^9.0.3",
-    "pino": "^10.3.1",
-    "zod": "^4.4.3"
+    "pino": "^10.4.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/busboy": "^1.5.4",
+    "@types/busboy": "^1.5.5",
     "@types/express": "^5.0.6",
     "@types/html-to-text": "^9.0.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.5.0",
-    "@types/nodemailer": "^8.0.1",
-    "tsx": "^4.21.0",
+    "@types/nodemailer": "^8.0.2",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.2"
   },
   "engines": {

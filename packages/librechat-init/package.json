@@ -5,10 +5,10 @@
   "type": "module",
   "description": "LibreChat initialization service",
   "dependencies": {
-    "mongoose": "^9.3.2",
+    "mongoose": "^9.12.0",
     "nanoid": "^5.1.7",
     "jsonwebtoken": "^9.0.3",
-    "yaml": "^2.8.3"
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
