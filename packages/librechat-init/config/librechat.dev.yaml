@@ -5,14 +5,14 @@ modelSpecs:
     - agents
 
 # Cost control test parity with prod: per-user token balance.
-# 1,000,000 credits = 1 USD → $30 = 30,000,000 credits. See librechat.prod.yaml for the full notes
+# 1,000,000 credits = 1 USD → $50 = 50,000,000 credits. See librechat.prod.yaml for the full notes
 # and the admin scripts (set-balance / add-balance / list-balances / user-stats).
 balance:
   enabled: true
-  startBalance: 30000000
+  startBalance: 50000000
   autoRefillEnabled: true
   refillIntervalValue: 1
   refillIntervalUnit: months
-  refillAmount: 30000000
+  refillAmount: 50000000
 transactions:
   enabled: true

@@ -647,7 +647,7 @@ registration:
   # socialLogins: ['github', 'google', 'discord', 'openid', 'facebook', 'apple', 'saml']
 
 # Balance System — ENABLED per environment in librechat.prod.yaml and librechat.dev.yaml
-# (per-user budget, default $30, 1,000,000 credits = 1 USD). Left disabled in base so local dev
+# (per-user budget, default $50, 1,000,000 credits = 1 USD). Left disabled in base so local dev
 # stays uncapped. The commented example below documents the available fields.
 # balance:
 #   enabled: false

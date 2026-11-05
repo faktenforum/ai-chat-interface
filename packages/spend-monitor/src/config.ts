@@ -49,7 +49,7 @@ export function loadConfig(): Config {
     port: num('PORT', 3016),
     mongoUri: process.env.SPEND_MONITOR_MONGO_URI || 'mongodb://prod-mongodb:27017/LibreChat',
     dbName: process.env.SPEND_MONITOR_DB || 'LibreChat',
-    budgetUsd: num('SPEND_MONITOR_BUDGET_USD', 100),
+    budgetUsd: num('SPEND_MONITOR_BUDGET_USD', 500),
     period: period('SPEND_MONITOR_PERIOD', 'calendar-month'),
     warnPct: num('SPEND_MONITOR_WARN_PCT', 50),
     critPct: num('SPEND_MONITOR_CRIT_PCT', 80),

@@ -23,7 +23,7 @@ when over budget (`SPEND_MONITOR_ENFORCE`). Per-user limits are LibreChat's own
 | `PORT` | `3016` | listen port |
 | `SPEND_MONITOR_MONGO_URI` | `mongodb://prod-mongodb:27017/LibreChat` | LibreChat MongoDB |
 | `SPEND_MONITOR_DB` | `LibreChat` | database name |
-| `SPEND_MONITOR_BUDGET_USD` | `100` | org budget (USD); a runtime override in the DB wins |
+| `SPEND_MONITOR_BUDGET_USD` | `500` | org budget (USD); a runtime override in the DB wins |
 | `SPEND_MONITOR_PERIOD` | `calendar-month` | `calendar-month`, `calendar-week`, `rolling-30d`, `rolling-7d`; a runtime override wins |
 | `SPEND_MONITOR_WARN_PCT` | `50` | warn threshold (%) |
 | `SPEND_MONITOR_CRIT_PCT` | `80` | critical threshold (%) |

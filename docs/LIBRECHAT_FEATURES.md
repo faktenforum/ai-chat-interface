@@ -462,7 +462,7 @@ Rating system for AI responses with thumbs up/down and detailed tags.
 Enabled in `librechat.prod.yaml` and `librechat.dev.yaml` (not in base, so local dev stays uncapped).
 
 - **Credit unit:** `1,000,000 token credits = 1 USD`. Cost = `tokens × multiplier`, where the multiplier is USD per 1M tokens. Default for unpriced models is `defaultRate = 6` ($6/1M).
-- **Budget:** `balance.startBalance: 30000000` ($30) with monthly auto-refill (`refillAmount: 30000000`). The check is pre-request on prompt tokens; an out-of-credit user is blocked with an error. Auto-refill ADDS `refillAmount` once the balance hits ≤ 0 and the interval has elapsed (it does not reset unused balance).
+- **Budget:** `balance.startBalance: 50000000` ($50) with monthly auto-refill (`refillAmount: 50000000`). The check is pre-request on prompt tokens; an out-of-credit user is blocked with an error. Auto-refill ADDS `refillAmount` once the balance hits ≤ 0 and the interval has elapsed (it does not reset unused balance).
 - **Per-user only.** No per-role/group budget exists. Override individual users via the API container:
   - `npm run set-balance <email> <credits>` (absolute), `npm run add-balance <email> <credits>` (increment), `npm run list-balances`, `npm run user-stats`.
 - **Prices must be known.** Two paths for custom endpoints:
