@@ -21,6 +21,7 @@ services:
     volumes:
       - librechat-config:/app/config
       - librechat-images:/images
+      - librechat-icons:/icons
       - librechat-uploads:/uploads
       - librechat-logs:/logs
       - mongodata:/mongo_data
@@ -63,6 +64,7 @@ services:
     # server rebuilds (fileStrategy is local). Merged by container path over the base.
     volumes:
       - librechat-images:/app/client/public/images
+      - librechat-icons:/app/client/dist/assets/icons:ro
       - librechat-uploads:/app/uploads
       - librechat-logs:/app/logs
       - librechat-config:/app/config:ro
@@ -313,6 +315,8 @@ volumes:
     name: ${STACK_NAME:-prod}-librechat-config
   librechat-images:
     name: ${STACK_NAME:-prod}-librechat-images
+  librechat-icons:
+    name: ${STACK_NAME:-prod}-librechat-icons
   librechat-uploads:
     name: ${STACK_NAME:-prod}-librechat-uploads
   librechat-logs:

@@ -14,6 +14,7 @@ docker-compose.override.yml
 data-node/
 meili_data_v1.12/
 images/
+icons/
 uploads/
 logs/
 *.log

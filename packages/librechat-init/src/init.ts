@@ -11,7 +11,7 @@ import {
   CONFIG_DIR,
   AGENT_ID_MAP_PATH,
   ASSETS_DIR,
-  IMAGES_DIR,
+  ICONS_DIR,
   INIT_TIME_ENV_VARS,
   SEARCH_MCP_SERVER_NAME,
   SEARCH_DEPENDENT_AGENT_ID,
@@ -169,9 +169,9 @@ async function main() {
     }
 
     console.log('\n[2/4] Copying MCP and group icons...');
-    if (!existsSync(IMAGES_DIR)) {
-      mkdirSync(IMAGES_DIR, { recursive: true });
-      console.log('✓ Created images directory');
+    if (!existsSync(ICONS_DIR)) {
+      mkdirSync(ICONS_DIR, { recursive: true });
+      console.log('✓ Created icons directory');
     }
 
     if (existsSync(ASSETS_DIR)) {
@@ -183,7 +183,7 @@ async function main() {
       } else {
         for (const iconFile of iconFiles) {
           const sourcePath = join(ASSETS_DIR, iconFile);
-          const targetPath = join(IMAGES_DIR, iconFile);
+          const targetPath = join(ICONS_DIR, iconFile);
           copyFileSync(sourcePath, targetPath);
           console.log(`✓ Copied ${iconFile}`);
         }

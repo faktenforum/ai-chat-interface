@@ -3,6 +3,7 @@ import { execSync } from 'child_process';
 const PATHS = [
   '/logs',
   '/images',
+  '/icons',
   '/uploads',
   '/mongo_data',
   '/mongo_configdb',

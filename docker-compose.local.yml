@@ -85,6 +85,7 @@ services:
       - ./packages/librechat-init/config:/app/config-source:ro
       - ./logs:/logs
       - ./images:/images
+      - ./icons:/icons
       - ./uploads:/uploads
       - mongodata:/mongo_data
       - ./meili_data_v1.12:/meili_data

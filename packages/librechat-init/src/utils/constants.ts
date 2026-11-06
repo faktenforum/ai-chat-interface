@@ -16,7 +16,11 @@ export const CONFIG_DIR = '/app/config';
 /** Persisted config-ID → API agent-ID map (written by post-init, applied by init). Stored in config volume, per environment. */
 export const AGENT_ID_MAP_PATH = join(CONFIG_DIR, 'agent-id-map.json');
 export const ASSETS_DIR = '/app/assets';
-export const IMAGES_DIR = '/images';
+/**
+ * Public icons (MCP, groups, endpoints). Served by the api from /app/client/dist/assets/icons as
+ * /assets/icons/<file>. Not /images: LibreChat authorizes that path per user and denies flat files.
+ */
+export const ICONS_DIR = '/icons';
 
 export const ROLES_CONFIG_PATH = join(CONFIG_SOURCE_DIR, 'roles.yaml');
 export const ROLES_CONFIG_FALLBACK = '../config/roles.yaml';

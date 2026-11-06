@@ -144,8 +144,8 @@ endpoints:
     - name: Scaleway
       apiKey: "$${SCALEWAY_API_KEY}"
       baseURL: "$${SCALEWAY_BASE_URL}"
-      # Custom endpoints only support iconURL (no iconPath key). Use a path to a copied asset: put the SVG in packages/librechat-init/assets/ and set iconURL: "/images/<filename>.svg"
-      iconURL: "/images/scaleway.svg"
+      # Custom endpoints only support iconURL (no iconPath key). Use a path to a copied asset: put the SVG in packages/librechat-init/assets/ and set iconURL: "/assets/icons/<filename>.svg"
+      iconURL: "/assets/icons/scaleway.svg"
       # Scaleway docs: "Meta models do not support parallel tool calls."
       # Affected: Llama 3.1 (8b, 70b), Llama 3.3 (70b). Without this → 400 single tool-calls error.
       # addParams has no per-model scope, so this applies endpoint-wide. Benign for the other
@@ -253,7 +253,7 @@ modelSpecs:
       label: "Assistant"
       description: "General-purpose assistant – coding, Linux/shell, files, data analysis, documents, research and GitHub in one place."
       group: "Assistants"
-      groupIcon: "/images/group-assistants.svg"
+      groupIcon: "/assets/icons/group-assistants.svg"
       order: 0
       default: true
       preset:
@@ -265,7 +265,7 @@ modelSpecs:
       label: "Faktencheck Assistant"
       description: "Search and present German fact-checks from Faktenforum; verify claims and find existing checks"
       group: "Assistants"
-      groupIcon: "/images/group-assistants.svg"
+      groupIcon: "/assets/icons/group-assistants.svg"
       order: 2
       preset:
         endpoint: "agents"
@@ -276,7 +276,7 @@ modelSpecs:
       label: "Image Generation Assistant"
       description: "Creates images from text descriptions using AI image generation"
       group: "Assistants"
-      groupIcon: "/images/group-assistants.svg"
+      groupIcon: "/assets/icons/group-assistants.svg"
       order: 3
       preset:
         endpoint: "agents"
@@ -287,7 +287,7 @@ modelSpecs:
       label: "Travel and Location Assistant"
       description: "Helps with travel planning, location search, route planning and combines geographic information with weather data"
       group: "Assistants"
-      groupIcon: "/images/group-assistants.svg"
+      groupIcon: "/assets/icons/group-assistants.svg"
       order: 4
       preset:
         endpoint: "agents"
@@ -304,7 +304,7 @@ modelSpecs:
       label: "GLM 5.3"
       description: "Starkes Reasoning- und Coding-Modell (Z.AI, MoE). Eines der besten Open-Weight-Modelle, europäisch gehostet (Scaleway). 256K Context, 16K Output. Text und Code. Nachfolger von GLM 5.2 zum selben Preis. Open Weights (Z.AI)."
       group: "Europa & Open Source"
-      groupIcon: "/images/group-europa.svg"
+      groupIcon: "/assets/icons/group-europa.svg"
       order: 0
       preset:
         endpoint: "Scaleway"
@@ -318,7 +318,7 @@ modelSpecs:
       description: "Günstiges Reasoning- und Coding-Modell (DeepSeek, MoE). 256K Context, 32K Output. Text, Code und Vision. Nachfolger von DeepSeek V4 Flash, etwas teurer. Open Weights (DeepSeek)."
       group: "Europa & Open Source"
       # Bot icon (green-600 #059669): Open Source / automation; good contrast in light and dark
-      groupIcon: "/images/group-europa.svg"
+      groupIcon: "/assets/icons/group-europa.svg"
       order: 1
       vision: true
       preset:
@@ -332,7 +332,7 @@ modelSpecs:
       label: "DeepSeek V4 Flash"
       description: "Der günstigere Vorgänger von V4.1 Flash, dafür nur Text, aber mit 1M Context und 32K Output. Open Weights (DeepSeek)."
       group: "Europa & Open Source"
-      groupIcon: "/images/group-europa.svg"
+      groupIcon: "/assets/icons/group-europa.svg"
       order: 2
       preset:
         endpoint: "Scaleway"
@@ -454,7 +454,7 @@ modelSpecs:
       description: "Anthropics stärkstes Modell für Coding, Agents und lange Workflows. 1M Context, 128K Output. Vision, erweiterte Tool-Nutzung. Closed Source (Anthropic)."
       group: "Premium-Modelle"
       # Lock icon (amber-600 #d97706): proprietary / not open source; good contrast in light and dark
-      groupIcon: "/images/group-premium.svg"
+      groupIcon: "/assets/icons/group-premium.svg"
       order: 1
       vision: true
       preset:
@@ -776,7 +776,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-wikipedia:3017/mcp
     title: Wikipedia
     description: Look up encyclopedic facts and article summaries from Wikipedia
-    iconPath: /images/mcp-wikipedia-icon.svg
+    iconPath: /assets/icons/mcp-wikipedia-icon.svg
     initTimeout: 120000
     chatMenu: true
     startup: true
@@ -787,7 +787,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-calculator:3012/mcp
     title: Rechner
     description: Mathematische Berechnungen und Rechenoperationen
-    iconPath: /images/mcp-calculator-icon.svg
+    iconPath: /assets/icons/mcp-calculator-icon.svg
     initTimeout: 120000
     chatMenu: false
     startup: true
@@ -798,7 +798,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-image-gen:3013/mcp
     title: Image Generation
     description: Create images from text descriptions
-    iconPath: /images/mcp-image-gen-icon.svg
+    iconPath: /assets/icons/mcp-image-gen-icon.svg
     initTimeout: 180000
     timeout: 150000  # 150 seconds for tool calls (image generation can take up to 120s)
     chatMenu: true
@@ -810,7 +810,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-openstreetmap:3004/mcp
     title: OpenStreetMap
     description: Geographic search, route planning and location information
-    iconPath: /images/mcp-openstreetmap-icon.svg
+    iconPath: /assets/icons/mcp-openstreetmap-icon.svg
     initTimeout: 120000
     chatMenu: false
     startup: true
@@ -821,7 +821,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-weather:3005/mcp
     title: Weather
     description: Current weather data, air quality and timezone information
-    iconPath: /images/mcp-weather-icon.svg
+    iconPath: /assets/icons/mcp-weather-icon.svg
     initTimeout: 120000
     chatMenu: true
     startup: true
@@ -832,7 +832,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-docs:6280/mcp
     title: Search Documentation
     description: Search publicly available documentation
-    iconPath: /images/mcp-docs-icon.svg
+    iconPath: /assets/icons/mcp-docs-icon.svg
     initTimeout: 120000
     chatMenu: true
     startup: true
@@ -843,7 +843,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-db-timetable:3007/mcp
     title: DB Timetable
     description: Current timetables, station search and train connections of Deutsche Bahn
-    iconPath: /images/mcp-db-timetable-icon.svg
+    iconPath: /assets/icons/mcp-db-timetable-icon.svg
     initTimeout: 120000
     chatMenu: true
     startup: true
@@ -854,7 +854,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-stackoverflow:3008/mcp
     title: Stack Overflow
     description: Find programming solutions and troubleshooting
-    iconPath: /images/mcp-stackoverflow-icon.svg
+    iconPath: /assets/icons/mcp-stackoverflow-icon.svg
     initTimeout: 120000
     chatMenu: false
     startup: true
@@ -865,7 +865,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-npm-search:3009/mcp
     title: npm Search
     description: Search and find npm packages
-    iconPath: /images/mcp-npm-search-icon.svg
+    iconPath: /assets/icons/mcp-npm-search-icon.svg
     initTimeout: 120000
     chatMenu: false
     startup: true
@@ -876,7 +876,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-chefkoch:3014/mcp
     title: Recipes
     description: Search and display recipes from Chefkoch.de
-    iconPath: /images/mcp-chefkoch-icon.svg
+    iconPath: /assets/icons/mcp-chefkoch-icon.svg
     initTimeout: 120000
     chatMenu: false
     startup: true
@@ -887,7 +887,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-linux:3015/mcp
     title: Linux Workspace
     description: Isolated Linux environment with terminal, file upload/download, Git and workspaces
-    iconPath: /images/mcp-linux-icon.svg
+    iconPath: /assets/icons/mcp-linux-icon.svg
     initTimeout: 120000
     timeout: 120000
     chatMenu: true
@@ -921,7 +921,7 @@ mcpServers:
     # /^[a-zA-Z0-9 ]+$/ and refuses to start on anything else, hyphens included.
     title: Postfach
     description: Eigenes Postfach lesen, durchsuchen und beantworten (IMAP/SMTP)
-    iconPath: /images/mcp-mail-icon.svg
+    iconPath: /assets/icons/mcp-mail-icon.svg
     initTimeout: 120000
     timeout: 120000
     chatMenu: true
@@ -984,7 +984,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-linux:3015/mcp/calendar
     title: Kalender
     description: Eigene Kalender lesen, Termine anlegen und freie Zeiten finden (CalDAV)
-    iconPath: /images/mcp-calendar-icon.svg
+    iconPath: /assets/icons/mcp-calendar-icon.svg
     initTimeout: 120000
     timeout: 120000
     chatMenu: true
@@ -1023,7 +1023,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-spend-monitor:3016/mcp
     title: Spend Monitor
     description: Org-wide LibreChat spend report and budget enforcement controls (admins only)
-    iconPath: /images/mcp-spend-monitor-icon.svg
+    iconPath: /assets/icons/mcp-spend-monitor-icon.svg
     initTimeout: 120000
     chatMenu: false
     startup: false
@@ -1038,7 +1038,7 @@ mcpServers:
     url: http://$${STACK_NAME:-prod}-mcp-ytptube:3010/mcp
     title: Video Transcripts
     description: Request video transcripts and check status.
-    iconPath: /images/mcp-ytptube-icon.svg
+    iconPath: /assets/icons/mcp-ytptube-icon.svg
     initTimeout: 120000
     timeout: 300000   # 5 min — downloads + STT
     chatMenu: false
@@ -1050,7 +1050,7 @@ mcpServers:
     url: https://api.githubcopilot.com/mcp/
     title: GitHub
     description: Repositories, Issues, Pull Requests und Code-Analyse
-    iconPath: /images/mcp-github-icon.svg
+    iconPath: /assets/icons/mcp-github-icon.svg
     headers:
       Authorization: "Bearer ${MCP_GITHUB_PAT}"
     # Static machine-user PAT, not OAuth - same reason as the `search` server below.
@@ -1078,7 +1078,7 @@ mcpServers:
     url: https://api.githubcopilot.com/mcp/
     title: GitHub eigener Zugang
     description: GitHub mit deinem persönlichen Token statt des gemeinsamen Bot-Kontos
-    iconPath: /images/mcp-github-icon.svg
+    iconPath: /assets/icons/mcp-github-icon.svg
     headers:
       Authorization: "Bearer {{GITHUB_PAT}}"
     customUserVars:
@@ -1102,7 +1102,7 @@ mcpServers:
     url: https://mcp.mapbox.com/mcp
     title: Mapbox
     description: Geographic search, route planning, geocoding and map visualization
-    iconPath: /images/mcp-mapbox-icon.svg
+    iconPath: /assets/icons/mcp-mapbox-icon.svg
     headers:
       Authorization: "Bearer ${MCP_MAPBOX_ACCESS_TOKEN}"
     initTimeout: 120000
@@ -1121,7 +1121,7 @@ mcpServers:
     url: ${SEARCH_MCP_URL}
     title: Search
     description: Search German fact-checks from Faktenforum; hybrid semantic and full-text search
-    iconPath: /images/mcp-search-icon.svg
+    iconPath: /assets/icons/mcp-search-icon.svg
     headers:
       Authorization: "Bearer ${SEARCH_MCP_API_KEY}"
     # Static admin-managed Bearer key, not OAuth. Without this, LibreChat's startup
