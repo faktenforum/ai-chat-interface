@@ -29,6 +29,7 @@ services:
       - librechat-config:/app/config
       - ./logs:/logs
       - ./images:/images
+      - ./icons:/icons
       - ./uploads:/uploads
       - mongodata:/mongo_data
       - ./meili_data_v1.12:/meili_data
@@ -138,6 +139,7 @@ services:
       SEARCH_MCP_API_KEY: ${SEARCH_MCP_API_KEY:-}
     volumes:
       - ./images:/app/client/public/images
+      - ./icons:/app/client/dist/assets/icons:ro
       - ./uploads:/app/uploads
       - ./logs:/app/logs
       - librechat-config:/app/config:ro

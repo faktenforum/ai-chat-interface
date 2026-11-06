@@ -293,7 +293,7 @@ Predefined model presets that appear as simple selections in the UI.
 - `iconURL` - Custom icon URL for individual model
   - Can be: Endpoint name, URL, or Data URI (SVG as base64)
   - **Note:** Data URIs and URLs are rendered as `<img>` tags, so `currentColor` doesn't work for theme support
-  - For theme support: Use built-in endpoint icons or place SVGs in `/images/` folder (still rendered as `<img>`)
+  - For theme support: Use built-in endpoint icons or place SVGs in `/assets/icons/` (see LIBRECHAT_GROUP_ICONS.md) (still rendered as `<img>`)
 - `showIconInMenu` - Show icon in menu (default: true)
 - `showIconInHeader` - Show icon in header (default: true)
 
@@ -309,7 +309,7 @@ Predefined model presets that appear as simple selections in the UI.
 **Custom Icons:**
 - URLs: `"https://example.com/icon.png"`
 - Data URIs: `"data:image/svg+xml;base64,..."` or `"data:image/svg+xml;charset=utf-8,..."`
-- Local files: `"/images/my-icon.svg"`
+- Local files: `"/assets/icons/my-icon.svg"`
 
 **Theme Support:**
 - Built-in endpoint icons automatically adapt to light/dark themes

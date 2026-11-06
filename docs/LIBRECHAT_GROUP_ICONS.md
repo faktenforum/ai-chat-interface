@@ -3,7 +3,7 @@
 Group icons in `librechat.yaml` (modelSpecs list) can be:
 
 - **Data URI** — inline SVG (e.g. `data:image/svg+xml;base64,...`). Rendered as `<img src="...">`, so `currentColor` does not apply; use explicit hex stroke/fill for light and dark theme.
-- **Path** — use `groupIcon: "/images/<filename>.svg"`. Put the SVG in `packages/librechat-init/assets/`; the init copies all `.svg` files from assets to `/images/` at startup.
+- **Path** — use `groupIcon: "/assets/icons/<filename>.svg"`. Put the SVG in `packages/librechat-init/assets/`; the init copies all `.svg` files from assets to the icons volume, which the api serves as `/assets/icons/`.
 
 ## Current assignment
 
@@ -40,9 +40,9 @@ From `dev/librechat/client/src/style.css` — use these for new group icons so t
 To use a file-based icon:
 
 1. Add the SVG to `packages/librechat-init/assets/` (e.g. `group-europa.svg`, `scaleway.svg`).
-2. In `librechat.yaml`, set `groupIcon: "/images/group-europa.svg"` or for custom endpoints `iconURL: "/images/scaleway.svg"` (path under `/images/`, filename matches the asset).
+2. In `librechat.yaml`, set `groupIcon: "/assets/icons/group-europa.svg"` or for custom endpoints `iconURL: "/assets/icons/scaleway.svg"` (path under `/assets/icons/`, filename matches the asset).
 
-The init script copies all `.svg` files from assets to `/images/`. Custom endpoints only support the key `iconURL`, not `iconPath`; use `iconURL` with the path value.
+The init script copies all `.svg` files from assets to the icons volume (`/icons` in init, `/app/client/dist/assets/icons` in the api). Do not use `/images/`: since v0.8.9 LibreChat only serves `/images/<userId>/<file>` and only to authorized users, so flat files there return 401/403. Custom endpoints only support the key `iconURL`, not `iconPath`; use `iconURL` with the path value.
 
 ## Regenerating a data URI
 
